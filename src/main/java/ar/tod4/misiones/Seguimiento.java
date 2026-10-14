@@ -148,7 +148,8 @@ final class Seguimiento implements Listener {
         boolean enTop = clicked.equals(top);
         // poner cosas en un cofre lo marca como "tocado" (sacar de ahi ya no cuenta)
         if (COFRES.contains(top.getType())) {
-            boolean pone = (enTop && !e.getCursor().getType().isAir()
+            ItemStack cur = e.getCursor();
+            boolean pone = (enTop && cur != null && !cur.getType().isAir()
                     && e.getAction() != InventoryAction.PICKUP_ALL && e.getAction() != InventoryAction.PICKUP_HALF)
                     || (!enTop && e.isShiftClick())
                     || (enTop && e.getAction() == InventoryAction.HOTBAR_SWAP);
