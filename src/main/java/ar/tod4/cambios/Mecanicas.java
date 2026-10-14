@@ -48,7 +48,6 @@ import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.BlastingRecipe;
 import org.bukkit.inventory.FurnaceRecipe;
 import org.bukkit.inventory.ItemStack;
@@ -119,16 +118,9 @@ final class Mecanicas implements Listener {
                 if (!juega(p) || !p.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)) continue;
                 Location l = p.getLocation();
                 if (l.getBlock().getType() == Material.LAVA || l.clone().add(0, 1, 0).getBlock().getType() == Material.LAVA) {
-                    p.setFireTicks(Math.max(p.getFireTicks(), 60));
-                    golpe(p, pl.getConfig().getDouble("cambios.lava_corazones", 0.5));
+                    p.setFireTicks(Math.max(p.getFireTicks(), 300));
+                    p.damage(pl.getConfig().getDouble("cambios.lava_dano", 4.0), DamageSource.builder(DamageType.GENERIC).build());
                 }
-            }
-        }
-        // Dia 4: sin aire te pega medio corazon cada 0.5 s
-        if (on("d4.agua")) {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                if (juega(p) && p.getRemainingAir() <= 0 && p.isUnderWater())
-                    golpe(p, pl.getConfig().getDouble("cambios.agua_corazones", 0.5));
             }
         }
     }
@@ -289,7 +281,9 @@ final class Mecanicas implements Listener {
         if (on("d1.nether") && calor.containsKey(p.getUniqueId())
                 && (e.getCause() == EntityDamageEvent.DamageCause.FIRE || e.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK))
             e.setCancelled(true);
-        if (on("d4.agua") && e.getCause() == EntityDamageEvent.DamageCause.DROWNING) e.setCancelled(true);
+        // Dia 4: la perla hace mas dano (como si el juego lo tuviera asi)
+        if (on("d4.perla") && e.getDamageSource().getDamageType().getKey().getKey().equals("ender_pearl") && juega(p))
+            e.setDamage(pl.getConfig().getDouble("cambios.perla_corazones", 4) * 2.0);
     }
 
     @EventHandler(ignoreCancelled = true)
@@ -328,21 +322,7 @@ final class Mecanicas implements Listener {
         int viejo = p.getRemainingAir(), nuevo = e.getAmount();
         if (nuevo >= viejo) return;
         int factor = pl.getConfig().getInt("cambios.agua_factor", 5);
-        e.setAmount(Math.max(-19, viejo - (viejo - nuevo) * factor));
-    }
-
-    @EventHandler(ignoreCancelled = true)
-    public void perla(PlayerTeleportEvent e) {
-        if (!on("d4.perla") || e.getCause() != PlayerTeleportEvent.TeleportCause.ENDER_PEARL) return;
-        Player p = e.getPlayer();
-        if (!juega(p)) return;
-        double h = p.getHealth();
-        double dano = pl.getConfig().getDouble("cambios.perla_corazones", 4) * 2.0;
-        Bukkit.getScheduler().runTaskLater(pl, () -> {
-            if (!p.isOnline() || p.isDead()) return;
-            if (h <= dano) p.damage(1000.0);
-            else p.setHealth(Math.max(0.5, h - dano));
-        }, 2L);
+        e.setAmount(Math.max(-20, viejo - (viejo - nuevo) * factor));
     }
 
     @EventHandler
@@ -370,17 +350,18 @@ final class Mecanicas implements Listener {
         smoke("chorus", new RecipeChoice.MaterialChoice(Material.CHORUS_FRUIT), Material.POPPED_CHORUS_FRUIT);
         smoke("troncos", new RecipeChoice.MaterialChoice(Tag.LOGS_THAT_BURN), Material.CHARCOAL);
         smoke("esponja", new RecipeChoice.MaterialChoice(Material.WET_SPONGE), Material.SPONGE);
+        Bukkit.updateRecipes();
     }
 
     private void blast(String id, Material in, Material out) {
         NamespacedKey k = new NamespacedKey(pl, "d2_blast_" + id);
-        Bukkit.addRecipe(new BlastingRecipe(k, new ItemStack(out), new RecipeChoice.MaterialChoice(in), 0.1f, 100), true);
+        Bukkit.addRecipe(new BlastingRecipe(k, new ItemStack(out), new RecipeChoice.MaterialChoice(in), 0.1f, 100), false);
         recetasD2.add(k);
     }
 
     private void smoke(String id, RecipeChoice in, Material out) {
         NamespacedKey k = new NamespacedKey(pl, "d2_smoke_" + id);
-        Bukkit.addRecipe(new SmokingRecipe(k, new ItemStack(out), in, 0.1f, 100), true);
+        Bukkit.addRecipe(new SmokingRecipe(k, new ItemStack(out), in, 0.1f, 100), false);
         recetasD2.add(k);
     }
 

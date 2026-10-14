@@ -22,7 +22,6 @@ import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 
 import ar.tod4.TOD4;
-import ar.tod4.hook.SkriptVars;
 import ar.tod4.util.Txt;
 import io.papermc.paper.scoreboard.numbers.NumberFormat;
 
@@ -31,7 +30,6 @@ import io.papermc.paper.scoreboard.numbers.NumberFormat;
  *  1) Momento Truco activo -> la parte de abajo es solo del momento.
  *  2) Misiones (diaria / opcional) con su estado en color.
  *  3) Nada -> frase de calma al azar.
- * Mientras las misiones y el Momento Truco sigan en Skript, se leen sus variables.
  */
 public final class Sidebar implements Listener {
 
@@ -116,40 +114,39 @@ public final class Sidebar implements Listener {
                     .replace("{jugadores}", jugadores(pl)));
         }
         out.addAll(abajo(p));
-        out.add(c.getString("linea_final", "&8&m                              "));
+        String fin = c.getString("linea_final", "");
+        if (fin != null && !fin.isEmpty()) out.add(fin);
         return out;
     }
 
-    /** La parte de abajo segun la prioridad. */
+    /** La parte de abajo segun la prioridad: Momento Truco > misiones > frase de calma. */
     private List<String> abajo(Player p) {
         List<String> out = new ArrayList<>();
-        String n = p.getName();
-        if (SkriptVars.isTrue("momentotruco.activo")) {
+        ar.tod4.momento.Momentos mo = pl.momentos();
+        if (mo != null && mo.enCurso()) {
+            int r = mo.restante();
             out.add("&c■ &f&lMomento Truco");
-            boolean salvado = SkriptVars.isTrue("momentotruco.salvado::" + p.getUniqueId());
-            out.add(salvado ? " &8| &a✔ A salvo" : " &8| &c✖ En peligro");
-            out.add("");
+            out.add(" &8| &f" + mo.objetivoCorto(mo.activo()));
+            out.add(" &8| &7Tiempo: &e" + String.format("%d:%02d", r / 60, r % 60));
+            if (mo.participa(p)) out.add(mo.aSalvo(p) ? " &8| &a✔ A salvo" : " &8| &c✖ En peligro");
+            else out.add(" &8| &8Mirando");
             return out;
         }
-        boolean diaria = SkriptVars.isSet("mision::activa");
-        boolean opcional = SkriptVars.isSet("mision_op::activa");
-        if (diaria) {
-            boolean recl = SkriptVars.isTrue("p_reclamo::dia::" + n);
-            out.add("&a■ &f&lMisión diaria");
-            out.add(" &8| " + (recl ? "&e✔ Reclamada ✔" : "&7En curso"));
-            if (opcional) {
-                boolean reclOp = SkriptVars.isTrue("p_reclamo::op::" + n);
-                out.add("&b■ &f&lMisión opcional");
-                if (!recl) out.add(" &8| &c🔒 Bloqueada");
-                else out.add(" &8| " + (reclOp ? "&e✔ Reclamada ✔" : "&7En curso"));
+        ar.tod4.misiones.Misiones ms = pl.misiones();
+        boolean dia = ms != null && ms.activa(ar.tod4.misiones.Misiones.DIA) != null;
+        boolean op = ms != null && ms.activa(ar.tod4.misiones.Misiones.OP) != null;
+        if (dia || op) {
+            if (dia) {
+                out.add("&a■ &f&lMisión diaria");
+                out.add(" &8| " + ar.tod4.misiones.Misiones.texto(ms.estado(ar.tod4.misiones.Misiones.DIA, p)));
             }
-            out.add("");
+            if (op) {
+                out.add("&b■ &f&lMisión opcional");
+                out.add(" &8| " + ar.tod4.misiones.Misiones.texto(ms.estado(ar.tod4.misiones.Misiones.OP, p)));
+            }
             return out;
         }
-        if (calma != null) {
-            out.add(" " + calma);
-            out.add("");
-        }
+        if (calma != null) out.add(" " + calma);
         return out;
     }
 

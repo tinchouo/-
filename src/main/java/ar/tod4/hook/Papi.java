@@ -14,6 +14,9 @@ import me.clip.placeholderapi.expansion.PlaceholderExpansion;
  *  %tod4_alma_raw%   true / false
  *  %tod4_mundo%      nombre del mundo con su color (Overworld, Nether, End, Aether, ???)
  *  %tod4_jugadores%  conectados/maximo
+ *  %tod4_mision_tab%       simbolo para el tab: ✔ azul / ✔ verde / ✖ rojo / - gris
+ *  %tod4_mision_diaria%    estado de la diaria (En curso, Completada, ✔ Reclamada ✔...)
+ *  %tod4_mision_opcional%  estado de la opcional
  */
 public final class Papi extends PlaceholderExpansion {
 
@@ -37,6 +40,18 @@ public final class Papi extends PlaceholderExpansion {
         switch (id.toLowerCase()) {
             case "alma": return pl.revivir().tieneAlma(op.getName()) ? "&f✦" : "&f✧";
             case "alma_raw": return String.valueOf(pl.revivir().tieneAlma(op.getName()));
+            case "mision_tab": {
+                Player p = op.getPlayer();
+                return p == null ? "&7-" : pl.misiones().simboloTab(p);
+            }
+            case "mision_diaria": {
+                Player p = op.getPlayer();
+                return p == null ? "" : ar.tod4.misiones.Misiones.texto(pl.misiones().estado(ar.tod4.misiones.Misiones.DIA, p));
+            }
+            case "mision_opcional": {
+                Player p = op.getPlayer();
+                return p == null ? "" : ar.tod4.misiones.Misiones.texto(pl.misiones().estado(ar.tod4.misiones.Misiones.OP, p));
+            }
             case "mundo": {
                 Player p = op.getPlayer();
                 return p == null ? "" : Sidebar.mundo(pl, p.getWorld());

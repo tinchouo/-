@@ -55,7 +55,7 @@ public final class Cambios {
         // ---- Dia 3
         add(new Cambio("d3.hornos", 3, "Hornos iguales al horno", false, "&7El alto horno y el ahumador cocinan", "&7todo lo que cocina el horno normal."));
         add(new Cambio("d3.leche", 3, "Sin leche", false, "&7No se puede sacar ni tomar leche", "&7(no se pueden borrar efectos)."));
-        add(new Cambio("d3.lava", 3, "Lava + Res. al fuego", false, "&7La poción no te salva de la lava:", "&7te hace daño y te prende fuego."));
+        add(new Cambio("d3.lava", 3, "Lava + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava: quema como siempre."));
         // ---- Dia 4
         add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
         add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogás 5 veces más rápido."));

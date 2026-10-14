@@ -541,6 +541,7 @@ public final class Revivir implements Listener {
         ItemStack cab = cabeza(p.getName());
         ItemMeta m = cab.getItemMeta();
         m.displayName(Txt.c("&fCabeza de &6" + p.getName()));
+        m.lore(Txt.lines("&7#" + (10000 + new java.util.Random().nextInt(90000))));
         cab.setItemMeta(m);
         st.set("tumbas." + id + ".dueno", p.getName());
         st.set("tumbas." + id + ".cabeza", cab);
@@ -604,7 +605,8 @@ public final class Revivir implements Listener {
         ConfigurationSection s = st.y().getConfigurationSection("tumbas." + id + ".items");
         if (s != null) for (String k : s.getKeys(false)) {
             ItemStack it = s.getItemStack(k);
-            if (it != null) b.getWorld().dropItemNaturally(l, it);
+            if (it != null) b.getWorld().dropItemNaturally(l, it).getPersistentDataContainer()
+                    .set(new NamespacedKey(pl, "tirado"), PersistentDataType.BYTE, (byte) 1);
         }
         ItemStack cab = st.y().getItemStack("tumbas." + id + ".cabeza");
         if (cab != null) b.getWorld().dropItemNaturally(l, cab);

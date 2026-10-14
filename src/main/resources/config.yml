@@ -3,6 +3,9 @@
 #  Los datos (mensajes, almas, muertos, cambios) se guardan aparte en datos.yml, avisos.yml, revivir.yml, cambios.yml
 # ==========================================================
 
+# no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
+config_version: 2
+
 sidebar:
   activa: true
   titulo: "&f&r &#55ff55&lT&#4ef14e&lR&#47e447&lU&#40d640&lC&#39c939&lO&#33bb33&lF&#2cae2c&lD&#25a025&lE&#1e931e&lA&#178517&lT&#117811&lH &f&l4 &f&r"
@@ -15,11 +18,11 @@ sidebar:
     - " &8| &7Conexión: &a{ping} ms"
     - ""
     - "&a■ &f&lMundo"
-    - " &8| &7Día actual: &f{dia}"
-    - " &8| &7Mundo: {mundo}"
+    - " &8| &7Día: &f{dia}"
     - " &8| &7Jugadores: &f{jugadores}"
-    - ""
-  linea_final: "&8&m                              "
+    - " &8| &7Dimensión: {mundo}"
+    - "&8&m                              "
+  # abajo de la linea van las misiones / el Momento Truco / una frase de calma
   cambio_frase_segundos: 60
   frases_calma:
     - "&7Aprovechá la calma mientras dure..."
@@ -39,10 +42,9 @@ mundos:
 
 cambios:
   horno_chance: 0.01        # dia 1: chance por segundo de que explote un horno prendido
-  lava_corazones: 0.5       # dia 3
-  agua_factor: 5            # dia 4: te ahogas X veces mas rapido
-  agua_corazones: 0.5
-  perla_corazones: 4
+  lava_dano: 4.0           # dia 3: dano de la lava con resistencia al fuego (4 = como la lava normal)
+  agua_factor: 5            # dia 4: el aire baja X veces mas rapido (el ahogo en si es el de siempre)
+  perla_corazones: 4        # dia 4: dano de cada perla
 
 avisos:
   sonido_custom_1: "tod4:custom_1"
@@ -67,6 +69,16 @@ avisos:
     - "animation false 1 148 295"
     - "execute as @a at @s run playsound tod4:momento_truco master @s ~ ~ ~ 1 1"
   momento_truco_espera_ticks: 140
+
+misiones:
+  sonido_activar_dia: "block.end_portal.spawn"
+  sonido_activar_op: "block.note_block.chime"
+  sonido_meta: "tod4:meta_mision"
+  sonido_completar_dia: "tod4:completar_diaria"
+  sonido_completar_op: "tod4:completar_opcional"
+
+palo:
+  mundo_principal: "world"
 
 revivir:
   nombre_totem: "Tótem Kui"
