@@ -12,7 +12,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import ar.tod4.avisos.Avisos;
 import ar.tod4.cambios.Cambios;
-import ar.tod4.core.Importar;
 import ar.tod4.data.Store;
 import ar.tod4.hook.Papi;
 import ar.tod4.mesa.Mesa;
@@ -99,7 +98,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&8&m----------------------------------------");
             Style.raw(s, "&6&lTOD4 &7- comandos");
             Style.raw(s, "&e/tod4 dia [número] &8- &7ver o cambiar el día actual");
-            Style.raw(s, "&e/tod4 importar &8- &7trae los datos de los scripts viejos");
             Style.raw(s, "&e/tod4 recargar &8- &7recarga config.yml y mesa.yml");
             Style.raw(s, "&e/cambios [día] &8- &7menú de cambios de dificultad");
             Style.raw(s, "&e/avisos &8- &7mensajes, bienvenidas y ruleta");
@@ -120,9 +118,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                     Style.ok(s, "Día actual: &f" + d);
                 } catch (NumberFormatException e) { Style.err(s, "Usá un número: &e/tod4 dia 3"); }
                 return true;
-            case "importar":
-                new Importar(this).correr(s);
-                return true;
             case "recargar":
                 reloadConfig();
                 mesa.recargar();
@@ -140,7 +135,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         String c = cmd.getName().toLowerCase();
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "importar", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "recargar")); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
                 case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); break;
