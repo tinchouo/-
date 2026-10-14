@@ -1,0 +1,102 @@
+# ==========================================================
+#  TOD4 - configuracion   (despues de cambiar: /tod4 recargar)
+#  Los datos (mensajes, almas, muertos, cambios) se guardan aparte en datos.yml, avisos.yml, revivir.yml, cambios.yml
+# ==========================================================
+
+sidebar:
+  activa: true
+  titulo: "&f&r &#55ff55&lT&#4ef14e&lR&#47e447&lU&#40d640&lC&#39c939&lO&#33bb33&lF&#2cae2c&lD&#25a025&lE&#1e931e&lA&#178517&lT&#117811&lH &f&l4 &f&r"
+  jugadores_max: 100
+  # {jugador} {ping} {dia} {mundo} {jugadores}
+  arriba:
+    - ""
+    - "&a■ &f&lPerfil"
+    - " &8| &7Jugador: &f{jugador}"
+    - " &8| &7Conexión: &a{ping} ms"
+    - ""
+    - "&a■ &f&lMundo"
+    - " &8| &7Día actual: &f{dia}"
+    - " &8| &7Mundo: {mundo}"
+    - " &8| &7Jugadores: &f{jugadores}"
+    - ""
+  linea_final: "&8&m                              "
+  cambio_frase_segundos: 60
+  frases_calma:
+    - "&7Aprovechá la calma mientras dure..."
+    - "&7No hay nada por aquí."
+    - "&7No hay nada que ver por aquí."
+    - "&7Todo tranquilo... por ahora."
+    - "&7El silencio no dura para siempre."
+
+mundos:
+  overworld: "&aOverworld"
+  nether: "&cNether"
+  end: "&dEnd"
+  # si el nombre del mundo (o de la dimension) contiene esta palabra:
+  por_nombre:
+    aether: "&bAether"
+    backrooms: "&e???"
+
+cambios:
+  horno_chance: 0.01        # dia 1: chance por segundo de que explote un horno prendido
+  lava_corazones: 0.5       # dia 3
+  agua_factor: 5            # dia 4: te ahogas X veces mas rapido
+  agua_corazones: 0.5
+  perla_corazones: 4
+
+avisos:
+  sonido_custom_1: "tod4:custom_1"
+  sonido_custom_2: "tod4:custom_2"
+  sonido_custom_3: "tod4:custom_3"
+  sonido_custom_4: "tod4:custom_4"
+  sonido_custom_5: "tod4:custom_5"
+  # sonido cuando la ruleta cae en cada color (sonidos de Minecraft)
+  sonido_ruleta:
+    rojo: "entity.wither.spawn"
+    naranja: "block.anvil.land"
+    amarillo: "entity.player.levelup"
+    verde: "ui.toast.challenge_complete"
+    azul: "block.end_portal.spawn"
+    celeste: "block.note_block.bell"
+    violeta: "block.beacon.deactivate"
+    blanco: "block.note_block.chime"
+    gris: "block.note_block.chime"
+    gris_oscuro: "block.note_block.chime"
+  # cuando cae en ROJO (Momento Truco), antes del mensaje:
+  momento_truco_comandos:
+    - "animation false 1 148 295"
+    - "execute as @a at @s run playsound tod4:momento_truco master @s ~ ~ ~ 1 1"
+  momento_truco_espera_ticks: 140
+
+revivir:
+  nombre_totem: "Tótem Kui"
+  mensaje_totem: "&6☩ &6&l{jugador} &7ha usado un &6&l{totem}&7."
+  sonido_ritual: "tod4:revivir"
+  sonido_revivido: "tod4:revivido"
+  sonido_muerte: "minecraft:dedsafio"
+  comandos_muerte:
+    - "animation false 1 0 147"
+  nombres_mobs:
+    zombie: "Zombi"
+    zombified_piglin: "Zombi Piglin"
+    skeleton: "Esqueleto"
+    creeper: "Creeper"
+    spider: "Araña"
+    cave_spider: "Araña de Cueva"
+    enderman: "Enderman"
+    witch: "Bruja"
+    iron_golem: "Golem de Hierro"
+    blaze: "Blaze"
+    ghast: "Ghast"
+    magma_cube: "Cubo de Magma"
+    wither_skeleton: "Esqueleto Wither"
+    phantom: "Fantasma"
+    drowned: "Ahogado"
+    husk: "Zombi Momificado"
+    stray: "Esqueleto Glacial"
+    guardian: "Guardián"
+    pillager: "Saqueador"
+    vindicator: "Vindicador"
+    evoker: "Invocador"
+    ravager: "Devastador"
+    warden: "Warden"

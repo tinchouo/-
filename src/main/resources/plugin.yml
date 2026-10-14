@@ -1,0 +1,25 @@
+name: TOD4
+version: 1.0.0
+main: ar.tod4.TOD4
+api-version: '1.21'
+author: TrucOfDeath
+description: TrucOfDeath 4 - cambios, avisos, revivir, sidebar.
+softdepend: [PlaceholderAPI, Skript, Oraxen, MythicMobs]
+permissions:
+  tod4.admin:
+    default: op
+commands:
+  tod4:
+    description: Ayuda y comandos generales de TOD4
+  cambios:
+    description: Menu de cambios de dificultad
+  avisos:
+    description: Mensajes, bienvenidas y ruleta
+    aliases: [mensajes, anuncios]
+  altar:
+    description: Configuracion del altar de revivir
+    aliases: [configrevivir]
+  alma:
+    description: Dar o quitar un alma
+  revivir:
+    description: Revivir a un jugador

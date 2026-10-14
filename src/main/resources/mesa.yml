@@ -1,0 +1,126 @@
+# Mesa de encantamientos mejorada - Paper 1.21.1
+# Cambios: editar este archivo y reiniciar el server.
+#
+# Estanterias: se cuentan igual que en vanilla (anillo de 5x5 alrededor de la mesa, a la altura de la mesa
+# o un bloque arriba, con aire entre la estanteria y la mesa). El anillo tiene 32 lugares.
+#  - Hasta 29 estanterias: la mesa es la de siempre (8 / 13 / 30).
+#  - Con 30 o mas: los botones pasan a boton1 / boton2 / boton3. Costo 1 / 2 / 3 niveles y lapislazuli, como siempre.
+estanterias_mesa_grande: 30
+botones:
+  boton1: 15
+  boton2: 30
+  boton3: 40
+
+# En la mesa normal (15 estanterias) el boton de 30 tambien usa las reglas "medio" de abajo.
+mejorar_boton_30_vanilla: true
+
+# Cantidad de encantamientos por tirada:  "cantidad:peso,cantidad:peso"
+#  (ej. "3:48,4:40,5:12" = 48% tres, 40% cuatro, 12% cinco).
+# El primero siempre es el PRINCIPAL (dano de la espada, eficiencia, poder, proteccion...).
+# tope = chance de que el principal salga a su nivel maximo.
+# extra_por_faltante = cuanto sube esa chance por cada encantamiento de menos que te toco
+#   (si te tocan pocos, el principal casi seguro sale al maximo).
+# principal_debajo_del_maximo = el nivel minimo del principal es (maximo - este numero). 1 => Filo 4 minimo.
+# secundarios_al_maximo = Irrompibilidad 3, Fortuna 3, Saqueo 3, Barrido 3, Caida de pluma 4, etc. siempre al tope.
+niveles:
+  alto:          # boton de 40
+    cantidad:
+      espada: "3:48,4:40,5:12"
+      herramienta: "1:25,2:55,3:20"
+      arco: "3:75,4:25"
+      ballesta: "2:50,3:50"
+      tridente: "2:50,3:40,4:10"
+      cana: "2:60,3:40"
+      casco: "2:50,3:35,4:15"
+      pechera: "2:75,3:25"
+      pantalones: "2:75,3:25"
+      botas: "2:45,3:40,4:15"
+      libro: "1:45,2:40,3:15"
+      otros: "2:60,3:40"
+    tope:
+      espada: 0.70
+      herramienta: 0.35
+      arco: 0.90
+      casco: 0.85
+      pechera: 0.85
+      pantalones: 0.85
+      botas: 0.85
+      otros: 0.75
+    extra_por_faltante:
+      herramienta: 0.30
+      otros: 0.15
+    principal_debajo_del_maximo:
+      otros: 1
+    secundarios_al_maximo: true
+  medio:         # boton de 30
+    cantidad:
+      espada: "2:50,3:40,4:10"
+      herramienta: "1:30,2:55,3:15"
+      arco: "2:50,3:40,4:10"
+      ballesta: "1:40,2:45,3:15"
+      tridente: "1:30,2:50,3:20"
+      cana: "1:40,2:45,3:15"
+      casco: "1:30,2:50,3:20"
+      pechera: "1:40,2:60"
+      pantalones: "1:40,2:60"
+      botas: "1:30,2:50,3:20"
+      libro: "1:55,2:35,3:10"
+      otros: "1:40,2:60"
+    tope:
+      espada: 0.20
+      herramienta: 0.10
+      arco: 0.30
+      otros: 0.25
+    extra_por_faltante:
+      otros: 0.05
+    principal_debajo_del_maximo:
+      otros: 1
+    secundarios_al_maximo: true
+  bajo:          # boton de 15
+    cantidad:
+      otros: "1:65,2:30,3:5"
+    tope:
+      otros: 0.0
+    extra_por_faltante:
+      otros: 0.0
+    principal_debajo_del_maximo:
+      otros: 3
+    secundarios_al_maximo: false
+
+# Libros: primero se elige de que objeto son (asi no te sale Irrompibilidad con cosas de ballesta mezcladas)
+# y despues se tira como ese objeto, con la cantidad de "libro".
+libros:
+  categorias: "espada:3,herramienta:3,arco:2,ballesta:1,tridente:1,cana:1,casco:1,pechera:1,pantalones:1,botas:1"
+  reparacion:          # chance de Reparacion por libro (0.0667 = 1 de cada 15)
+    alto: 0.0667
+    medio: 0.0
+    bajo: 0.0
+  reparacion_con_irrompibilidad: 0.5   # si sale Reparacion: 50% sola, 50% con Irrompibilidad 3
+
+# Peso de cada secundario (todos iguales = justo). Mas alto = sale mas.
+pesos:
+  unbreaking: 10
+  looting: 10
+  sweeping_edge: 10
+  fire_aspect: 10
+  knockback: 10
+  fortune: 10
+  silk_touch: 10
+  flame: 10
+  punch: 10
+  infinity: 10
+  multishot: 10
+  piercing: 10
+  loyalty: 10
+  riptide: 10
+  channeling: 10
+  lure: 10
+  luck_of_the_sea: 10
+  respiration: 10
+  aqua_affinity: 10
+  feather_falling: 10
+  depth_strider: 10
+
+# Espinas: solo sale si ya no queda ningun otro encantamiento posible y aun asi con esta chance.
+pesos_ultimos:
+  thorns: 0.25
