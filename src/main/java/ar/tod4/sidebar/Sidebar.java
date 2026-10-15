@@ -108,6 +108,7 @@ public final class Sidebar implements Listener {
         }
         boolean teams = ticks % 10 == 0; // cada 5 segundos
         for (Player p : Bukkit.getOnlinePlayers()) {
+            if (ar.tod4.video.Video.viendo(p)) continue; // mirando un video: sin sidebar
             if (sidebar) {
                 Scoreboard sb = boards.get(p.getUniqueId());
                 if (sb == null || p.getScoreboard() != sb) { attach(p); sb = boards.get(p.getUniqueId()); }

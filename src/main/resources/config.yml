@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 5
+config_version: 6
 
 sidebar:
   activa: true
@@ -133,3 +133,28 @@ revivir:
     evoker: "Invocador"
     ravager: "Devastador"
     warden: "Warden"
+
+# Videos a pantalla completa (/tod4:video <jugador> <video>). Los cuadros son un item del pack con un modelo por cuadro.
+videos:
+  lobotomia:
+    modelo: "tod4:video_lobotomia"
+    cuadros: 109
+    ticks_por_cuadro: 2
+    sonido: "lobotomia:video"
+
+# Level Fun (la fiesta de los partygoers). Se construye una vez con /tod4:fiesta crear
+fiesta:
+  mundo: backrooms
+  origen: [-1000, 100, -1000]   # esquina del mapa (x, y del piso, z)
+  backrooms_celdas: 50          # igual que "celdas" de lobotomia.sk (el pasillo va en el medio del borde oeste)
+  luz_min_seg: 180
+  luz_max_seg: 300
+  apagon_min_seg: 60
+  apagon_max_seg: 90
+  partygoers_max: 12            # (y nunca mas de 3 + 2 por jugador adentro)
+  partygoer_mythic: Partygoer   # mob de MythicMobs (si no existe, sale uno provisorio)
+  velocidad: 1.25
+  golpe_fraccion: 0.3334        # cada golpe saca este pedazo de la vida maxima
+  bloques_por_tick: 4000
+  modelo_casillero: "tod4:casillero"
+  overlay_casillero: "tod4:fiesta/casillero_overlay"

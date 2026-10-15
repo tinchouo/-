@@ -232,7 +232,7 @@ public final class Momentos implements Listener {
         }
         total = restante = Math.max(5, m(id).getInt("duracion", 240));
         barra = BossBar.bossBar(Txt.c(titulo()), 1f, BossBar.Color.RED, BossBar.Overlay.NOTCHED_20);
-        for (Player p : Bukkit.getOnlinePlayers()) p.showBossBar(barra);
+        for (Player p : Bukkit.getOnlinePlayers()) { if (ar.tod4.video.Video.viendo(p)) p.hideBossBar(barra); else p.showBossBar(barra); }
         tarea = Bukkit.getScheduler().runTaskTimer(pl, this::tick, 20L, 20L);
     }
 
@@ -286,7 +286,7 @@ public final class Momentos implements Listener {
         }
         barra.name(Txt.c(titulo()));
         barra.progress(Math.max(0f, Math.min(1f, restante / (float) total)));
-        for (Player p : Bukkit.getOnlinePlayers()) p.showBossBar(barra);
+        for (Player p : Bukkit.getOnlinePlayers()) { if (ar.tod4.video.Video.viendo(p)) p.hideBossBar(barra); else p.showBossBar(barra); }
         if (restante <= 0) terminar(true);
     }
 
