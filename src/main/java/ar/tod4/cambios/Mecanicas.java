@@ -228,6 +228,30 @@ final class Mecanicas implements Listener {
         return on("d2.saplings") && (n.endsWith("_SAPLING") || n.contains("PROPAGULE"));
     }
 
+    /** Dia 1: los aldeanos solo aparecen con huevo / comando (ni naturales, ni de crianza, ni de estructuras). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void aldeanoNoNace(CreatureSpawnEvent e) {
+        if (!on("d1.aldeanos") || e.getEntityType() != EntityType.VILLAGER) return;
+        switch (e.getSpawnReason()) {
+            case SPAWNER_EGG: case COMMAND: case CUSTOM: case DISPENSE_EGG: return;
+            default: e.setCancelled(true);
+        }
+    }
+
+    /** Dia 1: los aldeanos de las aldeas que se cargan desaparecen antes de que se vean. */
+    @EventHandler
+    public void aldeanosCargan(org.bukkit.event.world.EntitiesLoadEvent e) {
+        if (!on("d1.aldeanos")) return;
+        Set<String> viejos = null;
+        for (Entity en : e.getEntities()) {
+            if (en.getType() != EntityType.VILLAGER) continue;
+            if (en.getPersistentDataContainer().has(LEGAL, PersistentDataType.BYTE)) continue;
+            if (viejos == null) viejos = cb_legales();
+            if (viejos.contains(en.getUniqueId().toString())) continue;
+            en.remove();
+        }
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void aldeanoNace(CreatureSpawnEvent e) {
         if (e.getEntityType() != EntityType.VILLAGER) return;

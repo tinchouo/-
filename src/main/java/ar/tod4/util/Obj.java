@@ -168,15 +168,16 @@ public final class Obj {
         return w.getName().equalsIgnoreCase(n) || w.getKey().toString().equalsIgnoreCase(n);
     }
 
-    /** Cuantos items de estos objetivos hay en el inventario (+ cursor). */
+    /** Cuantos items de estos objetivos tiene el jugador (inventario, mano secundaria y armadura puesta). */
     public static int contar(PlayerInventory inv, List<String> objs) {
         int n = 0;
         for (ItemStack it : inv.getStorageContents()) if (item(objs, it)) n += it.getAmount();
         if (item(objs, inv.getItemInOffHand())) n += inv.getItemInOffHand().getAmount();
+        for (ItemStack it : inv.getArmorContents()) if (item(objs, it)) n += it.getAmount();
         return n;
     }
 
-    /** Saca 'cant' items de estos objetivos del inventario. */
+    /** Saca 'cant' items de estos objetivos: primero del inventario, despues la mano secundaria y la armadura. */
     public static void sacar(PlayerInventory inv, List<String> objs, int cant) {
         ItemStack[] c = inv.getStorageContents();
         for (int i = 0; i < c.length && cant > 0; i++) {
@@ -189,8 +190,21 @@ public final class Obj {
         inv.setStorageContents(c);
         if (cant > 0 && item(objs, inv.getItemInOffHand())) {
             ItemStack o = inv.getItemInOffHand();
-            o.setAmount(Math.max(0, o.getAmount() - cant));
+            int q = Math.min(cant, o.getAmount());
+            o.setAmount(o.getAmount() - q);
             inv.setItemInOffHand(o.getAmount() <= 0 ? null : o);
+            cant -= q;
+        }
+        if (cant > 0) {
+            ItemStack[] a = inv.getArmorContents();
+            for (int i = 0; i < a.length && cant > 0; i++) {
+                if (!item(objs, a[i])) continue;
+                int q = Math.min(cant, a[i].getAmount());
+                a[i].setAmount(a[i].getAmount() - q);
+                if (a[i].getAmount() <= 0) a[i] = null;
+                cant -= q;
+            }
+            inv.setArmorContents(a);
         }
     }
 

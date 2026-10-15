@@ -89,9 +89,12 @@ public final class Misiones {
         List<Objetivo> out = new ArrayList<>();
         List<Map<?, ?>> raw = st.y().getMapList("misiones." + id + ".objetivos");
         if (raw.isEmpty()) raw = st.y().getMapList("misiones." + id + ".reqs"); // version anterior
+        boolean sinUid = false;
         for (Map<?, ?> m : raw) {
-            try { out.add(Objetivo.of(m)); } catch (Exception ignored) { }
+            try { out.add(Objetivo.of(m)); if (m.get("uid") == null) sinUid = true; } catch (Exception ignored) { }
         }
+        // misiones de la version anterior: se guardan ya con su uid (si no, el progreso se perderia al reiniciar)
+        if (sinUid) guardarObjetivos(id, out);
         cache.put(id, out);
         return out;
     }
@@ -134,19 +137,26 @@ public final class Misiones {
     }
 
     public void activar(String clase, String id) {
-        st.set("activa." + clase, id);
-        for (String k : new String[]{"prog", "vis", "ultimo", "reclamo", "bypass"}) st.set(k + "." + clase, null);
         if (clase.equals(DIA)) {
+            // la diaria se activa cuando la ruleta cae en verde (asi nadie la ve antes)
+            st.set("activa." + clase, null);
             pl.avisos().ruletaGlobal(Paleta.VERDE, () -> {
+                empezar(clase, id);
                 caja("&a&l¡NUEVA MISIÓN DIARIA!", "&fCompleta la misión para recibir la", "&frecompensa del día.", "&a");
                 sonarTodos(pl.getConfig().getString("misiones.sonido_activar_dia", "block.end_portal.spawn"));
                 for (Player p : Bukkit.getOnlinePlayers()) verificar(p);
             });
         } else {
+            empezar(clase, id);
             caja("&b&l¡NUEVA MISIÓN OPCIONAL!", "&fCompleta la misión para recibir", "&frecompensas extra.", "&b");
             sonarTodos(pl.getConfig().getString("misiones.sonido_activar_op", "block.note_block.chime"));
             for (Player p : Bukkit.getOnlinePlayers()) verificar(p);
         }
+    }
+
+    private void empezar(String clase, String id) {
+        st.set("activa." + clase, id);
+        for (String k : new String[]{"prog", "vis", "ultimo", "reclamo", "bypass"}) st.set(k + "." + clase, null);
     }
 
     private void sonarTodos(String s) {
