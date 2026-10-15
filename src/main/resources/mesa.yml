@@ -1,4 +1,6 @@
-# Mesa de encantamientos mejorada - Paper 1.21.1
+# Mesa de encantamientos mejorada - Paper 1.21.4
+# no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
+version: 2
 # Cambios: editar este archivo y reiniciar el server.
 #
 # Estanterias: se cuentan igual que en vanilla (anillo de 5x5 alrededor de la mesa, a la altura de la mesa
@@ -26,7 +28,7 @@ niveles:
   alto:          # boton de 40
     cantidad:
       espada: "3:48,4:40,5:12"
-      herramienta: "1:25,2:55,3:20"
+      herramienta: "2:70,3:30"
       arco: "3:75,4:25"
       ballesta: "2:50,3:50"
       tridente: "2:50,3:40,4:10"
@@ -39,7 +41,7 @@ niveles:
       otros: "2:60,3:40"
     tope:
       espada: 0.70
-      herramienta: 0.35
+      herramienta: 1.0
       arco: 0.90
       casco: 0.85
       pechera: 0.85
@@ -91,11 +93,16 @@ niveles:
 # y despues se tira como ese objeto, con la cantidad de "libro".
 libros:
   categorias: "espada:3,herramienta:3,arco:2,ballesta:1,tridente:1,cana:1,casco:1,pechera:1,pantalones:1,botas:1"
-  reparacion:          # chance de Reparacion por libro (0.0667 = 1 de cada 15)
-    alto: 0.0667
+  reparacion:          # chance de Reparacion por libro (0.085 = 1 de cada 12)
+    alto: 0.085
     medio: 0.0
     bajo: 0.0
   reparacion_con_irrompibilidad: 0.5   # si sale Reparacion: 50% sola, 50% con Irrompibilidad 3
+  indestructible:      # chance del Libro Indestructible por libro (0.03 = 1 de cada 33). En el yunque hace indestructible un item.
+    alto: 0.03
+    medio: 0.0
+    bajo: 0.0
+  indestructible_costo_yunque: 10      # niveles que cuesta usarlo en el yunque
 
 # Peso de cada secundario (todos iguales = justo). Mas alto = sale mas.
 pesos:

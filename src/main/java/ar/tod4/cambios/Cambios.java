@@ -43,14 +43,15 @@ public final class Cambios {
         this.st = new Store(pl, "cambios");
         // ---- Dia 1
         add(new Cambio("d1.hornos", 1, "Explosión de Hornos", false, "&7Los hornos prendidos pueden", "&7explotar de la nada."));
-        add(new Cambio("d1.manzanas", 1, "Bloqueo de Manzanas", false, "&7Las hojas no sueltan manzanas."));
+        add(new Cambio("d1.warden", 1, "Warden en las Ancient City", false, "&7El Warden aparece solo en las", "&7Ancient City (saliendo del piso)."));
         add(new Cambio("d1.aldeanos", 1, "Bloqueo de Aldeanos", false, "&7Los aldeanos naturales desaparecen.", "&7Solo quedan los de huevo/comando."));
         add(new Cambio("d1.totems", 1, "Bloqueo de Tótems", false, "&7Los invocadores no sueltan tótem."));
         add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemas sin", "&7Resistencia al fuego y no hay agua."));
         // ---- Dia 2
         add(new Cambio("d2.reproduccion", 2, "Bloqueo de Reproducción", false, "&7Los aldeanos no se reproducen", "&7(no pueden juntar comida)."));
         add(new Cambio("d2.mending", 2, "Recordatorio: Mending", true, "&7Esto lo hace el datapack", "&7de ítems prohibidos."));
-        add(new Cambio("d2.saplings", 2, "Eliminar Saplings", false, "&7Las hojas no sueltan brotes."));
+        add(new Cambio("d2.saplings", 2, "Hojas sin brotes ni manzanas", false, "&7Las hojas no sueltan brotes", "&7ni manzanas."));
+        add(new Cambio("d2.silverfish", 2, "Silverfish en las cuevas", false, "&7Picando debajo de Y 0 puede salir", "&7un silverfish que da fatiga minera."));
         add(new Cambio("d2.hornos", 2, "Hornos Especiales", false, "&7Alto horno: arena, piedra, basalto,", "&7arenisca, terracotas -> esmaltadas.", "&7Ahumador: cactus, pepino de mar,", "&7chorus, troncos (carbón), esponja."));
         // ---- Dia 3
         add(new Cambio("d3.hornos", 3, "Hornos iguales al horno", false, "&7El alto horno y el ahumador cocinan", "&7todo lo que cocina el horno normal."));
@@ -62,8 +63,16 @@ public final class Cambios {
         add(new Cambio("d4.puertas", 4, "Botones y puertas", false, "&7Usarlos te mata (el tótem te salva)."));
         add(new Cambio("d4.crianza", 4, "Sin crianza", false, "&7Los animales no se reproducen."));
         add(new Cambio("d4.perla", 4, "Perlas con más daño", false, "&7Cada perla te saca 4 corazones."));
+        // ---- Dia 5
+        add(new Cambio("d5.wither", 5, "Wither con cabeza de jugador", false, "&7Solo se invoca con la cabeza de un", "&7jugador en el pecho: \"Wither de ...\"."));
+        // ---- Dia 6
+        add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
+        add(new Cambio("d6.noches", 6, "Noches y phantoms", false, "&7La noche no se puede saltar y", "&7dormir no resetea a los phantoms."));
+        add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
         new Mecanicas(pl, this);
+        new MecanicasExtra(pl, this);
+        new Sueno(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)
         for (Cambio c : todos.values()) if (c.alCambiar != null && on(c.id)) c.alCambiar.accept(true);
     }

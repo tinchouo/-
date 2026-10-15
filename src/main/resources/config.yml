@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 4
+config_version: 5
 
 sidebar:
   activa: true
@@ -47,6 +47,21 @@ cambios:
   lava_dano: 4.0           # dia 3: dano de la lava con resistencia al fuego (4 = como la lava normal)
   agua_factor: 5            # dia 4: el aire baja X veces mas rapido (el ahogo en si es el de siempre)
   perla_corazones: 4        # dia 4: dano de cada perla
+  warden_intervalo_seg: 30  # dia 1: cada cuanto se prueba si aparece un Warden (con alguien adentro de una Ancient City)
+  warden_chance: 0.25       # dia 1: chance en cada prueba
+  warden_max_por_ciudad: 1  # dia 1: maximo de Wardens a la vez en una ciudad
+  silverfish_chance: 0.033  # dia 2: chance por bloque picado debajo de Y 0 (0.033 = 1 de cada 30)
+  silverfish_y_max: 0
+  silverfish_fatiga_seg: 5      # dia 2: cada mordida suma estos segundos de fatiga minera
+  silverfish_fatiga_max_seg: 30 # dia 2: tope de la fatiga
+  bedrock_wither_nivel: 3       # dia 6: Wither III = 1 corazon por segundo
+  bedrock_armadura_segundos: 60 # dia 6: en cuanto se rompe la armadura tocando bedrock (sin Irrompibilidad)
+
+# Para pasar la noche: un cuarto de los jugadores, minimo 5 (si hay menos, todos). Cuentan Overworld y Aether.
+sueno:
+  activo: true
+  porcentaje: 25
+  minimo: 5
 
 avisos:
   sonido_custom_1: "tod4:custom_1"

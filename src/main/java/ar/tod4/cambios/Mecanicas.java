@@ -214,7 +214,7 @@ final class Mecanicas implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void hojasDecae(LeavesDecayEvent e) {
-        if (!on("d1.manzanas") && !on("d2.saplings")) return;
+        if (!on("d2.saplings")) return;
         Block b = e.getBlock();
         List<ItemStack> drops = new ArrayList<>(b.getDrops());
         e.setCancelled(true);
@@ -223,7 +223,7 @@ final class Mecanicas implements Listener {
     }
 
     private boolean filtrada(Material m) {
-        if (m == Material.APPLE && on("d1.manzanas")) return true;
+        if (m == Material.APPLE && on("d2.saplings")) return true;
         String n = m.name();
         return on("d2.saplings") && (n.endsWith("_SAPLING") || n.contains("PROPAGULE"));
     }

@@ -40,12 +40,22 @@ public final class Mesa implements Listener {
     private final TOD4 pl;
     private YamlConfiguration conf;
     private boolean activa;
+    private final NamespacedKey INDESTRUCTIBLE;
 
     public Mesa(TOD4 pl) {
         this.pl = pl;
         File f = new File(pl.getDataFolder(), "mesa.yml");
         if (!f.exists()) pl.saveResource("mesa.yml", false);
         conf = YamlConfiguration.loadConfiguration(f);
+        // mesa.yml de una version vieja: se guarda como mesa_viejo.yml y se pone el nuevo
+        if (conf.getInt("version", 1) < 2) {
+            File viejo = new File(pl.getDataFolder(), "mesa_viejo.yml");
+            if (viejo.exists()) viejo.delete();
+            f.renameTo(viejo);
+            pl.saveResource("mesa.yml", true);
+            conf = YamlConfiguration.loadConfiguration(f);
+        }
+        this.INDESTRUCTIBLE = new NamespacedKey(pl, "indestructible");
         Bukkit.getPluginManager().registerEvents(this, pl);
     }
 
@@ -358,6 +368,11 @@ public final class Mesa implements Listener {
         for (int i = 0; i < 3 && i < offers.length; i++) {
             if (tiers[i] == null) continue;
             int cost = big ? lvl(i + 1) : vCost3;
+            if (indestructible(cat, tiers[i], e.getEnchanter(), i)) {
+                Enchantment u = ench("unbreaking");
+                if (u != null) offers[i] = new EnchantmentOffer(u, maxLevel(u), cost);
+                continue;
+            }
             Map<Enchantment, Integer> res = roll(cat, tiers[i], item, rngFor(e.getEnchanter(), item, i));
             if (res.isEmpty()) continue;
             Map.Entry<Enchantment, Integer> first = res.entrySet().iterator().next();
@@ -378,6 +393,20 @@ public final class Mesa implements Listener {
             int shelves = countShelves(e.getEnchantBlock());
             String[] tiers = tiersFor(shelves, b == 2 ? e.getExpLevelCost() : 0);
             if (tiers[b] == null) return;
+            if (indestructible(cat, tiers[b], p, b)) {
+                // sale el Libro Indestructible: se cambia el libro de la mesa un tick despues
+                Map<Enchantment, Integer> add = e.getEnchantsToAdd();
+                add.clear();
+                Enchantment u = ench("unbreaking");
+                if (u != null) add.put(u, 1);
+                org.bukkit.inventory.Inventory inv = e.getInventory();
+                Bukkit.getScheduler().runTask(pl, () -> {
+                    ItemStack cur = inv.getItem(0);
+                    if (cur != null && cur.getType() == Material.ENCHANTED_BOOK) inv.setItem(0, libroIndestructible());
+                    p.playSound(p.getLocation(), org.bukkit.Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.8f, 1.4f);
+                });
+                return;
+            }
             Map<Enchantment, Integer> res = roll(cat, tiers[b], item, rngFor(p, item, b));
             if (res.isEmpty()) return;
             Map<Enchantment, Integer> add = e.getEnchantsToAdd();
@@ -386,5 +415,56 @@ public final class Mesa implements Listener {
         } finally {
             seeds.put(p.getUniqueId(), seedRng.nextLong());
         }
+    }
+
+    // ------------------------------------------------------------------ libro Indestructible
+
+    /** Sale el Libro Indestructible en este boton (tirada aparte, siempre igual para la misma mesa y semilla). */
+    private boolean indestructible(String cat, String tier, Player p, int boton) {
+        if (!"libro".equals(cat)) return false;
+        double ch = num("libros.indestructible." + tier, 0);
+        if (ch <= 0) return false;
+        return new Random(seed(p) * 31L + boton * 1_000_003L + 0x1D35L).nextDouble() < ch;
+    }
+
+    public ItemStack libroIndestructible() {
+        ItemStack it = new ItemStack(Material.ENCHANTED_BOOK);
+        org.bukkit.inventory.meta.ItemMeta m = it.getItemMeta();
+        m.displayName(ar.tod4.util.Txt.c("&d&lLibro Indestructible"));
+        m.lore(ar.tod4.util.Txt.lines("&7Combínalo en un yunque con", "&7cualquier ítem que se gaste:", "&7queda &dindestructible&7."));
+        m.setEnchantmentGlintOverride(true);
+        m.getPersistentDataContainer().set(INDESTRUCTIBLE, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        it.setItemMeta(m);
+        return it;
+    }
+
+    private boolean esLibro(ItemStack it) {
+        return it != null && it.getType() == Material.ENCHANTED_BOOK && it.hasItemMeta()
+                && it.getItemMeta().getPersistentDataContainer().has(INDESTRUCTIBLE, org.bukkit.persistence.PersistentDataType.BYTE);
+    }
+
+    /** Yunque: item que se gasta + Libro Indestructible = el item indestructible. */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void yunque(org.bukkit.event.inventory.PrepareAnvilEvent e) {
+        org.bukkit.inventory.AnvilInventory inv = e.getInventory();
+        ItemStack izq = inv.getItem(0), der = inv.getItem(1);
+        if (!esLibro(der)) return;
+        if (izq == null || izq.getType().isAir() || izq.getType().getMaxDurability() <= 0 || esLibro(izq)
+                || (izq.hasItemMeta() && izq.getItemMeta().isUnbreakable())) { e.setResult(null); return; }
+        ItemStack out = izq.clone();
+        out.setAmount(1);
+        org.bukkit.inventory.meta.ItemMeta m = out.getItemMeta();
+        m.setUnbreakable(true);
+        m.addItemFlags(org.bukkit.inventory.ItemFlag.HIDE_UNBREAKABLE);
+        List<net.kyori.adventure.text.Component> lore = m.hasLore() && m.lore() != null ? new ArrayList<>(m.lore()) : new ArrayList<>();
+        lore.add(ar.tod4.util.Txt.c("&d✦ Indestructible"));
+        m.lore(lore);
+        out.setItemMeta(m);
+        e.setResult(out);
+        int costo = Math.max(1, cfg().getInt("libros.indestructible_costo_yunque", 10));
+        Bukkit.getScheduler().runTask(pl, () -> {
+            try { e.getView().setRepairCost(costo); } catch (Throwable ignored) { }
+        });
+        try { e.getView().setRepairCost(costo); } catch (Throwable ignored) { }
     }
 }

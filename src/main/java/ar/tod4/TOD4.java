@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 4;
+    private static final int CONFIG_VERSION = 5;
 
     private Store core;
     private Avisos avisos;
@@ -106,6 +106,10 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
 
     @Override
     public void onDisable() {
+        // el sistema de dormir pone la regla en 101 (el juego no salta la noche solo): al apagar vuelve a la normal
+        for (org.bukkit.World w : Bukkit.getWorlds())
+            if (Integer.valueOf(101).equals(w.getGameRuleValue(org.bukkit.GameRule.PLAYERS_SLEEPING_PERCENTAGE)))
+                w.setGameRule(org.bukkit.GameRule.PLAYERS_SLEEPING_PERCENTAGE, 100);
         if (misionesMenu != null) misionesMenu.cerrarTodo();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
                 misiones == null ? null : misiones.store(), momentos == null ? null : momentos.store()})
