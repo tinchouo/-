@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 6;
+    private static final int CONFIG_VERSION = 7;
 
     private Store core;
     private Avisos avisos;
@@ -45,7 +45,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private MomentosMenu momentosMenu;
     private Palo palo;
     private ar.tod4.video.Video video;
-    private ar.tod4.fiesta.Fiesta fiesta;
 
     @Override
     public void onEnable() {
@@ -63,7 +62,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         momentosMenu = new MomentosMenu(this, momentos);
         palo = new Palo(this);
         video = new ar.tod4.video.Video(this);
-        fiesta = new ar.tod4.fiesta.Fiesta(this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Papi(this).register();
@@ -77,7 +75,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         getLogger().info("TOD4 listo. Dia actual: " + dia());
     }
 
-    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "fiesta", "video");
+    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
     private void soloConPrefijo() {
@@ -116,7 +114,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 w.setGameRule(org.bukkit.GameRule.PLAYERS_SLEEPING_PERCENTAGE, 100);
         if (misionesMenu != null) misionesMenu.cerrarTodo();
         if (video != null) video.terminarTodos();
-        if (fiesta != null) fiesta.apagar();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
                 misiones == null ? null : misiones.store(), momentos == null ? null : momentos.store()})
             if (s != null) s.save();
@@ -162,7 +159,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "momentostruco": if (p != null) momentosMenu.lista(p); return true;
             case "palo": if (p != null) { p.getInventory().addItem(palo.item()); Style.ok(p, "Palo de Retorno entregado."); } return true;
             case "completar": completar(s, a); return true;
-            case "fiesta": fiesta.comando(s, a); return true;
             case "video": {
                 if (a.length < 2) { Style.info(s, "Uso: &e/tod4:video <jugador> <video>"); return true; }
                 Player t = Bukkit.getPlayerExact(a[0]);
@@ -217,7 +213,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&e/tod4:alma <give|remove> <jugador> &8- &7dar o quitar un alma");
             Style.raw(s, "&e/tod4:revivir <jugador> &8- &7revivir a alguien sin ritual");
             Style.raw(s, "&e/tod4:palo &8- &7Palo de Retorno");
-            Style.raw(s, "&e/tod4:fiesta &8- &7Level Fun (crear, ir, apagón...)");
             Style.raw(s, "&e/tod4:video <jugador> <video> &8- &7video a pantalla completa");
             Style.raw(s, "&8&m----------------------------------------");
             return true;
@@ -250,7 +245,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (a.length == 1) {
             switch (c) {
                 case "tod4": out.addAll(List.of("help", "dia", "recargar")); break;
-                case "fiesta": out.addAll(List.of("crear", "conectar", "ir", "apagon", "luz", "casilleros", "estado")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

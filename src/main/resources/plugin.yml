@@ -32,7 +32,5 @@ commands:
     description: Revivir a un jugador
   palo:
     description: Palo de Retorno
-  fiesta:
-    description: Level Fun (la fiesta de los partygoers)
   video:
     description: Reproduce un video a pantalla completa a un jugador
