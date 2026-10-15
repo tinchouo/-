@@ -132,9 +132,14 @@ public final class Fiesta implements Listener {
         if (dentro.isEmpty()) {
             if (estado != Estado.LUZ) { estado = Estado.LUZ; luces(m, true); borrarPartygoers(); }
             hasta = 0;
+            if (segFin == Long.MAX_VALUE) segFin = 0;
             return;
         }
-        if (hasta == 0) hasta = t + seg(pl.getConfig().getInt("fiesta.luz_min_seg", 180), pl.getConfig().getInt("fiesta.luz_max_seg", 300));
+        if (hasta == 0) {
+            // entra el primero: luz prendida (por si el server se apago en medio de un apagon)
+            luces(m, true);
+            hasta = t + seg(pl.getConfig().getInt("fiesta.luz_min_seg", 180), pl.getConfig().getInt("fiesta.luz_max_seg", 300));
+        }
         switch (estado) {
             case LUZ:
                 if (t >= segFin) {
