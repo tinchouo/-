@@ -43,6 +43,7 @@ import org.bukkit.event.entity.EntityBreedEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
+import org.bukkit.event.entity.EntityTransformEvent;
 import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -88,14 +89,6 @@ final class Mecanicas implements Listener {
 
     private static boolean juega(Player p) {
         return p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE;
-    }
-
-    /** Dano fijo en corazones, ignora armadura. Si te mata, es un golpe normal (el totem te puede salvar). */
-    static void golpe(Player p, double corazones) {
-        double hp = corazones * 2.0, h = p.getHealth();
-        if (h <= hp) { p.damage(1000.0); return; }
-        p.damage(0.01);
-        if (!p.isDead()) p.setHealth(Math.max(0.5, h - hp));
     }
 
     // ================================================================= tareas
@@ -247,6 +240,12 @@ final class Mecanicas implements Listener {
         }
     }
 
+    /** Dia 1: los aldeanos zombi no se pueden curar (sin mensajes, como si el juego fuera asi). */
+    @EventHandler(ignoreCancelled = true)
+    public void curar(EntityTransformEvent e) {
+        if (on("d1.aldeanos") && e.getTransformReason() == EntityTransformEvent.TransformReason.CURED) e.setCancelled(true);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void evocador(EntityDeathEvent e) {
         if (on("d1.totems") && e.getEntityType() == EntityType.EVOKER)
@@ -262,7 +261,8 @@ final class Mecanicas implements Listener {
         if (on("d4.puertas") && juega(p)) {
             String n = t.name();
             if ((n.contains("BUTTON") || n.contains("DOOR")) && !n.contains("IRON")) {
-                p.setHealth(0);
+                // golpe mortal normal: si tiene un totem en la mano, lo salva
+                p.damage(1000.0);
                 return;
             }
         }

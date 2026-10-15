@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 2;
+    private static final int CONFIG_VERSION = 3;
 
     private Store core;
     private Avisos avisos;
@@ -68,7 +68,25 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         for (String c : getDescription().getCommands().keySet()) {
             if (getCommand(c) != null) getCommand(c).setTabCompleter(this);
         }
+        // los comandos de admin solo existen como /tod4:<comando>; /misiones queda normal para todos
+        Bukkit.getScheduler().runTask(this, this::soloConPrefijo);
         getLogger().info("TOD4 listo. Dia actual: " + dia());
+    }
+
+    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo");
+
+    /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
+    private void soloConPrefijo() {
+        java.util.Map<String, Command> known = Bukkit.getCommandMap().getKnownCommands();
+        List<String> sacar = new ArrayList<>(SOLO_ADMIN);
+        sacar.add("tod4:misiones");
+        sacar.add("tod4:quest");
+        sacar.add("tod4:quests");
+        for (String k : sacar) {
+            Command c = known.get(k);
+            if (c instanceof org.bukkit.command.PluginCommand pc && pc.getPlugin() == this) known.remove(k);
+        }
+        for (Player p : Bukkit.getOnlinePlayers()) p.updateCommands();
     }
 
     /** Si el config.yml es de una version vieja, se guarda como config_viejo.yml y se pone el nuevo. */
@@ -88,6 +106,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
 
     @Override
     public void onDisable() {
+        if (misionesMenu != null) misionesMenu.cerrarTodo();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
                 misiones == null ? null : misiones.store(), momentos == null ? null : momentos.store()})
             if (s != null) s.save();
@@ -137,31 +156,41 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
     }
 
-    /** /tod4:completar <jugador|todos> [dia|op] */
+    /** /tod4:completar <jugador|todos> <id> [evento] (como el /completar viejo: por ID) */
     private void completar(CommandSender s, String[] a) {
-        if (a.length < 1) { Style.info(s, "Uso: &e/tod4:completar <jugador|todos> [dia|op]"); return; }
-        String clase = a.length > 1 && a[1].equalsIgnoreCase("op") ? Misiones.OP : Misiones.DIA;
-        if (misiones.activa(clase) == null) { Style.err(s, "No hay misión " + (clase.equals(Misiones.DIA) ? "diaria" : "opcional") + " activa."); return; }
+        if (a.length < 2) { Style.info(s, "Uso: &e/tod4:completar <jugador|todos> <id> &7[evento]"); return; }
+        String id = a[1];
+        String clase = misiones.claseDe(id);
+        if (clase == null) { Style.err(s, "Esa ID de misión no existe."); return; }
+        if (!id.equals(misiones.activa(clase))) { Style.err(s, "La misión &f" + id + " &cno está activa."); return; }
+        boolean evento = a.length > 2 && a[2].equalsIgnoreCase("evento");
         List<Player> ps = new ArrayList<>();
         if (a[0].equalsIgnoreCase("todos")) ps.addAll(Bukkit.getOnlinePlayers());
         else {
             Player t = Bukkit.getPlayerExact(a[0]);
-            if (t == null) { Style.err(s, "Ese jugador no está conectado."); return; }
+            if (t == null) { Style.err(s, "Jugador no encontrado."); return; }
             ps.add(t);
         }
-        for (Player t : ps) misiones.completar(clase, t);
-        Style.ok(s, "Misión marcada como completada para &f" + (ps.size() == 1 ? ps.get(0).getName() : ps.size() + " jugadores") + "&a.");
+        for (Player t : ps) {
+            if (evento) {
+                if (!misiones.completarEvento(clase, t)) { Style.err(s, "Esa misión no tiene ningún objetivo de evento."); return; }
+            } else {
+                misiones.completarTodo(clase, t);
+            }
+        }
+        String quien = ps.size() == 1 ? ps.get(0).getName() : "todos";
+        Style.ok(s, (evento ? "Evento de la misión &f" : "Misión &f") + id + " &acompletado para &f" + quien + "&a.");
     }
 
     private boolean tod4(CommandSender s, String[] a) {
         if (a.length == 0 || a[0].equalsIgnoreCase("help") || a[0].equalsIgnoreCase("ayuda")) {
             Style.raw(s, "&8&m----------------------------------------");
-            Style.raw(s, "&6&lTOD4 &7- comandos &8(todos existen también como /tod4:...)");
+            Style.raw(s, "&6&lTOD4 &7- comandos de admin &8(escribí /tod4: para verlos todos)");
             Style.raw(s, "&e/tod4 dia [número] &8- &7ver o cambiar el día actual");
             Style.raw(s, "&e/tod4 recargar &8- &7recarga config.yml y mesa.yml");
-            Style.raw(s, "&e/tod4:panel &8- &7panel de misiones (crear, activar)");
-            Style.raw(s, "&e/tod4:misiones &8- &7misiones del jugador (todos)");
-            Style.raw(s, "&e/tod4:completar <jugador|todos> [dia|op] &8- &7marcar misión completada");
+            Style.raw(s, "&e/tod4:panel &8- &7panel de misiones (crear, editar, activar)");
+            Style.raw(s, "&e/tod4:completar <jugador|todos> <id> &8- &7completar una misión o su evento");
+            Style.raw(s, "&e/misiones &8- &7misiones del jugador (para todos)");
             Style.raw(s, "&e/tod4:momentostruco &8- &7Momentos Truco");
             Style.raw(s, "&e/tod4:cambios [día] &8- &7cambios de dificultad");
             Style.raw(s, "&e/tod4:avisos &8- &7mensajes, bienvenidas y ruleta");
@@ -211,7 +240,11 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             }
         } else if (a.length == 2) {
             if (c.equals("alma") || c.equals("altar")) for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
-            if (c.equals("completar")) out.addAll(List.of("dia", "op"));
+            if (c.equals("completar")) {
+                for (String cl : new String[]{Misiones.DIA, Misiones.OP}) if (misiones.activa(cl) != null) out.add(misiones.activa(cl));
+            }
+        } else if (a.length == 3 && c.equals("completar")) {
+            out.add("evento");
         }
         String pre = a.length > 0 ? a[a.length - 1].toLowerCase() : "";
         out.removeIf(x -> !x.toLowerCase().startsWith(pre));

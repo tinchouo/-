@@ -59,7 +59,7 @@ public final class Cambios {
         // ---- Dia 4
         add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
         add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogás 5 veces más rápido."));
-        add(new Cambio("d4.puertas", 4, "Botones y puertas", false, "&7Usarlos te mata (ignora el tótem)."));
+        add(new Cambio("d4.puertas", 4, "Botones y puertas", false, "&7Usarlos te mata (el tótem te salva)."));
         add(new Cambio("d4.crianza", 4, "Sin crianza", false, "&7Los animales no se reproducen."));
         add(new Cambio("d4.perla", 4, "Perlas con más daño", false, "&7Cada perla te saca 4 corazones."));
 

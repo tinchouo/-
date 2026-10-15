@@ -13,21 +13,19 @@ commands:
     description: Ayuda y comandos generales de TOD4
   misiones:
     description: Tus misiones (diaria y opcional)
+    aliases: [quest, quests]
   panel:
     description: Panel de misiones (admin)
   completar:
     description: Marcar una mision como completada
   momentostruco:
     description: Momentos Truco
-    aliases: [momentos]
   cambios:
     description: Menu de cambios de dificultad
   avisos:
     description: Mensajes, bienvenidas y ruleta
-    aliases: [mensajes, anuncios]
   altar:
     description: Configuracion del altar de revivir
-    aliases: [configrevivir]
   alma:
     description: Dar o quitar un alma
   revivir:

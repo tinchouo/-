@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 2
+config_version: 3
 
 sidebar:
   activa: true
@@ -21,7 +21,9 @@ sidebar:
     - " &8| &7Día: &f{dia}"
     - " &8| &7Jugadores: &f{jugadores}"
     - " &8| &7Dimensión: {mundo}"
-    - "&8&m                              "
+  # la linea que separa (va abajo de lo de arriba y al final). Su ancho es el ancho de toda la sidebar:
+  # los textos mas largos saltan de renglon solos.
+  separador: "&8&m                                  "
   # abajo de la linea van las misiones / el Momento Truco / una frase de calma
   cambio_frase_segundos: 60
   frases_calma:
@@ -52,37 +54,39 @@ avisos:
   sonido_custom_3: "tod4:custom_3"
   sonido_custom_4: "tod4:custom_4"
   sonido_custom_5: "tod4:custom_5"
-  # sonido cuando la ruleta cae en cada color (sonidos de Minecraft)
-  sonido_ruleta:
-    rojo: "entity.wither.spawn"
-    naranja: "block.anvil.land"
-    amarillo: "entity.player.levelup"
-    verde: "ui.toast.challenge_complete"
-    azul: "block.end_portal.spawn"
-    celeste: "block.note_block.bell"
-    violeta: "block.beacon.deactivate"
-    blanco: "block.note_block.chime"
-    gris: "block.note_block.chime"
-    gris_oscuro: "block.note_block.chime"
-  # cuando cae en ROJO (Momento Truco), antes del mensaje:
+  # cuando la ruleta cae siempre suena el de experiencia. Si cae en ROJO (Momento Truco), 2 segundos despues:
   momento_truco_comandos:
     - "animation false 1 148 295"
     - "execute as @a at @s run playsound tod4:momento_truco master @s ~ ~ ~ 1 1"
   momento_truco_espera_ticks: 140
 
+tab:
+  activo: true    # [mision] [alma] nombre (reemplaza al tabulador.sk)
+  vida: true      # corazones de vida en el tab
+
+momentos:
+  delay_castigo_seg: 15   # el castigo llega X segundos despues de que termina (para leer el chat)
+
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"
   sonido_activar_op: "block.note_block.chime"
-  sonido_meta: "tod4:meta_mision"
+  sonido_meta: "tod4:meta_mision"     # cada objetivo completado (menos el ultimo)
+  sonido_gg: "tod4:gg_mision"         # cuando completas todos
   sonido_completar_dia: "tod4:completar_diaria"
   sonido_completar_op: "tod4:completar_opcional"
+  # como se ve el estado en la sidebar (en curso lleva los puntitos animados al final)
+  estados:
+    en_curso: "&7En curso"
+    completada: "&6Completada ✔"
+    reclamada: "&eReclamada ✔✔"
+    bloqueada: "&cBloqueada 🔒"
 
 palo:
   mundo_principal: "world"
 
 revivir:
-  nombre_totem: "Tótem Kui"
-  mensaje_totem: "&6☩ &6&l{jugador} &7ha usado un &6&l{totem}&7."
+  nombre_totem: "Tótem Cuy"
+  mensaje_totem: "&6✟ &6&l{jugador} &7ha usado un &6&l{totem}&7."
   sonido_ritual: "tod4:revivir"
   sonido_revivido: "tod4:revivido"
   sonido_muerte: "minecraft:dedsafio"

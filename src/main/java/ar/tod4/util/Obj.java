@@ -68,6 +68,54 @@ public final class Obj {
         return k == null ? null : Bukkit.getTag(Tag.REGISTRY_BLOCKS, k, Material.class);
     }
 
+    /** Texto del objetivo a partir de un item, sin convertir huevos en mobs (para Conseguir / Fabricar / Picar). */
+    public static String deItemPuro(ItemStack it) {
+        String ox = Items.oraxenId(it);
+        if (ox != null) return "ox:" + ox;
+        return "mat:" + it.getType().name();
+    }
+
+    /**
+     * Variante de un mob para el modo "ultra especifico" (panda marron, gato negro, aldeano herrero...).
+     * null si ese mob no tiene variantes.
+     */
+    public static String variante(Entity e) {
+        try {
+            Object v = null;
+            if (e instanceof org.bukkit.entity.Panda x) v = x.getMainGene();
+            else if (e instanceof org.bukkit.entity.Cat x) v = x.getCatType();
+            else if (e instanceof org.bukkit.entity.Fox x) v = x.getFoxType();
+            else if (e instanceof org.bukkit.entity.Horse x) v = x.getColor();
+            else if (e instanceof org.bukkit.entity.Rabbit x) v = x.getRabbitType();
+            else if (e instanceof org.bukkit.entity.Llama x) v = x.getColor();
+            else if (e instanceof org.bukkit.entity.Parrot x) v = x.getVariant();
+            else if (e instanceof org.bukkit.entity.MushroomCow x) v = x.getVariant();
+            else if (e instanceof org.bukkit.entity.Axolotl x) v = x.getVariant();
+            else if (e instanceof org.bukkit.entity.Frog x) v = x.getVariant();
+            else if (e instanceof org.bukkit.entity.Wolf x) v = x.getVariant();
+            else if (e instanceof org.bukkit.entity.Sheep x) v = x.getColor();
+            else if (e instanceof org.bukkit.entity.Villager x) v = x.getProfession();
+            else if (e instanceof org.bukkit.entity.ZombieVillager x) v = x.getVillagerProfession();
+            else if (e instanceof org.bukkit.entity.TropicalFish x) v = x.getPattern();
+            if (v == null) return null;
+            if (v instanceof org.bukkit.Keyed k) return k.getKey().getKey().toUpperCase();
+            if (v instanceof Enum<?> en) return en.name();
+            return String.valueOf(v).toUpperCase();
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    /** Texto del objetivo para un mob: ent:TIPO, ent:TIPO:VARIANTE (ultra especifico) o mm:Nombre. */
+    public static String deMob(Entity e, boolean especifico) {
+        String mm = Ext.mythic(e);
+        if (mm != null) return "mm:" + mm;
+        String base = "ent:" + e.getType().name();
+        if (!especifico) return base;
+        String v = variante(e);
+        return v == null ? base : base + ":" + v;
+    }
+
     /** Texto del objetivo a partir de un item (Oraxen primero). */
     public static String deItem(ItemStack it) {
         String ox = Items.oraxenId(it);
@@ -105,7 +153,12 @@ public final class Obj {
 
     public static boolean mob(String obj, Entity e, String mythic) {
         if (obj.startsWith("mm:")) return mythic != null && mythic.equalsIgnoreCase(obj.substring(3));
-        if (obj.startsWith("ent:")) return mythic == null && e.getType().name().equals(obj.substring(4));
+        if (obj.startsWith("ent:")) {
+            if (mythic != null) return false;
+            String[] pt = obj.substring(4).split(":", 2);
+            if (!e.getType().name().equals(pt[0])) return false;
+            return pt.length < 2 || pt[1].equalsIgnoreCase(String.valueOf(variante(e)));
+        }
         return false;
     }
 
@@ -160,7 +213,11 @@ public final class Obj {
             }
             if (obj.equals("tag:minecraft:beds")) return Component.text("Cualquier cama");
             if (obj.startsWith("tag:")) return Component.text(GRUPOS.getOrDefault(obj.substring(4), bonito(obj.substring(4))));
-            if (obj.startsWith("ent:")) return Component.translatable(EntityType.valueOf(obj.substring(4)).translationKey());
+            if (obj.startsWith("ent:")) {
+                String[] pt = obj.substring(4).split(":", 2);
+                Component c = Component.translatable(EntityType.valueOf(pt[0]).translationKey());
+                return pt.length < 2 ? c : c.append(Component.text(" (" + bonito(pt[1].toLowerCase()) + ")"));
+            }
             if (obj.startsWith("mm:")) return Component.text(bonito(obj.substring(3)));
             if (obj.startsWith("adv:")) {
                 NamespacedKey k = NamespacedKey.fromString(obj.substring(4));
@@ -186,7 +243,7 @@ public final class Obj {
             if (obj.startsWith("ox:")) { ItemStack it = Ext.oraxenItem(obj.substring(3)); return it != null ? it.getType() : Material.NOTE_BLOCK; }
             if (obj.equals("tag:minecraft:beds")) return Material.RED_BED;
             if (obj.startsWith("tag:")) return grupoIcono(obj.substring(4));
-            if (obj.startsWith("ent:")) { Material egg = Material.matchMaterial(obj.substring(4) + "_SPAWN_EGG"); return egg != null ? egg : Material.ZOMBIE_HEAD; }
+            if (obj.startsWith("ent:")) { Material egg = Material.matchMaterial(obj.substring(4).split(":")[0] + "_SPAWN_EGG"); return egg != null ? egg : Material.ZOMBIE_HEAD; }
             if (obj.startsWith("mm:")) return Material.WITHER_SKELETON_SKULL;
             if (obj.startsWith("adv:")) return Material.KNOWLEDGE_BOOK;
             if (obj.startsWith("dim:")) return Material.ENDER_EYE;

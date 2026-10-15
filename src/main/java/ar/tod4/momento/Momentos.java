@@ -166,8 +166,13 @@ public final class Momentos implements Listener {
     private void salvar(Player p) {
         if (activo == null || !participantes.contains(p.getUniqueId()) || salvados.contains(p.getUniqueId())) return;
         salvados.add(p.getUniqueId());
-        Style.ok(p, "¡Lo conseguiste! &f✔ ESTÁS A SALVO");
+        Style.raw(p, "&6&l⚡ MOMENTO TRUCO &8» &f" + (esCama(activo) ? "¡Has encontrado una cama!" : "¡Lo conseguiste!") + " &a✔ ESTÁS A SALVO");
         p.playSound(p.getLocation(), "entity.player.levelup", SoundCategory.MASTER, 1f, 1.4f);
+    }
+
+    /** El momento clasico: tocar cualquier cama. */
+    private boolean esCama(String id) {
+        return id != null && tipo(id) == Tipo.TOCAR && m(id).getStringList("objetivo.objs").equals(List.of("tag:minecraft:beds"));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -225,13 +230,12 @@ public final class Momentos implements Listener {
         total = restante = Math.max(5, m(id).getInt("duracion", 240));
         barra = BossBar.bossBar(Txt.c(titulo()), 1f, BossBar.Color.RED, BossBar.Overlay.NOTCHED_20);
         for (Player p : Bukkit.getOnlinePlayers()) p.showBossBar(barra);
-        Style.broadcast("&c⚡ &c&lMOMENTO TRUCO: &f" + objetivoCorto(id));
         tarea = Bukkit.getScheduler().runTaskTimer(pl, this::tick, 20L, 20L);
     }
 
     private String titulo() {
         int mm = restante / 60, ss = restante % 60;
-        return "&c&l⚡ " + nombre(activo) + " &8| &f" + objetivoCorto(activo) + " &8| &e" + String.format("%d:%02d", mm, ss);
+        return "&c&l☠ MOMENTO TRUCO ☠ &8| &f" + objetivoCorto(activo) + " &8| &c" + String.format("%d:%02d", mm, ss);
     }
 
     private void tick() {
@@ -263,19 +267,26 @@ public final class Momentos implements Listener {
                 Player p = Bukkit.getPlayer(u);
                 if (p != null && cumpleAhora(p, id)) salvados.add(u);
             }
-            List<Player> fallaron = new ArrayList<>();
+            List<UUID> fallaron = new ArrayList<>();
+            String que = esCama(id) ? "no consiguió tocar una cama." : "no lo consiguió.";
             for (UUID u : participantes) {
                 Player p = Bukkit.getPlayer(u);
                 if (p == null || p.isDead()) continue;
                 if (salvados.contains(u)) {
-                    Style.raw(p, "&a✔ &fSobreviviste al Momento Truco.");
                     for (ItemStack it : recompensas(id)) p.getInventory().addItem(it.clone()).values().forEach(r -> p.getWorld().dropItemNaturally(p.getLocation(), r));
                 } else {
-                    fallaron.add(p);
-                    Style.broadcast("&c✖ &f" + p.getName() + " &7no lo consiguió.");
+                    fallaron.add(u);
+                    Style.broadcast("&c✖ &f" + p.getName() + " &7" + que);
                 }
             }
-            for (Player p : fallaron) consecuencias(p, id);
+            // el castigo llega unos segundos despues, para que se llegue a leer el chat
+            long delay = Math.max(0, pl.getConfig().getLong("momentos.delay_castigo_seg", 15)) * 20L;
+            Bukkit.getScheduler().runTaskLater(pl, () -> {
+                for (UUID u : fallaron) {
+                    Player p = Bukkit.getPlayer(u);
+                    if (p != null && !p.isDead()) consecuencias(p, id);
+                }
+            }, delay);
         }
         activo = null;
         BossBar b = barra;

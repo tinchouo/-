@@ -106,7 +106,7 @@ public final class Revivir implements Listener {
     }
 
     public void cmdAlma(org.bukkit.command.CommandSender s, String[] a) {
-        if (a.length < 2) { Style.info(s, "Uso: &e/alma <give|remove> <jugador>"); return; }
+        if (a.length < 2) { Style.info(s, "Uso: &e/tod4:alma <give|remove> <jugador>"); return; }
         OfflinePlayer t = Bukkit.getOfflinePlayer(a[1]);
         String n = t.getName() != null ? t.getName() : a[1];
         if (a[0].equalsIgnoreCase("give") || a[0].equalsIgnoreCase("dar")) {
@@ -123,7 +123,7 @@ public final class Revivir implements Listener {
                 Style.raw(t.getPlayer(), "&c✧ &c&lTE HAS QUEDADO SIN ALMA.");
                 t.getPlayer().playSound(t.getPlayer().getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 0.5f);
             }
-        } else Style.info(s, "Uso: &e/alma <give|remove> <jugador>");
+        } else Style.info(s, "Uso: &e/tod4:alma <give|remove> <jugador>");
     }
 
     // ================================================================= items de revivir
@@ -365,7 +365,7 @@ public final class Revivir implements Listener {
     }
 
     public void cmdRevivir(org.bukkit.command.CommandSender s, String[] a) {
-        if (a.length < 1) { Style.info(s, "Uso: &e/revivir <jugador>"); return; }
+        if (a.length < 1) { Style.info(s, "Uso: &e/tod4:revivir <jugador>"); return; }
         String n = a[0];
         for (String m : st.y().getStringList("muertos")) if (m.equalsIgnoreCase(n)) n = m;
         if (!st.y().getStringList("muertos").contains(n)) { Style.err(s, "El jugador &e" + n + " &cno está muerto."); return; }
@@ -508,9 +508,9 @@ public final class Revivir implements Listener {
         ItemStack t = null;
         for (ItemStack it : new ItemStack[]{p.getInventory().getItemInMainHand(), p.getInventory().getItemInOffHand()})
             if (it != null && it.getType() == Material.TOTEM_OF_UNDYING) { t = it; break; }
-        String nombre = pl.getConfig().getString("revivir.nombre_totem", "Tótem Kui");
+        String nombre = pl.getConfig().getString("revivir.nombre_totem", "Tótem Cuy");
         if (t != null && t.hasItemMeta() && t.getItemMeta().hasDisplayName()) nombre = Txt.plain(t.getItemMeta().displayName());
-        Style.broadcast(pl.getConfig().getString("revivir.mensaje_totem", "&6☩ &6&l{jugador} &7ha usado un &6&l{totem}&7.")
+        Style.broadcast(pl.getConfig().getString("revivir.mensaje_totem", "&6✟ &6&l{jugador} &7ha usado un &6&l{totem}&7.")
                 .replace("{jugador}", p.getName()).replace("{totem}", nombre));
     }
 

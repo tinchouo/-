@@ -215,13 +215,17 @@ public final class Avisos implements Listener {
                     if (!p.isOnline()) continue;
                     p.showTitle(Title.title(Txt.c(fin), Txt.c(""), Title.Times.times(java.time.Duration.ZERO,
                             java.time.Duration.ofMillis(1500), java.time.Duration.ofMillis(1500))));
-                    p.playSound(p.getLocation(), pl.getConfig().getString("avisos.sonido_ruleta." + destino.name().toLowerCase(), destino.sonidoCae),
-                            SoundCategory.MASTER, 1f, 1f);
+                    // siempre el sonido de experiencia cuando la ruleta elige el color
+                    p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, SoundCategory.MASTER, 1f, 1f);
                 }
+                // como el mensajes.sk viejo: 2 segundos y despues el mensaje.
+                // Si es ROJO (Momento Truco): a los 2 segundos la animacion + su sonido, y 7 segundos mas.
                 long extra = 40L;
                 if (destino == Paleta.ROJO) {
-                    for (String cmd : pl.getConfig().getStringList("avisos.momento_truco_comandos"))
-                        Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                    Bukkit.getScheduler().runTaskLater(pl, () -> {
+                        for (String cmd : pl.getConfig().getStringList("avisos.momento_truco_comandos"))
+                            Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                    }, 40L);
                     extra += pl.getConfig().getLong("avisos.momento_truco_espera_ticks", 140);
                 }
                 Bukkit.getScheduler().runTaskLater(pl, despues, extra);
