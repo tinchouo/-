@@ -47,6 +47,30 @@ public final class Ext {
         }
     }
 
+    /**
+     * Le manda una senal a un mob de MythicMobs (para "~onSignal:NOMBRE" en su archivo). Devuelve false si no es de Mythic.
+     */
+    public static boolean mythicSignal(Entity e, String senal) {
+        try {
+            Class<?> mb = Class.forName("io.lumine.mythic.bukkit.MythicBukkit");
+            Object inst = mb.getMethod("inst").invoke(null);
+            Object mm = inst.getClass().getMethod("getMobManager").invoke(inst);
+            Object opt = mm.getClass().getMethod("getActiveMob", java.util.UUID.class).invoke(mm, e.getUniqueId());
+            if (!(opt instanceof java.util.Optional<?> o) || o.isEmpty()) return false;
+            Object am = o.get();
+            Object yo = Class.forName("io.lumine.mythic.bukkit.BukkitAdapter").getMethod("adapt", Entity.class).invoke(null, e);
+            for (Method m : am.getClass().getMethods()) {
+                if (m.getName().equals("signalMob") && m.getParameterCount() == 2 && m.getParameterTypes()[1] == String.class) {
+                    m.invoke(am, yo, senal);
+                    return true;
+                }
+            }
+            return false;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     private static Method OX_BLOCK;
     private static boolean oxTried;
 

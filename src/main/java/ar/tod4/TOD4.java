@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 7;
+    private static final int CONFIG_VERSION = 8;
 
     private Store core;
     private Avisos avisos;
@@ -62,6 +62,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         momentosMenu = new MomentosMenu(this, momentos);
         palo = new Palo(this);
         video = new ar.tod4.video.Video(this);
+        new ar.tod4.mobs.Mobs(this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Papi(this).register();

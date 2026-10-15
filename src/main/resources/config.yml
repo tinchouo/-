@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 7
+config_version: 8
 
 sidebar:
   activa: true
@@ -142,3 +142,9 @@ videos:
     ticks_por_cuadro: 2
     sonido: "lobotomia:video"
 
+
+# Mobs de MythicMobs + Better Model
+mobs:
+  mundo_backrooms: backrooms
+  howler_etiqueta: howler     # la etiqueta que le pone su archivo de MythicMobs (addtag)
+  howler_velocidad: 1.0       # multiplica su velocidad de movimiento mientras persigue
