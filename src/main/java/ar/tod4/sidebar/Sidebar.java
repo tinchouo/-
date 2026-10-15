@@ -207,9 +207,6 @@ public final class Sidebar implements Listener {
         return out;
     }
 
-    private static final net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer LEG =
-            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection();
-
     private static final Pattern HEX = Pattern.compile("&#[0-9a-fA-F]{6}");
     private static final Pattern COLOR = Pattern.compile("&[0-69a-eA-E]");
 
@@ -228,12 +225,9 @@ public final class Sidebar implements Listener {
         String mision = pl.misiones() == null ? "" : pl.misiones().simboloTab(p);
         String alma = pl.revivir().tieneAlma(p.getName()) ? "&f✦ " : "&f✧ ";
         String nombre = mision + alma + "&f" + p.getName();
-        // se compara con lo que REALMENTE tiene puesto el tab: si otro script lo pisa, el plugin lo vuelve a poner
-        net.kyori.adventure.text.Component c = Txt.c(nombre);
-        String quiero = LEG.serialize(c);
-        if (quiero.equals(tabCache.get(p.getUniqueId())) && quiero.equals(LEG.serialize(p.playerListName()))) return;
-        tabCache.put(p.getUniqueId(), quiero);
-        p.playerListName(c);
+        if (nombre.equals(tabCache.get(p.getUniqueId()))) return;
+        tabCache.put(p.getUniqueId(), nombre);
+        p.playerListName(Txt.c(nombre));
     }
 
     /** Corazones del tab (como /scoreboard objectives add vida health + setdisplay list). */
