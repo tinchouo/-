@@ -1,0 +1,69 @@
+package ar.tod4.aether;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.bukkit.Color;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.inventory.ItemFlag;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.plugin.Plugin;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+
+/**
+ * Pocion del Aether: Levitacion muy fuerte. Se escribe como las pociones normales (el efecto en azul, como uno bueno).
+ * Lleva la marca tod4:aether_pocion, asi se puede usar en recetas (plugins de crafteo) y el plugin la reconoce.
+ */
+final class Pocion {
+
+    private static NamespacedKey KEY;
+
+    private Pocion() { }
+
+    static void init(Plugin pl) { KEY = new NamespacedKey(pl, "aether_pocion"); }
+
+    static ItemStack crear(int nivel, int segundos) {
+        ItemStack it = new ItemStack(Material.POTION);
+        PotionMeta m = (PotionMeta) it.getItemMeta();
+        m.setColor(Color.fromRGB(0xA6E4FF));
+        m.addCustomEffect(new PotionEffect(PotionEffectType.LEVITATION, segundos * 20, nivel - 1, false, true, true), true);
+        m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
+        m.itemName(Component.text("Poción del Aether"));
+        List<Component> lore = new ArrayList<>();
+        lore.add(linea("Levitación " + romano(nivel) + " (" + tiempo(segundos) + ")", NamedTextColor.BLUE));
+        lore.add(Component.empty());
+        lore.add(linea("Esta poción te lleva al reino del Aether.", NamedTextColor.GRAY));
+        lore.add(linea("No se recomienda tomarla dentro del Aether.", NamedTextColor.DARK_GRAY));
+        m.lore(lore);
+        m.getPersistentDataContainer().set(KEY, PersistentDataType.BYTE, (byte) 1);
+        it.setItemMeta(m);
+        return it;
+    }
+
+    static boolean es(ItemStack it) {
+        if (it == null || it.getType() != Material.POTION || !it.hasItemMeta()) return false;
+        return it.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE);
+    }
+
+    private static Component linea(String s, NamedTextColor c) {
+        return Component.text(s, c).decoration(TextDecoration.ITALIC, false);
+    }
+
+    private static String tiempo(int s) { return (s / 60) + ":" + String.format("%02d", s % 60); }
+
+    static String romano(int n) {
+        int[] v = {100, 90, 50, 40, 10, 9, 5, 4, 1};
+        String[] r = {"C", "XC", "L", "XL", "X", "IX", "V", "IV", "I"};
+        StringBuilder b = new StringBuilder();
+        for (int i = 0; i < v.length; i++) while (n >= v[i]) { b.append(r[i]); n -= v[i]; }
+        return b.toString();
+    }
+}

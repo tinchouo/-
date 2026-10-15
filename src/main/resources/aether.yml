@@ -1,0 +1,93 @@
+# =====================================================================
+#  AETHER (TOD4)   ->   despues de cambiar algo: /tod4 recargar
+#  Lo del mapa vale para lo que se genere desde ahi (lo ya pegado no cambia).
+#  Las piezas (.nbt) vienen en el datapack aether_v7; la dimension y los biomas en aether_dimension.
+# =====================================================================
+
+# Vacio = se busca solo (la dimension aether:aether). Si no, el nombre del mundo.
+mundo: ""
+# Mundo desde el que se sube (y al que vuelves al caerte)
+mundo_principal: world
+
+# Subir hasta esta altura en el Overworld te lleva al spawn del Aether (y se te saca la levitacion)
+entrar_y: 500
+# Caer por debajo de esta altura en el Aether te devuelve al cielo del Overworld, sobre el spawn
+volver_y: 120
+volver_cielo_y: 300
+# Segundos sin dano de caida despues de entrar o volver
+sin_dano_caida_seg: 30
+
+pocion:
+  # Levitacion L (50) por 30 segundos: unos 50 bloques por segundo
+  nivel: 50
+  segundos: 30
+
+musica:
+  sonido: aether:aether.music
+  intro: aether:aether.music_intro
+  # tu cancion dura 84 s: se vuelve a lanzar un poquito antes para que no quede silencio
+  repetir_cada_seg: 83.92
+
+vida:
+  # animales en las islas cuando se generan (aldea, hongo, molino, islas grandes y medianas)
+  animales: true
+  # rafagas de nubecitas que pasan cerca de cada jugador
+  viento: true
+
+mapa:
+  # altura de las islas (las nubes de Minecraft estan en 192, quedan justo abajo)
+  altura_base: 210
+  desvio_altura_max: 10
+  # el mapa crece cuando un jugador esta a menos de esta distancia de un camino abierto
+  radio_expansion: 380
+  cola_max: 10
+  expansiones_por_segundo: 2
+
+# Caminos principales (verdes): 4, salen del spawn, infinitos
+caminos:
+  chance_doblar: 20
+  recto_min: 3
+  costado_max: 3
+  # cuanto se puede correr hacia un costado de su linea
+  deriva_max: 110
+  chance_isla_grande: 40
+  chance_casas: 20
+  chance_ruina: 1
+  chance_puente_roto: 5
+  medianas_seguidas_max: 3
+
+# Caminos azules: cada principal abre uno cada "separacion" bloques, siempre hacia su izquierda (su cuadrante)
+caminos_azules:
+  separacion: 1500
+  variacion: 100
+  # las ramas de un camino azul empiezan a esta distancia de donde sale (antes se chocarian con las del principal)
+  ramas_desde: 700
+
+# Ramas (marrones): maximo 3 islas. Izquierda (lado de los azules) mas cortas.
+ramas:
+  chance: 45
+  # distancia minima entre dos ramas del mismo camino
+  separacion: 300
+  vivas_max: 3
+  chance_isla_grande: 25
+  chance_doblar: 10
+  # rama sin estructura: la ultima isla tiene cobre (este %) o una ruinita con cofre
+  cobre_al_final: 80
+
+# village, coliseum, windmill, mushroom_island (al final de las ramas)
+estructuras:
+  chance: 40
+  distancia_min_spawn: 150
+  # contador de mala suerte: cada isla sin estructura suma; a las 7 la rama con estructura es segura
+  mala_suerte_max: 7
+  mala_suerte_paso: 12
+  # dos estructuras nunca quedan mas cerca que esto
+  separacion_min: 450
+  peso_village: 36
+  peso_coliseum: 22
+  peso_windmill: 20
+
+# islitas sueltas al costado de los puentes
+decoracion:
+  chance_cerca: 55
+  chance_lejos: 25
