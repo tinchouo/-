@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 3;
+    private static final int CONFIG_VERSION = 4;
 
     private Store core;
     private Avisos avisos;
@@ -132,7 +132,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             if (s instanceof Player p) misionesMenu.jugador(p);
             return true;
         }
-        if (!s.hasPermission("tod4.admin")) { Style.err(s, "No tenés permiso."); return true; }
+        if (!s.hasPermission("tod4.admin")) { Style.err(s, "No tienes permiso."); return true; }
         Player p = s instanceof Player pp ? pp : null;
         switch (c) {
             case "tod4": return tod4(s, a);
@@ -185,7 +185,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private boolean tod4(CommandSender s, String[] a) {
         if (a.length == 0 || a[0].equalsIgnoreCase("help") || a[0].equalsIgnoreCase("ayuda")) {
             Style.raw(s, "&8&m----------------------------------------");
-            Style.raw(s, "&6&lTOD4 &7- comandos de admin &8(escribí /tod4: para verlos todos)");
+            Style.raw(s, "&6&lTOD4 &7- comandos de admin &8(escribe /tod4: para verlos todos)");
             Style.raw(s, "&e/tod4 dia [número] &8- &7ver o cambiar el día actual");
             Style.raw(s, "&e/tod4 recargar &8- &7recarga config.yml y mesa.yml");
             Style.raw(s, "&e/tod4:panel &8- &7panel de misiones (crear, editar, activar)");
@@ -209,7 +209,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                     if (d < 1 || d > 99) throw new NumberFormatException();
                     core.set("dia", d);
                     Style.ok(s, "Día actual: &f" + d);
-                } catch (NumberFormatException e) { Style.err(s, "Usá un número: &e/tod4 dia 3"); }
+                } catch (NumberFormatException e) { Style.err(s, "Usa un número: &e/tod4 dia 3"); }
                 return true;
             case "recargar":
                 reloadConfig();
@@ -217,7 +217,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 Style.ok(s, "Config recargada.");
                 return true;
             default:
-                Style.err(s, "No existe ese comando. Usá &e/tod4 help");
+                Style.err(s, "No existe ese comando. Usa &e/tod4 help");
                 return true;
         }
     }

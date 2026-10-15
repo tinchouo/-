@@ -40,11 +40,28 @@ public final class Avisos implements Listener {
     private boolean ruletaGlobal;
     private final Map<UUID, Boolean> ruletaLocal = new ConcurrentHashMap<>();
 
-    public static final Material[] ICONOS = {
-            Material.BOOK, Material.WRITABLE_BOOK, Material.ENCHANTED_BOOK, Material.PAPER, Material.MAP,
-            Material.NAME_TAG, Material.BELL, Material.CLOCK, Material.COMPASS, Material.RECOVERY_COMPASS,
-            Material.NETHER_STAR, Material.TOTEM_OF_UNDYING, Material.DIAMOND, Material.EMERALD, Material.GOLD_INGOT,
-            Material.REDSTONE, Material.ENDER_EYE, Material.FIREWORK_ROCKET, Material.SKELETON_SKULL, Material.BEACON};
+    /** El icono de cada mensaje es su dia: una terracota de color por dia (1 a 16). Sin dia = General. */
+    private static final Material[] DIAS = {
+            Material.RED_TERRACOTTA, Material.ORANGE_TERRACOTTA, Material.YELLOW_TERRACOTTA, Material.LIME_TERRACOTTA,
+            Material.GREEN_TERRACOTTA, Material.CYAN_TERRACOTTA, Material.LIGHT_BLUE_TERRACOTTA, Material.BLUE_TERRACOTTA,
+            Material.PURPLE_TERRACOTTA, Material.MAGENTA_TERRACOTTA, Material.PINK_TERRACOTTA, Material.BROWN_TERRACOTTA,
+            Material.WHITE_TERRACOTTA, Material.LIGHT_GRAY_TERRACOTTA, Material.GRAY_TERRACOTTA, Material.BLACK_TERRACOTTA};
+
+    public static Material iconoDia(int dia) {
+        return dia >= 1 && dia <= DIAS.length ? DIAS[dia - 1] : Material.TERRACOTTA;
+    }
+
+    private static String textoDia(int dia) { return dia > 0 ? "Día " + dia : "General"; }
+
+    /** Ordena por dia (1, 2, 3...) y los generales al final. */
+    private void ordenar(List<String> l) {
+        l.sort((a, b) -> {
+            int da = msg(a).getInt("dia", 0), db = msg(b).getInt("dia", 0);
+            if (da <= 0) da = 999;
+            if (db <= 0) db = 999;
+            return da != db ? Integer.compare(da, db) : a.compareToIgnoreCase(b);
+        });
+    }
 
     private static final Material[] DISCOS = {null, Material.MUSIC_DISC_PIGSTEP, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_13,
             Material.MUSIC_DISC_CHIRP, Material.MUSIC_DISC_FAR, Material.MUSIC_DISC_OTHERSIDE, Material.MUSIC_DISC_CAT,
@@ -183,14 +200,23 @@ public final class Avisos implements Listener {
 
     /** Ruleta para la mision diaria u otros sistemas (sin mensaje guardado). */
     public void ruletaGlobal(Paleta pal, Runnable despues) {
-        ruleta(Bukkit.getOnlinePlayers(), pal, despues);
+        ruleta(Bukkit.getOnlinePlayers(), pal, null, despues);
+    }
+
+    /** Igual, con algo que pasa justo cuando sale la animacion del rojo (la vineta del Momento Truco). */
+    public void ruletaGlobal(Paleta pal, Runnable alAnimar, Runnable despues) {
+        ruleta(Bukkit.getOnlinePlayers(), pal, alAnimar, despues);
+    }
+
+    public void ruleta(Collection<? extends Player> quienes, Paleta destino, Runnable despues) {
+        ruleta(quienes, destino, null, despues);
     }
 
     /**
      * La ruleta: gira con los colores visibles y frena en el de la paleta. Sin subtitulo.
      * Blanco y grises nunca aparecen mientras gira: solo entran en los ultimos cuadros, cuando esta por caer ahi.
      */
-    public void ruleta(Collection<? extends Player> quienes, Paleta destino, Runnable despues) {
+    public void ruleta(Collection<? extends Player> quienes, Paleta destino, Runnable alAnimar, Runnable despues) {
         List<Player> ps = new ArrayList<>(quienes);
         int[] esperas = {1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 10, 13, 17, 22, 28};
         List<Paleta> vis = new ArrayList<>();
@@ -225,6 +251,7 @@ public final class Avisos implements Listener {
                     Bukkit.getScheduler().runTaskLater(pl, () -> {
                         for (String cmd : pl.getConfig().getStringList("avisos.momento_truco_comandos"))
                             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd);
+                        if (alAnimar != null) alAnimar.run();
                     }, 40L);
                     extra += pl.getConfig().getLong("avisos.momento_truco_espera_ticks", 140);
                 }
@@ -279,10 +306,10 @@ public final class Avisos implements Listener {
         Style.click(p);
         String act = st.y().getString("bienvenida_activa");
         Menu m = new Menu(3, "&8Panel de Mensajes TOD4");
-        m.set(11, Items.of(Material.WRITABLE_BOOK, "&a&l1. Mensajes de Inicio (Bienvenida)", "", "&7Creá, guardá y activá presets de",
+        m.set(11, Items.of(Material.WRITABLE_BOOK, "&a&l1. Mensajes de Inicio (Bienvenida)", "", "&7Crea, guarda y activa presets de",
                 "&7bienvenida con paletas de tonos.", "", "&7Estado actual: " + (act != null ? "&aActivo (&f" + act + "&a)" : "&cDesactivado"),
                 "", "&e▶ Click para administrar"), e -> listaBienvenidas(p));
-        m.set(15, Items.of(Material.ENDER_EYE, "&6&l2. Mandar un Mensaje", "", "&7Creá, guardá y enviá comunicados",
+        m.set(15, Items.of(Material.ENDER_EYE, "&6&l2. Mandar un Mensaje", "", "&7Crea, guarda y envía comunicados",
                 "&7a todo el servidor con paletas,", "&7símbolos, íconos y ruleta.", "", "&6▶ Click para administrar"), e -> listaMensajes(p));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
@@ -304,7 +331,7 @@ public final class Avisos implements Listener {
         m.set(45, Items.of(Material.ARROW, "&7◀ Volver al Menú Principal"), e -> abrirPanel(p));
         m.set(49, Items.of(Material.LIME_CONCRETE, "&a&l➕ Crear Nueva Bienvenida", "", "&a▶ Click para crear"), e -> {
             p.closeInventory();
-            Style.info(p, "Escribí en el chat la &eID o Nombre &7para el preset &8(o cancel)&7:");
+            Style.info(p, "Escribe en el chat la &eID o Nombre &7para el preset &8(o cancel)&7:");
             ChatInput.ask(p, txt -> {
                 ChatInput.cancel(p);
                 String id = Txt.strip(txt).replace(' ', '_').replace('.', '_');
@@ -339,7 +366,7 @@ public final class Avisos implements Listener {
                 on ? "&7Saldrá al entrar al server." : "&7Actualmente apagado.", "", on ? "&c▶ Click para DESACTIVAR" : "&a▶ Click para ACTIVAR"),
                 e -> { st.set("bienvenida_activa", on ? null : id); editorBienvenida(p, id); });
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver a Presets"), e -> listaBienvenidas(p));
-        m.set(31, Items.of(Material.SPYGLASS, "&6&l👁 Vista Previa (Solo para vos)"), e -> { p.closeInventory(); mostrarBienvenida(id, p); });
+        m.set(31, Items.of(Material.SPYGLASS, "&6&l👁 Vista Previa (Solo para ti)"), e -> { p.closeInventory(); mostrarBienvenida(id, p); });
         m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar esta Bienvenida"), e -> {
             if (id.equals(st.y().getString("bienvenida_activa"))) st.set("bienvenida_activa", null);
             st.set("bienvenidas." + id, null);
@@ -351,10 +378,9 @@ public final class Avisos implements Listener {
     private ItemStack iconoDe(String id) {
         ConfigurationSection m = msg(id);
         Paleta pal = Paleta.of(m.getInt("paleta", 6));
-        int ic = Math.floorMod(m.getInt("icono", 0), ICONOS.length);
         int dia = m.getInt("dia", 0);
         String ct = m.getString("titulo", "ninguno");
-        ItemStack it = Items.of(ICONOS[ic], "&6&lMensaje: &f" + id, "", "&7• Día: &f" + (dia > 0 ? dia : "-"), "&7• Paleta: " + pal.nombre + " &8(" + pal.uso + ")",
+        ItemStack it = Items.of(iconoDia(dia), "&6&lMensaje: &f" + id, "", "&7• " + textoDia(dia), "&7• Paleta: " + pal.nombre + " &8(" + pal.uso + ")",
                 "&7• Ruleta: " + (m.getBoolean("ruleta", true) ? "&aSí" : "&cNo"), "&7• Título en chat: &f" + ct, "", "&e▶ Click para configurar / enviar");
         if (dia > 0) it.setAmount(Math.min(64, dia));
         return it;
@@ -364,7 +390,7 @@ public final class Avisos implements Listener {
         Style.click(p);
         Menu m = new Menu(6, "&8Mis Mensajes Guardados");
         List<String> l = ids("mensajes");
-        l.sort((a, b) -> Integer.compare(msg(a).getInt("dia", 99), msg(b).getInt("dia", 99)));
+        ordenar(l);
         int slot = 0;
         for (String id : l) {
             if (slot >= 45) break;
@@ -374,14 +400,14 @@ public final class Avisos implements Listener {
         m.set(45, Items.of(Material.ARROW, "&7◀ Volver al Menú Principal"), e -> abrirPanel(p));
         m.set(49, Items.of(Material.LIME_CONCRETE, "&a&l➕ Crear Nuevo Mensaje", "", "&a▶ Click para crear"), e -> {
             p.closeInventory();
-            Style.info(p, "Escribí en el chat la &eID o Nombre &7para el nuevo mensaje &8(o cancel)&7:");
+            Style.info(p, "Escribe en el chat la &eID o Nombre &7para el nuevo mensaje &8(o cancel)&7:");
             ChatInput.ask(p, txt -> {
                 ChatInput.cancel(p);
                 String id = Txt.strip(txt).replace(' ', '_').replace('.', '_');
                 ConfigurationSection c = msg(id);
                 if (!c.contains("paleta")) {
                     c.set("paleta", 6); c.set("titulo", "ninguno"); c.set("sonido", 7); c.set("ruleta", true);
-                    c.set("dia", pl.dia()); c.set("icono", 0); st.touch();
+                    c.set("dia", pl.dia()); st.touch();
                 }
                 editorMensaje(p, id);
             });
@@ -414,22 +440,18 @@ public final class Avisos implements Listener {
         int snd = c.getInt("sonido", 7);
         m.set(16, Items.of(DISCOS[Math.max(1, Math.min(snd, 14))], "&d&l4. Disco de Sonido", "", "&7Sonido actual:", SONIDOS_NOMBRE[Math.max(1, Math.min(snd, 14))], "",
                 "&d▶ Click para rotar sonido"), e -> { int s = snd % 14 + 1; c.set("sonido", s); st.touch(); editorMensaje(p, id); sonar(p, s); });
-        int ic = Math.floorMod(c.getInt("icono", 0), ICONOS.length);
-        m.set(19, Items.of(ICONOS[ic], "&b&l5. Ícono del Mensaje", "", "&7Para reconocerlo rápido en la lista.", "",
-                "&b▶ Click: siguiente | Click derecho: anterior"), e -> {
-            c.set("icono", Math.floorMod(ic + (e.isRightClick() ? -1 : 1), ICONOS.length)); st.touch(); editorMensaje(p, id);
-        });
         int dia = c.getInt("dia", 0);
-        ItemStack diaIt = Items.of(Material.CLOCK, "&e&l6. Día del Mensaje: &f" + (dia > 0 ? dia : "-"), "", "&7Ordena la lista por día.", "",
+        ItemStack diaIt = Items.of(iconoDia(dia), "&e&l5. Día del Mensaje: &f" + textoDia(dia), "",
+                "&7El color dice el día y la lista", "&7se ordena por día. &fGeneral &7= sin día", "&7(avisos que sirven siempre).", "",
                 "&e▶ Click: +1 | Click derecho: -1");
         if (dia > 0) diaIt.setAmount(Math.min(64, dia));
-        m.set(21, diaIt, e -> { c.set("dia", Math.max(0, Math.min(16, dia + (e.isRightClick() ? -1 : 1)))); st.touch(); editorMensaje(p, id); });
+        m.set(20, diaIt, e -> { c.set("dia", Math.floorMod(dia + (e.isRightClick() ? -1 : 1), DIAS.length + 1)); st.touch(); editorMensaje(p, id); });
         boolean rul = c.getBoolean("ruleta", true);
-        m.set(23, Items.of(rul ? Material.LIME_DYE : Material.RED_DYE, rul ? "&a&l7. Ruleta: SÍ" : "&c&l7. Ruleta: NO", "",
+        m.set(24, Items.of(rul ? Material.LIME_DYE : Material.RED_DYE, rul ? "&a&l6. Ruleta: SÍ" : "&c&l6. Ruleta: NO", "",
                 rul ? "&7Antes del mensaje gira la ruleta." : "&7Sale directo en el chat.", "", "&e▶ Click para cambiar"),
                 e -> { c.set("ruleta", !rul); st.touch(); editorMensaje(p, id); });
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver a Mis Mensajes"), e -> listaMensajes(p));
-        m.set(30, Items.of(Material.SPYGLASS, "&e&l👁 Vista Previa (Solo para vos)", "", "&7Muestra cómo queda sin enviarlo."), e -> {
+        m.set(30, Items.of(Material.SPYGLASS, "&e&l👁 Vista Previa (Solo para ti)", "", "&7Muestra cómo queda sin enviarlo."), e -> {
             if (ruletaLocal.containsKey(p.getUniqueId())) { Style.err(p, "¡Ya hay una vista previa en curso!"); return; }
             p.closeInventory();
             if (!c.getBoolean("ruleta", true)) { mostrar(id, p); return; }
@@ -449,6 +471,7 @@ public final class Avisos implements Listener {
     public void elegir(Player p, String titulo, Consumer<String> listo) {
         Menu m = new Menu(6, titulo);
         List<String> l = ids("mensajes");
+        ordenar(l);
         int slot = 0;
         for (String id : l) {
             if (slot >= 45) break;
@@ -467,11 +490,11 @@ public final class Avisos implements Listener {
         Style.raw(p, "&8• &7Símbolos: &e(tic) (cruz) (estrella) (alerta) (calavera) (flecha) (corazon)");
         Style.raw(p, "&8• &7Colores: &c[r] &4[ro] &6[n] &e[am] &a[v] &b[c] &d[rs] &f[b] &7[g] &7[ng]");
         if (multi) {
-            Style.raw(p, "&8• &eRenglón vacío: &7mandá &e.");
-            Style.raw(p, "&8• &cBorrar el último renglón: &7mandá &e-1");
-            Style.raw(p, "&a▶ Mandá cada renglón por el chat. Al terminar escribí &eLISTO &a(o &ccancel&a).");
+            Style.raw(p, "&8• &eRenglón vacío: &7manda &e.");
+            Style.raw(p, "&8• &cBorrar el último renglón: &7manda &e-1");
+            Style.raw(p, "&a▶ Manda cada renglón por el chat. Al terminar escribe &eLISTO &a(o &ccancel&a).");
         } else {
-            Style.raw(p, "&a▶ Escribí el texto en el chat (o &ccancel&a):");
+            Style.raw(p, "&a▶ Escribe el texto en el chat (o &ccancel&a):");
         }
         Style.raw(p, "&8&m----------------------------------------");
     }
@@ -490,12 +513,12 @@ public final class Avisos implements Listener {
             }
             if (txt.equals("-1")) {
                 if (buf.isEmpty()) Style.err(p, "El texto ya está vacío.");
-                else { buf.remove(buf.size() - 1); Style.err(p, "Se borró el último renglón. Podés volver a escribirlo."); }
+                else { buf.remove(buf.size() - 1); Style.err(p, "Se borró el último renglón. Puedes volver a escribirlo."); }
                 return;
             }
             buf.add(txt);
             String muestra = txt.equals(".") ? "&7(Renglón vacío)" : procesar(txt, pal, titulo, p);
-            Style.raw(p, "&a✔ Renglón " + buf.size() + ": &r" + muestra + " &8| Escribí &eLISTO &8o &e-1 &8para borrar");
+            Style.raw(p, "&a✔ Renglón " + buf.size() + ": &r" + muestra + " &8| Escribe &eLISTO &8o &e-1 &8para borrar");
         });
     }
 }

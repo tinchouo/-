@@ -250,7 +250,7 @@ public final class Revivir implements Listener {
             m.getInventory().setItem(13, null);
             p.getInventory().addItem(nuevo).values().forEach(r -> p.getWorld().dropItem(p.getLocation(), r));
         };
-        m.set(22, Items.of(Material.ARROW, "&a&l✔ Guardar Ítem y Volver", "", "&7Poné el ítem (y la cantidad) en el", "&7hueco central y tocá acá."),
+        m.set(22, Items.of(Material.ARROW, "&a&l✔ Guardar Ítem y Volver", "", "&7Pon el ítem (y la cantidad) en el", "&7hueco central y toca aquí."),
                 e -> { guardar.run(); abrirAdmin(p); });
         m.onClose(e -> guardar.run());
         m.open(p);
@@ -407,7 +407,9 @@ public final class Revivir implements Listener {
         if (!(e.getEntity() instanceof Player v)) return;
         Entity at = e.getDamager();
         if (at instanceof Projectile pr && pr.getShooter() instanceof Entity sh) at = sh;
-        String nom = at instanceof Player ap ? ap.getName() : traducir(at.getType().name());
+        // mobs con nombre (MythicMobs, nombrados): su nombre; si no, el nombre del tipo en castellano
+        String nom = at instanceof Player ap ? ap.getName()
+                : at.customName() != null ? Txt.plain(at.customName()) : traducir(at.getType().name());
         ultimoAtacante.put(v.getName(), nom);
         ultimoAtacanteT.put(v.getName(), System.currentTimeMillis());
     }
@@ -509,7 +511,7 @@ public final class Revivir implements Listener {
         for (ItemStack it : new ItemStack[]{p.getInventory().getItemInMainHand(), p.getInventory().getItemInOffHand()})
             if (it != null && it.getType() == Material.TOTEM_OF_UNDYING) { t = it; break; }
         String nombre = pl.getConfig().getString("revivir.nombre_totem", "Tótem Cuy");
-        if (t != null && t.hasItemMeta() && t.getItemMeta().hasDisplayName()) nombre = Txt.plain(t.getItemMeta().displayName());
+        if (t != null && t.hasItemMeta() && (t.getItemMeta().hasDisplayName() || t.getItemMeta().hasItemName())) nombre = Txt.plain(Items.nombre(t));
         Style.broadcast(pl.getConfig().getString("revivir.mensaje_totem", "&6✟ &6&l{jugador} &7ha usado un &6&l{totem}&7.")
                 .replace("{jugador}", p.getName()).replace("{totem}", nombre));
     }

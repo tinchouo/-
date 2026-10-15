@@ -304,7 +304,7 @@ public final class Misiones {
                 Style.raw(p, "&e&l¡Completaste todos tus objetivos! (" + total + "/" + total + ")");
                 Style.raw(p, "&eUsa &f/misiones &epara reclamar tu recompensa.");
                 p.showTitle(Title.title(Txt.c(color(c) + "&l¡MISIÓN " + (dia ? "DIARIA" : "OPCIONAL") + " LISTA!"),
-                        Txt.c("&fUsá &e/misiones &fpara reclamar"),
+                        Txt.c("&fUsa &e/misiones &fpara reclamar"),
                         Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2000), Duration.ofMillis(500))));
             }
         }
@@ -313,7 +313,7 @@ public final class Misiones {
     /** /tod4:completar ... : la mision entera (como el /completar viejo). */
     public void completarTodo(String clase, Player p) {
         st.set(base("bypass", clase, p), true);
-        Style.raw(p, "&e&l¡Se completó tu misión! &7Revisá &f/misiones&7.");
+        Style.raw(p, "&e&l¡Se completó tu misión! &7Revisa &f/misiones&7.");
         verificar(p);
     }
 
@@ -343,7 +343,7 @@ public final class Misiones {
                 if (!o.tipo.consumible() || !o.consumir) continue;
                 for (Objetivo.Meta m : o.metas()) {
                     if (Obj.contar(p.getInventory(), m.objs) < m.cant) {
-                        Style.err(p, "Para reclamar tenés que tener en el inventario lo que se entrega.");
+                        Style.err(p, "Para reclamar tienes que tener en el inventario lo que se entrega.");
                         return;
                     }
                 }
@@ -390,8 +390,8 @@ public final class Misiones {
         switch (e) {
             case BLOQUEADA: return c != null ? c.getString("bloqueada", "&cBloqueada 🔒") : "&cBloqueada 🔒";
             case EN_CURSO: return (c != null ? c.getString("en_curso", "&7En curso") : "&7En curso") + PUNTOS[Math.floorMod(anim, 4)];
-            case COMPLETADA: return c != null ? c.getString("completada", "&6Completada ✔") : "&6Completada ✔";
-            case RECLAMADA: return c != null ? c.getString("reclamada", "&eReclamada ✔✔") : "&eReclamada ✔✔";
+            case COMPLETADA: return c != null ? c.getString("completada", "&6¡Completada!") : "&6¡Completada!";
+            case RECLAMADA: return c != null ? c.getString("reclamada", "&eReclamada ✔") : "&eReclamada ✔";
             default: return "";
         }
     }

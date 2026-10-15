@@ -113,12 +113,12 @@ public final class Momentos implements Listener {
         List<String> objs = c.getStringList("objetivo.objs");
         String lista = objs.isEmpty() ? "?" : Txt.plain(Obj.nombre(objs.get(0))) + (objs.size() > 1 ? " (o similar)" : "");
         switch (tipo(id)) {
-            case TOCAR: return "Tocá: " + lista;
+            case TOCAR: return "Toca: " + lista;
             case DIMENSION: return "Estar en: " + lista;
             case ALTURA: return (c.getBoolean("objetivo.arriba", true) ? "Arriba de Y " : "Abajo de Y ") + c.getInt("objetivo.y", 64);
-            case CERCA: return "Llegá al punto (" + c.getInt("objetivo.radio", 10) + " bloques)";
-            case TENER: return "Tené " + c.getInt("objetivo.cant", 1) + "x " + lista;
-            case MATAR: return "Matá " + c.getInt("objetivo.cant", 1) + "x " + lista;
+            case CERCA: return "Llega al punto (" + c.getInt("objetivo.radio", 10) + " bloques)";
+            case TENER: return "Ten " + c.getInt("objetivo.cant", 1) + "x " + lista;
+            case MATAR: return "Mata " + c.getInt("objetivo.cant", 1) + "x " + lista;
             default: return "";
         }
     }
@@ -214,7 +214,7 @@ public final class Momentos implements Listener {
     public void iniciar(Player quien, String id) {
         if (activo != null || preparando) { Style.err(quien, "Ya hay un Momento Truco activo."); return; }
         preparando = true;
-        pl.avisos().ruletaGlobal(Paleta.ROJO, () -> {
+        pl.avisos().ruletaGlobal(Paleta.ROJO, this::vinetaATodos, () -> {
             preparando = false;
             String av = m(id).getString("aviso");
             if (av != null && pl.avisos().existe(av)) for (Player p : Bukkit.getOnlinePlayers()) pl.avisos().mostrar(av, p);
@@ -225,8 +225,11 @@ public final class Momentos implements Listener {
     private void comenzar(String id) {
         activo = id;
         participantes.clear(); salvados.clear(); kills.clear();
-        for (Player p : Bukkit.getOnlinePlayers())
-            if (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) participantes.add(p.getUniqueId());
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!afecta(p)) continue;
+            participantes.add(p.getUniqueId());
+            if (!conVineta.contains(p.getUniqueId())) ponerVineta(p);
+        }
         total = restante = Math.max(5, m(id).getInt("duracion", 240));
         barra = BossBar.bossBar(Txt.c(titulo()), 1f, BossBar.Color.RED, BossBar.Overlay.NOTCHED_20);
         for (Player p : Bukkit.getOnlinePlayers()) p.showBossBar(barra);
@@ -234,8 +237,42 @@ public final class Momentos implements Listener {
     }
 
     private String titulo() {
-        int mm = restante / 60, ss = restante % 60;
-        return "&c&l☠ MOMENTO TRUCO ☠ &8| &f" + objetivoCorto(activo) + " &8| &c" + String.format("%d:%02d", mm, ss);
+        return "&c&l☠ MOMENTO TRUCO ☠";
+    }
+
+    // ================================================================= vineta roja
+
+    private final Set<UUID> conVineta = new HashSet<>();
+
+    private static boolean afecta(Player p) {
+        return p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE;
+    }
+
+    /** Borde del mundo falso (solo lo ve ese jugador) para que la pantalla tenga la vineta roja. */
+    private void ponerVineta(Player p) {
+        if (!pl.getConfig().getBoolean("momentos.vineta", true)) return;
+        double intensidad = Math.max(0.05, Math.min(0.99, pl.getConfig().getDouble("momentos.vineta_intensidad", 0.75)));
+        org.bukkit.WorldBorder b = Bukkit.createWorldBorder();
+        b.setCenter(0, 0);
+        b.setSize(59_999_968);
+        double dist = 59_999_968 / 2.0;
+        b.setWarningDistance((int) Math.min(Integer.MAX_VALUE, dist / (1.0 - intensidad)));
+        b.setWarningTime(0);
+        p.setWorldBorder(b);
+        conVineta.add(p.getUniqueId());
+    }
+
+    private void sacarVinetas() {
+        for (UUID u : conVineta) {
+            Player p = Bukkit.getPlayer(u);
+            if (p != null) p.setWorldBorder(null);
+        }
+        conVineta.clear();
+    }
+
+    /** Cuando sale la animacion del Momento Truco: vineta roja a los que les aplica. */
+    private void vinetaATodos() {
+        for (Player p : Bukkit.getOnlinePlayers()) if (afecta(p)) ponerVineta(p);
     }
 
     private void tick() {
@@ -289,6 +326,7 @@ public final class Momentos implements Listener {
             }, delay);
         }
         activo = null;
+        sacarVinetas();
         BossBar b = barra;
         Bukkit.getScheduler().runTaskLater(pl, () -> { if (b != null) for (Player p : Bukkit.getOnlinePlayers()) p.hideBossBar(b); }, 40L);
         barra = null;

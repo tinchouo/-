@@ -132,7 +132,7 @@ final class ModoMobs implements Listener {
         if (s == null) return;
         e.setCancelled(true);
         if (e.getHand() != EquipmentSlot.HAND || !"vara".equals(tipo(p.getInventory().getItemInMainHand()))) return;
-        if (ChatInput.waiting(p)) { Style.err(p, "Primero escribí la cantidad en el chat (o &ccancel&c)."); return; }
+        if (ChatInput.waiting(p)) { Style.err(p, "Primero escribe la cantidad en el chat (o &ccancel&c)."); return; }
         Entity en = e.getRightClicked();
         if (en instanceof Player) { Style.err(p, "Eso es un jugador."); return; }
         String obj = Obj.deMob(en, especifico.getOrDefault(p.getUniqueId(), false));
@@ -144,14 +144,14 @@ final class ModoMobs implements Listener {
             Style.ok(p, "Agregado: &f" + nom + " &a(en conjunto, la cantidad la pone el reloj).");
             return;
         }
-        Style.info(p, "Escribí en el chat la cantidad a matar de: &e" + nom + " &7(&ccancel &7para cancelar)");
+        Style.info(p, "Escribe en el chat la cantidad a matar de: &e" + nom + " &7(&ccancel &7para cancelar)");
         ChatInput.ask(p, txt -> {
             Integer leido = numero(txt);
             if (leido == null) { Style.err(p, "Tiene que ser un número (1 o más)."); return; }
             final int n = leido;
             ChatInput.cancel(p);
             menu.editar(s.id, s.uid, x -> x.entradas.put(obj, n));
-            Style.ok(p, "Agregado: &f" + n + "x " + nom + "&a. Seguís en el modo Mobs.");
+            Style.ok(p, "Agregado: &f" + n + "x " + nom + "&a. Sigues en el modo Mobs.");
         });
     }
 
@@ -193,7 +193,7 @@ final class ModoMobs implements Listener {
     public void comando(PlayerCommandPreprocessEvent e) {
         if (!sesiones.containsKey(e.getPlayer().getUniqueId())) return;
         e.setCancelled(true);
-        Style.err(e.getPlayer(), "Estás en el modo Mobs: salí con la flecha (click derecho).");
+        Style.err(e.getPlayer(), "Estás en el modo Mobs: sal con la flecha (click derecho).");
     }
 
     @EventHandler

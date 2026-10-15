@@ -41,7 +41,7 @@ public final class Objetivo {
                 "&7Entrar a un mundo / dimensión (Nether, End, Aether...)."),
         EVENTO("Evento", "Evento", Material.NAME_TAG,
                 "&7Algo que el juego no puede detectar.",
-                "&7Lo completás vos con:",
+                "&7Lo completas tú con:",
                 "&e/tod4:completar <jugador|todos> <id> evento");
 
         /** Nombre para el admin. */

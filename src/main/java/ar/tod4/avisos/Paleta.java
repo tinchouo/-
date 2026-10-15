@@ -3,7 +3,7 @@ package ar.tod4.avisos;
 import org.bukkit.Material;
 
 /**
- * Paleta de la ruleta TOD4.
+ * Paleta de la ruleta TOD4 (en el orden del arcoiris: asi gira la ruleta).
  *  1 Rojo Momento Truco | 2 Naranja Cambio de dificultad | 3 Amarillo Momento Cuy | 4 Verde Mision diaria
  *  5 Azul Nueva dungeon | 6 Celeste Avisos | 7 Violeta Sanciones | 8/9/10 Blanco y grises (sorpresa: no se ven
  *  en la ruleta hasta que esta por caer ahi).
@@ -13,8 +13,8 @@ public enum Paleta {
     NARANJA(2, "&6Naranja", "Cambio de dificultad", Material.ORANGE_DYE, "&6", "&6", "&6&l", "&6", true, "fde68a", "78350f", "block.anvil.land"),
     AMARILLO(3, "&eAmarillo", "Momento Cuy", Material.YELLOW_DYE, "&6", "&e", "&e&l", "&e", true, "fef08a", "854d0e", "entity.player.levelup"),
     VERDE(4, "&aVerde", "Misión diaria", Material.LIME_DYE, "&2", "&a", "&a&l", "&a", true, "a7f3d0", "148836", "ui.toast.challenge_complete"),
-    AZUL(5, "&9Azul", "Nueva dungeon", Material.BLUE_DYE, "&1", "&9", "&9&l", "&9", true, "93c5fd", "172554", "block.end_portal.spawn"),
     CELESTE(6, "&bCeleste", "Avisos", Material.LIGHT_BLUE_DYE, "&3", "&b", "&b&l", "&b", true, "a5f3fc", "155e75", "block.note_block.bell"),
+    AZUL(5, "&9Azul", "Nueva dungeon", Material.BLUE_DYE, "&1", "&9", "&9&l", "&9", true, "93c5fd", "172554", "block.end_portal.spawn"),
     VIOLETA(7, "<#a855f7>Violeta", "Sanciones", Material.PURPLE_DYE, "<#5b21b6>", "<#a855f7>", "<#c084fc>&l", "&5", true, "e9d5ff", "581c87", "block.beacon.deactivate"),
     BLANCO(8, "&fBlanco", "Sorpresa", Material.WHITE_DYE, "&7", "&f", "&f&l", "&f", false, "ffffff", "64748b", "block.note_block.chime"),
     GRIS(9, "&7Gris claro", "Sorpresa", Material.LIGHT_GRAY_DYE, "&8", "&7", "&7&l", "&7", false, "e2e8f0", "475569", "block.note_block.chime"),
@@ -37,7 +37,8 @@ public enum Paleta {
         return CELESTE;
     }
 
-    public Paleta next() { return of(idx % values().length + 1); }
+    /** La siguiente en el orden del arcoiris. */
+    public Paleta next() { return values()[(ordinal() + 1) % values().length]; }
 
     /** Paleta del script viejo de mensajes -> nueva. (El verde viejo era de avisos buenos: pasa a celeste.) */
     public static int desdeVieja(int vieja) {

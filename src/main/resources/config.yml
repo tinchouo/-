@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 3
+config_version: 4
 
 sidebar:
   activa: true
@@ -27,7 +27,7 @@ sidebar:
   # abajo de la linea van las misiones / el Momento Truco / una frase de calma
   cambio_frase_segundos: 60
   frases_calma:
-    - "&7Aprovechá la calma mientras dure..."
+    - "&7Aprovecha la calma mientras dure..."
     - "&7No hay nada por aquí."
     - "&7No hay nada que ver por aquí."
     - "&7Todo tranquilo... por ahora."
@@ -66,6 +66,8 @@ tab:
 
 momentos:
   delay_castigo_seg: 15   # el castigo llega X segundos despues de que termina (para leer el chat)
+  vineta: true            # pantalla con vineta roja durante el Momento Truco (desde que sale la animacion)
+  vineta_intensidad: 0.75 # de 0.05 (casi nada) a 0.99 (muy roja)
 
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"
@@ -77,8 +79,8 @@ misiones:
   # como se ve el estado en la sidebar (en curso lleva los puntitos animados al final)
   estados:
     en_curso: "&7En curso"
-    completada: "&6Completada ✔"
-    reclamada: "&eReclamada ✔✔"
+    completada: "&6¡Completada!"
+    reclamada: "&eReclamada ✔"
     bloqueada: "&cBloqueada 🔒"
 
 palo:

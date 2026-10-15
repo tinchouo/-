@@ -47,14 +47,30 @@ public final class Items {
         return of(m, " ");
     }
 
-    /** Nombre visible de un item (custom o el nombre del material). */
+    /**
+     * Nombre visible de un item como texto con colores &: el nombre puesto, el "item_name" (asi tienen nombre los
+     * items de Oraxen, por eso antes salia "paper") o el nombre del material.
+     */
     public static String name(ItemStack it) {
         if (it == null) return "nada";
         ItemMeta meta = it.getItemMeta();
-        if (meta != null && meta.hasDisplayName()) return Txt.plain(meta.displayName());
+        if (meta != null && meta.hasDisplayName()) return LEG.serialize(meta.displayName());
+        if (meta != null && meta.hasItemName()) return LEG.serialize(meta.itemName());
         String n = it.getType().name().toLowerCase().replace('_', ' ');
         return Character.toUpperCase(n.charAt(0)) + n.substring(1);
     }
+
+    /** Nombre visible de un item como componente (los vanilla salen en el idioma de cada jugador). */
+    public static Component nombre(ItemStack it) {
+        if (it == null) return Component.text("nada");
+        ItemMeta meta = it.getItemMeta();
+        if (meta != null && meta.hasDisplayName() && meta.displayName() != null) return meta.displayName();
+        if (meta != null && meta.hasItemName()) return meta.itemName();
+        return Component.translatable(it.getType().getItemTranslationKey());
+    }
+
+    private static final net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer LEG =
+            net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.builder().character('&').hexColors().build();
 
     private static final NamespacedKey ORAXEN_ID = new NamespacedKey("oraxen", "id");
 

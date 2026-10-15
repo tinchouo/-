@@ -27,6 +27,26 @@ public final class Ext {
         }
     }
 
+    /** Nombre visible (Display) de un mob de MythicMobs por su nombre interno, o null. */
+    public static String mythicNombre(String interno) {
+        try {
+            Class<?> mb = Class.forName("io.lumine.mythic.bukkit.MythicBukkit");
+            Object inst = mb.getMethod("inst").invoke(null);
+            Object mm = inst.getClass().getMethod("getMobManager").invoke(inst);
+            Object opt = mm.getClass().getMethod("getMythicMob", String.class).invoke(mm, interno);
+            if (!(opt instanceof java.util.Optional<?> o) || o.isEmpty()) return null;
+            Object mob = o.get();
+            Object dn = mob.getClass().getMethod("getDisplayName").invoke(mob);
+            if (dn == null) return null;
+            Object txt;
+            try { txt = dn.getClass().getMethod("get").invoke(dn); } catch (NoSuchMethodException e) { txt = dn.toString(); }
+            String s = txt == null ? null : String.valueOf(txt);
+            return s == null || s.isBlank() ? null : s;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     private static Method OX_BLOCK;
     private static boolean oxTried;
 

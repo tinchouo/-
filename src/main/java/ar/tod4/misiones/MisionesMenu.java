@@ -134,7 +134,7 @@ public final class MisionesMenu {
                 switch (o.tipo) {
                     case MATAR:
                         obj = Obj.deItem(it);
-                        if (!obj.startsWith("ent:")) { malos.add(Items.name(it) + " (usá huevos o la vara)"); continue; }
+                        if (!obj.startsWith("ent:")) { malos.add(Items.name(it) + " (usa huevos o la vara)"); continue; }
                         break;
                     case PICAR:
                         obj = Obj.deItemPuro(it);
@@ -181,7 +181,7 @@ public final class MisionesMenu {
         String titulo = (dia ? "&a&lMisión Diaria: &f" : "&b&lMisión Opcional: &f") + ms.nombre(id);
         Misiones.Estado est = ms.estado(clase, p);
         if (est == Misiones.Estado.BLOQUEADA)
-            return Items.of(Material.BOOK, titulo, " ", ms.textoEstado(est), " ", "&7Completá y reclamá la Diaria primero.");
+            return Items.of(Material.BOOK, titulo, " ", ms.textoEstado(est), " ", "&7Completa y reclama la Diaria primero.");
         List<Component> lore = loreJugador(p, clase, id);
         lore.add(Txt.c(" "));
         lore.add(Txt.c("&fEstado: " + ms.textoEstado(est)));
@@ -190,32 +190,47 @@ public final class MisionesMenu {
         return it;
     }
 
-    /** Los objetivos como los ve el jugador: Conseguir: / ▪ Casco de diamante 0/1 / ▪ Pechera 1/1 ✔ ... */
+    /**
+     * Los objetivos como los ve el jugador.
+     *  Por separado:  Conseguir:  /  ▪ Casco de diamante  0/1  /  ▪ Pechera de diamante  1/1 ✔
+     *  En conjunto:   Picar: 4/20  /  ▪ Mena de diamante  /  ▪ Mena de diamante de pizarra
+     */
     private List<Component> loreJugador(Player p, String clase, String id) {
         List<Component> l = new ArrayList<>();
         String col = Misiones.color(clase);
         String ultimo = null;
         for (Objetivo o : ms.objetivos(id)) {
             if (o.vacio()) continue;
-            String header = "&f" + o.tipo.visible + (o.tipo.consumible() && o.consumir ? " &c(Se consume al reclamar)" : "") + "&f:";
-            if (!header.equals(ultimo)) { l.add(Txt.c(" ")); l.add(Txt.c(header)); ultimo = header; }
+            String header = "&f" + o.tipo.visible + (o.tipo.consumible() && o.consumir ? " &c(Se consume al reclamar)" : "");
+            if (o.conjunto && o.tipo != Objetivo.Tipo.EVENTO) {
+                // la cantidad va al lado del titulo y abajo la lista normal
+                Objetivo.Meta m = o.metas().get(0);
+                int prog = ms.progreso(clase, p, o, m);
+                boolean ok = prog >= m.cant;
+                l.add(Txt.c(" "));
+                l.add(Txt.c(header + "&f: " + cuenta(prog, m.cant, col)));
+                ultimo = null;
+                if (o.oculto && !ok) { l.add(linea("  &8▪ ", Component.text("???"), null)); continue; }
+                for (String x : m.objs) l.add(linea("  &8▪ ", Obj.nombre(x), null));
+                continue;
+            }
+            if (!header.equals(ultimo)) { l.add(Txt.c(" ")); l.add(Txt.c(header + "&f:")); ultimo = header; }
             for (Objetivo.Meta m : o.metas()) {
                 int prog = ms.progreso(clase, p, o, m);
                 boolean ok = prog >= m.cant;
-                String cuenta = ok ? "  " + col + prog + "&7/" + col + m.cant + " " + col + "✔" : "  &e" + prog + "&7/&f" + m.cant;
                 boolean ocultar = o.oculto && !ok;
-                if (o.tipo == Objetivo.Tipo.EVENTO) {
-                    l.add(linea("  &8▪ ", ocultar ? Component.text("???") : Txt.c("&7" + o.texto), cuenta));
-                    continue;
-                }
-                if (ocultar) { l.add(linea("  &8▪ ", Component.text("???"), cuenta)); continue; }
-                for (int k = 0; k < m.objs.size(); k++) {
-                    boolean last = k == m.objs.size() - 1;
-                    l.add(linea(k == 0 ? "  &8▪ " : "    &8o ", Obj.nombre(m.objs.get(k)), last ? cuenta : null));
-                }
+                Component nom;
+                if (ocultar) nom = Component.text("???");
+                else if (o.tipo == Objetivo.Tipo.EVENTO) nom = Txt.c("&7" + o.texto);
+                else nom = Obj.nombre(m.objs.get(0));
+                l.add(linea("  &8▪ ", nom, "  " + cuenta(prog, m.cant, col)));
             }
         }
         return l;
+    }
+
+    private static String cuenta(int prog, int cant, String col) {
+        return prog >= cant ? col + prog + "&7/" + col + cant + " " + col + "✔" : "&e" + prog + "&7/&f" + cant;
     }
 
     private ItemStack premios(String clase, String id) {
@@ -224,9 +239,7 @@ public final class MisionesMenu {
         List<ItemStack> r = ms.recompensas(id);
         if (r.isEmpty()) lore.add(Txt.c("&7Sin recompensas configuradas."));
         for (ItemStack it : r) {
-            Component n = it.hasItemMeta() && it.getItemMeta().hasDisplayName() ? it.getItemMeta().displayName()
-                    : Component.translatable(it.getType().getItemTranslationKey());
-            lore.add(linea("&8▪ &d" + it.getAmount() + "x ", n == null ? Component.text("?") : n.colorIfAbsent(NamedTextColor.WHITE), null));
+            lore.add(linea("&8▪ &d" + it.getAmount() + "x ", Items.nombre(it).colorIfAbsent(NamedTextColor.WHITE), null));
         }
         return conLore(new ItemStack(Material.FEATHER), clase.equals(Misiones.DIA) ? "&d&lRecompensas Diarias" : "&d&lRecompensas Opcionales", lore);
     }
@@ -266,23 +279,23 @@ public final class MisionesMenu {
         for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.BLACK_STAINED_GLASS_PANE));
         m.set(45, Items.of(Material.ARROW, "&7◀ Volver"), e -> panel(p));
         m.set(49, Items.of(Material.LIME_DYE, "&a&l➕ Crear nueva",
-                "", "&7Escribís en el chat: &fID Nombre", "&7La ID va pegada (sin espacios) y es única.",
+                "", "&7Escribes en el chat: &fID Nombre", "&7La ID va pegada (sin espacios) y es única.",
                 "&7Ej: &f" + (dia ? "3 Armadura de diamante" : "op3 Cazador de pandas"), "", "&e▶ Click para crear"), e -> crear(p, clase));
         m.open(p);
     }
 
     private void crear(Player p, String clase) {
         p.closeInventory();
-        Style.info(p, "Escribí en el chat &fID Nombre &7(ej: &f" + (clase.equals(Misiones.DIA) ? "3 Armadura de diamante" : "op3 Cazador")
-                + "&7). Escribí &ccancel &7para cancelar.");
+        Style.info(p, "Escribe en el chat &fID Nombre &7(ej: &f" + (clase.equals(Misiones.DIA) ? "3 Armadura de diamante" : "op3 Cazador")
+                + "&7). Escribe &ccancel &7para cancelar.");
         ChatInput.ask(p, txt -> {
             String t = txt.trim();
             int sp = t.indexOf(' ');
             String id = sp < 0 ? t : t.substring(0, sp);
             String nombre = sp < 0 ? id : t.substring(sp + 1).trim();
-            if (!ID_OK.matcher(id).matches()) { Style.err(p, "La ID solo puede tener letras, números, - y _. Probá de nuevo."); return; }
+            if (!ID_OK.matcher(id).matches()) { Style.err(p, "La ID solo puede tener letras, números, - y _. Prueba de nuevo."); return; }
             if (ms.existe(id)) {
-                Style.err(p, "Ya existe una misión con la ID &f" + id + " &c(" + ms.nombre(id) + "). Probá con otra.");
+                Style.err(p, "Ya existe una misión con la ID &f" + id + " &c(" + ms.nombre(id) + "). Prueba con otra.");
                 return;
             }
             ChatInput.cancel(p);
@@ -341,7 +354,7 @@ public final class MisionesMenu {
         }
         m.set(51, Items.of(Material.NAME_TAG, "&e&lRenombrar", "", "&7Nombre: &f" + ms.nombre(id), "&7(la ID no cambia)", "", "&e▶ Click para cambiar"), e -> {
             p.closeInventory();
-            Style.info(p, "Escribí el nuevo nombre. &ccancel &7para cancelar.");
+            Style.info(p, "Escribe el nuevo nombre. &ccancel &7para cancelar.");
             ChatInput.ask(p, txt -> { ChatInput.cancel(p); ms.renombrar(id, txt.trim()); Style.ok(p, "Nombre cambiado."); mision(p, id); });
         });
         m.set(53, Items.of(Material.TNT, "&c&lBorrar misión", "", "&7Se pide confirmación."), e -> confirmarBorrar(p, id));
@@ -357,12 +370,12 @@ public final class MisionesMenu {
         } else if (o.entradas.isEmpty()) {
             lore.add(Txt.c("&c(vacío: click para elegir)"));
         } else if (o.conjunto) {
+            lore.add(Txt.c("&7Total entre todos: &f" + o.total));
             int k = 0;
             for (String x : o.entradas.keySet()) {
-                if (k == 8) { lore.add(Txt.c("    &8... y " + (o.entradas.size() - 8) + " más")); break; }
-                lore.add(linea(k++ == 0 ? "  &8▪ " : "    &8o ", Obj.nombre(x), null));
+                if (k++ == 10) { lore.add(Txt.c("  &8... y " + (o.entradas.size() - 10) + " más")); break; }
+                lore.add(linea("  &8▪ ", Obj.nombre(x), null));
             }
-            lore.add(Txt.c("  &7Total entre todos: &f" + o.total));
         } else {
             int k = 0;
             for (Map.Entry<String, Integer> x : o.entradas.entrySet()) {
@@ -411,7 +424,7 @@ public final class MisionesMenu {
             ms.guardarRecompensas(id, l);
         };
         for (int i = 27; i < 36; i++) m.set(i, Items.pane(Material.BLACK_STAINED_GLASS_PANE));
-        m.set(31, Items.of(Material.ARROW, "&a◀ Volver y guardar", "", "&7Poné arriba lo que se gana."), e -> { guardar.run(); mision(p, id); });
+        m.set(31, Items.of(Material.ARROW, "&a◀ Volver y guardar", "", "&7Pon arriba lo que se gana."), e -> { guardar.run(); mision(p, id); });
         m.onClose(e -> guardar.run());
         m.open(p);
     }
@@ -495,7 +508,7 @@ public final class MisionesMenu {
 
     private void escribirCantidad(Player p, String id, String uid, Runnable volver) {
         p.closeInventory();
-        Style.info(p, "Escribí la cantidad total (un número). &ccancel &7para cancelar.");
+        Style.info(p, "Escribe la cantidad total (un número). &ccancel &7para cancelar.");
         ChatInput.ask(p, txt -> {
             Integer leido = numero(txt);
             if (leido == null) { Style.err(p, "Tiene que ser un número (1 o más)."); return; }
@@ -511,7 +524,7 @@ public final class MisionesMenu {
     void cofre(Player p, String id, String uid) {
         Objetivo o = objetivo(id, uid);
         if (o == null) { mision(p, id); return; }
-        Menu m = new Menu(4, "&8" + o.tipo.label + " (poné los ítems arriba)");
+        Menu m = new Menu(4, "&8" + o.tipo.label + " (pon los ítems arriba)");
         for (int i = 0; i < 27; i++) m.editable(i);
         int s = 0;
         for (Map.Entry<String, Integer> e : o.entradas.entrySet()) {
@@ -535,7 +548,7 @@ public final class MisionesMenu {
                     e -> { guardar.run(); escribirCantidad(p, id, uid, reabrir); });
         } else {
             m.set(30, Items.of(Material.LIGHT_GRAY_STAINED_GLASS_PANE, "&7Cantidad: &fla de cada stack",
-                    "", "&7Poné la cantidad que quieras en el ítem.", "&7Varios stacks del mismo se suman."));
+                    "", "&7Pon la cantidad que quieras en el ítem.", "&7Varios stacks del mismo se suman."));
         }
         switch (o.tipo) {
             case TENER: case FABRICAR:
@@ -551,7 +564,7 @@ public final class MisionesMenu {
             case MATAR:
                 m.set(32, Items.of(Material.BLAZE_ROD, "&c&lElegir mobs con la vara",
                         "", "&7Te da una vara: click derecho a un mob", "&7para agregarlo (MythicMobs, panda marrón...).",
-                        "&7Los huevos de spawn también sirven acá.", "", "&e▶ Click para entrar"),
+                        "&7Los huevos de spawn también sirven aquí.", "", "&e▶ Click para entrar"),
                         e -> { guardar.run(); p.closeInventory(); mobs.entrar(p, id, uid); });
                 break;
             default: break;
@@ -568,9 +581,9 @@ public final class MisionesMenu {
         for (String d : t.desc) l.add(d);
         l.add("");
         switch (t) {
-            case MATAR: l.add("&7Poné &fhuevos de spawn &7arriba o usá la vara."); break;
-            case PICAR: l.add("&7Poné arriba los &fbloques &7que tiene que picar."); break;
-            default: l.add("&7Poné arriba los &fítems &7(también de Oraxen)."); break;
+            case MATAR: l.add("&7Pon &fhuevos de spawn &7arriba o usa la vara."); break;
+            case PICAR: l.add("&7Pon arriba los &fbloques &7que tiene que picar."); break;
+            default: l.add("&7Pon arriba los &fítems &7(también de Oraxen)."); break;
         }
         l.add("&7Por separado: la cantidad es la del stack.");
         l.add("&7En conjunto: todos suman y la cantidad");
@@ -652,7 +665,7 @@ public final class MisionesMenu {
     private void mundos(Player p, String id, String uid) {
         Objetivo o = objetivo(id, uid);
         if (o == null) { mision(p, id); return; }
-        Menu m = new Menu(4, "&8Ir a: elegí los mundos");
+        Menu m = new Menu(4, "&8Ir a: elige los mundos");
         int s = 0;
         for (World w : Bukkit.getWorlds()) {
             if (s >= 27) break;
@@ -687,7 +700,7 @@ public final class MisionesMenu {
 
     private void textoEvento(Player p, String id, String uid) {
         p.closeInventory();
-        Style.info(p, "Escribí la descripción del evento (lo que ve el jugador). &ccancel &7para cancelar.");
+        Style.info(p, "Escribe la descripción del evento (lo que ve el jugador). &ccancel &7para cancelar.");
         ChatInput.ask(p, txt -> {
             ChatInput.cancel(p);
             editar(id, uid, x -> x.texto = txt.trim());

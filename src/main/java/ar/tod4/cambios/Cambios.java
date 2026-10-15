@@ -46,7 +46,7 @@ public final class Cambios {
         add(new Cambio("d1.manzanas", 1, "Bloqueo de Manzanas", false, "&7Las hojas no sueltan manzanas."));
         add(new Cambio("d1.aldeanos", 1, "Bloqueo de Aldeanos", false, "&7Los aldeanos naturales desaparecen.", "&7Solo quedan los de huevo/comando."));
         add(new Cambio("d1.totems", 1, "Bloqueo de Tótems", false, "&7Los invocadores no sueltan tótem."));
-        add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemás sin", "&7Resistencia al fuego y no hay agua."));
+        add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemas sin", "&7Resistencia al fuego y no hay agua."));
         // ---- Dia 2
         add(new Cambio("d2.reproduccion", 2, "Bloqueo de Reproducción", false, "&7Los aldeanos no se reproducen", "&7(no pueden juntar comida)."));
         add(new Cambio("d2.mending", 2, "Recordatorio: Mending", true, "&7Esto lo hace el datapack", "&7de ítems prohibidos."));
@@ -58,7 +58,7 @@ public final class Cambios {
         add(new Cambio("d3.lava", 3, "Lava + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava: quema como siempre."));
         // ---- Dia 4
         add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
-        add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogás 5 veces más rápido."));
+        add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido."));
         add(new Cambio("d4.puertas", 4, "Botones y puertas", false, "&7Usarlos te mata (el tótem te salva)."));
         add(new Cambio("d4.crianza", 4, "Sin crianza", false, "&7Los animales no se reproducen."));
         add(new Cambio("d4.perla", 4, "Perlas con más daño", false, "&7Cada perla te saca 4 corazones."));

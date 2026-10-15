@@ -39,7 +39,7 @@ public final class Palo implements Listener {
     }
 
     public ItemStack item() {
-        ItemStack it = Items.of(Material.STICK, "&6&lPalo de Retorno", "&7Pegale o hacé click derecho a un", "&7jugador para mandarlo a su spawn.");
+        ItemStack it = Items.of(Material.STICK, "&6&lPalo de Retorno", "&7Pegale o haz click derecho a un", "&7jugador para mandarlo a su spawn.");
         ItemMeta m = it.getItemMeta();
         m.addEnchant(Enchantment.UNBREAKING, 1, true);
         m.getPersistentDataContainer().set(KEY, PersistentDataType.BYTE, (byte) 1);

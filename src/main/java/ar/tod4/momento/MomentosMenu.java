@@ -53,7 +53,7 @@ public final class MomentosMenu {
         for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.RED_STAINED_GLASS_PANE));
         m.set(49, Items.of(Material.LIME_CONCRETE, "&a&l➕ Crear Momento Truco"), e -> {
             p.closeInventory();
-            Style.info(p, "Escribí el &enombre &7del momento &8(o cancel)&7:");
+            Style.info(p, "Escribe el &enombre &7del momento &8(o cancel)&7:");
             ChatInput.ask(p, txt -> {
                 ChatInput.cancel(p);
                 String nom = Txt.strip(txt).trim();
@@ -80,14 +80,14 @@ public final class MomentosMenu {
                 e -> { p.closeInventory(); mo.iniciar(p, id); });
         m.set(11, Items.of(Material.NAME_TAG, "&e&lNombre", "", "&7" + mo.nombre(id), "", "&e▶ Click para cambiar"), e -> {
             p.closeInventory();
-            Style.info(p, "Escribí el nuevo nombre &8(o cancel)&7:");
+            Style.info(p, "Escribe el nuevo nombre &8(o cancel)&7:");
             ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("nombre", Txt.strip(txt).trim()); touch(); editor(p, id); });
         });
         m.set(12, Items.of(mo.tipo(id).icono, "&6&lObjetivo", "", "&f" + mo.objetivoCorto(id), "&7Tipo: " + mo.tipo(id).label, "", "&e▶ Click para cambiar"),
                 e -> objetivo(p, id));
         boolean final_ = "al_final".equals(c.getString("modo", "una_vez"));
         m.set(13, Items.of(final_ ? Material.CLOCK : Material.TOTEM_OF_UNDYING, final_ ? "&e&lModo: al final del tiempo" : "&e&lModo: una vez y a salvo", "",
-                final_ ? "&7Tenés que estar así cuando termina." : "&7Lo hacés una vez y quedás a salvo.", "&8(Tocar y Matar siempre son \"una vez\")", "",
+                final_ ? "&7Tienes que estar así cuando termina." : "&7Lo haces una vez y quedas a salvo.", "&8(Tocar y Matar siempre son \"una vez\")", "",
                 "&e▶ Click para cambiar"), e -> { c.set("modo", final_ ? "una_vez" : "al_final"); touch(); editor(p, id); });
         int dur = c.getInt("duracion", 240);
         m.set(14, Items.of(Material.CLOCK, "&e&lDuración: &f" + String.format("%d:%02d", dur / 60, dur % 60), "",
@@ -104,8 +104,8 @@ public final class MomentosMenu {
                 "&e▶ Click para elegir"), e -> pl.avisos().elegir(p, "&8Aviso para: " + mo.nombre(id), sel -> { c.set("aviso", sel); touch(); editor(p, id); }));
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> lista(p));
         m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
-            if (!e.isShiftClick()) { Style.err(p, "Usá shift+click para borrar."); return; }
-            if (on) { Style.err(p, "Primero cancelalo."); return; }
+            if (!e.isShiftClick()) { Style.err(p, "Usa shift+click para borrar."); return; }
+            if (on) { Style.err(p, "Primero cancélalo."); return; }
             mo.st.set("momentos." + id, null); lista(p);
         });
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
@@ -161,7 +161,7 @@ public final class MomentosMenu {
         int k = 0;
         for (String o : c.getStringList("objetivo.objs")) if (k < 27) m.getInventory().setItem(k++, icono(o));
         for (int i = 27; i < 54; i++) m.set(i, Items.pane(Material.GRAY_STAINED_GLASS_PANE));
-        m.set(31, Items.of(Material.OAK_SIGN, "&e&lObjetivos", "", t == Momentos.Tipo.MATAR ? "&7Poné huevos de spawn." : "&7Poné bloques / ítems (vanilla u Oraxen).",
+        m.set(31, Items.of(Material.OAK_SIGN, "&e&lObjetivos", "", t == Momentos.Tipo.MATAR ? "&7Pon huevos de spawn." : "&7Pon bloques / ítems (vanilla u Oraxen).",
                 "&7Cualquiera de ellos sirve."));
         final boolean[] listo = {false};
         Runnable guardar = () -> {
@@ -203,7 +203,7 @@ public final class MomentosMenu {
             m.set(42, Items.of(Material.WITHER_SKELETON_SKULL, "&d&lAgregar MythicMob"), e -> {
                 guardar.run();
                 p.closeInventory();
-                Style.info(p, "Escribí el nombre interno del MythicMob &8(o cancel)&7:");
+                Style.info(p, "Escribe el nombre interno del MythicMob &8(o cancel)&7:");
                 ChatInput.ask(p, txt -> {
                     ChatInput.cancel(p);
                     List<String> l = c.getStringList("objetivo.objs");
@@ -222,7 +222,7 @@ public final class MomentosMenu {
         ItemStack it = new ItemStack(Obj.icono(o));
         ItemMeta m = it.getItemMeta();
         m.displayName(Obj.nombre(o).color(NamedTextColor.WHITE).decoration(TextDecoration.ITALIC, false));
-        m.lore(Txt.lines("&8" + o, "&7Sacalo de acá para quitarlo."));
+        m.lore(Txt.lines("&8" + o, "&7Sácalo de aquí para quitarlo."));
         m.getPersistentDataContainer().set(MARCA, PersistentDataType.STRING, o);
         it.setItemMeta(m);
         return it;
@@ -336,7 +336,7 @@ public final class MomentosMenu {
                     Style.ok(p, "Lugar del teletransporte guardado.");
                 } else if (key.equals("mobs")) {
                     p.closeInventory();
-                    Style.info(p, "Escribí el mob y la cantidad: &ezombie 3 &7o &dmythic:EnderZombie 2 &8(o cancel)");
+                    Style.info(p, "Escribe el mob y la cantidad: &ezombie 3 &7o &dmythic:EnderZombie 2 &8(o cancel)");
                     ChatInput.ask(p, txt -> {
                         ChatInput.cancel(p);
                         String[] a = Txt.strip(txt).trim().split("\\s+");
@@ -347,7 +347,7 @@ public final class MomentosMenu {
                     return;
                 }
             } else {
-                if (key.equals("tp") && !on && c.getLocation("tp_pos") == null) { Style.err(p, "Primero guardá el lugar (click derecho)."); return; }
+                if (key.equals("tp") && !on && c.getLocation("tp_pos") == null) { Style.err(p, "Primero guarda el lugar (click derecho)."); return; }
                 c.set(key, !on);
             }
             touch();

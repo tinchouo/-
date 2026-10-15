@@ -220,7 +220,7 @@ public final class Obj {
                 ItemStack it = Ext.oraxenItem(obj.substring(3));
                 if (it != null) {
                     ItemMeta im = it.getItemMeta();
-                    if (im != null && im.hasDisplayName()) return im.displayName();
+                    if (im != null && im.hasDisplayName() && im.displayName() != null) return im.displayName();
                     if (im != null && im.hasItemName()) return im.itemName();
                 }
                 return Component.text(bonito(obj.substring(3)));
@@ -232,7 +232,10 @@ public final class Obj {
                 Component c = Component.translatable(EntityType.valueOf(pt[0]).translationKey());
                 return pt.length < 2 ? c : c.append(Component.text(" (" + bonito(pt[1].toLowerCase()) + ")"));
             }
-            if (obj.startsWith("mm:")) return Component.text(bonito(obj.substring(3)));
+            if (obj.startsWith("mm:")) {
+                String dn = Ext.mythicNombre(obj.substring(3));
+                return dn != null ? Txt.c(dn) : Component.text(bonito(obj.substring(3)));
+            }
             if (obj.startsWith("adv:")) {
                 NamespacedKey k = NamespacedKey.fromString(obj.substring(4));
                 Advancement a = k == null ? null : Bukkit.getAdvancement(k);
