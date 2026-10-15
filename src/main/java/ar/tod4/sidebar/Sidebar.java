@@ -253,7 +253,7 @@ public final class Sidebar implements Listener {
                 d.displayName(t.displayName());
                 d.prefix(t.prefix());
                 d.suffix(t.suffix());
-                if (t.hasColor()) d.color(t.color());
+                if (t.hasColor() && t.color() instanceof net.kyori.adventure.text.format.NamedTextColor nc) d.color(nc);
                 d.setAllowFriendlyFire(t.allowFriendlyFire());
                 d.setCanSeeFriendlyInvisibles(t.canSeeFriendlyInvisibles());
                 for (Team.Option op : Team.Option.values()) d.setOption(op, t.getOption(op));
