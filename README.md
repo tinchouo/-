@@ -34,3 +34,9 @@ Plugin de TrucOfDeath 4. Se compila solo: pestaña **Actions** → última ejecu
 - Día 6: solo Caída de Pluma protege de la caída; las noches no se saltan (acostarte igual resetea el contador de phantoms); tocar bedrock da Wither III apenas la tocas y gasta la armadura.
 - Siempre: para pasar la noche duerme un cuarto de los jugadores (mínimo 5), contando Overworld y Aether (`sueno:` en config.yml).
 - Mesa (día 4): con el botón 40 las herramientas sacan mínimo 2 encantamientos y el principal al máximo; Reparación un poco más seguido; nuevo **Libro Indestructible** (se usa en el yunque). El `mesa.yml` viejo queda como `mesa_viejo.yml`.
+
+## Lobotomía (video) y Level Fun (fiesta)
+1. Descomprimí `TOD4_pack_Oraxen.zip` adentro de `plugins/Oraxen/pack/` (se suma a la carpeta `assets/`) y recargá Oraxen. Trae el video, el shader de pantalla completa, los casilleros y los audios de la fiesta y de lobotomía.
+2. Reemplazá `lobotomia.sk` y `howler.sk` por los nuevos.
+3. `partygoer.bbmodel` en `plugins/BetterModel/models/` y `Partygoer.yml` en `plugins/MythicMobs/Mobs/` (con la línea del modelo copiada del Howler).
+4. En el juego: `/tod4:fiesta crear` (una sola vez). Probar: `/lobotomia frame <jugador>`, `/tod4:fiesta ir`, `/tod4:fiesta apagon`.
