@@ -67,7 +67,7 @@ public final class Cambios {
         add(new Cambio("d5.wither", 5, "Wither con cabeza de jugador", false, "&7Solo se invoca con la cabeza de un", "&7jugador en el pecho: \"Wither de ...\"."));
         // ---- Dia 6
         add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
-        add(new Cambio("d6.noches", 6, "Noches y phantoms", false, "&7La noche no se puede saltar y", "&7dormir no resetea a los phantoms."));
+        add(new Cambio("d6.noches", 6, "Noches eternas", false, "&7La noche no se puede saltar.", "&7Acostarte igual resetea los phantoms."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
         new Mecanicas(pl, this);

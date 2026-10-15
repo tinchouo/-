@@ -303,9 +303,6 @@ public final class Misiones {
                 p.playSound(p.getLocation(), pl.getConfig().getString("misiones.sonido_gg", "tod4:gg_mision"), SoundCategory.MASTER, 1f, 1f);
                 Style.raw(p, "&e&l¡Completaste todos tus objetivos! (" + total + "/" + total + ")");
                 Style.raw(p, "&eUsa &f/misiones &epara reclamar tu recompensa.");
-                p.showTitle(Title.title(Txt.c(color(c) + "&l¡MISIÓN " + (dia ? "DIARIA" : "OPCIONAL") + " LISTA!"),
-                        Txt.c("&fUsa &e/misiones &fpara reclamar"),
-                        Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(2000), Duration.ofMillis(500))));
             }
         }
     }

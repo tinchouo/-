@@ -1,10 +1,7 @@
 package ar.tod4.cambios;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.UUID;
 
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
@@ -16,7 +13,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerBedEnterEvent;
-import org.bukkit.event.player.PlayerBedLeaveEvent;
 
 import ar.tod4.TOD4;
 import ar.tod4.util.Txt;
@@ -26,13 +22,12 @@ import ar.tod4.util.Txt;
  *  - Para pasar la noche tiene que dormir un cuarto de los jugadores, pero minimo 5 (si hay menos de 5, todos).
  *  - Cuentan los del Overworld y los del Aether (donde se puede dormir). Si se pasa la noche, se hace de dia en los dos.
  *  - Mensaje como el de vanilla: "Durmiendo 3/5".
- *  - Cambio del dia 6 (d6.noches): la noche no se puede saltar y dormir no resetea a los phantoms.
+ *  - Cambio del dia 6 (d6.noches): la noche no se puede saltar; acostarse igual resetea el contador de phantoms.
  */
 final class Sueno implements Listener {
 
     private final TOD4 pl;
     private final Cambios cb;
-    private final Map<UUID, Integer> insomnio = new HashMap<>();
 
     Sueno(TOD4 pl, Cambios cb) {
         this.pl = pl;
@@ -88,25 +83,25 @@ final class Sueno implements Listener {
         for (Player p : cuentan) p.sendActionBar(Txt.c(msg));
     }
 
-    // ================================================================= dia 6: dormir no resetea a los phantoms
+    // ================================================================= al acostarse
 
+    /**
+     * Normal: como vanilla, el que duerme resetea su contador de phantoms; enseguida ve "Durmiendo X/Y".
+     * Dia 6 (d6.noches): la noche no pasa, pero acostarte igual resetea tu contador y te avisa en verde.
+     */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void acuesta(PlayerBedEnterEvent e) {
-        if (!cb.on("d6.noches") || e.getBedEnterResult() != PlayerBedEnterEvent.BedEnterResult.OK) return;
+        if (e.getBedEnterResult() != PlayerBedEnterEvent.BedEnterResult.OK) return;
         Player p = e.getPlayer();
-        int antes = p.getStatistic(Statistic.TIME_SINCE_REST);
-        insomnio.put(p.getUniqueId(), antes);
-        // el juego lo pone en 0 al acostarse: se le devuelve enseguida
-        Bukkit.getScheduler().runTaskLater(pl, () -> { if (p.isOnline()) p.setStatistic(Statistic.TIME_SINCE_REST, antes); }, 1L);
-    }
-
-    @EventHandler
-    public void levanta(PlayerBedLeaveEvent e) {
-        Integer antes = insomnio.remove(e.getPlayer().getUniqueId());
-        if (antes == null || !cb.on("d6.noches")) return;
-        Player p = e.getPlayer();
+        // un tick despues, asi tapa el mensaje del juego ("no se puede dormir esta noche")
         Bukkit.getScheduler().runTaskLater(pl, () -> {
-            if (p.isOnline()) p.setStatistic(Statistic.TIME_SINCE_REST, Math.max(antes, p.getStatistic(Statistic.TIME_SINCE_REST)));
+            if (!p.isOnline()) return;
+            if (cb.on("d6.noches")) {
+                p.setStatistic(Statistic.TIME_SINCE_REST, 0);
+                p.sendActionBar(Txt.c("&aSe reseteó tu contador de phantoms"));
+            } else if (activo()) {
+                tick();
+            }
         }, 1L);
     }
 }

@@ -60,7 +60,7 @@ import ar.tod4.util.Txt;
  *  Dia 2  d2.silverfish picando debajo de Y 0 puede salir un silverfish que da fatiga minera.
  *  Dia 5  d5.wither     el Wither solo se invoca con la cabeza de un jugador en el pecho: "Wither de <jugador>".
  *  Dia 6  d6.caida      Proteccion ya no baja el dano por caida (solo Caida de Pluma).
- *         d6.bedrock    tocar la bedrock da Wither III y gasta la armadura (se rompe en 1 minuto).
+ *         d6.bedrock    tocar la bedrock da Wither III (apenas la tocas, sin importar la armadura) y gasta la armadura (1 minuto).
  */
 final class MecanicasExtra implements Listener {
 
@@ -79,6 +79,7 @@ final class MecanicasExtra implements Listener {
         this.NATURAL = new NamespacedKey(pl, "warden_natural");
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada10, 10L, 10L);
+        Bukkit.getScheduler().runTaskTimer(pl, () -> { if (on("d6.bedrock")) bedrock(); }, 1L, 1L);
     }
 
     private boolean on(String id) { return cb.on(id); }
@@ -89,7 +90,6 @@ final class MecanicasExtra implements Listener {
 
     private void cada10() {
         ticks++;
-        if (on("d6.bedrock")) bedrock();
         int cadaWarden = Math.max(1, pl.getConfig().getInt("cambios.warden_intervalo_seg", 30) * 2);
         if (on("d1.warden") && ticks % cadaWarden == 0) wardens();
     }
@@ -317,6 +317,8 @@ final class MecanicasExtra implements Listener {
     public void sale(PlayerQuitEvent e) {
         tocoBedrock.remove(e.getPlayer().getUniqueId());
         polillas.remove(e.getPlayer().getUniqueId());
+        ultimoGolpe.remove(e.getPlayer().getUniqueId());
+        ultimoDesgaste.remove(e.getPlayer().getUniqueId());
     }
 
     private static boolean tocaBedrock(Player p) {
@@ -329,25 +331,53 @@ final class MecanicasExtra implements Listener {
         return false;
     }
 
+    private final Map<UUID, Long> ultimoGolpe = new HashMap<>();
+    private final Map<UUID, Long> ultimoDesgaste = new HashMap<>();
+
+    /**
+     * Se revisa cada tick: apenas la tocas (parado, saltando, de costado, con la cabeza o clickeandola) te pega.
+     * Wither III = 1 corazon por segundo (medio corazon cada medio segundo), sin importar la armadura ni Proteccion.
+     */
     private void bedrock() {
         long ahora = System.currentTimeMillis();
         int nivel = Math.max(1, pl.getConfig().getInt("cambios.bedrock_wither_nivel", 3));
+        long cada = Math.max(50, (40L >> (nivel - 1)) * 50L); // como el efecto Wither: 40 ticks >> (nivel - 1)
         double seg = Math.max(1, pl.getConfig().getDouble("cambios.bedrock_armadura_segundos", 60));
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!juega(p)) continue;
+            if (!juega(p) || p.isDead()) continue;
             Long hasta = tocoBedrock.get(p.getUniqueId());
             boolean toca = (hasta != null && hasta > ahora) || tocaBedrock(p);
             if (!toca) continue;
-            p.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 40, nivel - 1, false, true, true));
-            if (ticks % 2 != 0) continue; // la armadura se gasta una vez por segundo
-            for (EquipmentSlot s : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
-                ItemStack it = p.getInventory().getItem(s);
-                if (it == null || it.getType().isAir()) continue;
-                int max = it.getType().getMaxDurability();
-                if (max <= 0 || (it.hasItemMeta() && it.getItemMeta().isUnbreakable())) continue;
-                // se rompe en "bedrock_armadura_segundos" (Irrompibilidad la hace durar un poco mas, como siempre)
-                p.damageItemStack(s, (int) Math.ceil(max / seg));
+            // corazones negros (con poca duracion el efecto no hace dano solo: el dano lo pone el plugin)
+            p.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, Math.max(1, (int) (cada / 50) - 1), nivel - 1, false, true, true));
+            Long ug = ultimoGolpe.get(p.getUniqueId());
+            if (ug == null || ahora - ug >= cada) {
+                ultimoGolpe.put(p.getUniqueId(), ahora);
+                golpeWither(p);
+            }
+            Long ud = ultimoDesgaste.get(p.getUniqueId());
+            if (ud == null || ahora - ud >= 1000) {
+                ultimoDesgaste.put(p.getUniqueId(), ahora);
+                for (EquipmentSlot s : new EquipmentSlot[]{EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+                    ItemStack it = p.getInventory().getItem(s);
+                    if (it == null || it.getType().isAir()) continue;
+                    int max = it.getType().getMaxDurability();
+                    if (max <= 0 || (it.hasItemMeta() && it.getItemMeta().isUnbreakable())) continue;
+                    // se rompe en "bedrock_armadura_segundos" (Irrompibilidad la hace durar un poco mas, como siempre)
+                    p.damageItemStack(s, (int) Math.ceil(max / seg));
+                }
             }
         }
+    }
+
+    /** Medio corazon de Wither que no baja con armadura ni Proteccion. Si te mata, es un golpe normal (el totem te salva). */
+    private void golpeWither(Player p) {
+        org.bukkit.damage.DamageSource src = org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.WITHER).build();
+        double h = p.getHealth();
+        if (h <= 1.0 && p.getAbsorptionAmount() <= 0) { p.damage(1000.0, src); return; }
+        p.damage(0.0001, src); // la animacion y el sonido de golpe
+        if (p.isDead()) return;
+        if (p.getAbsorptionAmount() > 0) p.setAbsorptionAmount(Math.max(0, p.getAbsorptionAmount() - 1.0));
+        else p.setHealth(Math.max(0.0, Math.min(p.getHealth(), h) - 1.0));
     }
 }

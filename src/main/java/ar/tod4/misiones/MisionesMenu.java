@@ -349,7 +349,6 @@ public final class MisionesMenu {
                 if (ms.objetivos(id).stream().allMatch(Objetivo::vacio)) { Style.err(p, "La misión no tiene objetivos."); return; }
                 p.closeInventory();
                 ms.activar(clase, id);
-                Style.ok(p, "Misión &f" + ms.nombre(id) + " &aactivada.");
             });
         }
         m.set(51, Items.of(Material.NAME_TAG, "&e&lRenombrar", "", "&7Nombre: &f" + ms.nombre(id), "&7(la ID no cambia)", "", "&e▶ Click para cambiar"), e -> {

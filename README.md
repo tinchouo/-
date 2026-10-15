@@ -31,6 +31,6 @@ Plugin de TrucOfDeath 4. Se compila solo: pestaña **Actions** → última ejecu
 - Día 1: el Warden aparece solo en las Ancient City (en lugar del bloqueo de manzanas).
 - Día 2: las hojas no sueltan brotes ni manzanas; silverfish en las cuevas (debajo de Y 0).
 - Día 5: el Wither solo se invoca con la cabeza de un jugador pegada en el pecho de la T. Se llama "Wither de <jugador>".
-- Día 6: solo Caída de Pluma protege de la caída; las noches no se saltan y dormir no resetea a los phantoms; tocar bedrock da Wither III y gasta la armadura.
+- Día 6: solo Caída de Pluma protege de la caída; las noches no se saltan (acostarte igual resetea el contador de phantoms); tocar bedrock da Wither III apenas la tocas y gasta la armadura.
 - Siempre: para pasar la noche duerme un cuarto de los jugadores (mínimo 5), contando Overworld y Aether (`sueno:` en config.yml).
 - Mesa (día 4): con el botón 40 las herramientas sacan mínimo 2 encantamientos y el principal al máximo; Reparación un poco más seguido; nuevo **Libro Indestructible** (se usa en el yunque). El `mesa.yml` viejo queda como `mesa_viejo.yml`.
