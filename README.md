@@ -39,3 +39,10 @@ Plugin de TrucOfDeath 4. Se compila solo: pestaña **Actions** → última ejecu
 1. Descomprimí `TOD4_pack_Oraxen.zip` adentro de `plugins/Oraxen/pack/` (se suma a la carpeta `assets/`) y recargá Oraxen. Trae el video, el shader de pantalla completa y los sonidos de lobotomía y del Howler.
 2. Reemplazá `lobotomia.sk` por el nuevo (llama a `/tod4:video`).
 3. Probar: `/lobotomia frame <jugador>`.
+
+## Aether
+
+Antes estaba en `aether.sk`; ahora lo hace el plugin (saca `aether.sk` de `plugins/Skript/scripts/`).
+Siguen haciendo falta los datapacks `aether_v7` (piezas y loot) y `aether_dimension` (dimension y biomas).
+Opciones en `plugins/TOD4/aether.yml`. Comandos: `/tod4:aether_init`, `_tp`, `_pocion`, `_locate`, `_goto`,
+`_fill`, `_test`, `_force`, `_music`, `_reset`.
