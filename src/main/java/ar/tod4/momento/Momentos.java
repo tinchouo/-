@@ -263,7 +263,6 @@ public final class Momentos implements Listener {
 
     private void salvar(Player p, Act a) {
         if (!participantes.contains(p.getUniqueId()) || !a.salvados.add(p.getUniqueId())) return;
-        Style.raw(p, "&c&l☠ MOMENTO TRUCO &8» &f" + (esCama(a) ? "¡Has encontrado una cama!" : "¡Lo conseguiste!") + " &a✔ ESTÁS A SALVO");
         p.playSound(p.getLocation(), "entity.player.levelup", SoundCategory.MASTER, 1f, 1.4f);
     }
 
@@ -413,12 +412,7 @@ public final class Momentos implements Listener {
             if (dur > 0) { a.totalSeg = dur; a.fin = System.currentTimeMillis() + dur * 1000L; }
         }
         // las reglas anteriores siguen, salvo la del mismo tipo (que se reemplaza)
-        Act vieja = activos.put(familia(a.tipo), a);
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!participantes.contains(p.getUniqueId())) continue;
-            if (vieja != null && a.tipo != null) Style.raw(p, "&c&l☠ &8» &7La regla anterior queda cancelada: &f" + Txt.strip(vieja.texto));
-            for (Act o : activos.values()) if (o != a && o.tipo != null) Style.raw(p, "&c&l☠ &8» &7Sigue activo: &f" + Txt.strip(o.texto));
-        }
+        activos.put(familia(a.tipo), a);
     }
 
     private void comenzar() {
@@ -471,7 +465,6 @@ public final class Momentos implements Listener {
             if (p != null && cumpleAhora(p, a)) a.salvados.add(u);
         }
         List<UUID> fallaron = new ArrayList<>();
-        String que = esCama(a) ? "no consiguió tocar una cama." : "no lo consiguió.";
         for (UUID u : participantes) {
             Player p = Bukkit.getPlayer(u);
             if (p == null || p.isDead()) continue;
@@ -479,8 +472,6 @@ public final class Momentos implements Listener {
                 for (ItemStack it : recompensas(a.path)) p.getInventory().addItem(it.clone()).values().forEach(r -> p.getWorld().dropItemNaturally(p.getLocation(), r));
             } else {
                 fallaron.add(u);
-                Style.broadcast("&c✖ &f" + p.getName() + " &7" + que);
-                if (gas) Style.raw(p, "&2&l☣ GAS TÓXICO &8» &aTe hace daño hasta que lo consigas.");
             }
         }
         long delay = Math.max(0, pl.getConfig().getLong("momentos.delay_castigo_seg", 15)) * 20L;
@@ -720,7 +711,7 @@ public final class Momentos implements Listener {
     /**
      * La sidebar completa durante el momento (reemplaza todo lo demas):
      *   linea gris / el aviso vinculado del ultimo paso tal cual (sin titulo) / linea gris /
-     *   un renglon por paso activo (■ rojo oscuro) / linea gris / el tiempo (si algun paso tiene) / linea gris /
+     *   por cada paso activo: "■ texto" (rojo oscuro) y debajo el reloj con el tiempo (si tiene) / linea gris /
      *   "No participas" (creativo, espectador o exento) / linea gris
      */
     public List<String> sidebar(Player p, String sep, int ancho) {
@@ -735,24 +726,16 @@ public final class Momentos implements Listener {
             out.add(sep);
         }
         long ahora = System.currentTimeMillis();
-        List<Act> conTiempo = new ArrayList<>();
         for (Act a : activos.values()) {
-            String t = "&c" + Txt.strip(Txt.norm(a.texto)) + (a.gas ? " &2☣" : "");
-            out.addAll(Ancho.cortar(t, "&4■ ", "&4  ", ancho));
-            if (a.fin > 0) conTiempo.add(a);
-        }
-        if (activos.isEmpty()) out.add("&4■ &cEsperando el siguiente paso...");
-        out.add(sep);
-        if (!conTiempo.isEmpty()) {
-            String reloj = pl.getConfig().getString("momentos.simbolo_tiempo", "⌚");
-            for (Act a : conTiempo) {
+            // como "■ Mundo": el cuadradito y el texto del paso; abajo el reloj (sin el guion gris) si tiene tiempo
+            out.addAll(Ancho.cortar("&c&l" + Txt.norm(a.texto), "&4■ ", "&4  ", ancho));
+            if (a.fin > 0) {
                 long r = Math.max(0, (a.fin - ahora + 999) / 1000);
-                String t = "&c" + reloj + " &f" + String.format("%d:%02d", r / 60, r % 60);
-                if (conTiempo.size() > 1) t += " &8» &c" + Txt.strip(Txt.norm(a.texto));
-                out.add(Ancho.cortar(t, "", "", ancho).get(0));
+                out.add(" &c" + pl.getConfig().getString("momentos.simbolo_tiempo", "⌚") + " &f" + String.format("%d:%02d", r / 60, r % 60));
             }
-            out.add(sep);
         }
+        if (activos.isEmpty()) out.add("&4■ &c&lEsperando el siguiente paso...");
+        out.add(sep);
         if (!participa(p)) {
             out.add("&e■ &eNo participas");
             out.add(sep);
