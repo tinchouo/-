@@ -170,7 +170,7 @@ final class Mecanicas implements Listener {
         }
     }
 
-    /** Dia 1: calor del Nether. Cada segundo, medio corazon fijo (ignora armadura, encantamientos y Resistencia). */
+    /** Dia 1: calor del Nether. Cada segundo, medio corazon fijo; a los 30 s, un corazon (ignora armadura, encantamientos y Resistencia). */
     private void calorNether() {
         if (on("d1.nether")) {
             for (Player p : Bukkit.getOnlinePlayers()) {
@@ -184,7 +184,8 @@ final class Mecanicas implements Listener {
                     quemando.add(p.getUniqueId());
                     try {
                         // tipo "quemadura": el mensaje de muerte dice que se quemo
-                        p.damage(1.0, DamageSource.builder(DamageType.ON_FIRE).build());
+                        // medio corazon; a los 30 s (cuando ya tiene nauseas) sube a un corazon
+                        p.damage(c >= 30 ? 2.0 : 1.0, DamageSource.builder(DamageType.ON_FIRE).build());
                     } finally {
                         quemando.remove(p.getUniqueId());
                     }
