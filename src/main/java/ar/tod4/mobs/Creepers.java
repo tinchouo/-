@@ -11,6 +11,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
+import com.destroystokyo.paper.entity.ai.VanillaGoal;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.GameMode;
@@ -27,6 +28,7 @@ import org.bukkit.block.Container;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
+import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
@@ -36,6 +38,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.potion.PotionEffect;
@@ -76,6 +79,7 @@ public final class Creepers implements Listener {
         Creeper c;
         int t, total;
         BossBar bar;
+        int seg = -1;
         final Set<UUID> ven = new HashSet<>();
     }
 
@@ -98,7 +102,15 @@ public final class Creepers implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void aparece(CreatureSpawnEvent e) {
-        if (!(e.getEntity() instanceof Creeper c) || e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        // tambien pueden aparecer junto a otros bichos hostiles (zombies, esqueletos, arañas...)
+        if (!(e.getEntity() instanceof Creeper) && e.getEntity() instanceof org.bukkit.entity.Monster
+                && rnd.nextDouble() * 100 < cfg.getDouble("chance_con_otros", 4)) {
+            Location lo = e.getEntity().getLocation();
+            Bukkit.getScheduler().runTask(pl, () -> extra(lo));
+            return;
+        }
+        if (!(e.getEntity() instanceof Creeper c)) return;
         if (on("electronico")) c.setPowered(true);
         Location l = c.getLocation();
         Bukkit.getScheduler().runTask(pl, () -> extra(l));
@@ -133,7 +145,7 @@ public final class Creepers implements Listener {
         if (!(en instanceof Creeper c)) return;
         switch (tipo) {
             case "mini" -> escala(c, cfg.getDouble("mini.tamano", 0.5));
-            case "nuclear" -> { escala(c, cfg.getDouble("nuclear.tamano", 1.5)); c.setMaxFuseTicks(32000); c.setExplosionRadius(0); }
+            case "nuclear" -> { escala(c, cfg.getDouble("nuclear.tamano", 1.5)); c.setMaxFuseTicks(32000); c.setExplosionRadius(0); nuclearBase(c); }
             default -> { }
         }
     }
@@ -190,7 +202,21 @@ public final class Creepers implements Listener {
 
     private void mini(Creeper c) {
         escala(c, cfg.getDouble("mini.tamano", 0.5));
-        if (!(c.getTarget() instanceof Player p) || p.isDead() || p.getWorld() != c.getWorld()) return;
+        // el "swell" de vanilla frena al creeper mientras se infla: sin eso sigue corriendo con la mecha prendida
+        if (!c.getScoreboardTags().contains("mini_listo")) {
+            c.addScoreboardTag("mini_listo");
+            try { Bukkit.getMobGoals().removeGoal(c, VanillaGoal.CREEPER_SWELL); } catch (Throwable ignored) { }
+        }
+        Player p = c.getTarget() instanceof Player t && !t.isDead() && t.getWorld() == c.getWorld() ? t : null;
+        if (p == null && c.isIgnited()) {         // perdio el objetivo pero la mecha sigue: va al jugador mas cercano
+            double best = 20 * 20;
+            for (Player q : c.getWorld().getPlayers()) {
+                if (q.isDead() || q.getGameMode() == GameMode.CREATIVE || q.getGameMode() == GameMode.SPECTATOR) continue;
+                double d = q.getLocation().distanceSquared(c.getLocation());
+                if (d < best) { best = d; p = q; }
+            }
+        }
+        if (p == null) return;
         if (!c.isIgnited()) {
             if (p.getLocation().distanceSquared(c.getLocation()) > Math.pow(cfg.getDouble("mini.vision", 10), 2)) return;
             c.setMaxFuseTicks((int) (cfg.getDouble("mini.mecha_seg", 5) * 20));
@@ -220,15 +246,10 @@ public final class Creepers implements Listener {
         if (rasgo.equals("invisible") && tick % 40 == 0)
             c.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 20, 0, false, false));
         // teleport: cada tanto aparece al lado tuyo
-        if (rasgo.equals("teleport") && tick % 60 == 0 && c.getTarget() instanceof Player p && p.getWorld() == c.getWorld()
+        if (rasgo.equals("teleport") && tick % 40 == 0 && c.getTarget() instanceof Player p && p.getWorld() == c.getWorld()
                 && p.getLocation().distanceSquared(c.getLocation()) > 16 && p.getLocation().distanceSquared(c.getLocation()) < 400 && rnd.nextInt(100) < 60) {
             Location dst = lugar(p.getLocation(), 2, 4);
-            if (dst != null) {
-                c.getWorld().spawnParticle(Particle.PORTAL, c.getLocation().add(0, 1, 0), 40, 0.3, 0.8, 0.3, 0.3);
-                c.teleport(dst);
-                c.getWorld().playSound(dst, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, 1.2f);
-                c.getWorld().spawnParticle(Particle.PORTAL, dst.clone().add(0, 1, 0), 40, 0.3, 0.8, 0.3, 0.3);
-            }
+            if (dst != null) saltar(c, dst);
         }
         // inflandose: chispas de colores
         if (c.getFuseTicks() > 0) {
@@ -255,10 +276,54 @@ public final class Creepers implements Listener {
         }
     }
 
+    /** Random: no rompe bloques (mismo dano que un creeper) y la nube que deja es de dano instantaneo, no de sus rasgos. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void explotaRandom(EntityExplodeEvent e) {
+        if (!(e.getEntity() instanceof Creeper c) || !c.getScoreboardTags().contains("creeper_random")) return;
+        e.blockList().clear();
+        c.clearActivePotionEffects();             // sin efectos propios, vanilla no deja la nube de resistencia/salto
+        Location l = c.getLocation();
+        c.getWorld().spawn(l, AreaEffectCloud.class, nube -> {
+            nube.setRadius(2.2f);
+            nube.setDuration(80);
+            nube.setReapplicationDelay(30);
+            nube.setRadiusPerTick(-0.004f);
+            nube.setColor(Color.fromRGB(190, 30, 60));
+            nube.addCustomEffect(new PotionEffect(PotionEffectType.INSTANT_DAMAGE, 1, 0), true);
+        });
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void explota(EntityExplodeEvent e) {
         if (e.getEntity() instanceof Creeper c && c.getScoreboardTags().contains("creeper_calamar"))
             c.getWorld().spawnParticle(Particle.SQUID_INK, c.getLocation().add(0, 1, 0), 120, 1.8, 1.2, 1.8, 0.15);
+    }
+
+    /** Random con teleport: como un Enderman, a veces se esfuma cuando le pegan. Nuclear: voz grave. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void herido(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Creeper c)) return;
+        Set<String> tags = c.getScoreboardTags();
+        if (tags.contains("rc_teleport") && e.getCause() != EntityDamageEvent.DamageCause.VOID && !c.isDead() && rnd.nextInt(100) < 55) {
+            Location dst = lugar(c.getLocation(), 3, 8);
+            if (dst != null) Bukkit.getScheduler().runTask(pl, () -> { if (c.isValid()) saltar(c, dst); });
+        }
+        if (tags.contains("creeper_nuclear") && !c.isDead() && c.getHealth() - e.getFinalDamage() > 0)
+            c.getWorld().playSound(c.getLocation(), Sound.ENTITY_CREEPER_HURT, SoundCategory.HOSTILE, 1.4f, 0.5f);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void murio(EntityDeathEvent e) {
+        if (e.getEntity() instanceof Creeper c && c.getScoreboardTags().contains("creeper_nuclear"))
+            c.getWorld().playSound(c.getLocation(), Sound.ENTITY_CREEPER_DEATH, SoundCategory.HOSTILE, 1.4f, 0.5f);
+    }
+
+    private void saltar(Creeper c, Location dst) {
+        c.getWorld().spawnParticle(Particle.PORTAL, c.getLocation().add(0, 1, 0), 40, 0.3, 0.8, 0.3, 0.3);
+        c.getWorld().playSound(c.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, 1.2f);
+        c.teleport(dst);
+        c.getWorld().playSound(dst, Sound.ENTITY_ENDERMAN_TELEPORT, SoundCategory.HOSTILE, 1f, 1.2f);
+        c.getWorld().spawnParticle(Particle.PORTAL, dst.clone().add(0, 1, 0), 40, 0.3, 0.8, 0.3, 0.3);
     }
 
     /** La pantalla se mancha de tinta (uno de 4 dibujos del pack) y se va desvaneciendo. */
@@ -273,8 +338,17 @@ public final class Creepers implements Listener {
 
     // ----------------------------------------------------------------- nuclear
 
+    /** Vida, silencio (la voz grave la ponemos nosotros) y nada mas. */
+    private void nuclearBase(Creeper c) {
+        double vida = cfg.getDouble("nuclear.vida", 50);
+        AttributeInstance a = c.getAttribute(Attribute.MAX_HEALTH);
+        if (a != null && a.getBaseValue() < vida) { a.setBaseValue(vida); c.setHealth(vida); }
+        if (!c.isSilent()) c.setSilent(true);
+    }
+
     private void nuclear(Creeper c) {
         escala(c, cfg.getDouble("nuclear.tamano", 1.5));
+        nuclearBase(c);
         if (c.getMaxFuseTicks() < 32000) { c.setMaxFuseTicks(32000); c.setExplosionRadius(0); }
         if (nukes.containsKey(c.getUniqueId())) return;
         if (!(c.getTarget() instanceof Player p) || p.isDead() || p.getWorld() != c.getWorld()) return;
@@ -283,9 +357,11 @@ public final class Creepers implements Listener {
         Nuke n = new Nuke();
         n.c = c;
         n.total = n.t = (int) (cfg.getDouble("nuclear.cuenta_seg", 10) * 20);
-        n.bar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.YELLOW, BossBar.Overlay.PROGRESS);
+        n.bar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.YELLOW, BossBar.Overlay.NOTCHED_10);
         nukes.put(c.getUniqueId(), n);
         c.setAI(false);
+        // casi imposible de matar de cerca: hay que usar arco
+        c.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, PotionEffect.INFINITE_DURATION, cfg.getInt("nuclear.resistencia", 3) - 1, false, false));
         Ext.mythicSignal(c, "NUCLEAR");
         c.getWorld().playSound(c.getLocation(), Sound.ENTITY_CREEPER_PRIMED, SoundCategory.HOSTILE, 3f, 0.5f);
         c.getWorld().playSound(c.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.HOSTILE, 4f, 0.6f);
@@ -295,11 +371,14 @@ public final class Creepers implements Listener {
         Creeper c = n.c;
         if (c.isDead() || !c.isValid()) { terminar(n); return; }      // lo mataron: no explota
         Location l = c.getLocation();
-        if (n.t % 10 == 0) {
-            int s = (int) Math.ceil(n.t / 20.0);
+        int s = (int) Math.ceil(n.t / 20.0);
+        if (s != n.seg) {          // la barra baja un casillero por segundo (10 casilleros)
+            n.seg = s;
             n.bar.name(Component.text("☢ CREEPER NUCLEAR ☢  ", NamedTextColor.YELLOW, TextDecoration.BOLD)
                     .append(Component.text(s + "s", NamedTextColor.YELLOW)));
-            n.bar.progress(Math.max(0f, Math.min(1f, n.t / (float) n.total)));
+            n.bar.progress(Math.max(0f, Math.min(1f, s / (float) Math.ceil(n.total / 20.0))));
+        }
+        if (n.t % 10 == 0) {
             double r2 = Math.pow(cfg.getDouble("nuclear.radio_aviso", 80), 2);
             for (Player p : Bukkit.getOnlinePlayers()) {
                 boolean cerca = p.getWorld() == l.getWorld() && p.getLocation().distanceSquared(l) <= r2;
@@ -307,9 +386,11 @@ public final class Creepers implements Listener {
                 else if (!cerca && n.ven.remove(p.getUniqueId())) p.hideBossBar(n.bar);
             }
         }
-        // pitidos cada vez mas rapidos
-        int cada = Math.max(2, (int) (20.0 * n.t / n.total));
-        if (n.t % cada == 0) l.getWorld().playSound(l, Sound.BLOCK_NOTE_BLOCK_BIT, SoundCategory.HOSTILE, 4f, 1.6f);
+        // un sonido por segundo, desde donde esta el creeper: count1 (10-7), count2 (6-3), count4 (2-1)
+        if (n.t % 20 == 0) {
+            String snd = s >= 7 ? "count1" : s >= 3 ? "count2" : "count4";
+            l.getWorld().playSound(l, "tod4:creeper.nuclear." + snd, SoundCategory.HOSTILE, (float) cfg.getDouble("nuclear.volumen_cuenta", 5), 1f);
+        }
         if (n.t == 30) Ext.mythicSignal(c, "SWELL");
         if (--n.t <= 0) {
             terminar(n);
@@ -328,10 +409,11 @@ public final class Creepers implements Listener {
         for (Nuke n : new ArrayList<>(nukes.values())) terminar(n);
     }
 
-    /** La explosion nuclear: crater de ~15, fuego, mortal a 30 bloques, dano hasta 50, veneno y hongo de humo. */
+    /** La explosion nuclear: crater de ~15, fuego y mortal hasta el mismo radio, dano decreciente hasta el borde, veneno y hongo de humo. */
     private void detonar(Location l) {
         World w = l.getWorld();
-        double mortal = cfg.getDouble("nuclear.radio_mortal", 30), dano = cfg.getDouble("nuclear.radio_dano", 50);
+        double mortal = cfg.getDouble("nuclear.radio_mortal", 22), dano = cfg.getDouble("nuclear.radio_dano", 40);
+        double max = cfg.getDouble("nuclear.dano_centro", 800), min = cfg.getDouble("nuclear.dano_borde_mortal", 400);
         int veneno = cfg.getInt("nuclear.veneno_seg", 10);
         w.createExplosion(l, 6f, false, true);
         w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 16f, 0.5f);
@@ -341,14 +423,14 @@ public final class Creepers implements Listener {
             if (p.getGameMode() == GameMode.CREATIVE || p.getGameMode() == GameMode.SPECTATOR) continue;
             double d = p.getLocation().distance(l);
             if (d > dano) continue;
-            if (d <= mortal) p.damage(1000, src);                 // mortal (solo te salva un totem)
+            if (d <= mortal) p.damage(min + (max - min) * (1 - d / mortal), src);   // mortal incluso con prot 4 (solo te salva un totem); baja con la distancia
             else p.damage(4 + 20 * (1 - (d - mortal) / (dano - mortal)), src);
             if (!p.isDead()) p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, veneno * 20, 2));
         }
         for (Entity en : w.getNearbyEntities(l, mortal, mortal, mortal)) {
             if (en instanceof LivingEntity le && !(en instanceof Player) && le.getLocation().distance(l) <= mortal) le.damage(200, src);
         }
-        crater(l);
+        crater(l, (int) Math.round(mortal));
         hongo(l);
     }
 
@@ -358,7 +440,7 @@ public final class Creepers implements Listener {
             Material.RESPAWN_ANCHOR, Material.ANCIENT_DEBRIS, Material.NETHERITE_BLOCK, Material.ENCHANTING_TABLE, Material.ANVIL);
 
     /** Crater irregular (mas hondo que alto), de a capas para no trabar el server; despues fuego alrededor. */
-    private void crater(Location l) {
+    private void crater(Location l, int radioFuego) {
         World w = l.getWorld();
         int R = cfg.getInt("nuclear.radio_bloques", 15);
         int abajo = (int) Math.round(R * 0.75), arriba = (int) Math.round(R * 0.5);
@@ -387,7 +469,7 @@ public final class Creepers implements Listener {
                 }
                 if (dy < -abajo) {
                     cancel();
-                    fuego(l, R + 7);
+                    fuego(l, radioFuego);   // el fuego llega hasta donde mata la explosion
                 }
             }
         }.runTaskTimer(pl, 1L, 1L);

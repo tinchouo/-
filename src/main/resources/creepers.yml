@@ -7,11 +7,14 @@
 # Cada vez que aparece un creeper normal, con esta chance (%) aparece ADEMAS uno de estos cerca
 # (a lo sumo uno por creeper; el Mini viene en grupo)
 chances:
-  nuclear: 1
-  void: 4
-  calamar: 6
-  mini: 8
-  random: 10
+  nuclear: 3
+  void: 8
+  calamar: 12
+  mini: 14
+  random: 16
+
+# Cada vez que aparece un zombie, esqueleto, araña u otro bicho hostil, con esta chance (%) se tira el mismo sorteo de arriba
+chance_con_otros: 4
 
 # Nombre interno de cada uno en MythicMobs
 mythic:
@@ -36,8 +39,18 @@ nuclear:
   cuenta_seg: 10
   # a cuantos bloques se ve la barra de aviso
   radio_aviso: 80
-  radio_mortal: 30
-  radio_dano: 50
+  vida: 50
+  # al plantarse tiene Resistencia de este nivel hasta que explota (hay que matarlo con arco)
+  resistencia: 3
+  # volumen de los sonidos de la cuenta (5 = se oyen hasta ~80 bloques)
+  volumen_cuenta: 5
+  # mata hasta este radio (es tambien hasta donde llega el fuego), aunque lleves prot 4 completa; solo te salva un totem
+  radio_mortal: 22
+  # el dano baja con la distancia: en el centro y en el borde del radio mortal (el desgaste de armadura es ~ dano / 4)
+  dano_centro: 800
+  dano_borde_mortal: 400
+  # mas alla del radio mortal el dano es bajo y sigue bajando hasta este radio
+  radio_dano: 40
   # radio del crater (bloques que rompe)
   radio_bloques: 15
   veneno_seg: 10
