@@ -36,7 +36,7 @@ final class EquiposMenu {
             List<String> lore = new ArrayList<>();
             lore.add("&7Nombre: &f" + e.nombre);
             lore.add("&7Miembros: &f" + e.miembros.size());
-            lore.add("&7Líder: &f" + (e.lider == null ? "nadie" : Equipos.nombreDe(e.lider) + " ©"));
+            lore.add("&7Líder: &f" + (e.lider == null ? "nadie" : Equipos.nombreDe(e.lider)));
             lore.add("");
             lore.add("&e▶ Clic para ver");
             ItemStack it = nombrado(Items.of(Equipos.lana(e.color), "x", lore), Component.text("[" + e.tag + "] " + e.nombre, e.color));
@@ -55,7 +55,7 @@ final class EquiposMenu {
             if (i >= 45) break;
             boolean lid = u.equals(e.lider);
             boolean on = Bukkit.getPlayer(u) != null;
-            ItemStack it = Equipos.cabeza(u, "&f" + Equipos.nombreDe(u) + (lid ? " ©" : ""),
+            ItemStack it = Equipos.cabeza(u, "&f" + (lid ? eq.simboloLider() + " " : "") + Equipos.nombreDe(u),
                     List.of(lid ? "&7Líder del equipo" : "&7Miembro", on ? "&aConectado" : "&8Desconectado", "", "&e▶ Clic para opciones"));
             m.set(i++, it, c -> miembro(p, e, u));
         }
@@ -68,7 +68,7 @@ final class EquiposMenu {
     private void miembro(Player p, Equipo e, UUID u) {
         Menu m = new Menu(3, "&8" + Equipos.nombreDe(u));
         boolean lid = u.equals(e.lider);
-        m.set(11, Items.of(Material.NETHER_STAR, lid ? "&7Ya es el líder" : "&eHacer líder", "&7Le da el liderazgo (©)."), c -> {
+        m.set(11, Items.of(Material.NETHER_STAR, lid ? "&7Ya es el líder" : "&eHacer líder", "&7Le da el liderazgo."), c -> {
             if (!e.miembros.contains(u) || u.equals(e.lider)) return;
             eq.hacerLider(e, u);
             Style.ok(p, Equipos.nombreDe(u) + " ahora es el líder de [" + e.tag + "].");

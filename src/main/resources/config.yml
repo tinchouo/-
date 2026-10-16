@@ -4,18 +4,20 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 8
+config_version: 9
 
 sidebar:
   activa: true
   titulo: "&f&r &#55ff55&lT&#4ef14e&lR&#47e447&lU&#40d640&lC&#39c939&lO&#33bb33&lF&#2cae2c&lD&#25a025&lE&#1e931e&lA&#178517&lT&#117811&lH &f&l4 &f&r"
   jugadores_max: 100
-  # {jugador} {ping} {dia} {mundo} {jugadores}
+  # {jugador} {ping} {dia} {mundo} {jugadores} {equipo} | {separador} = la linea gris
+  #  (si una linea tiene {equipo} y el jugador no tiene equipo, esa linea no se muestra)
   arriba:
-    - ""
+    - "{separador}"
     - "&a■ &f&lPerfil"
     - " &8| &7Jugador: &f{jugador}"
-    - " &8| &7Conexión: &a{ping} ms"
+    - " &8| &7Ping: &a{ping} ms"
+    - " &8| &7Equipo: {equipo}"
     - ""
     - "&a■ &f&lMundo"
     - " &8| &7Día: &f{dia}"
@@ -76,8 +78,16 @@ avisos:
   momento_truco_espera_ticks: 140
 
 tab:
-  activo: true    # [mision] [alma] nombre (reemplaza al tabulador.sk)
+  activo: true    # [mision] [alma] [EQUIPO] [L] nombre (reemplaza al tabulador.sk); arriba de la cabeza lo mismo
   vida: true      # corazones de vida en el tab
+
+equipos:
+  simbolo_lider: "[L]"
+
+chat:
+  # cuando un jugador escribe: "Nombre: mensaje" (el nombre y los dos puntos en este color, el mensaje en blanco)
+  formato: true
+  color_nombre: "&a"
 
 momentos:
   delay_castigo_seg: 15   # el castigo llega X segundos despues de que termina (para leer el chat)
@@ -85,6 +95,8 @@ momentos:
   vineta_intensidad: 0.75 # de 0.05 (casi nada) a 0.99 (muy roja)
   # tag de los jugadores que no participan (como las nutrias de Desafio): /tag <jugador> add exento_momento
   tag_exento: exento_momento
+  # simbolo del tiempo en la sidebar
+  simbolo_tiempo: "⌚"
 
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"

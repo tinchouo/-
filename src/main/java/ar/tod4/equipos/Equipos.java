@@ -19,7 +19,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -42,7 +41,7 @@ import net.kyori.adventure.text.format.TextDecoration;
 /**
  * Equipos:
  *  - Los admins los crean (/tod4:equipo crear <tag> <color> <nombre completo>) y eligen al lider. Menu: /tod4:equipo
- *  - Arriba de la cabeza: el nombre en el color del equipo y el tag ("Rusbik [GOC]"); el lider lleva ©. En el tab no se ve nada.
+ *  - Tab y arriba de la cabeza: "[GOC] [L] Rusbik" en el color del equipo (lo arma la Sidebar con prefijo()).
  *  - /eq: chat de equipo (alterna) o /eq <mensaje>. El lider invita (se acepta desde el chat), pasa el liderazgo y expulsa.
  *  - No toca nada de PvP.
  */
@@ -81,7 +80,7 @@ public final class Equipos implements Listener {
         this.store = new Store(pl, "equipos");
         cargar();
         Bukkit.getPluginManager().registerEvents(this, pl);
-        Bukkit.getScheduler().runTask(pl, () -> { for (Equipo e : equipos.values()) aplicar(e); });
+        Bukkit.getScheduler().runTask(pl, this::limpiarTeamsViejos);
     }
 
     public Store store() { return store; }
@@ -133,38 +132,51 @@ public final class Equipos implements Listener {
         return o.getName() == null ? u.toString().substring(0, 8) : o.getName();
     }
 
-    // ================================================================= equipos del scoreboard (nombre arriba de la cabeza)
+    // ================================================================= como se ve el nombre (lo usa la Sidebar)
 
-    private static String tn(Equipo e, boolean lider) { return (lider ? "tod4l_" : "tod4e_") + e.tag.toLowerCase(); }
-
-    /** Dos equipos de Minecraft por equipo: miembros y lider (para la ©). Colores y tag; PvP y lo demas quedan como vienen. */
-    private void aplicar(Equipo e) {
+    /** Antes cada equipo tenia dos teams de Minecraft; ahora cada jugador tiene el suyo (Sidebar). */
+    private void limpiarTeamsViejos() {
         Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
-        for (boolean lid : new boolean[]{false, true}) {
-            Team t = sb.getTeam(tn(e, lid));
-            if (t == null) t = sb.registerNewTeam(tn(e, lid));
-            t.color(e.color);
-            t.suffix(Component.text((lid ? " ©" : "") + " [" + e.tag + "]", e.color));
-            for (String en : new ArrayList<>(t.getEntries())) t.removeEntry(en);
-        }
-        for (UUID u : e.miembros) {
-            String n = Bukkit.getOfflinePlayer(u).getName();
-            if (n != null) sb.getTeam(tn(e, u.equals(e.lider))).addEntry(n);
-        }
+        for (Team t : new ArrayList<>(sb.getTeams()))
+            if (t.getName().startsWith("tod4e_") || t.getName().startsWith("tod4l_")) t.unregister();
     }
 
-    private void borrarTeams(Equipo e) {
-        Scoreboard sb = Bukkit.getScoreboardManager().getMainScoreboard();
-        for (boolean lid : new boolean[]{false, true}) {
-            Team t = sb.getTeam(tn(e, lid));
-            if (t != null) t.unregister();
-        }
+    /** No hace nada: la Sidebar lee el equipo de cada jugador cada segundo. */
+    private void aplicar(Equipo e) { }
+
+    private void borrarTeams(Equipo e) { }
+
+    public String simboloLider() { return pl.getConfig().getString("equipos.simbolo_lider", "[L]"); }
+
+    /** "&a[ABC] [L] " (o "&a[ABC] " si no es lider); "" si no tiene equipo. */
+    public String prefijo(UUID u) {
+        Equipo e = de.get(u);
+        if (e == null) return "";
+        return codigo(e.color) + "[" + e.tag + "] " + (u.equals(e.lider) ? simboloLider() + " " : "");
     }
 
-    @EventHandler
-    public void entra(PlayerJoinEvent ev) {
-        Equipo e = de.get(ev.getPlayer().getUniqueId());
-        if (e != null) aplicar(e);   // por si cambio de nombre
+    /** Color del equipo del jugador, o null si no tiene. */
+    public NamedTextColor color(UUID u) {
+        Equipo e = de.get(u);
+        return e == null ? null : e.color;
+    }
+
+    /** Para la sidebar: "&aABC" o "&aABC [L]"; null si no tiene equipo. */
+    public String sidebar(UUID u) {
+        Equipo e = de.get(u);
+        if (e == null) return null;
+        return codigo(e.color) + e.tag + (u.equals(e.lider) ? " " + simboloLider() : "");
+    }
+
+    /** Para ordenar el tab: los del mismo equipo quedan juntos. */
+    public String orden(UUID u) {
+        Equipo e = de.get(u);
+        return e == null ? "zz" : e.tag.toLowerCase();
+    }
+
+    static String codigo(NamedTextColor c) {
+        String s = net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacyAmpersand().serialize(Component.text("x", c));
+        return s.length() >= 3 ? s.substring(0, 2) : "&f";
     }
 
     @EventHandler
@@ -249,7 +261,7 @@ public final class Equipos implements Listener {
     private Component formato(Equipo e, Player p, Component msg) {
         boolean lid = p.getUniqueId().equals(e.lider);
         return Component.text("[Equipo] ", e.color)
-                .append(Component.text(p.getName() + (lid ? " ©" : ""), e.color))
+                .append(Component.text((lid ? simboloLider() + " " : "") + p.getName(), e.color))
                 .append(Component.text(": ", e.color))
                 .append(msg.colorIfAbsent(NamedTextColor.GRAY));
     }
@@ -298,6 +310,7 @@ public final class Equipos implements Listener {
                 Player t = Bukkit.getPlayerExact(a[1]);
                 if (t == null) { rojo(p, "Ese jugador no está conectado."); return; }
                 if (de.containsKey(t.getUniqueId())) { rojo(p, t.getName() + " ya está en un equipo."); return; }
+                if (invitaciones.containsKey(t.getUniqueId())) { rojo(p, t.getName() + " ya tiene una invitación pendiente. Espera a que la responda o a que venza."); return; }
                 invitar(e, p, t);
             }
             case "lider" -> {
@@ -324,7 +337,7 @@ public final class Equipos implements Listener {
                 p.sendMessage(tagNombre(e));
                 for (UUID u : e.miembros) {
                     boolean on = Bukkit.getPlayer(u) != null;
-                    p.sendMessage(Component.text(" • " + nombreDe(u) + (u.equals(e.lider) ? " ©" : ""), on ? NamedTextColor.WHITE : NamedTextColor.GRAY));
+                    p.sendMessage(Component.text(" • " + (u.equals(e.lider) ? simboloLider() + " " : "") + nombreDe(u), on ? NamedTextColor.WHITE : NamedTextColor.GRAY));
                 }
             }
             default -> mandar(e, p, Component.text(String.join(" ", a)));
@@ -470,7 +483,7 @@ public final class Equipos implements Listener {
         if (equipos.isEmpty()) { Style.info(s, "No hay equipos."); return; }
         for (Equipo e : equipos.values()) {
             s.sendMessage(tagNombre(e).append(Component.text(" — " + e.miembros.size() + " miembros — líder: "
-                    + (e.lider == null ? "nadie" : nombreDe(e.lider) + " ©"), NamedTextColor.WHITE)));
+                    + (e.lider == null ? "nadie" : nombreDe(e.lider)), NamedTextColor.WHITE)));
         }
     }
 

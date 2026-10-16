@@ -452,7 +452,7 @@ public final class Revivir implements Listener {
             List<net.kyori.adventure.text.Component> args = new ArrayList<>();
             int i = 0;
             for (net.kyori.adventure.text.TranslationArgument a : tc.arguments()) {
-                net.kyori.adventure.text.Component x = a.asComponent().color(nombres);
+                net.kyori.adventure.text.Component x = ar.tod4.core.Chat.sinEquipo(a.asComponent()).color(nombres);
                 if (i++ == 0) x = x.decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true);
                 args.add(x);
             }
@@ -648,8 +648,9 @@ public final class Revivir implements Listener {
 
     public void descenso(Player p) {
         p.setGameMode(GameMode.SURVIVAL);
-        p.setHealth(Math.min(10.0, p.getMaxHealth()));
-        p.setFoodLevel(10);
+        p.setHealth(p.getMaxHealth());   // revive con la vida y el hambre llenas
+        p.setFoodLevel(20);
+        p.setSaturation(20f);
         for (PotionEffect ef : p.getActivePotionEffects()) p.removePotionEffect(ef.getType());
         Location base = altar() != null ? altar().clone() : p.getWorld().getSpawnLocation();
         Location aire = base.clone().add(0.5, 72, 0.5);

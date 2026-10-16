@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 8;
+    private static final int CONFIG_VERSION = 9;
 
     private Store core;
     private Avisos avisos;
@@ -69,6 +69,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         creepers = new ar.tod4.mobs.Creepers(this);
         aether = new ar.tod4.aether.Aether(this);
         equipos = new ar.tod4.equipos.Equipos(this);
+        new ar.tod4.core.Chat(this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Papi(this).register();
@@ -142,6 +143,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     public Cambios cambios() { return cambios; }
     public Misiones misiones() { return misiones; }
     public Momentos momentos() { return momentos; }
+    public ar.tod4.equipos.Equipos equipos() { return equipos; }
 
     // ================================================================= comandos
 

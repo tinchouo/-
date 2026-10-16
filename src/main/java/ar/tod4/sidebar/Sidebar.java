@@ -37,7 +37,8 @@ import io.papermc.paper.scoreboard.numbers.NumberFormat;
  * Sidebar + tab de TOD4.
  * Sidebar (abajo de la linea, por prioridad): Momento Truco > misiones > frase de calma, y otra linea al final.
  * Durante el Momento Truco todo lo que tiene color (menos blanco y gris) se pone rojo; el titulo queda igual.
- * Tab: [mision] [alma] nombre + corazones de vida.
+ * Tab: [mision] [alma] [EQUIPO] [L] nombre + corazones de vida. Arriba de la cabeza lo mismo sin los corazones
+ * (un team propio por jugador en cada scoreboard: prefijo con mision, alma y equipo; el nombre en el color del equipo).
  * Cada jugador tiene su propio scoreboard; por eso aca adentro se copian la vida y los teams del scoreboard principal.
  */
 public final class Sidebar implements Listener {
@@ -94,6 +95,7 @@ public final class Sidebar implements Listener {
             v.setDisplaySlot(DisplaySlot.PLAYER_LIST);
         }
         copiarTeams(sb);
+        nametags(sb);
         boards.put(p.getUniqueId(), sb);
         lineasCache.remove(p.getUniqueId());
         p.setScoreboard(sb);
@@ -116,8 +118,8 @@ public final class Sidebar implements Listener {
                 if (sb == null || p.getScoreboard() != sb) { attach(p); sb = boards.get(p.getUniqueId()); }
                 if (sb != null) {
                     render(p, sb);
-                    if (ticks % 2 == 0) vida(sb);
                     if (teams) copiarTeams(sb);
+                    if (ticks % 2 == 0) { vida(sb); nametags(sb); }
                 }
             }
             if (ticks % 2 == 0) tab(p);
@@ -159,11 +161,15 @@ public final class Sidebar implements Listener {
 
     private List<String> build(Player p) {
         // Momento Truco: sidebar nueva que reemplaza todo (sin perfil, mundo ni misiones)
-        if (pl.momentos() != null && pl.momentos().enCurso()) return pl.momentos().sidebar(p, ticks, anchoMax());
+        if (pl.momentos() != null && pl.momentos().enCurso()) return pl.momentos().sidebar(p, separador(), anchoMax());
         ConfigurationSection c = pl.getConfig().getConfigurationSection("sidebar");
         List<String> out = new ArrayList<>();
+        String equipo = pl.equipos() == null ? null : pl.equipos().sidebar(p.getUniqueId());
         for (String l : c.getStringList("arriba")) {
+            if (l.contains("{equipo}") && equipo == null) continue;
+            if (l.trim().equals("{separador}")) { out.add(separador()); continue; }
             out.add(l.replace("{jugador}", p.getName())
+                    .replace("{equipo}", equipo == null ? "" : equipo)
                     .replace("{ping}", String.valueOf(p.getPing()))
                     .replace("{dia}", String.valueOf(pl.dia()))
                     .replace("{mundo}", mundo(pl, p.getWorld()))
@@ -218,12 +224,25 @@ public final class Sidebar implements Listener {
 
     // ================================================================= tab
 
-    /** [mision] [alma] nombre, igual que el tabulador.sk viejo. */
-    private void tab(Player p) {
-        if (!pl.getConfig().getBoolean("tab.activo", true)) return;
+    /** [mision] [alma] (sin el nombre). */
+    private String simbolos(Player p) {
         String mision = pl.misiones() == null ? "" : pl.misiones().simboloTab(p);
         String alma = pl.revivir().tieneAlma(p.getName()) ? "&f✦ " : "&f✧ ";
-        String nombre = mision + alma + "&f" + p.getName();
+        return mision + alma;
+    }
+
+    /** "&a[ABC] [L] " o "" y el color del nombre ("&a" o "&f"). */
+    private String[] equipo(Player p) {
+        if (pl.equipos() == null) return new String[]{"", "&f"};
+        String pre = pl.equipos().prefijo(p.getUniqueId());
+        return new String[]{pre, pre.isEmpty() ? "&f" : pre.substring(0, 2)};
+    }
+
+    /** [mision] [alma] [EQUIPO] [L] nombre (lo del equipo en su color). */
+    private void tab(Player p) {
+        if (!pl.getConfig().getBoolean("tab.activo", true)) return;
+        String[] eq = equipo(p);
+        String nombre = simbolos(p) + eq[0] + eq[1] + p.getName();
         if (nombre.equals(tabCache.get(p.getUniqueId()))) return;
         tabCache.put(p.getUniqueId(), nombre);
         p.playerListName(Txt.c(nombre));
@@ -240,12 +259,42 @@ public final class Sidebar implements Listener {
         }
     }
 
+    /**
+     * Arriba de la cabeza: lo mismo que en el tab sin los corazones. Cada jugador conectado va en un team propio
+     * ("tod4n_<equipo>_<nombre>", asi el tab queda ordenado por equipo) con el prefijo y el color del nombre.
+     */
+    private void nametags(Scoreboard sb) {
+        if (!pl.getConfig().getBoolean("tab.activo", true)) return;
+        Set<String> usados = new HashSet<>();
+        for (Player t : Bukkit.getOnlinePlayers()) {
+            String[] eq = equipo(t);
+            String orden = pl.equipos() == null ? "zz" : pl.equipos().orden(t.getUniqueId());
+            String nombre = (NT + orden + "_" + t.getName().toLowerCase());
+            usados.add(nombre);
+            Team tm = sb.getTeam(nombre);
+            if (tm == null) tm = sb.registerNewTeam(nombre);
+            net.kyori.adventure.text.Component pre = Txt.c(simbolos(t) + eq[0]);
+            if (!pre.equals(tm.prefix())) tm.prefix(pre);
+            net.kyori.adventure.text.format.NamedTextColor col = pl.equipos() == null ? null : pl.equipos().color(t.getUniqueId());
+            if (col == null) col = net.kyori.adventure.text.format.NamedTextColor.WHITE;
+            if (!tm.hasColor() || !col.equals(tm.color())) tm.color(col);
+            if (!tm.hasEntry(t.getName())) tm.addEntry(t.getName());
+        }
+        for (Team tm : new HashSet<>(sb.getTeams()))
+            if (tm.getName().startsWith(NT) && !usados.contains(tm.getName())) tm.unregister();
+    }
+
+    private static final String NT = "tod4n_";
+
     /** Copia los teams del scoreboard principal (colores de nombre, prefijos de otros scripts, etc.). */
     @SuppressWarnings("deprecation")
     private void copiarTeams(Scoreboard dest) {
         Scoreboard main = Bukkit.getScoreboardManager().getMainScoreboard();
         Set<String> nombres = new HashSet<>();
+        Set<String> conectados = new HashSet<>();
+        if (pl.getConfig().getBoolean("tab.activo", true)) for (Player p : Bukkit.getOnlinePlayers()) conectados.add(p.getName());
         for (Team t : main.getTeams()) {
+            if (t.getName().startsWith(NT)) continue;
             nombres.add(t.getName());
             Team d = dest.getTeam(t.getName());
             if (d == null) d = dest.registerNewTeam(t.getName());
@@ -258,11 +307,12 @@ public final class Sidebar implements Listener {
                 d.setCanSeeFriendlyInvisibles(t.canSeeFriendlyInvisibles());
                 for (Team.Option op : Team.Option.values()) d.setOption(op, t.getOption(op));
                 Set<String> ent = t.getEntries();
-                for (String e : ent) if (!d.hasEntry(e)) d.addEntry(e);
-                for (String e : new HashSet<>(d.getEntries())) if (!ent.contains(e)) d.removeEntry(e);
+                // los jugadores conectados van en su team propio (nametags): no se copian aca
+                for (String e : ent) if (!conectados.contains(e) && !d.hasEntry(e)) d.addEntry(e);
+                for (String e : new HashSet<>(d.getEntries())) if (!ent.contains(e) || conectados.contains(e)) d.removeEntry(e);
             } catch (Exception ignored) { }
         }
-        for (Team d : new HashSet<>(dest.getTeams())) if (!nombres.contains(d.getName())) d.unregister();
+        for (Team d : new HashSet<>(dest.getTeams())) if (!d.getName().startsWith(NT) && !nombres.contains(d.getName())) d.unregister();
     }
 
     // ================================================================== utilidades publicas

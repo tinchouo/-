@@ -58,7 +58,8 @@ import ar.tod4.util.Txt;
  * para los jugadores: el admin recibe un item por paso y el momento arranca cuando activa el primero (ruleta roja + aviso).
  * Cada paso nuevo se SUMA a los anteriores; solo reemplaza a una regla del mismo tipo (altura/punto se reemplazan entre si).
  * Reglas: tocar un bloque, estar en una dimension, arriba/abajo de una altura, cerca de un punto, tener un item, matar mobs.
- * Cada regla puede tener tiempo (o no), gas (dano cada tanto al que no cumple), consecuencias al terminar el tiempo y premio.
+ * Cada regla puede tener tiempo (o no), consecuencias al terminar el tiempo (entre ellas el gas: desde que se acaba el tiempo
+ * le pega cada tanto al que no cumple, hasta que cumpla) y premio.
  * Spawn: hace aparecer un mob (vanilla, MythicMobs o uno de los creepers del dia 5) en la posicion de cada jugador.
  */
 public final class Momentos implements Listener {
@@ -84,6 +85,7 @@ public final class Momentos implements Listener {
         long fin;                       // 0 = sin tiempo
         int totalSeg;
         long gasProx;
+        boolean gas;                    // se acabo el tiempo y el gas esta pegando a los que no cumplen
         final Set<UUID> salvados = new HashSet<>();
         final Map<UUID, Integer> kills = new HashMap<>();
     }
@@ -100,6 +102,7 @@ public final class Momentos implements Listener {
     private final Set<UUID> participantes = new HashSet<>();
     private final Map<UUID, Long> congelados = new HashMap<>();
     private BukkitTask tarea;
+    private String avisoActual;                                // aviso del ultimo paso activado (arriba en la sidebar)
 
     public Momentos(TOD4 pl) {
         this.pl = pl;
@@ -108,6 +111,7 @@ public final class Momentos implements Listener {
         this.K_FIN = new NamespacedKey(pl, "momento_fin");
         migrar();
         Bukkit.getPluginManager().registerEvents(this, pl);
+        Bukkit.getScheduler().runTaskTimer(pl, this::tickCorazones, 20L, 20L);
     }
 
     public Store store() { return st; }
@@ -397,6 +401,7 @@ public final class Momentos implements Listener {
         ConfigurationSection c = m(path);
         String av = c.getString("aviso");
         if (av != null && pl.avisos().existe(av)) for (Player p : Bukkit.getOnlinePlayers()) pl.avisos().mostrar(av, p);
+        avisoActual = av != null && pl.avisos().existe(av) ? av : null;
         Act a = new Act();
         a.path = path;
         a.texto = textoSidebar(path);
@@ -406,7 +411,6 @@ public final class Momentos implements Listener {
             a.tipo = tipo(path);
             int dur = c.getInt("duracion", 0);
             if (dur > 0) { a.totalSeg = dur; a.fin = System.currentTimeMillis() + dur * 1000L; }
-            a.gasProx = System.currentTimeMillis() + (long) (c.getDouble("gas.cada", 1.5) * 1000);
         }
         // las reglas anteriores siguen, salvo la del mismo tipo (que se reemplaza)
         Act vieja = activos.put(familia(a.tipo), a);
@@ -440,12 +444,12 @@ public final class Momentos implements Listener {
                     if (p != null && !a.salvados.contains(u) && cumpleAhora(p, a)) salvar(p, a);
                 }
             }
-            // gas: dano cada tanto a los participantes que todavia no cumplen
+            // gas: desde que se acabo el tiempo, dano cada tanto a los que todavia no cumplen (la Resistencia lo baja)
             ConfigurationSection c = m(a.path);
-            if (c.getBoolean("gas.on", false) && ahora >= a.gasProx) {
-                a.gasProx = ahora + (long) (Math.max(0.5, c.getDouble("gas.cada", 1.5)) * 1000);
+            if (a.gas && ahora >= a.gasProx) {
+                a.gasProx = ahora + (long) (Math.max(0.5, c.getDouble("gas.cada", 1.0)) * 1000);
                 DamageSource src = DamageSource.builder(DamageType.MAGIC).build();
-                double dano = Math.max(1, c.getInt("gas.corazones", 2)) * 2.0;
+                double dano = Math.max(0.5, c.getDouble("gas.corazones", 2.5)) * 2.0;
                 for (UUID u : participantes) {
                     Player p = Bukkit.getPlayer(u);
                     if (p == null || p.isDead() || !afecta(p) || salvoDe(p, a)) continue;
@@ -458,7 +462,10 @@ public final class Momentos implements Listener {
 
     /** Se acabo el tiempo de una regla: premio a los que cumplieron y castigo a los que fallaron. */
     private void terminarRegla(Act a) {
-        activos.remove(familia(a.tipo), a);
+        boolean gas = m(a.path).getBoolean("gas.on", false);
+        // con gas la regla sigue en la sidebar: desde ahora el gas le pega al que no cumple hasta que cumpla
+        if (gas) { a.fin = 0; a.gas = true; a.gasProx = System.currentTimeMillis(); }
+        else activos.remove(familia(a.tipo), a);
         if (!unaVez(a)) for (UUID u : participantes) {
             Player p = Bukkit.getPlayer(u);
             if (p != null && cumpleAhora(p, a)) a.salvados.add(u);
@@ -473,6 +480,7 @@ public final class Momentos implements Listener {
             } else {
                 fallaron.add(u);
                 Style.broadcast("&c✖ &f" + p.getName() + " &7" + que);
+                if (gas) Style.raw(p, "&2&l☣ GAS TÓXICO &8» &aTe hace daño hasta que lo consigas.");
             }
         }
         long delay = Math.max(0, pl.getConfig().getLong("momentos.delay_castigo_seg", 15)) * 20L;
@@ -495,6 +503,7 @@ public final class Momentos implements Listener {
         iniciado = false;
         ruleta = false;
         mid = null;
+        avisoActual = null;
         sacarVinetas();
     }
 
@@ -622,9 +631,23 @@ public final class Momentos implements Listener {
         if (c.getBoolean("corazones_on")) {
             AttributeInstance a = p.getAttribute(Attribute.MAX_HEALTH);
             if (a != null) {
-                double nuevo = Math.max(2.0, a.getBaseValue() - c.getInt("corazones", 3) * 2.0);
+                double antes = a.getBaseValue();
+                double nuevo = Math.max(2.0, antes - c.getInt("corazones", 3) * 2.0);
                 a.setBaseValue(nuevo);
                 if (p.getHealth() > nuevo) p.setHealth(nuevo);
+                double quitado = antes - nuevo;
+                int durSeg = c.getInt("corazones_seg", 0);
+                if (quitado > 0) {
+                    if (durSeg > 0) {
+                        String base = "quitados." + p.getUniqueId() + "." + System.currentTimeMillis();
+                        st.set(base + ".vida", quitado);
+                        st.set(base + ".resta", durSeg);
+                        Style.raw(p, "&c&l❤ &cPierdes " + corazones(quitado) + " durante &f" + duracion(durSeg)
+                                + "&c. &7(Solo cuenta el tiempo que estás conectado.)");
+                    } else {
+                        Style.raw(p, "&c&l❤ &cPierdes " + corazones(quitado) + " para siempre.");
+                    }
+                }
             }
         }
         if (c.getBoolean("rayo")) p.getWorld().strikeLightning(p.getLocation());
@@ -633,47 +656,107 @@ public final class Momentos implements Listener {
         if (c.getBoolean("instakill") && !p.isDead()) p.setHealth(0);
     }
 
-    // ================================================================= sidebar
+    // ================================================================= corazones que vuelven
 
-    /** Titulo de la sidebar durante el momento: calavera roja, MOMENTO TRUCO, calavera roja (degradado rojo). */
-    public static String tituloSidebar() {
-        String t = "MOMENTO TRUCO";
-        String[] hex = {"ff5555", "f84d4d", "f14646", "ea3e3e", "e43737", "dd2f2f", "d62828", "cf2020", "c91919", "c21212", "bb0b0b", "b40404", "aa0000"};
-        StringBuilder sb = new StringBuilder("&#ff0000&l☠ ");
-        for (int i = 0; i < t.length(); i++) {
-            char ch = t.charAt(i);
-            sb.append(ch == ' ' ? " " : "&#" + hex[Math.min(hex.length - 1, i * hex.length / t.length())] + "&l" + ch);
-        }
-        return sb.append(" &#ff0000&l☠").toString();
+    private static String corazones(double vida) {
+        double c = vida / 2.0;
+        String n = c == Math.floor(c) ? String.valueOf((int) c) : String.valueOf(c).replace('.', ',');
+        return n + (c == 1 ? " corazón" : " corazones");
     }
 
-    /** La sidebar completa durante el momento: reemplaza todo lo demas. */
-    public List<String> sidebar(Player p, int anim, int ancho) {
-        // la linea tiene que ser mas ancha que el titulo para que entre en un renglon
-        int objetivo = Math.max(ancho + 8, Ancho.de("&l☠ MOMENTO TRUCO ☠") + 12);
-        StringBuilder esp = new StringBuilder("&c&m ");
-        while (Ancho.de(esp.toString()) < objetivo) esp.append(' ');
-        String sep = esp.toString();
-        int max = Ancho.de(sep);
+    public static String duracion(int seg) {
+        int h = seg / 3600, mi = (seg % 3600) / 60, s = seg % 60;
+        if (h > 0) return h + " h" + (mi > 0 ? " " + mi + " min" : "");
+        if (mi > 0) return mi + " min" + (s > 0 ? " " + s + " s" : "");
+        return s + " s";
+    }
+
+    /** Cada segundo: descuenta el tiempo de los corazones quitados (solo a los conectados) y los devuelve al terminar. */
+    private void tickCorazones() {
+        ConfigurationSection s = st.y().getConfigurationSection("quitados");
+        if (s == null) return;
+        boolean cambio = false;
+        for (String u : new ArrayList<>(s.getKeys(false))) {
+            Player p;
+            try { p = Bukkit.getPlayer(UUID.fromString(u)); } catch (IllegalArgumentException ex) { continue; }
+            ConfigurationSection q = s.getConfigurationSection(u);
+            if (p == null || q == null || p.isDead()) continue;
+            for (String k : new ArrayList<>(q.getKeys(false))) {
+                int resta = q.getInt(k + ".resta") - 1;
+                cambio = true;
+                if (resta > 0) { q.set(k + ".resta", resta); continue; }
+                double vida = q.getDouble(k + ".vida");
+                AttributeInstance a = p.getAttribute(Attribute.MAX_HEALTH);
+                if (a != null) a.setBaseValue(a.getBaseValue() + vida);
+                q.set(k, null);
+                Style.raw(p, "&a&l❤ &aRecuperaste " + corazones(vida) + ".");
+                p.playSound(p.getLocation(), "entity.player.levelup", SoundCategory.MASTER, 1f, 1.2f);
+            }
+            if (q.getKeys(false).isEmpty()) s.set(u, null);
+        }
+        if (cambio) st.touch();
+    }
+
+    @EventHandler
+    public void entra(org.bukkit.event.player.PlayerJoinEvent e) {
+        Player p = e.getPlayer();
+        ConfigurationSection q = st.y().getConfigurationSection("quitados." + p.getUniqueId());
+        if (q == null) return;
+        Bukkit.getScheduler().runTaskLater(pl, () -> {
+            if (!p.isOnline()) return;
+            for (String k : q.getKeys(false))
+                Style.raw(p, "&c&l❤ &7Te faltan &f" + duracion(q.getInt(k + ".resta")) + " &7conectado para recuperar "
+                        + corazones(q.getDouble(k + ".vida")) + ".");
+        }, 60L);
+    }
+
+    // ================================================================= sidebar
+
+    /** Titulo de la sidebar durante el momento: calaveras en rojo oscuro y MOMENTO TRUCO en rojo. */
+    public static String tituloSidebar() {
+        return "&4&l☠ &c&lMOMENTO TRUCO &4&l☠";
+    }
+
+    /**
+     * La sidebar completa durante el momento (reemplaza todo lo demas):
+     *   linea gris / el aviso vinculado del ultimo paso tal cual (sin titulo) / linea gris /
+     *   un renglon por paso activo (■ rojo oscuro) / linea gris / el tiempo (si algun paso tiene) / linea gris /
+     *   "No participas" (creativo, espectador o exento) / linea gris
+     */
+    public List<String> sidebar(Player p, String sep, int ancho) {
         List<String> out = new ArrayList<>();
         out.add(sep);
-        long ahora = System.currentTimeMillis();
-        for (Act a : activos.values()) {
-            String t = Txt.norm(a.texto);
-            if (a.fin > 0) {
-                long r = Math.max(0, (a.fin - ahora + 999) / 1000);
-                t += " &8» &c" + String.format("%d:%02d", r / 60, r % 60);
-            }
-            out.addAll(Ancho.cortar(t, "&c■ &c", "&c  ", max));
+        List<String> av = pl.avisos().lineasSinTitulo(avisoActual, p);
+        if (!av.isEmpty()) {
+            List<String> renglones = new ArrayList<>();
+            for (String l : av) renglones.addAll(Ancho.cortar(l, "", "", ancho));
+            if (renglones.size() > 5) renglones = renglones.subList(0, 5);
+            out.addAll(renglones);
+            out.add(sep);
         }
-        if (activos.isEmpty()) out.add("&c■ &cEsperando el siguiente paso...");
+        long ahora = System.currentTimeMillis();
+        List<Act> conTiempo = new ArrayList<>();
+        for (Act a : activos.values()) {
+            String t = "&c" + Txt.strip(Txt.norm(a.texto)) + (a.gas ? " &2☣" : "");
+            out.addAll(Ancho.cortar(t, "&4■ ", "&4  ", ancho));
+            if (a.fin > 0) conTiempo.add(a);
+        }
+        if (activos.isEmpty()) out.add("&4■ &cEsperando el siguiente paso...");
+        out.add(sep);
+        if (!conTiempo.isEmpty()) {
+            String reloj = pl.getConfig().getString("momentos.simbolo_tiempo", "⌚");
+            for (Act a : conTiempo) {
+                long r = Math.max(0, (a.fin - ahora + 999) / 1000);
+                String t = "&c" + reloj + " &f" + String.format("%d:%02d", r / 60, r % 60);
+                if (conTiempo.size() > 1) t += " &8» &c" + Txt.strip(Txt.norm(a.texto));
+                out.add(Ancho.cortar(t, "", "", ancho).get(0));
+            }
+            out.add(sep);
+        }
         if (!participa(p)) {
             out.add("&e■ &eNo participas");
-        } else if (hayReglas()) {
-            if (aSalvo(p)) out.add("&a■ &aA salvo " + (anim % 2 == 0 ? "✦" : "✧"));
-            else out.add("&c■ &cEn peligro ☠");
+            out.add(sep);
         }
-        out.add(sep);
         return out;
     }
 }

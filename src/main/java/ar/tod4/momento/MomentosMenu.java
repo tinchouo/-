@@ -120,7 +120,7 @@ public final class MomentosMenu {
             lore.add("");
             lore.add("&7" + mo.objetivoCorto(path));
             lore.add("&7Sidebar: &f" + mo.textoSidebar(path));
-            if (!sp) lore.add("&7Tiempo: &f" + (mo.m(path).getInt("duracion", 0) > 0 ? mo.m(path).getInt("duracion", 0) + " s" : "sin tiempo")
+            if (!sp) lore.add("&7Tiempo: &f" + (mo.m(path).getInt("duracion", 0) > 0 ? Momentos.duracion(mo.m(path).getInt("duracion", 0)) : "sin tiempo")
                     + (mo.m(path).getBoolean("gas.on", false) ? " &8| &2☣ gas" : ""));
             lore.add("");
             lore.add("&e▶ Click para editar");
@@ -178,26 +178,15 @@ public final class MomentosMenu {
                 final_ ? "&7Tienes que estar así cuando termina." : "&7Lo haces una vez y quedas a salvo.", "&8(Tocar y Matar siempre son \"una vez\")", "",
                 "&e▶ Click para cambiar"), e -> { c.set("modo", final_ ? "una_vez" : "al_final"); touch(); pasoEditor(p, path); });
         int dur = c.getInt("duracion", 0);
-        m.set(13, Items.of(Material.CLOCK, "&e&lTiempo: &f" + (dur > 0 ? String.format("%d:%02d", dur / 60, dur % 60) : "sin tiempo"), "",
+        m.set(13, Items.of(Material.COMPASS, "&e&lTiempo: &f" + (dur > 0 ? String.format("%d:%02d", dur / 60, dur % 60) : "sin tiempo"), "",
                 "&7Click: +10 s | Click derecho: -10 s", "&7Shift: ±60 s", "&7En 0 no hay reloj ni castigo por tiempo."), e -> {
             int d = (e.isShiftClick() ? 60 : 10) * (e.isRightClick() ? -1 : 1);
             c.set("duracion", Math.max(0, dur + d)); touch(); pasoEditor(p, path);
         });
-        m.set(14, Items.of(Material.SKELETON_SKULL, "&5&l☠ Consecuencias", "", "&7Qué le pasa al que falla cuando", "&7se acaba el tiempo.", "", "&e▶ Click para administrar"),
+        m.set(14, Items.of(Material.SKELETON_SKULL, "&5&l☠ Consecuencias", "", "&7Qué le pasa al que falla cuando", "&7se acaba el tiempo (castigos y gas).", "", "&e▶ Click para administrar"),
                 e -> consecuencias(p, path));
         m.set(15, Items.of(Material.CHEST, "&6&lRecompensa", "", "&7Para los que lo consiguen (opcional).", "&7Ítems: &f" + mo.recompensas(path).size(), "",
                 "&e▶ Click para editar"), e -> recompensas(p, path));
-        boolean gas = c.getBoolean("gas.on", false);
-        int cor = c.getInt("gas.corazones", 2);
-        double cada = c.getDouble("gas.cada", 1.5);
-        m.set(16, Items.of(gas ? Material.POISONOUS_POTATO : Material.GRAY_WOOL, (gas ? "&2&l☣ Gas: " : "&7&l☣ Gas: ") + (gas ? "ACTIVADO" : "desactivado"), "",
-                "&7Daño: &f" + cor + " corazones cada " + cada + " s", "&7a los que todavía no cumplen (ignora armadura).", "",
-                "&eClick: activar / desactivar", "&eClick derecho: corazones +1", "&eShift+click: segundos +0,5"), e -> {
-            if (e.isShiftClick()) c.set("gas.cada", cada >= 5 ? 0.5 : cada + 0.5);
-            else if (e.isRightClick()) c.set("gas.corazones", cor >= 10 ? 1 : cor + 1);
-            else c.set("gas.on", !gas);
-            touch(); pasoEditor(p, path);
-        });
         textoYAviso(m, p, path, c, () -> pasoEditor(p, path));
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> pasos(p, id));
         m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
@@ -248,13 +237,14 @@ public final class MomentosMenu {
 
     /** Texto de la sidebar y aviso vinculado (los dos tipos de paso). */
     private void textoYAviso(Menu m, Player p, String path, ConfigurationSection c, Runnable otra) {
-        m.set(19, Items.of(Material.OAK_SIGN, "&c&lMensaje de la sidebar", "", "&7" + mo.textoSidebar(path), "", "&7Es lo que leen todos mientras el paso", "&7está activo.", "", "&e▶ Click para cambiar"), e -> {
+        m.set(19, Items.of(Material.OAK_SIGN, "&c&lRenglón de la sidebar", "", "&4■ &c" + mo.textoSidebar(path), "",
+                "&7Sale con el cuadradito mientras el paso", "&7está activo (uno por paso).", "&7Arriba sale el aviso vinculado tal cual.", "", "&e▶ Click para cambiar"), e -> {
             p.closeInventory();
-            Style.info(p, "Escribe el mensaje de la sidebar &8(o cancel)&7:");
+            Style.info(p, "Escribe el renglón de la sidebar &8(corto, o cancel)&7:");
             ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("texto", Txt.strip(txt).trim()); touch(); otra.run(); });
         });
         String av = c.getString("aviso");
-        m.set(20, Items.of(Material.ENCHANTED_BOOK, "&b&lAviso vinculado", "", "&7Se muestra después de la ruleta:", av != null ? "&f" + av : "&8ninguno", "",
+        m.set(20, Items.of(Material.ENCHANTED_BOOK, "&b&lAviso vinculado", "", "&7Se muestra después de la ruleta", "&7y queda arriba en la sidebar (sin el título):", av != null ? "&f" + av : "&8ninguno", "",
                 "&e▶ Click para elegir"), e -> pl.avisos().elegir(p, "&8Aviso para: " + mo.nombre(path), sel -> { c.set("aviso", sel); touch(); otra.run(); }));
     }
 
@@ -434,8 +424,10 @@ public final class MomentosMenu {
         final ConfigurationSection cc = c;
         Menu m = new Menu(5, "&4&l☠ &8Consecuencias");
         toggle(m, p, id, cc, 10, "instakill", Material.WITHER_SKELETON_SKULL, "💀 Insta Kill", "Muere ignorando el tótem.");
+        int corSeg = cc.getInt("corazones_seg", 0);
         toggle(m, p, id, cc, 11, "corazones_on", Material.RED_DYE, "❤ Quitar corazones: " + cc.getInt("corazones", 3),
-                "Le baja la vida máxima.", "Click derecho: +1 | Shift+derecho: -1", "corazones", 1, 10);
+                "Le baja la vida máxima " + (corSeg > 0 ? "por " + Momentos.duracion(corSeg) + " conectado." : "para siempre."),
+                "Click derecho: +1 | Shift+derecho: -1", "corazones", 1, 10);
         toggle(m, p, id, cc, 12, "medio", Material.REDSTONE, "🩸 Medio corazón", "Queda a medio corazón.");
         toggle(m, p, id, cc, 13, "explosion", Material.TNT, "💥 Explosión: fuerza " + cc.getInt("fuerza", 4),
                 "Explota donde está.", "Click derecho: +1 | Shift+derecho: -1", "fuerza", 1, 10);
@@ -451,11 +443,36 @@ public final class MomentosMenu {
         toggle(m, p, id, cc, 23, "darkness", Material.BLACK_CONCRETE, "🌑 Oscuridad", "Efecto por " + cc.getInt("efectos_seg", 10) + " s.");
         toggle(m, p, id, cc, 24, "freeze", Material.PACKED_ICE, "🧊 Congelar: " + cc.getInt("freeze_seg", 5) + " s",
                 "No se puede mover.", "Click derecho: +1 s | Shift+derecho: -1 s", "freeze_seg", 1, 60);
+        // gas: se guarda en el paso (gas.*), arranca cuando se acaba el tiempo
+        ConfigurationSection paso = mo.m(id);
+        boolean gas = paso.getBoolean("gas.on", false);
+        double gcor = paso.getDouble("gas.corazones", 2.5);
+        double gcada = paso.getDouble("gas.cada", 1.0);
+        m.set(25, Items.of(gas ? Material.SLIME_BALL : Material.GRAY_WOOL, (gas ? "&2&l" : "&7&l") + "☣ Gas tóxico: " + fmt(gcor) + " ❤ cada " + fmt(gcada) + " s", "",
+                "&7Estado: " + (gas ? "&aACTIVADO" : "&cDESACTIVADO"),
+                "&7Cuando se acaba el tiempo, le pega al que", "&7no cumple hasta que lo consiga.",
+                "&7Ignora la armadura; la Resistencia lo baja.", "&8Solo funciona si el paso tiene tiempo.", "",
+                "&eClick: activar / desactivar", "&eClick derecho: +0,5 ❤ | Shift+derecho: -0,5 ❤", "&eShift+click: cada cuántos segundos"), e -> {
+            if (e.isShiftClick() && e.isRightClick()) paso.set("gas.corazones", Math.max(0.5, gcor - 0.5));
+            else if (e.isRightClick()) paso.set("gas.corazones", Math.min(10, gcor + 0.5));
+            else if (e.isShiftClick()) paso.set("gas.cada", gcada >= 5 ? 0.5 : gcada + 0.5);
+            else paso.set("gas.on", !gas);
+            touch(); consecuencias(p, id);
+        });
         int seg = cc.getInt("efectos_seg", 10);
-        m.set(31, Items.of(Material.CLOCK, "&e&lDuración de efectos: &f" + seg + " s", "", "&7Click: +5 | Click derecho: -5"),
-                e -> { cc.set("efectos_seg", Math.max(5, seg + (e.isRightClick() ? -5 : 5))); touch(); consecuencias(p, id); });
+        m.set(30, Items.of(Material.CLOCK, "&e&lDuración de efectos: &f" + Momentos.duracion(seg), "", "&7Wither, veneno, lentitud y oscuridad.",
+                "&7Solo corre mientras está conectado.", "", "&7Click: +5 s | Click derecho: -5 s", "&7Shift: ±5 min"),
+                e -> { int d = e.isShiftClick() ? 300 : 5; cc.set("efectos_seg", Math.max(5, seg + (e.isRightClick() ? -d : d))); touch(); consecuencias(p, id); });
+        m.set(32, Items.of(Material.RECOVERY_COMPASS, "&c&lDuración de corazones: &f" + (corSeg > 0 ? Momentos.duracion(corSeg) : "para siempre"), "",
+                "&7Cuánto tiempo conectado tiene que estar", "&7para recuperar los corazones.", "&7En 0 no los recupera nunca.", "",
+                "&7Click: +1 h | Click derecho: -1 h", "&7Shift: ±10 min"),
+                e -> { int d = e.isShiftClick() ? 600 : 3600; cc.set("corazones_seg", Math.max(0, corSeg + (e.isRightClick() ? -d : d))); touch(); consecuencias(p, id); });
         m.set(36, Items.of(Material.ARROW, "&7◀ Volver"), e -> volver(p, id));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    private static String fmt(double d) {
+        return d == Math.floor(d) ? String.valueOf((int) d) : String.valueOf(d).replace('.', ',');
     }
 
     private void toggle(Menu m, Player p, String id, ConfigurationSection c, int slot, String key, Material mat, String nombre, String desc) {

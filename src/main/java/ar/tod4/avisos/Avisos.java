@@ -151,6 +151,20 @@ public final class Avisos implements Listener {
 
     // ================================================================= enviar
 
+    /** Los renglones del mensaje tal como salen en el chat, pero sin el titulo, sin barras y sin renglones vacios. */
+    public List<String> lineasSinTitulo(String id, Player p) {
+        List<String> out = new ArrayList<>();
+        if (id == null || !existe(id)) return out;
+        ConfigurationSection m = msg(id);
+        Paleta pal = Paleta.of(m.getInt("paleta", 6));
+        for (String l : m.getStringList("lineas")) {
+            String t = l.trim();
+            if (t.isEmpty() || t.equals(".") || t.equalsIgnoreCase("vacio") || t.equalsIgnoreCase("espacio") || t.equals("---")) continue;
+            out.add(procesar(l, pal, false, p));
+        }
+        return out;
+    }
+
     /** Muestra el mensaje en el chat de un jugador (sin ruleta). */
     public void mostrar(String id, Player p) {
         ConfigurationSection m = msg(id);
