@@ -54,3 +54,7 @@ commands:
     description: La proxima estructura del Aether sera la elegida
   aether_music:
     description: Prueba la musica del Aether
+  equipo:
+    description: Equipos (admins)
+  eq:
+    description: Chat y opciones de tu equipo
