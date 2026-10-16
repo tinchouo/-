@@ -412,8 +412,8 @@ public final class Momentos implements Listener {
         Act vieja = activos.put(familia(a.tipo), a);
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!participantes.contains(p.getUniqueId())) continue;
-            if (vieja != null && a.tipo != null) Style.raw(p, "&c&l☠ &8» &7La regla anterior queda cancelada: &f" + Txt.plain(vieja.texto));
-            for (Act o : activos.values()) if (o != a && o.tipo != null) Style.raw(p, "&c&l☠ &8» &7Sigue activo: &f" + Txt.plain(o.texto));
+            if (vieja != null && a.tipo != null) Style.raw(p, "&c&l☠ &8» &7La regla anterior queda cancelada: &f" + Txt.strip(vieja.texto));
+            for (Act o : activos.values()) if (o != a && o.tipo != null) Style.raw(p, "&c&l☠ &8» &7Sigue activo: &f" + Txt.strip(o.texto));
         }
     }
 
