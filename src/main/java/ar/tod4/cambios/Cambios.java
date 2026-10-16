@@ -27,6 +27,8 @@ public final class Cambios {
         public final int dia;
         public final String[] desc;
         public final boolean nota; // solo recordatorio (no se activa)
+        /** Si no es null, el cambio va adentro de un submenu del dia (por ejemplo "Mobs"). */
+        String grupo;
         Consumer<Boolean> alCambiar;
 
         Cambio(String id, int dia, String nombre, boolean nota, String... desc) {
@@ -65,6 +67,13 @@ public final class Cambios {
         add(new Cambio("d4.perla", 4, "Perlas con más daño", false, "&7Cada perla te saca 4 corazones."));
         // ---- Dia 5
         add(new Cambio("d5.wither", 5, "Wither con cabeza de jugador", false, "&7Solo se invoca con la cabeza de un", "&7jugador en el pecho: \"Wither de ...\"."));
+        // dia 5: submenu "Mobs" (creepers nuevos; aparecen ademas de los creepers normales)
+        mob(new Cambio("d5.creeper_electronico", 5, "Creeper Electrónico", false, "&7Todos los creepers normales", "&7salen cargados (eléctricos)."));
+        mob(new Cambio("d5.creeper_random", 5, "Random Creeper", false, "&7Lucky block: un rasgo al azar y", "&7al explotar un efecto al azar."));
+        mob(new Cambio("d5.creeper_mini", 5, "Mini Creeper", false, "&7Chiquitos, en grupo. Te ven a 10", "&7bloques y explotan a los 5 s."));
+        mob(new Cambio("d5.creeper_calamar", 5, "Creeper Calamar", false, "&7Si te alcanza la explosión,", "&7te mancha la pantalla de tinta."));
+        mob(new Cambio("d5.creeper_void", 5, "Void Creeper", false, "&7El creeper de las backrooms."));
+        mob(new Cambio("d5.creeper_nuclear", 5, "Creeper Nuclear", false, "&7Se planta y explota a los 10 s.", "&7Mortal a 30 bloques, daño hasta 50."));
         // ---- Dia 6
         add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
         add(new Cambio("d6.noches", 6, "Noches eternas", false, "&7La noche no se puede saltar.", "&7Acostarte igual resetea los phantoms."));
@@ -78,6 +87,8 @@ public final class Cambios {
     }
 
     private void add(Cambio c) { todos.put(c.id, c); }
+
+    private void mob(Cambio c) { c.grupo = "Mobs"; add(c); }
 
     void hook(String id, Consumer<Boolean> f) { Cambio c = todos.get(id); if (c != null) c.alCambiar = f; }
 
@@ -126,9 +137,21 @@ public final class Cambios {
     }
 
     public void abrirDia(Player p, int dia) {
-        List<Cambio> lista = delDia(dia);
+        List<Cambio> lista = new ArrayList<>();
+        List<String> grupos = new ArrayList<>();
+        for (Cambio c : delDia(dia)) {
+            if (c.grupo == null) lista.add(c);
+            else if (!grupos.contains(c.grupo)) grupos.add(c.grupo);
+        }
         Menu m = new Menu(3, "&8Menú de Cambios - Día " + dia);
-        int[] slots = slotsCentrados(lista.size());
+        int[] slots = slotsCentrados(lista.size() + grupos.size());
+        for (int g = 0; g < grupos.size(); g++) {
+            String gr = grupos.get(g);
+            int act = 0, tot = 0;
+            for (Cambio c : delDia(dia)) if (gr.equals(c.grupo)) { tot++; if (on(c.id)) act++; }
+            m.set(slots[lista.size() + g], Items.of(Material.ZOMBIE_HEAD, "&6&l" + gr, "", "&7Activos: &f" + act + "&7/&f" + tot, "", "&e▶ Click para abrir"),
+                    e -> { Style.click(p); abrirGrupo(p, dia, gr); });
+        }
         for (int i = 0; i < lista.size(); i++) {
             Cambio c = lista.get(i);
             m.set(slots[i], icono(c), e -> {
@@ -140,6 +163,25 @@ public final class Cambios {
             });
         }
         m.set(18, Items.of(Material.ARROW, "&7◀ Volver"), e -> { Style.click(p); abrirDias(p); });
+        m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    /** Submenu de un grupo del dia (por ejemplo "Mobs"). */
+    public void abrirGrupo(Player p, int dia, String grupo) {
+        List<Cambio> lista = new ArrayList<>();
+        for (Cambio c : delDia(dia)) if (grupo.equals(c.grupo)) lista.add(c);
+        Menu m = new Menu(3, "&8Día " + dia + " - " + grupo);
+        int[] slots = slotsCentrados(lista.size());
+        for (int i = 0; i < lista.size(); i++) {
+            Cambio c = lista.get(i);
+            m.set(slots[i], icono(c), e -> {
+                if (e.isShiftClick()) { elegirAviso(p, c, dia); return; }
+                set(c.id, !on(c.id));
+                p.playSound(p.getLocation(), on(c.id) ? Sound.BLOCK_NOTE_BLOCK_PLING : Sound.BLOCK_STONE_BUTTON_CLICK_OFF, 0.6f, 1.4f);
+                abrirGrupo(p, dia, grupo);
+            });
+        }
+        m.set(18, Items.of(Material.ARROW, "&7◀ Volver"), e -> { Style.click(p); abrirDia(p, dia); });
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 

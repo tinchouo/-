@@ -71,6 +71,21 @@ public final class Ext {
         }
     }
 
+    /** Hace aparecer un mob de MythicMobs. Devuelve la entidad o null si no se pudo. */
+    public static Entity mythicSpawn(String id, Location l) {
+        try {
+            Class<?> mb = Class.forName("io.lumine.mythic.bukkit.MythicBukkit");
+            Object inst = mb.getMethod("inst").invoke(null);
+            Object mm = inst.getClass().getMethod("getMobManager").invoke(inst);
+            Object am = mm.getClass().getMethod("spawnMob", String.class, Location.class).invoke(mm, id, l);
+            if (am == null) return null;
+            Object ae = am.getClass().getMethod("getEntity").invoke(am);
+            return (Entity) ae.getClass().getMethod("getBukkitEntity").invoke(ae);
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
     private static Method OX_BLOCK;
     private static boolean oxTried;
 

@@ -47,6 +47,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.video.Video video;
     private ar.tod4.aether.Aether aether;
     private ar.tod4.equipos.Equipos equipos;
+    private ar.tod4.mobs.Creepers creepers;
 
     @Override
     public void onEnable() {
@@ -65,6 +66,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         palo = new Palo(this);
         video = new ar.tod4.video.Video(this);
         new ar.tod4.mobs.Mobs(this);
+        creepers = new ar.tod4.mobs.Creepers(this);
         aether = new ar.tod4.aether.Aether(this);
         equipos = new ar.tod4.equipos.Equipos(this);
         new Sidebar(this);
@@ -82,7 +84,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
 
     private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video",
             "aether_pocion", "aether_init", "aether_reset", "aether_tp", "aether_locate", "aether_goto", "aether_fill",
-            "aether_test", "aether_force", "aether_music", "equipo");
+            "aether_test", "aether_force", "aether_music", "equipo", "creeper");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
     private void soloConPrefijo() {
@@ -123,6 +125,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (misionesMenu != null) misionesMenu.cerrarTodo();
         if (video != null) video.terminarTodos();
         if (aether != null) aether.apagar();
+        if (creepers != null) creepers.apagar();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
                 misiones == null ? null : misiones.store(), momentos == null ? null : momentos.store(),
                 equipos == null ? null : equipos.store()})
@@ -157,6 +160,12 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         Player p = s instanceof Player pp ? pp : null;
         if (c.startsWith("aether_")) return aether.comando(s, c, a);
         if (c.equals("equipo")) { equipos.comandoAdmin(s, a); return true; }
+        if (c.equals("creeper")) {
+            if (p == null) return true;
+            if (a.length == 0 || !creepers.tipos().contains(a[0].toLowerCase())) { Style.info(s, "Uso: &e/tod4:creeper <" + String.join("|", creepers.tipos()) + ">"); return true; }
+            if (creepers.aparecer(a[0].toLowerCase(), p.getLocation()) == null) Style.err(s, "No pude hacerlo aparecer (¿está el archivo de MythicMobs?).");
+            return true;
+        }
         switch (c) {
             case "tod4": return tod4(s, a);
             case "cambios":
@@ -250,6 +259,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 reloadConfig();
                 mesa.recargar();
                 aether.recargar();
+                creepers.recargar();
                 Style.ok(s, "Config recargada.");
                 return true;
             default:
@@ -283,6 +293,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                     break;
                 case "aether_reset": out.addAll(List.of("clear", "forget", "status")); break;
                 case "aether_music": out.add("stop"); break;
+                case "creeper": out.addAll(creepers.tipos()); break;
                 case "completar":
                     out.add("todos");
                     for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());

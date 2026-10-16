@@ -58,3 +58,5 @@ commands:
     description: Equipos (admins)
   eq:
     description: Chat y opciones de tu equipo
+  creeper:
+    description: Hace aparecer un creeper especial (prueba)

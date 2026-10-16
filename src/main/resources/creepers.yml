@@ -1,0 +1,47 @@
+# =====================================================================
+#  CREEPERS DEL DIA 5   (se prenden en /tod4:cambios -> Dia 5 -> Mobs)
+#  Despues de cambiar algo: /tod4 recargar
+#  Para probar uno: /tod4:creeper <random|mini|calamar|void|nuclear>
+# =====================================================================
+
+# Cada vez que aparece un creeper normal, con esta chance (%) aparece ADEMAS uno de estos cerca
+# (a lo sumo uno por creeper; el Mini viene en grupo)
+chances:
+  nuclear: 1
+  void: 4
+  calamar: 6
+  mini: 8
+  random: 10
+
+# Nombre interno de cada uno en MythicMobs
+mythic:
+  random: RandomCreeper
+  mini: MiniCreeper
+  calamar: CreeperCalamar
+  void: VoidCreeper
+  nuclear: CreeperNuclear
+
+mini:
+  grupo_min: 3
+  grupo_max: 5
+  # te ve a esta distancia, prende la mecha y te persigue
+  vision: 10
+  mecha_seg: 5
+  tamano: 0.5
+
+nuclear:
+  tamano: 1.5
+  # cuando llega a esta distancia se planta y arranca la cuenta (si lo matan antes, no explota)
+  rango_activar: 3.5
+  cuenta_seg: 10
+  # a cuantos bloques se ve la barra de aviso
+  radio_aviso: 80
+  radio_mortal: 30
+  radio_dano: 50
+  # radio del crater (bloques que rompe)
+  radio_bloques: 15
+  veneno_seg: 10
+
+calamar:
+  # cuanto dura la tinta en la pantalla (se va desvaneciendo)
+  tinta_seg: 3
