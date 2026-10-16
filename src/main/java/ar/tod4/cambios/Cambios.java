@@ -48,7 +48,7 @@ public final class Cambios {
         add(new Cambio("d1.warden", 1, "Warden en las Ancient City", false, "&7El Warden aparece solo en las", "&7Ancient City (saliendo del piso)."));
         add(new Cambio("d1.aldeanos", 1, "Bloqueo de Aldeanos", false, "&7Los aldeanos naturales desaparecen.", "&7Solo quedan los de huevo/comando."));
         add(new Cambio("d1.totems", 1, "Bloqueo de Tótems", false, "&7Los invocadores no sueltan tótem."));
-        add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemas sin", "&7Resistencia al fuego y no hay agua."));
+        add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemas (medio corazón", "&7por segundo) sin Resistencia al fuego", "&7y no hay agua."));
         // ---- Dia 2
         add(new Cambio("d2.reproduccion", 2, "Bloqueo de Reproducción", false, "&7Los aldeanos no se reproducen", "&7(no pueden juntar comida)."));
         add(new Cambio("d2.mending", 2, "Recordatorio: Mending", true, "&7Esto lo hace el datapack", "&7de ítems prohibidos."));
@@ -59,6 +59,7 @@ public final class Cambios {
         add(new Cambio("d3.hornos", 3, "Hornos iguales al horno", false, "&7El alto horno y el ahumador cocinan", "&7todo lo que cocina el horno normal."));
         add(new Cambio("d3.leche", 3, "Sin leche", false, "&7No se puede sacar ni tomar leche", "&7(no se pueden borrar efectos)."));
         add(new Cambio("d3.lava", 3, "Lava + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava: quema como siempre."));
+        add(new Cambio("d3.blaze", 3, "Blazes + Res. al fuego", false, "&7Las bolas de fuego de los blazes", "&7te pegan aunque tengas resistencia", "&7al fuego."));
         // ---- Dia 4
         add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
         add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido."));

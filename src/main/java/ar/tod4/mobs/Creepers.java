@@ -397,8 +397,8 @@ public final class Creepers implements Listener {
         if (n.t == 30) Ext.mythicSignal(c, "SWELL");
         if (--n.t <= 0) {
             terminar(n);
+            detonar(l, c);   // el creeper todavia existe: figura como el que mato ("fue volado por Creeper Nuclear")
             c.remove();
-            detonar(l);
         }
     }
 
@@ -413,7 +413,7 @@ public final class Creepers implements Listener {
     }
 
     /** La explosion nuclear: crater de ~15, fuego y mortal hasta el mismo radio, dano decreciente hasta el borde, veneno y hongo de humo. */
-    private void detonar(Location l) {
+    private void detonar(Location l, Creeper causa) {
         World w = l.getWorld();
         double mortal = cfg.getDouble("nuclear.radio_mortal", 22), dano = cfg.getDouble("nuclear.radio_dano", 40);
         double max = cfg.getDouble("nuclear.dano_centro", 800), min = cfg.getDouble("nuclear.dano_borde_mortal", 400);
@@ -421,7 +421,9 @@ public final class Creepers implements Listener {
         w.createExplosion(l, 6f, false, true);
         w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 16f, 0.5f);
         w.playSound(l, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.HOSTILE, 16f, 0.6f);
-        DamageSource src = DamageSource.builder(DamageType.EXPLOSION).withDamageLocation(l).build();
+        DamageSource.Builder sb = DamageSource.builder(DamageType.EXPLOSION).withDamageLocation(l);
+        if (causa != null && causa.isValid()) sb.withCausingEntity(causa).withDirectEntity(causa);
+        DamageSource src = sb.build();
         for (Player p : w.getPlayers()) {
             if (p.getGameMode() == GameMode.CREATIVE || p.getGameMode() == GameMode.SPECTATOR) continue;
             double d = p.getLocation().distance(l);

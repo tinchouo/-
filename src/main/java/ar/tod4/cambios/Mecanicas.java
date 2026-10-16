@@ -26,10 +26,12 @@ import org.bukkit.block.BlockState;
 import org.bukkit.block.Furnace;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
+import org.bukkit.entity.Blaze;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.SmallFireball;
 import org.bukkit.entity.Villager;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -44,6 +46,7 @@ import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.event.entity.EntityTransformEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.FurnaceBurnEvent;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -60,6 +63,8 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 
 import ar.tod4.TOD4;
+import ar.tod4.core.Causas;
+import net.kyori.adventure.text.Component;
 
 /** Las mecanicas de los cambios de los dias 1 a 4 (portadas de cambios_dia_1..4.sk, por eventos). */
 final class Mecanicas implements Listener {
@@ -69,6 +74,7 @@ final class Mecanicas implements Listener {
     private final NamespacedKey LEGAL;
     private final Set<Location> hornos = new HashSet<>();
     private final Map<UUID, Integer> calor = new HashMap<>();
+    private final Set<UUID> quemando = new HashSet<>();   // dano del calor del Nether en curso (ignora armadura y resistencia)
     private final List<NamespacedKey> recetasD2 = new ArrayList<>();
     private final List<NamespacedKey> recetasD3 = new ArrayList<>();
 
@@ -112,13 +118,17 @@ final class Mecanicas implements Listener {
                 Location l = p.getLocation();
                 if (l.getBlock().getType() == Material.LAVA || l.clone().add(0, 1, 0).getBlock().getType() == Material.LAVA) {
                     p.setFireTicks(Math.max(p.getFireTicks(), 300));
-                    p.damage(pl.getConfig().getDouble("cambios.lava_dano", 4.0), DamageSource.builder(DamageType.GENERIC).build());
+                    // la lava de verdad no le pega a quien tiene resistencia al fuego: por eso va con otro tipo de dano
+                    // y se anota la causa para que el mensaje de muerte diga lava
+                    Causas.anotar(p.getUniqueId(), Component.translatable("death.attack.lava", Component.text(p.getName())));
+                    p.damage(pl.getConfig().getDouble("cambios.lava_dano", 1.5), DamageSource.builder(DamageType.GENERIC).build());
                 }
             }
         }
     }
 
     private void cada20() {
+        calorNether();
         // Dia 1: hornos prendidos cerca de jugadores -> 1% por segundo de explotar
         if (on("d1.hornos")) {
             Iterator<Location> it = hornos.iterator();
@@ -158,21 +168,25 @@ final class Mecanicas implements Listener {
         if (on("d2.reproduccion")) {
             for (World w : Bukkit.getWorlds()) for (Villager v : w.getEntitiesByClass(Villager.class)) v.getInventory().clear();
         }
-        // Dia 1: calor del Nether
+    }
+
+    /** Dia 1: calor del Nether. Cada segundo, medio corazon fijo (ignora armadura, encantamientos y Resistencia). */
+    private void calorNether() {
         if (on("d1.nether")) {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 boolean enNether = p.getWorld().getEnvironment() == World.Environment.NETHER;
                 if (enNether && p.getGameMode() == GameMode.SURVIVAL && !p.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)) {
-                    int c = calor.getOrDefault(p.getUniqueId(), 0) + 2;
+                    int c = calor.getOrDefault(p.getUniqueId(), 0) + 1;
                     calor.put(p.getUniqueId(), c);
                     p.setFireTicks(Math.max(p.getFireTicks(), 60));
                     p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 60, 1, true, false, true));
-                    DamageSource magia = DamageSource.builder(DamageType.MAGIC).build();
-                    if (c >= 30) {
-                        p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 100, 0, true, false, true));
-                        p.damage(4.0, magia);
-                    } else {
-                        p.damage(2.0, magia);
+                    if (c >= 30) p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 100, 0, true, false, true));
+                    quemando.add(p.getUniqueId());
+                    try {
+                        // tipo "quemadura": el mensaje de muerte dice que se quemo
+                        p.damage(1.0, DamageSource.builder(DamageType.ON_FIRE).build());
+                    } finally {
+                        quemando.remove(p.getUniqueId());
                     }
                     p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT_ON_FIRE, SoundCategory.MASTER, 1.5f, 1f);
                     p.playSound(p.getLocation(), Sound.BLOCK_FIRE_AMBIENT, SoundCategory.MASTER, 1.2f, 1.2f);
@@ -300,14 +314,31 @@ final class Mecanicas implements Listener {
     }
 
     @EventHandler(ignoreCancelled = true)
+    @SuppressWarnings("deprecation")
     public void fuegoNether(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof Player p)) return;
+        if (quemando.contains(p.getUniqueId())) {
+            // el calor del Nether pega exactamente 1 de vida: sin armadura, encantamientos ni Resistencia
+            for (EntityDamageEvent.DamageModifier m : new EntityDamageEvent.DamageModifier[]{EntityDamageEvent.DamageModifier.ARMOR,
+                    EntityDamageEvent.DamageModifier.RESISTANCE, EntityDamageEvent.DamageModifier.MAGIC})
+                if (e.isApplicable(m)) e.setDamage(m, 0);
+            return;
+        }
         if (on("d1.nether") && calor.containsKey(p.getUniqueId())
                 && (e.getCause() == EntityDamageEvent.DamageCause.FIRE || e.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK))
             e.setCancelled(true);
         // Dia 4: la perla hace mas dano (como si el juego lo tuviera asi)
         if (on("d4.perla") && e.getDamageSource().getDamageType().getKey().getKey().equals("ender_pearl") && juega(p))
             e.setDamage(pl.getConfig().getDouble("cambios.perla_corazones", 4) * 2.0);
+    }
+
+    /** Dia 3: la bola de fuego del Blaze le pega a quien tiene resistencia al fuego (el juego la anula): se le hace el dano a mano. */
+    @EventHandler(ignoreCancelled = true)
+    public void blaze(ProjectileHitEvent e) {
+        if (!on("d3.blaze") || !(e.getEntity() instanceof SmallFireball bola) || !(bola.getShooter() instanceof Blaze blaze)) return;
+        if (!(e.getHitEntity() instanceof Player p) || !juega(p) || !p.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)) return;
+        p.damage(pl.getConfig().getDouble("cambios.blaze_dano", 5.0),
+                DamageSource.builder(DamageType.MOB_PROJECTILE).withCausingEntity(blaze).withDirectEntity(bola).build());
     }
 
     @EventHandler(ignoreCancelled = true)

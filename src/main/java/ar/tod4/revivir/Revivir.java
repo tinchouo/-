@@ -472,12 +472,19 @@ public final class Revivir implements Listener {
         v.getInventory().clear();
         e.getDrops().clear();
         e.setKeepInventory(false);
-        crearTumba(v, loc, items);
+        // experiencia: la mitad de los niveles queda guardada en la tumba (en una botella); no se suelta nada
+        int lvlGuardado = v.getLevel() / 2;
+        int xpGuardada = puntos(lvlGuardado);
+        e.setDroppedExp(0);
+        e.setKeepLevel(false);
+        crearTumba(v, loc, items, xpGuardada);
 
         // el mensaje es el del juego (sale bien con los mobs de MythicMobs, que tienen nombre), solo con otros colores
         String mot = motivo(v);
         st.set("motivo." + n, mot.isEmpty() ? "causas desconocidas" : mot);
         net.kyori.adventure.text.Component vanilla = e.deathMessage();
+        net.kyori.adventure.text.Component propio = ar.tod4.core.Causas.sacar(v.getUniqueId());   // causa anotada por un cambio (lava, etc.)
+        if (propio != null) vanilla = propio;
         if (vanilla == null) vanilla = Txt.c(n + " ha muerto");
         e.deathMessage(Txt.c("&4☠ ").append(colorear(vanilla, net.kyori.adventure.text.format.NamedTextColor.GRAY,
                 net.kyori.adventure.text.format.NamedTextColor.RED)));
@@ -543,7 +550,52 @@ public final class Revivir implements Listener {
         return it;
     }
 
-    private void crearTumba(Player p, Location loc, List<ItemStack> items) {
+    // ---- experiencia guardada en la tumba
+
+    private final NamespacedKey K_XP = new NamespacedKey(pl, "xp_guardada");
+    private static final int SLOT_XP = 53;
+
+    /** Puntos de experiencia que hacen falta para llegar a ese nivel desde 0 (formula del juego). */
+    static int puntos(int nivel) {
+        if (nivel <= 0) return 0;
+        if (nivel <= 16) return nivel * nivel + 6 * nivel;
+        if (nivel <= 31) return (int) Math.round(2.5 * nivel * nivel - 40.5 * nivel + 360);
+        return (int) Math.round(4.5 * nivel * nivel - 162.5 * nivel + 2220);
+    }
+
+    /** Nivel que corresponde a esos puntos (para mostrarlo). */
+    static int nivelDe(int pts) {
+        int n = 0;
+        while (puntos(n + 1) <= pts) n++;
+        return n;
+    }
+
+    /** La botella como item: con clic derecho suma esa experiencia (una sola vez, el item se gasta). */
+    private ItemStack botella(int pts) {
+        ItemStack it = new ItemStack(Material.EXPERIENCE_BOTTLE);
+        ItemMeta m = it.getItemMeta();
+        m.displayName(Txt.c("&a&l✦ Experiencia guardada"));
+        m.lore(Txt.lines("&7Nivel: &f" + nivelDe(pts) + " &8(" + pts + " pts)", "", "&e▶ Clic derecho para usarla"));
+        m.getPersistentDataContainer().set(K_XP, PersistentDataType.INTEGER, pts);
+        m.setEnchantmentGlintOverride(true);
+        it.setItemMeta(m);
+        return it;
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void usaBotella(PlayerInteractEvent e) {
+        if (e.getItem() == null || !e.getItem().hasItemMeta()) return;
+        Integer pts = e.getItem().getItemMeta().getPersistentDataContainer().get(K_XP, PersistentDataType.INTEGER);
+        if (pts == null) return;
+        e.setCancelled(true);   // que no se tire como una botella normal
+        if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        Player p = e.getPlayer();
+        e.getItem().setAmount(e.getItem().getAmount() - 1);
+        p.giveExp(pts);
+        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1.2f);
+    }
+
+    private void crearTumba(Player p, Location loc, List<ItemStack> items, int xp) {
         Block b = loc.getBlock();
         for (int i = 0; i < 60; i++) {
             boolean ocupado = st.y().isConfigurationSection("tumbas." + tumbaId(b)) || esAltar(b.getLocation(), 0.5) || !b.getType().isAir();
@@ -560,7 +612,8 @@ public final class Revivir implements Listener {
         cab.setItemMeta(m);
         st.set("tumbas." + id + ".dueno", p.getName());
         st.set("tumbas." + id + ".cabeza", cab);
-        for (int i = 0; i < items.size() && i < 54; i++) st.set("tumbas." + id + ".items." + i, items.get(i));
+        if (xp > 0) st.set("tumbas." + id + ".xp", xp);
+        for (int i = 0; i < items.size() && i < 53; i++) st.set("tumbas." + id + ".items." + i, items.get(i));
     }
 
     private void abrirTumba(Player p, String id) {
@@ -571,8 +624,10 @@ public final class Revivir implements Listener {
         Inventory inv = Bukkit.createInventory(new TumbaHolder(id), 54, Txt.c("&8Tumba de " + st.y().getString("tumbas." + id + ".dueno", "?")));
         ConfigurationSection s = st.y().getConfigurationSection("tumbas." + id + ".items");
         if (s != null) for (String k : s.getKeys(false)) {
-            try { inv.setItem(Integer.parseInt(k), s.getItemStack(k)); } catch (NumberFormatException ignored) { }
+            try { int i = Integer.parseInt(k); if (i != SLOT_XP) inv.setItem(i, s.getItemStack(k)); } catch (NumberFormatException ignored) { }
         }
+        int xp = st.y().getInt("tumbas." + id + ".xp", 0);
+        if (xp > 0) inv.setItem(SLOT_XP, botella(xp));   // abajo a la derecha, siempre
         p.openInventory(inv);
     }
 
@@ -580,6 +635,43 @@ public final class Revivir implements Listener {
         final String id;
         TumbaHolder(String id) { this.id = id; }
         @Override public Inventory getInventory() { return null; }
+    }
+
+    /** La botella de la tumba: al sacarla se pasa a la mano (y se borra de la tumba, asi no se puede sacar dos veces). Nadie puede dejar cosas en ese lugar. */
+    @EventHandler(priority = EventPriority.HIGH)
+    public void clicTumba(org.bukkit.event.inventory.InventoryClickEvent e) {
+        if (!(e.getView().getTopInventory().getHolder() instanceof TumbaHolder h)) return;
+        Inventory top = e.getView().getTopInventory();
+        boolean enTop = e.getClickedInventory() == top;
+        if (enTop && e.getSlot() == SLOT_XP) {
+            e.setCancelled(true);
+            if (!(e.getWhoClicked() instanceof Player p)) return;
+            int xp = st.y().getInt("tumbas." + h.id + ".xp", 0);
+            ItemStack it = top.getItem(SLOT_XP);
+            if (xp <= 0 || it == null) return;
+            st.set("tumbas." + h.id + ".xp", null);   // primero se borra de la tumba, despues se entrega
+            top.setItem(SLOT_XP, null);
+            p.getInventory().addItem(botella(xp)).values().forEach(r -> p.getWorld().dropItemNaturally(p.getLocation(), r));
+            p.playSound(p.getLocation(), Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
+            return;
+        }
+        // shift+click desde el inventario del jugador podria meter un item en ese lugar
+        if (!enTop && e.isShiftClick() && top.getItem(SLOT_XP) == null) {
+            e.setCancelled(true);
+            ItemStack mov = e.getCurrentItem();
+            if (mov == null || mov.getType().isAir()) return;
+            for (int i = 0; i < SLOT_XP; i++) {
+                ItemStack x = top.getItem(i);
+                if (x == null || x.getType().isAir()) { top.setItem(i, mov.clone()); e.setCurrentItem(null); return; }
+            }
+        }
+        if (e.getClick() == org.bukkit.event.inventory.ClickType.NUMBER_KEY && enTop && e.getSlot() == SLOT_XP) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void arrastraTumba(org.bukkit.event.inventory.InventoryDragEvent e) {
+        if (!(e.getView().getTopInventory().getHolder() instanceof TumbaHolder)) return;
+        if (e.getRawSlots().contains(SLOT_XP)) e.setCancelled(true);
     }
 
     @EventHandler
@@ -594,6 +686,7 @@ public final class Revivir implements Listener {
     private void guardarTumba(String id, Inventory inv) {
         st.set("tumbas." + id + ".items", null);
         for (int i = 0; i < inv.getSize(); i++) {
+            if (i == SLOT_XP) continue;   // la botella no es un item de la tumba: su experiencia se guarda aparte
             ItemStack it = inv.getItem(i);
             if (it != null && !it.getType().isAir()) st.set("tumbas." + id + ".items." + i, it);
         }
@@ -625,6 +718,8 @@ public final class Revivir implements Listener {
         }
         ItemStack cab = st.y().getItemStack("tumbas." + id + ".cabeza");
         if (cab != null) b.getWorld().dropItemNaturally(l, cab);
+        int xp = st.y().getInt("tumbas." + id + ".xp", 0);
+        if (xp > 0) b.getWorld().dropItemNaturally(l, botella(xp));   // si rompen la cabeza, la botella queda en el piso
         e.getPlayer().playSound(l, Sound.BLOCK_BONE_BLOCK_BREAK, 1f, 1f);
         st.set("tumbas." + id, null);
     }
