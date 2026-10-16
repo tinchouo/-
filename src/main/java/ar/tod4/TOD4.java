@@ -136,6 +136,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
 
     public Store datos() { return core; }
     public Avisos avisos() { return avisos; }
+    public ar.tod4.mobs.Creepers creepers() { return creepers; }
     public Revivir revivir() { return revivir; }
     public Mesa mesa() { return mesa; }
     public Cambios cambios() { return cambios; }

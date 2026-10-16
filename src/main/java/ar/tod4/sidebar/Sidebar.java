@@ -46,6 +46,7 @@ public final class Sidebar implements Listener {
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
     private final Map<UUID, String> tabCache = new HashMap<>();
     private final Map<UUID, List<String>> lineasCache = new HashMap<>();
+    private final Set<UUID> tituloTruco = new HashSet<>();
     private final Random rnd = new Random();
     private String calma = null;
     private long calmaHasta = 0;
@@ -79,6 +80,7 @@ public final class Sidebar implements Listener {
         boards.remove(e.getPlayer().getUniqueId());
         tabCache.remove(e.getPlayer().getUniqueId());
         lineasCache.remove(e.getPlayer().getUniqueId());
+        tituloTruco.remove(e.getPlayer().getUniqueId());
     }
 
     private void attach(Player p) {
@@ -127,6 +129,12 @@ public final class Sidebar implements Listener {
     private void render(Player p, Scoreboard sb) {
         Objective o = sb.getObjective("tod4");
         if (o == null) return;
+        // durante el Momento Truco el titulo cambia (calavera roja, MOMENTO TRUCO, calavera roja)
+        boolean truco = pl.momentos() != null && pl.momentos().enCurso();
+        if (truco != tituloTruco.contains(p.getUniqueId())) {
+            o.displayName(Txt.c(truco ? Momentos.tituloSidebar() : pl.getConfig().getString("sidebar.titulo", "&a&lTOD4")));
+            if (truco) tituloTruco.add(p.getUniqueId()); else tituloTruco.remove(p.getUniqueId());
+        }
         List<String> lines = build(p);
         if (lines.equals(lineasCache.get(p.getUniqueId()))) return;
         lineasCache.put(p.getUniqueId(), lines);
@@ -150,6 +158,8 @@ public final class Sidebar implements Listener {
     private int anchoMax() { return Ancho.de(separador()); }
 
     private List<String> build(Player p) {
+        // Momento Truco: sidebar nueva que reemplaza todo (sin perfil, mundo ni misiones)
+        if (pl.momentos() != null && pl.momentos().enCurso()) return pl.momentos().sidebar(p, ticks, anchoMax());
         ConfigurationSection c = pl.getConfig().getConfigurationSection("sidebar");
         List<String> out = new ArrayList<>();
         for (String l : c.getStringList("arriba")) {
@@ -159,10 +169,7 @@ public final class Sidebar implements Listener {
                     .replace("{mundo}", mundo(pl, p.getWorld()))
                     .replace("{jugadores}", jugadores(pl)));
         }
-        boolean truco = pl.momentos() != null && pl.momentos().enCurso();
-        // durante el Momento Truco todo lo de arriba se pone rojo (la parte del momento tiene sus propios colores)
-        if (truco) out.replaceAll(Sidebar::rojo);
-        String sep = truco ? rojo(separador()) : separador();
+        String sep = separador();
         out.add(sep);
         List<String> ab = abajo(p);
         // la sidebar tiene 15 renglones como maximo: si no entra, se recorta lo de abajo
@@ -180,15 +187,6 @@ public final class Sidebar implements Listener {
     /** La parte de abajo segun la prioridad: Momento Truco > misiones > frase de calma. */
     private List<String> abajo(Player p) {
         List<String> out = new ArrayList<>();
-        Momentos mo = pl.momentos();
-        if (mo != null && mo.enCurso()) {
-            int r = mo.restante();
-            out.add("&c■ &c&lMomento Truco &c☠");
-            item(out, "&7Tiempo: &c" + String.format("%d:%02d", r / 60, r % 60));
-            if (mo.participa(p)) item(out, mo.aSalvo(p) ? "&fA salvo ✔" : "&cEn peligro ✖");
-            else item(out, "&eNo te afecta (" + (p.getGameMode() == org.bukkit.GameMode.SPECTATOR ? "espectador" : "creativo") + ")");
-            return out;
-        }
         Misiones ms = pl.misiones();
         boolean dia = ms != null && ms.activa(Misiones.DIA) != null;
         boolean op = ms != null && ms.activa(Misiones.OP) != null;

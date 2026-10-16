@@ -38,6 +38,14 @@ public final class MomentosMenu {
 
     private void touch() { mo.st.touch(); }
 
+    private static String raiz(String path) { return path.contains(".") ? path.substring(0, path.indexOf('.')) : path; }
+
+    /** Vuelve al menu que corresponde: el del paso (regla o spawn) o el del momento. */
+    private void volver(Player p, String id) {
+        if (id.contains(".pasos.")) { if (mo.esSpawn(id)) pasoSpawn(p, id); else pasoEditor(p, id); }
+        else editor(p, id);
+    }
+
     public void lista(Player p) {
         Style.click(p);
         Menu m = new Menu(6, "&4&l⚡ &8Momentos Truco");
@@ -45,8 +53,8 @@ public final class MomentosMenu {
         for (String id : mo.ids()) {
             if (s >= 45) break;
             boolean on = id.equals(mo.activo());
-            ItemStack it = Items.of(mo.tipo(id).icono, "&c&l⚡ " + mo.nombre(id), "", "&7" + mo.objetivoCorto(id),
-                    "&7Duración: &f" + mo.m(id).getInt("duracion", 240) + " s", "", on ? "&c&l● EN CURSO" : "&e▶ Click para administrar");
+            ItemStack it = Items.of(Material.REDSTONE_TORCH, "&c&l⚡ " + mo.nombre(id), "", "&7Pasos: &f" + mo.pasos(id).size(), "",
+                    on ? (mo.enCurso() ? "&c&l● EN CURSO" : "&e&l● PREPARADO") : "&e▶ Click para administrar");
             if (on) Items.glow(it);
             m.set(s++, it, e -> editor(p, id));
         }
@@ -60,55 +68,194 @@ public final class MomentosMenu {
                 String id = nom.toLowerCase().replaceAll("[^a-z0-9áéíóúñ]+", "_");
                 if (id.isEmpty()) { Style.err(p, "Nombre inválido."); return; }
                 ConfigurationSection c = mo.m(id);
-                if (!c.contains("nombre")) {
-                    c.set("nombre", nom); c.set("duracion", 240); c.set("modo", "una_vez");
-                    c.set("objetivo.tipo", "TOCAR"); c.set("objetivo.objs", List.of("tag:minecraft:beds")); touch();
-                }
+                if (!c.contains("nombre")) { c.set("nombre", nom); touch(); }
                 editor(p, id);
             });
         });
         m.open(p);
     }
 
+    /** El momento: preparar/terminar, nombre, pasos, portales. */
     void editor(Player p, String id) {
         Style.click(p);
         ConfigurationSection c = mo.m(id);
         boolean on = id.equals(mo.activo());
         Menu m = new Menu(4, "&4&l⚡ &8" + mo.nombre(id));
-        if (on) m.set(10, Items.of(Material.RED_WOOL, "&c&l✖ CANCELAR EVENTO", "", "&7No cuenta a nadie como fallido."), e -> { mo.cancelar(p); editor(p, id); });
-        else m.set(10, Items.of(Material.LIME_WOOL, "&a&l▶ INICIAR EVENTO", "", "&7Gira la ruleta roja y arranca.", "&7Participan los que están conectados."),
-                e -> { p.closeInventory(); mo.iniciar(p, id); });
+        if (on) {
+            m.set(10, Items.of(Material.RED_WOOL, "&c&l✖ TERMINAR MOMENTO", "", "&7Termina todo sin castigar a nadie."), e -> { mo.cancelar(p); editor(p, id); });
+            m.set(19, Items.of(Material.CHEST, "&e&lDarme los ítems otra vez", "", "&7Un ítem por paso."), e -> { mo.darItems(p); p.closeInventory(); });
+        } else {
+            m.set(10, Items.of(Material.LIME_WOOL, "&a&l▶ PREPARAR MOMENTO", "", "&7No empieza para los jugadores todavía:",
+                    "&7recibes un ítem por paso y el momento", "&7arranca cuando activas el primero."), e -> { p.closeInventory(); mo.preparar(p, id); });
+        }
         m.set(11, Items.of(Material.NAME_TAG, "&e&lNombre", "", "&7" + mo.nombre(id), "", "&e▶ Click para cambiar"), e -> {
             p.closeInventory();
             Style.info(p, "Escribe el nuevo nombre &8(o cancel)&7:");
             ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("nombre", Txt.strip(txt).trim()); touch(); editor(p, id); });
         });
-        m.set(12, Items.of(mo.tipo(id).icono, "&6&lObjetivo", "", "&f" + mo.objetivoCorto(id), "&7Tipo: " + mo.tipo(id).label, "", "&e▶ Click para cambiar"),
-                e -> objetivo(p, id));
-        boolean final_ = "al_final".equals(c.getString("modo", "una_vez"));
-        m.set(13, Items.of(final_ ? Material.CLOCK : Material.TOTEM_OF_UNDYING, final_ ? "&e&lModo: al final del tiempo" : "&e&lModo: una vez y a salvo", "",
-                final_ ? "&7Tienes que estar así cuando termina." : "&7Lo haces una vez y quedas a salvo.", "&8(Tocar y Matar siempre son \"una vez\")", "",
-                "&e▶ Click para cambiar"), e -> { c.set("modo", final_ ? "una_vez" : "al_final"); touch(); editor(p, id); });
-        int dur = c.getInt("duracion", 240);
-        m.set(14, Items.of(Material.CLOCK, "&e&lDuración: &f" + String.format("%d:%02d", dur / 60, dur % 60), "",
-                "&7Click: +10 s | Click derecho: -10 s", "&7Shift: ±60 s"), e -> {
-            int d = (e.isShiftClick() ? 60 : 10) * (e.isRightClick() ? -1 : 1);
-            c.set("duracion", Math.max(10, dur + d)); touch(); editor(p, id);
-        });
-        m.set(15, Items.of(Material.SKELETON_SKULL, "&5&l☠ Consecuencias", "", "&7Qué le pasa al que falla.", "", "&e▶ Click para administrar"),
-                e -> consecuencias(p, id));
-        m.set(16, Items.of(Material.CHEST, "&6&lRecompensa", "", "&7Para los que lo consiguen (opcional).", "&7Ítems: &f" + mo.recompensas(id).size(), "",
-                "&e▶ Click para editar"), e -> recompensas(p, id));
-        String av = c.getString("aviso");
-        m.set(22, Items.of(Material.ENCHANTED_BOOK, "&b&lAviso vinculado", "", "&7Se muestra después de la ruleta:", av != null ? "&f" + av : "&8ninguno", "",
-                "&e▶ Click para elegir"), e -> pl.avisos().elegir(p, "&8Aviso para: " + mo.nombre(id), sel -> { c.set("aviso", sel); touch(); editor(p, id); }));
+        m.set(12, Items.of(Material.WRITABLE_BOOK, "&6&lPasos", "", "&7Cosas que pueden pasar en este momento.", "&7Pasos: &f" + mo.pasos(id).size(), "", "&e▶ Click para administrar"),
+                e -> pasos(p, id));
+        boolean bloq = c.getBoolean("bloquear_portales", false);
+        m.set(13, Items.of(bloq ? Material.OBSIDIAN : Material.END_PORTAL_FRAME, bloq ? "&c&lPortales: bloqueados" : "&a&lPortales: permitidos", "",
+                "&7Si están bloqueados, nadie cambia de dimensión", "&7mientras dura el momento.", "", "&e▶ Click para cambiar"),
+                e -> { c.set("bloquear_portales", !bloq); touch(); editor(p, id); });
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> lista(p));
         m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
             if (!e.isShiftClick()) { Style.err(p, "Usa shift+click para borrar."); return; }
-            if (on) { Style.err(p, "Primero cancélalo."); return; }
+            if (on) { Style.err(p, "Primero termínalo."); return; }
             mo.st.set("momentos." + id, null); lista(p);
         });
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    private void pasos(Player p, String id) {
+        Style.click(p);
+        Menu m = new Menu(6, "&8Pasos: " + mo.nombre(id));
+        int s = 0;
+        for (String pid : mo.pasos(id)) {
+            if (s >= 45) break;
+            String path = id + ".pasos." + pid;
+            boolean sp = mo.esSpawn(path);
+            List<String> lore = new ArrayList<>();
+            lore.add("");
+            lore.add("&7" + mo.objetivoCorto(path));
+            lore.add("&7Sidebar: &f" + mo.textoSidebar(path));
+            if (!sp) lore.add("&7Tiempo: &f" + (mo.m(path).getInt("duracion", 0) > 0 ? mo.m(path).getInt("duracion", 0) + " s" : "sin tiempo")
+                    + (mo.m(path).getBoolean("gas.on", false) ? " &8| &2☣ gas" : ""));
+            lore.add("");
+            lore.add("&e▶ Click para editar");
+            lore.add("&c▶ Shift+click derecho para borrar");
+            m.set(s++, Items.of(sp ? Material.CREEPER_HEAD : mo.tipo(path).icono, "&c&l" + (s) + ". &f" + mo.nombre(path), lore), e -> {
+                if (e.isShiftClick() && e.isRightClick()) { mo.st.set("momentos." + path, null); pasos(p, id); return; }
+                volver(p, path);
+            });
+        }
+        for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.RED_STAINED_GLASS_PANE));
+        m.set(45, Items.of(Material.ARROW, "&7◀ Volver"), e -> editor(p, id));
+        m.set(48, Items.of(Material.LIME_CONCRETE, "&a&l➕ Agregar regla", "", "&7Tocar, altura, punto, dimensión...", "&7con tiempo, gas y castigo."), e -> nuevoPaso(p, id, false));
+        m.set(50, Items.of(Material.CREEPER_HEAD, "&a&l➕ Agregar spawn de mob", "", "&7Hace aparecer un mob en la posición", "&7de cada jugador."), e -> nuevoPaso(p, id, true));
+        m.open(p);
+    }
+
+    private void nuevoPaso(Player p, String id, boolean spawn) {
+        p.closeInventory();
+        Style.info(p, "Escribe el &enombre &7del paso &8(o cancel)&7:");
+        ChatInput.ask(p, txt -> {
+            ChatInput.cancel(p);
+            String nom = Txt.strip(txt).trim();
+            if (nom.isEmpty()) { Style.err(p, "Nombre inválido."); return; }
+            int n = mo.pasos(id).size() + 1;
+            while (mo.existe(id + ".pasos." + n)) n++;
+            String path = id + ".pasos." + n;
+            ConfigurationSection c = mo.m(path);
+            c.set("nombre", nom);
+            if (spawn) {
+                c.set("tipo_paso", "SPAWN"); c.set("spawn.mob", "creeper_cargado"); c.set("spawn.cant", 1); c.set("spawn.vida", 1); c.set("spawn.azar", 0);
+            } else {
+                c.set("tipo_paso", "REGLA"); c.set("duracion", 0); c.set("modo", "una_vez");
+                c.set("objetivo.tipo", "TOCAR"); c.set("objetivo.objs", List.of("tag:minecraft:beds"));
+            }
+            touch();
+            volver(p, path);
+        });
+    }
+
+    /** Un paso de tipo regla. */
+    void pasoEditor(Player p, String path) {
+        Style.click(p);
+        ConfigurationSection c = mo.m(path);
+        String id = raiz(path);
+        Menu m = new Menu(4, "&4&l⚡ &8" + mo.nombre(path));
+        m.set(10, Items.of(Material.NAME_TAG, "&e&lNombre", "", "&7" + mo.nombre(path), "", "&e▶ Click para cambiar"), e -> {
+            p.closeInventory();
+            Style.info(p, "Escribe el nuevo nombre &8(o cancel)&7:");
+            ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("nombre", Txt.strip(txt).trim()); touch(); pasoEditor(p, path); });
+        });
+        m.set(11, Items.of(mo.tipo(path).icono, "&6&lObjetivo", "", "&f" + mo.objetivoCorto(path), "&7Tipo: " + mo.tipo(path).label, "", "&e▶ Click para cambiar"),
+                e -> objetivo(p, path));
+        boolean final_ = "al_final".equals(c.getString("modo", "una_vez"));
+        m.set(12, Items.of(final_ ? Material.CLOCK : Material.TOTEM_OF_UNDYING, final_ ? "&e&lModo: al final del tiempo" : "&e&lModo: una vez y a salvo", "",
+                final_ ? "&7Tienes que estar así cuando termina." : "&7Lo haces una vez y quedas a salvo.", "&8(Tocar y Matar siempre son \"una vez\")", "",
+                "&e▶ Click para cambiar"), e -> { c.set("modo", final_ ? "una_vez" : "al_final"); touch(); pasoEditor(p, path); });
+        int dur = c.getInt("duracion", 0);
+        m.set(13, Items.of(Material.CLOCK, "&e&lTiempo: &f" + (dur > 0 ? String.format("%d:%02d", dur / 60, dur % 60) : "sin tiempo"), "",
+                "&7Click: +10 s | Click derecho: -10 s", "&7Shift: ±60 s", "&7En 0 no hay reloj ni castigo por tiempo."), e -> {
+            int d = (e.isShiftClick() ? 60 : 10) * (e.isRightClick() ? -1 : 1);
+            c.set("duracion", Math.max(0, dur + d)); touch(); pasoEditor(p, path);
+        });
+        m.set(14, Items.of(Material.SKELETON_SKULL, "&5&l☠ Consecuencias", "", "&7Qué le pasa al que falla cuando", "&7se acaba el tiempo.", "", "&e▶ Click para administrar"),
+                e -> consecuencias(p, path));
+        m.set(15, Items.of(Material.CHEST, "&6&lRecompensa", "", "&7Para los que lo consiguen (opcional).", "&7Ítems: &f" + mo.recompensas(path).size(), "",
+                "&e▶ Click para editar"), e -> recompensas(p, path));
+        boolean gas = c.getBoolean("gas.on", false);
+        int cor = c.getInt("gas.corazones", 2);
+        double cada = c.getDouble("gas.cada", 1.5);
+        m.set(16, Items.of(gas ? Material.POISONOUS_POTATO : Material.GRAY_WOOL, (gas ? "&2&l☣ Gas: " : "&7&l☣ Gas: ") + (gas ? "ACTIVADO" : "desactivado"), "",
+                "&7Daño: &f" + cor + " corazones cada " + cada + " s", "&7a los que todavía no cumplen (ignora armadura).", "",
+                "&eClick: activar / desactivar", "&eClick derecho: corazones +1", "&eShift+click: segundos +0,5"), e -> {
+            if (e.isShiftClick()) c.set("gas.cada", cada >= 5 ? 0.5 : cada + 0.5);
+            else if (e.isRightClick()) c.set("gas.corazones", cor >= 10 ? 1 : cor + 1);
+            else c.set("gas.on", !gas);
+            touch(); pasoEditor(p, path);
+        });
+        textoYAviso(m, p, path, c, () -> pasoEditor(p, path));
+        m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> pasos(p, id));
+        m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
+            if (!e.isShiftClick()) { Style.err(p, "Usa shift+click para borrar."); return; }
+            mo.st.set("momentos." + path, null); pasos(p, id);
+        });
+        m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    /** Un paso de tipo spawn de mob. */
+    void pasoSpawn(Player p, String path) {
+        Style.click(p);
+        ConfigurationSection c = mo.m(path);
+        String id = raiz(path);
+        Menu m = new Menu(4, "&4&l⚡ &8" + mo.nombre(path));
+        m.set(10, Items.of(Material.NAME_TAG, "&e&lNombre", "", "&7" + mo.nombre(path), "", "&e▶ Click para cambiar"), e -> {
+            p.closeInventory();
+            Style.info(p, "Escribe el nuevo nombre &8(o cancel)&7:");
+            ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("nombre", Txt.strip(txt).trim()); touch(); pasoSpawn(p, path); });
+        });
+        m.set(11, Items.of(Material.CREEPER_HEAD, "&6&lMob: &f" + c.getString("spawn.mob", "creeper_cargado"), "",
+                "&7Puede ser:", "&f creeper_cargado &8(creeper eléctrico)", "&f tod4:nuclear &8(random, mini, calamar, void)", "&f mythic:NombreInterno",
+                "&f cualquier mob de vanilla &8(zombie, skeleton...)", "", "&e▶ Click para cambiar"), e -> {
+            p.closeInventory();
+            Style.info(p, "Escribe el mob &8(o cancel)&7:");
+            ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("spawn.mob", Txt.strip(txt).trim()); touch(); pasoSpawn(p, path); });
+        });
+        int cant = c.getInt("spawn.cant", 1);
+        m.set(12, Items.of(Material.PAPER, "&e&lCantidad por jugador: &f" + cant, "", "&7Click: +1 | Click derecho: -1"),
+                e -> { c.set("spawn.cant", Math.max(1, Math.min(20, cant + (e.isRightClick() ? -1 : 1)))); touch(); pasoSpawn(p, path); });
+        double vida = c.getDouble("spawn.vida", 0);
+        m.set(13, Items.of(Material.GOLDEN_APPLE, "&c&lVida: &f" + (vida > 0 ? (int) vida : "normal"), "", "&7Click: +1 | Click derecho: -1", "&7Shift: ±10", "&7En 0 usa la vida normal del mob."), e -> {
+            int d = (e.isShiftClick() ? 10 : 1) * (e.isRightClick() ? -1 : 1);
+            c.set("spawn.vida", Math.max(0, vida + d)); touch(); pasoSpawn(p, path);
+        });
+        int azar = c.getInt("spawn.azar", 0);
+        m.set(14, Items.of(Material.PLAYER_HEAD, "&e&lA quién: &f" + (azar > 0 ? azar + " jugadores al azar" : "todos los jugadores"), "",
+                "&7Click: +1 | Click derecho: -1", "&7En 0 le toca a todos.", "&7Los exentos nunca reciben mobs."),
+                e -> { c.set("spawn.azar", Math.max(0, azar + (e.isRightClick() ? -1 : 1))); touch(); pasoSpawn(p, path); });
+        textoYAviso(m, p, path, c, () -> pasoSpawn(p, path));
+        m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> pasos(p, id));
+        m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
+            if (!e.isShiftClick()) { Style.err(p, "Usa shift+click para borrar."); return; }
+            mo.st.set("momentos." + path, null); pasos(p, id);
+        });
+        m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    /** Texto de la sidebar y aviso vinculado (los dos tipos de paso). */
+    private void textoYAviso(Menu m, Player p, String path, ConfigurationSection c, Runnable otra) {
+        m.set(19, Items.of(Material.OAK_SIGN, "&c&lMensaje de la sidebar", "", "&7" + mo.textoSidebar(path), "", "&7Es lo que leen todos mientras el paso", "&7está activo.", "", "&e▶ Click para cambiar"), e -> {
+            p.closeInventory();
+            Style.info(p, "Escribe el mensaje de la sidebar &8(o cancel)&7:");
+            ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("texto", Txt.strip(txt).trim()); touch(); otra.run(); });
+        });
+        String av = c.getString("aviso");
+        m.set(20, Items.of(Material.ENCHANTED_BOOK, "&b&lAviso vinculado", "", "&7Se muestra después de la ruleta:", av != null ? "&f" + av : "&8ninguno", "",
+                "&e▶ Click para elegir"), e -> pl.avisos().elegir(p, "&8Aviso para: " + mo.nombre(path), sel -> { c.set("aviso", sel); touch(); otra.run(); }));
     }
 
     private void recompensas(Player p, String id) {
@@ -120,7 +267,7 @@ public final class MomentosMenu {
             List<ItemStack> nuevo = new ArrayList<>();
             for (ItemStack it : m.getInventory().getContents()) if (it != null && !it.getType().isAir()) nuevo.add(it.clone());
             mo.m(id).set("recompensas", nuevo); touch();
-            Bukkit.getScheduler().runTask(pl, () -> editor(p, id));
+            Bukkit.getScheduler().runTask(pl, () -> volver(p, id));
         });
         m.open(p);
     }
@@ -143,7 +290,7 @@ public final class MomentosMenu {
                 configurar(p, id, t);
             });
         }
-        m.set(18, Items.of(Material.ARROW, "&7◀ Volver"), e -> editor(p, id));
+        m.set(18, Items.of(Material.ARROW, "&7◀ Volver"), e -> volver(p, id));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 
@@ -213,7 +360,7 @@ public final class MomentosMenu {
                 });
             });
         }
-        m.set(45, Items.of(Material.ARROW, "&a&l✔ Guardar y volver"), e -> { guardar.run(); editor(p, id); });
+        m.set(45, Items.of(Material.ARROW, "&a&l✔ Guardar y volver"), e -> { guardar.run(); volver(p, id); });
         m.onClose(e -> guardar.run());
         m.open(p);
     }
@@ -246,7 +393,7 @@ public final class MomentosMenu {
                 c.set("objetivo.objs", l); touch(); mundos(p, id);
             });
         }
-        m.set(18, Items.of(Material.ARROW, "&a&l✔ Listo"), e -> editor(p, id));
+        m.set(18, Items.of(Material.ARROW, "&a&l✔ Listo"), e -> volver(p, id));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 
@@ -262,7 +409,7 @@ public final class MomentosMenu {
         m.set(14, Items.of(Material.LIME_STAINED_GLASS_PANE, "&a+10 / +1 &7(derecho)"), e -> { c.set("objetivo.y", y + (e.isRightClick() ? 1 : 10)); touch(); altura(p, id); });
         m.set(16, Items.of(Material.COMPASS, "&b&lUsar mi altura", "", "&7Tu Y actual: &f" + p.getLocation().getBlockY()),
                 e -> { c.set("objetivo.y", p.getLocation().getBlockY()); touch(); altura(p, id); });
-        m.set(18, Items.of(Material.ARROW, "&a&l✔ Listo"), e -> editor(p, id));
+        m.set(18, Items.of(Material.ARROW, "&a&l✔ Listo"), e -> volver(p, id));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 
@@ -275,7 +422,7 @@ public final class MomentosMenu {
                 e -> { c.set("objetivo.punto", p.getLocation()); touch(); cerca(p, id); });
         m.set(15, Items.of(Material.CLOCK, "&e&lRadio: &f" + r + " bloques", "", "&7Click: +5 | Click derecho: -5"),
                 e -> { c.set("objetivo.radio", Math.max(1, r + (e.isRightClick() ? -5 : 5))); touch(); cerca(p, id); });
-        m.set(18, Items.of(Material.ARROW, "&a&l✔ Listo"), e -> editor(p, id));
+        m.set(18, Items.of(Material.ARROW, "&a&l✔ Listo"), e -> volver(p, id));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 
@@ -307,7 +454,7 @@ public final class MomentosMenu {
         int seg = cc.getInt("efectos_seg", 10);
         m.set(31, Items.of(Material.CLOCK, "&e&lDuración de efectos: &f" + seg + " s", "", "&7Click: +5 | Click derecho: -5"),
                 e -> { cc.set("efectos_seg", Math.max(5, seg + (e.isRightClick() ? -5 : 5))); touch(); consecuencias(p, id); });
-        m.set(36, Items.of(Material.ARROW, "&7◀ Volver"), e -> editor(p, id));
+        m.set(36, Items.of(Material.ARROW, "&7◀ Volver"), e -> volver(p, id));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 

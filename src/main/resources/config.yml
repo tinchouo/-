@@ -83,6 +83,8 @@ momentos:
   delay_castigo_seg: 15   # el castigo llega X segundos despues de que termina (para leer el chat)
   vineta: true            # pantalla con vineta roja durante el Momento Truco (desde que sale la animacion)
   vineta_intensidad: 0.75 # de 0.05 (casi nada) a 0.99 (muy roja)
+  # tag de los jugadores que no participan (como las nutrias de Desafio): /tag <jugador> add exento_momento
+  tag_exento: exento_momento
 
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"
