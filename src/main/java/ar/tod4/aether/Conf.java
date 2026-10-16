@@ -10,7 +10,7 @@ final class Conf {
     int pocionNivel, pocionSeg;
     String musica, musicaIntro;
     double musicaVuelve;
-    boolean animales, viento;
+    boolean animales;
 
     int baseY, maxDev, radioExpansion, colaMax, expansionesPorSeg;
     int giro, rectoMin, costadoMax, derivaMax, chanceGrande, casas, ruina, puenteRoto, medianasMax;
@@ -18,7 +18,9 @@ final class Conf {
     int ramaChance, ramaSeparacion, ramaVivasMax, ramaGrande, ramaGiro, cobreFinal;
     int especialChance, especialDistMin, malaSuerteMax, malaSuertePaso, especialSeparacion;
     int wVillage, wColiseum, wWindmill;
-    int decorCerca, decorLejos;
+    int decorCerca, decorLejos, decorVacio;
+    String menaId;
+    int menaEsquina, menaOtras, ticksBaldosa;
 
     static Conf de(YamlConfiguration y) {
         Conf c = new Conf();
@@ -34,7 +36,6 @@ final class Conf {
         c.musicaIntro = y.getString("musica.intro", "aether:aether.music_intro");
         c.musicaVuelve = y.getDouble("musica.repetir_cada_seg", 83.92);
         c.animales = y.getBoolean("vida.animales", true);
-        c.viento = y.getBoolean("vida.viento", true);
 
         c.baseY = y.getInt("mapa.altura_base", 210);
         c.maxDev = y.getInt("mapa.desvio_altura_max", 10);
@@ -72,8 +73,13 @@ final class Conf {
         c.wColiseum = y.getInt("estructuras.peso_coliseum", 22);
         c.wWindmill = y.getInt("estructuras.peso_windmill", 20);
 
-        c.decorCerca = y.getInt("decoracion.chance_cerca", 55);
-        c.decorLejos = y.getInt("decoracion.chance_lejos", 25);
+        c.decorCerca = y.getInt("decoracion.chance_cerca", 70);
+        c.decorLejos = y.getInt("decoracion.chance_lejos", 45);
+        c.decorVacio = y.getInt("decoracion.chance_vacio", 35);
+        c.menaId = y.getString("mena_truco.oraxen_id", "mineral_truco_ore");
+        c.menaEsquina = y.getInt("mena_truco.molino_por_mena", 8);
+        c.menaOtras = y.getInt("mena_truco.otras_estructuras_max", 6);
+        c.ticksBaldosa = Math.max(1, y.getInt("mapa.ticks_entre_pedazos", 2));
         return c;
     }
 }

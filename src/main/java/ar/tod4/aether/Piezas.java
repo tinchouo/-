@@ -1,77 +1,72 @@
 package ar.tod4.aether;
 
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
 /**
- * Las piezas del datapack aether_v7 (data/aether/structure/*.nbt).
+ * Las piezas del datapack aether_v7 (data/aether/structure/*.nbt). La tabla la genera el generador (build.py) en
+ * src/main/resources/aether_piezas.json: medidas, baldosas (las piezas grandes se pegan de a pedazos), menas de Truco y atriles.
  * c = indice del centro dentro de la plantilla, rax = radio sobre los ejes (hasta el borde donde apoya el puente),
  * rm = radio para la ocupacion (superelipse), ylo/yhi = alto real de la isla dentro de la plantilla.
  */
 final class Piezas {
 
-    record Pieza(String n, int c, int rax, int rm, int ylo, int yhi, boolean big) { }
+    record Pieza(String n, int c, int rax, int rm, int ylo, int yhi, boolean big,
+                 int[] size, List<Object[]> tiles, List<int[]> ores, List<int[]> lecterns) { }
 
     /** Altura de la cubierta (la superficie de la isla) dentro de la plantilla. */
     static final int DECK = 44;
     /** Posicion del marco del tridente dentro de la plantilla del windmill. */
-    static final int[] MARCO_WINDMILL = {103, 128, 98};
+    static int[] MARCO_WINDMILL = {103, 128, 98};
 
     private static final Map<String, Pieza> P = new HashMap<>();
-
-    private static void p(String n, int c, int rax, int rm, int ylo, int yhi, boolean big) {
-        P.put(n, new Pieza(n, c, rax, rm, ylo, yhi, big));
-    }
 
     static Pieza get(String n) { return P.get(n); }
 
     static {
-        p("village_1", 104, 100, 123, 23, 57, true);
-        p("village_2", 104, 100, 123, 23, 58, true);
-        p("village_3", 104, 100, 123, 23, 58, true);
-        p("windmill", 103, 99, 122, 18, 149, true);
-        p("coliseum", 108, 80, 95, 23, 58, true);
-        p("mushroom_island_1", 102, 75, 90, 21, 109, true);
-        p("mushroom_island_2", 102, 75, 90, 21, 109, true);
-        p("mushroom_island_3", 102, 75, 90, 21, 109, true);
-        p("mushroom_island_4", 102, 75, 90, 21, 101, true);
-        p("spawn", 61, 44, 54, 10, 74, true);
-        p("tiny_1", 7, 2, 6, 38, 45, false);
-        p("tiny_2", 8, 3, 7, 36, 46, false);
-        p("tiny_3", 8, 3, 7, 37, 45, false);
-        p("tiny_4", 9, 4, 9, 35, 46, false);
-        p("small_1", 11, 5, 10, 33, 47, false);
-        p("small_2", 12, 6, 11, 31, 45, false);
-        p("small_3", 12, 6, 11, 32, 47, false);
-        p("small_4", 12, 6, 11, 31, 47, false);
-        p("small_f1", 17, 6, 11, 31, 46, false);
-        p("small_f2", 17, 6, 11, 30, 47, false);
-        p("medium_1", 24, 15, 21, 27, 50, false);
-        p("medium_2", 24, 15, 21, 27, 51, false);
-        p("medium_3", 29, 15, 21, 27, 52, false);
-        p("medium_4", 24, 15, 21, 28, 52, false);
-        p("bm_1", 24, 15, 21, 28, 55, false);
-        p("bm_2", 24, 15, 21, 28, 57, false);
-        p("bm_3", 24, 15, 21, 27, 55, false);
-        p("bm_4", 29, 15, 21, 27, 57, false);
-        p("bm_c1", 24, 15, 21, 27, 57, false);
-        p("bm_c2", 24, 15, 21, 26, 56, false);
-        p("bm_r1", 24, 15, 21, 27, 57, false);
-        p("bm_r2", 24, 15, 21, 28, 57, false);
-        p("bl_1", 69, 50, 61, 6, 57, true);
-        p("bl_2", 69, 50, 61, 4, 57, true);
-        p("bl_3", 69, 50, 61, 5, 57, true);
-        p("large_1", 69, 50, 61, 5, 54, true);
-        p("large_2", 69, 50, 61, 4, 54, true);
-        p("large_3", 74, 50, 61, 4, 54, true);
-        p("large_4", 69, 50, 61, 2, 54, true);
-        p("large_h1", 69, 50, 61, 3, 54, true);
-        p("large_h2", 69, 50, 61, 3, 58, true);
-        p("large_ruin", 69, 50, 61, 4, 54, true);
+        try (InputStreamReader r = new InputStreamReader(Piezas.class.getResourceAsStream("/aether_piezas.json"), StandardCharsets.UTF_8)) {
+            JsonObject root = new Gson().fromJson(r, JsonObject.class);
+            JsonArray mw = root.getAsJsonArray("marco_windmill");
+            MARCO_WINDMILL = new int[]{mw.get(0).getAsInt(), mw.get(1).getAsInt(), mw.get(2).getAsInt()};
+            for (Map.Entry<String, JsonElement> en : root.getAsJsonObject("piezas").entrySet()) {
+                JsonObject o = en.getValue().getAsJsonObject();
+                List<Object[]> tiles = new java.util.ArrayList<>();
+                if (o.has("tiles")) for (JsonElement t : o.getAsJsonArray("tiles")) {
+                    JsonArray a = t.getAsJsonArray();
+                    tiles.add(new Object[]{a.get(0).getAsString(), a.get(1).getAsInt(), a.get(2).getAsInt()});
+                }
+                int[] size = o.has("size") ? arr(o.getAsJsonArray("size")) : new int[]{2 * o.get("c").getAsInt() + 1, 0, 2 * o.get("c").getAsInt() + 1};
+                P.put(en.getKey(), new Pieza(en.getKey(), o.get("c").getAsInt(), o.get("rax").getAsInt(), o.get("rm").getAsInt(),
+                        o.get("ylo").getAsInt(), o.get("yhi").getAsInt(), o.get("big").getAsBoolean(), size, tiles,
+                        lista(o, "ores"), lista(o, "lecterns")));
+            }
+        } catch (Exception ex) {
+            throw new IllegalStateException("No pude leer aether_piezas.json", ex);
+        }
     }
 
-    /** Puentes: [bgt][xz]b?_<largo>_<z0|p1|p2|n1|n2> */
-    static boolean esPuente(String n) { return n.matches("[bgt][xz]b?_.*"); }
+    private static int[] arr(JsonArray a) {
+        int[] r = new int[a.size()];
+        for (int i = 0; i < r.length; i++) r[i] = a.get(i).getAsInt();
+        return r;
+    }
+
+    private static List<int[]> lista(JsonObject o, String k) {
+        List<int[]> l = new java.util.ArrayList<>();
+        if (o.has(k)) for (JsonElement e : o.getAsJsonArray(k)) l.add(arr(e.getAsJsonArray()));
+        return l;
+    }
+
+    /** Puentes: [bgt][xz][bf]?_<largo>_<z0|p1|p2|n1|n2>  (b = roto, f = con banderines) */
+    static boolean esPuente(String n) { return n.matches("[bgt][xz][bf]?_.*") && !n.startsWith("bm_") && !n.startsWith("bl_"); }
 
     /** Nombre del bioma (F3) para una pieza. */
     static String bioma(String n) {

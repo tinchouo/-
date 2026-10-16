@@ -37,6 +37,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.damage.DamageSource;
 import org.bukkit.damage.DamageType;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -65,7 +66,7 @@ import net.kyori.adventure.title.Title;
 
 /**
  * El Aether (antes aether.sk): mapa de islas que se va armando a medida que los jugadores exploran,
- * pocion para entrar, caida al vacio para volver, musica en loop, animales y viento.
+ * pocion para entrar, caida al vacio para volver, tu musica en loop (en la categoria Musica) y animales.
  * Las piezas (.nbt) siguen en el datapack aether_v7 y la dimension/biomas en aether_dimension.
  */
 public final class Aether implements Listener {
@@ -86,8 +87,8 @@ public final class Aether implements Listener {
     private boolean guardarPendiente;
 
     private final Map<UUID, Long> sinCaida = new HashMap<>();
-    private final Map<UUID, Long> musica = new HashMap<>();
     private final Map<UUID, Long> aviso = new HashMap<>();
+    private final Map<UUID, Long> musica = new HashMap<>();
     private final Set<UUID> condenados = new HashSet<>();
     private int tick;
     private int fillRestantes;
@@ -107,6 +108,12 @@ public final class Aether implements Listener {
 
     public void recargar() {
         File f = new File(pl.getDataFolder(), "aether.yml");
+        if (f.exists() && YamlConfiguration.loadConfiguration(f).getInt("version", 1) < 2) {
+            // version vieja: se guarda como aether_viejo.yml y se pone la nueva (con mas islitas, mena de Truco, etc.)
+            File viejo = new File(pl.getDataFolder(), "aether_viejo.yml");
+            if (viejo.exists()) viejo.delete();
+            f.renameTo(viejo);
+        }
         if (!f.exists()) pl.saveResource("aether.yml", false);
         k = Conf.de(YamlConfiguration.loadConfiguration(f));
         if (e != null) nuevoPlan();
@@ -175,10 +182,6 @@ public final class Aether implements Listener {
             if (e.cola.size() != antes) guardarPendiente = true;
         }
         if (tick % 5 == 0 && fillRestantes > 0) fill();
-        if (tick % 40 == 0 && k.viento) {
-            World w = mundo();
-            if (w != null) for (Player p : w.getPlayers()) if (rnd.nextInt(100) < 40) Vida.viento(p, rnd);
-        }
         if (tick % 6000 == 0 && guardarPendiente) guardar();
     }
 
@@ -230,77 +233,95 @@ public final class Aether implements Listener {
         return l;
     }
 
-    /** Carga los chunks sin trabar el server, pega la pieza y suelta los chunks. */
+    /** De plantilla a mundo (x,z), con la rotacion de la pieza (las aldeas se giran hacia el camino). */
+    private static int[] tf(Trabajo j, int x, int z) {
+        if (j.rot == null) return new int[]{j.x0 + x, j.z0 + z};
+        return switch (j.rot) {
+            case "CLOCKWISE_90" -> new int[]{j.x1 - z, j.z0 + x};
+            case "CLOCKWISE_180" -> new int[]{j.x1 - x, j.z1 - z};
+            case "COUNTERCLOCKWISE_90" -> new int[]{j.x0 + z, j.z1 - x};
+            default -> new int[]{j.x0 + x, j.z0 + z};
+        };
+    }
+
+    /** Pega la pieza de a pedazos (las grandes vienen en baldosas de 48x48): asi el server no se traba. */
     private void pegar(World w, Trabajo j) {
-        List<int[]> cs = chunks(j);
+        Pieza pz = Piezas.get(j.n);
+        if (pz != null && !pz.tiles().isEmpty()) {
+            pegarBaldosa(w, j, pz, 0);
+        } else {
+            pegarPedazo(w, j, j.n, 0, 0, j.x1 - j.x0 + 1, j.z1 - j.z0 + 1, () -> fin(w, j, pz));
+        }
+    }
+
+    private void pegarBaldosa(World w, Trabajo j, Pieza pz, int i) {
+        if (i >= pz.tiles().size()) { fin(w, j, pz); return; }
+        Object[] t = pz.tiles().get(i);
+        int ox = (Integer) t[1], oz = (Integer) t[2];
+        int tw = Math.min(48, pz.size()[0] - ox), td = Math.min(48, pz.size()[2] - oz);
+        pegarPedazo(w, j, (String) t[0], ox, oz, tw, td, () -> pegarBaldosa(w, j, pz, i + 1));
+    }
+
+    private void pegarPedazo(World w, Trabajo j, String nombre, int ox, int oz, int tw, int td, Runnable luego) {
+        ocupadoDesde = System.currentTimeMillis();
+        Structure s = estructura(nombre);
+        if (s == null) {
+            pl.getLogger().warning("[Aether] Falta la pieza aether:" + nombre + " (esta el datapack aether_v7 en world/datapacks?)");
+            luego.run();
+            return;
+        }
+        StructureRotation rot = j.rot == null ? StructureRotation.NONE : StructureRotation.valueOf(j.rot);
+        int[] a = tf(j, ox, oz), b = tf(j, ox + tw - 1, oz + td - 1);
+        int x0 = Math.min(a[0], b[0]), x1 = Math.max(a[0], b[0]), z0 = Math.min(a[1], b[1]), z1 = Math.max(a[1], b[1]);
+        List<int[]> cs = new ArrayList<>();
+        for (int cx = x0 >> 4; cx <= x1 >> 4; cx++) for (int cz = z0 >> 4; cz <= z1 >> 4; cz++) cs.add(new int[]{cx, cz});
         List<CompletableFuture<Chunk>> fs = new ArrayList<>();
         for (int[] c : cs) fs.add(w.getChunkAtAsync(c[0], c[1], true));
         CompletableFuture.allOf(fs.toArray(new CompletableFuture[0])).whenComplete((v, ex) ->
                 Bukkit.getScheduler().runTask(pl, () -> {
                     for (int[] c : cs) w.addPluginChunkTicket(c[0], c[1], pl);
                     try {
-                        colocar(w, j);
+                        s.place(new Location(w, a[0], j.y0, a[1]), false, rot, Mirror.NONE, 0, 1f, rnd);
                     } catch (Exception err) {
-                        pl.getLogger().warning("[Aether] No pude pegar " + j.n + ": " + err);
-                        listo(j);
+                        pl.getLogger().warning("[Aether] No pude pegar " + nombre + ": " + err);
                     }
-                    Bukkit.getScheduler().runTaskLater(pl, () -> {
-                        for (int[] c : cs) w.removePluginChunkTicket(c[0], c[1], pl);
-                    }, 60L);
+                    Bukkit.getScheduler().runTaskLater(pl, () -> { for (int[] c : cs) w.removePluginChunkTicket(c[0], c[1], pl); }, 80L);
+                    Bukkit.getScheduler().runTaskLater(pl, luego, k.ticksBaldosa);
                 }));
     }
 
-    private void colocar(World w, Trabajo j) {
-        Structure s = estructura(j.n);
-        if (s == null) {
-            pl.getLogger().warning("[Aether] Falta la pieza aether:" + j.n + " (esta el datapack aether_v7 en world/datapacks?)");
-            listo(j);
-            return;
-        }
-        StructureRotation rot = j.rot == null ? StructureRotation.NONE : StructureRotation.valueOf(j.rot);
-        int px = j.x0, pz = j.z0;
-        if (rot == StructureRotation.CLOCKWISE_90) px = j.x1;
-        if (rot == StructureRotation.CLOCKWISE_180) { px = j.x1; pz = j.z1; }
-        if (rot == StructureRotation.COUNTERCLOCKWISE_90) pz = j.z1;
-        Location at = new Location(w, px, j.y0, pz);
-        s.place(at, false, rot, Mirror.NONE, 0, 1f, rnd);
+    private void fin(World w, Trabajo j, Pieza p) {
         if (Piezas.esPuente(j.n)) {
             e.puentes.add(new Puente(j.n, j.x0, j.y0, j.z0));
             e.hechos.add(new int[]{j.x0, j.y0, j.z0, j.x1, j.y0 + 17, j.z1});
             listo(j);
             return;
         }
-        Pieza pz2 = Piezas.get(j.n);
-        int mx = Math.floorDiv(j.x0 + j.x1, 2), mz = Math.floorDiv(j.z0 + j.z1, 2);
-        if (pz2 != null && !hayBloques(w, mx, mz, j.y0 + pz2.ylo(), j.y0 + pz2.yhi())) {
-            // a veces la pieza no aparece entera la primera vez: se vuelve a pegar una vez
-            pl.getLogger().info("[Aether] La pieza " + j.n + " no aparecio en (" + j.x0 + ", " + j.y0 + ", " + j.z0 + "); reintentando.");
-            Bukkit.getScheduler().runTaskLater(pl, () -> {
-                s.place(at, false, rot, Mirror.NONE, 0, 1f, rnd);
-                terminarIsla(w, j, pz2);
-            }, 20L);
-            return;
+        try {
+            terminarIsla(w, j, p);
+        } catch (Exception ex) {
+            pl.getLogger().warning("[Aether] Al terminar " + j.n + ": " + ex);
+            listo(j);
         }
-        terminarIsla(w, j, pz2);
-    }
-
-    private boolean hayBloques(World w, int x, int z, int y0, int y1) {
-        for (int y = y0; y <= y1; y += 2) if (!w.getBlockAt(x, y, z).getType().isAir()) return true;
-        return false;
     }
 
     private void terminarIsla(World w, Trabajo j, Pieza p) {
         int ylo = p == null ? 0 : p.ylo(), yhi = p == null ? 17 : p.yhi();
-        // bioma (nombre en el F3, color del cielo y particulas)
+        // bioma (nombre en el F3, color del cielo, particulas y musica)
         int fy0 = Math.max(w.getMinHeight(), j.y0 + ylo - 8), fy1 = Math.min(w.getMaxHeight() - 1, j.y0 + yhi + 40);
         consola("execute in " + w.getKey().asString() + " run fillbiome " + j.x0 + " " + fy0 + " " + j.z0 + " "
                 + j.x1 + " " + fy1 + " " + j.z1 + " aether:" + Piezas.bioma(j.n));
         if (j.n.equals("windmill")) {
             int[] f = Piezas.MARCO_WINDMILL;
-            consola("execute in " + w.getKey().asString() + " run summon minecraft:glow_item_frame " + (j.x0 + f[0]) + " "
-                    + (j.y0 + f[1]) + " " + (j.z0 + f[2]) + " {Facing:3b,Item:{id:\"minecraft:trident\",count:1,components:{"
+            int[] xz = tf(j, f[0], f[2]);
+            consola("execute in " + w.getKey().asString() + " run summon minecraft:glow_item_frame " + xz[0] + " "
+                    + (j.y0 + f[1]) + " " + xz[1] + " {Facing:3b,Item:{id:\"minecraft:trident\",count:1,components:{"
                     + "\"minecraft:custom_name\":'{\"text\":\"Tridente del Aether\",\"color\":\"aqua\",\"italic\":false}',"
                     + "\"minecraft:custom_data\":{aether:1b}}}}");
+        }
+        if (p != null) {
+            try { mena(w, j, p); } catch (Exception ex) { pl.getLogger().warning("[Aether] Mena: " + ex); }
+            try { libros(w, j, p); } catch (Exception ex) { pl.getLogger().warning("[Aether] Atriles: " + ex); }
         }
         if (k.animales && p != null) {
             int cx = Math.floorDiv(j.x0 + j.x1, 2), cz = Math.floorDiv(j.z0 + j.z1, 2);
@@ -310,8 +331,84 @@ public final class Aether implements Listener {
                 pl.getLogger().warning("[Aether] Animales: " + ex);
             }
         }
+        // por las dudas: nada tirado en el piso (flores que se cayeron al pegar, etc.)
+        BoundingBox caja = new BoundingBox(j.x0, j.y0 + ylo - 2, j.z0, j.x1 + 1, j.y0 + yhi + 4, j.z1 + 1);
+        Bukkit.getScheduler().runTaskLater(pl, () -> {
+            for (Entity en : w.getNearbyEntities(caja, x -> x instanceof Item)) en.remove();
+        }, 40L);
         e.hechos.add(new int[]{j.x0, j.y0 + ylo, j.z0, j.x1, j.y0 + yhi, j.z1});
         listo(j);
+    }
+
+    // ================================================================= mena de Truco (Oraxen) y libros
+
+    private java.lang.reflect.Method oraxenPlace;
+    private boolean oraxenAviso;
+
+    private boolean ponerMena(Location l) {
+        try {
+            if (oraxenPlace == null) oraxenPlace = Class.forName("io.th0rgal.oraxen.api.OraxenBlocks").getMethod("place", String.class, Location.class);
+            oraxenPlace.invoke(null, k.menaId, l);
+            return true;
+        } catch (Throwable ex) {
+            if (!oraxenAviso) {
+                oraxenAviso = true;
+                pl.getLogger().warning("[Aether] No pude poner la Mena de Truco con Oraxen (" + ex + "). Queda el bloque marcador.");
+            }
+            return false;
+        }
+    }
+
+    private static boolean expuesta(World w, int x, int y, int z) {
+        int[][] d = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        for (int[] q : d) if (w.getBlockAt(x + q[0], y + q[1], z + q[2]).getType().isAir()) return true;
+        return false;
+    }
+
+    /**
+     * Los bloques marcados (bloque musical) se vuelven Mena de Truco de Oraxen: 8 por mena en la isla del molino (32 en total)
+     * y unas pocas en las otras estructuras. Primero las que se ven; las que sobran quedan de piedra.
+     */
+    private void mena(World w, Trabajo j, Pieza p) {
+        if (p.ores().isEmpty()) return;
+        boolean molino = j.n.equals("windmill");
+        Map<Integer, List<int[]>> grupos = new HashMap<>();
+        for (int[] o : p.ores()) {
+            int[] xz = tf(j, o[0], o[2]);
+            int key = molino ? (o[0] >= p.c() ? 1 : 0) + (o[2] >= p.c() ? 2 : 0) : 0;
+            grupos.computeIfAbsent(key, x -> new ArrayList<>()).add(new int[]{xz[0], j.y0 + o[1], xz[1]});
+        }
+        int cupo = molino ? k.menaEsquina : k.menaOtras;
+        for (List<int[]> g : grupos.values()) {
+            java.util.Collections.shuffle(g, rnd);
+            g.sort((a, b) -> Boolean.compare(!expuesta(w, a[0], a[1], a[2]), !expuesta(w, b[0], b[1], b[2])));
+            int n = 0;
+            for (int[] q : g) {
+                Block b = w.getBlockAt(q[0], q[1], q[2]);
+                if (b.getType() != Material.NOTE_BLOCK) continue;
+                if (n < cupo && ponerMena(b.getLocation())) n++;
+                else b.setType(Material.STONE, false);
+            }
+        }
+    }
+
+    /** Todos los atriles tienen el mismo libro. */
+    private void libros(World w, Trabajo j, Pieza p) {
+        for (int[] l : p.lecterns()) {
+            int[] xz = tf(j, l[0], l[2]);
+            Block b = w.getBlockAt(xz[0], j.y0 + l[1], xz[1]);
+            if (b.getState() instanceof org.bukkit.block.Lectern le) le.getInventory().setItem(0, libro());
+        }
+    }
+
+    private static ItemStack libro() {
+        ItemStack it = new ItemStack(Material.WRITTEN_BOOK);
+        org.bukkit.inventory.meta.BookMeta m = (org.bukkit.inventory.meta.BookMeta) it.getItemMeta();
+        m.setTitle("Diario");
+        m.setAuthor("Desconocido");
+        m.addPages(net.kyori.adventure.text.Component.text("Truco was right."), net.kyori.adventure.text.Component.text("..."));
+        it.setItemMeta(m);
+        return it;
     }
 
     private void consola(String cmd) {
@@ -448,30 +545,35 @@ public final class Aether implements Listener {
     public void sale(PlayerQuitEvent ev) {
         UUID u = ev.getPlayer().getUniqueId();
         condenados.remove(u);
-        musica.remove(u);
         aviso.remove(u);
+        musica.remove(u);
     }
 
     // ================================================================= musica
 
-    /** Tu cancion en loop en todo el Aether (categoria master), sin la musica de Minecraft. */
+    /** Musica de Minecraft que no tiene que sonar en el Aether (la tuya sigue en la misma categoria, Musica). */
+    private static final String[] VANILLA = {"minecraft:music.game", "minecraft:music.creative", "minecraft:music.under_water",
+            "minecraft:music.menu", "minecraft:music.overworld.meadow", "minecraft:music.overworld.cherry_grove", "minecraft:music.overworld.forest",
+            "minecraft:music.overworld.flower_forest", "minecraft:music.overworld.grove", "minecraft:music.overworld.lush_caves"};
+
+    /** Tu cancion en loop en todo el Aether, en la categoria Musica (el control de volumen de Musica de cada jugador la baja o la sube). */
     private void musica() {
         long ahora = System.currentTimeMillis();
         for (Player p : Bukkit.getOnlinePlayers()) {
             UUID u = p.getUniqueId();
             if (enAether(p)) {
-                p.stopSound(SoundCategory.MUSIC);
+                for (String v : VANILLA) p.stopSound(v, SoundCategory.MUSIC);
                 Long t = musica.get(u);
                 if (t == null) {
                     musica.put(u, ahora);
-                    p.playSound(p, k.musicaIntro, SoundCategory.MASTER, 1f, 1f);
+                    p.playSound(p, k.musicaIntro, SoundCategory.MUSIC, 1f, 1f);
                 } else if (ahora - t > (long) (k.musicaVuelve * 1000)) {
                     musica.put(u, ahora);
-                    p.playSound(p, k.musica, SoundCategory.MASTER, 1f, 1f);
+                    p.playSound(p, k.musica, SoundCategory.MUSIC, 1f, 1f);
                 }
             } else if (musica.remove(u) != null) {
-                p.stopSound(k.musica, SoundCategory.MASTER);
-                p.stopSound(k.musicaIntro, SoundCategory.MASTER);
+                p.stopSound(k.musica, SoundCategory.MUSIC);
+                p.stopSound(k.musicaIntro, SoundCategory.MUSIC);
             }
         }
     }
@@ -506,8 +608,6 @@ public final class Aether implements Listener {
 
     public void apagar() {
         guardar();
-        World w = mundo();
-        if (w != null) for (Player p : w.getPlayers()) { p.stopSound(k.musica, SoundCategory.MASTER); p.stopSound(k.musicaIntro, SoundCategory.MASTER); }
     }
 
     // ================================================================= comandos (/tod4:aether_...)
@@ -582,12 +682,12 @@ public final class Aether implements Listener {
             case "aether_music" -> {
                 if (p == null) return true;
                 if (a.length > 0 && a[0].equalsIgnoreCase("stop")) {
-                    p.stopSound(k.musica, SoundCategory.MASTER);
-                    p.stopSound(k.musicaIntro, SoundCategory.MASTER);
+                    p.stopSound(k.musica, SoundCategory.MUSIC);
+                    p.stopSound(k.musicaIntro, SoundCategory.MUSIC);
                     Style.info(s, "Música detenida (si estás en el Aether vuelve sola).");
                 } else {
-                    p.playSound(p, k.musicaIntro, SoundCategory.MASTER, 1f, 1f);
-                    Style.info(s, "Reproduciendo la prueba. Si no escuchas nada, falta el pack con la música.");
+                    p.playSound(p, k.musicaIntro, SoundCategory.MUSIC, 1f, 1f);
+                    Style.info(s, "Reproduciendo la prueba (volumen de Música). Si no escuchas nada, falta el pack con la música.");
                 }
                 return true;
             }

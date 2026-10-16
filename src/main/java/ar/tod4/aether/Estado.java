@@ -31,6 +31,9 @@ final class Estado {
     List<int[]> hechos = new ArrayList<>();
     /** Puentes pegados (para /tod4:aether_test). */
     List<Puente> puentes = new ArrayList<>();
+    /** Islitas de relleno que se deciden despues (cuando las ramas de la zona ya crecieron): {x, y, z, chica, skip, turno}. */
+    List<int[]> decorPend = new ArrayList<>();
+    int expansiones;
     /** Piezas por pegar. */
     List<Trabajo> cola = new ArrayList<>();
 

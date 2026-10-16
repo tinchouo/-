@@ -200,31 +200,61 @@ final class Plan {
 
     // ================================================================= decoracion
 
-    /** Islitas sueltas alrededor de un puente (sin conexion): el degrade hacia el vacio. */
+    /** Islitas sueltas alrededor de un puente (sin conexion): cerca, lejos y algunas sueltas en el vacio a otra altura. */
     private void decor(int mx, int mz, int my, int dx, int dz, int skipt, int bsd) {
         if ((double) mx * mx + (double) mz * mz < 200.0 * 200.0) return;   // el spawn queda limpio
         int px = dz, pz = dx;
-        for (int kk = 1; kk <= 3; kk++) {
-            int chance = kk == 3 ? k.decorLejos : k.decorCerca;
-            int dmin = kk == 3 ? 70 : 26, dmax = kk == 3 ? 115 : 58;
-            if (!pct(chance)) continue;
+        // {chance, distancia min, distancia max, variacion de altura, 1 = puede ser chica}
+        int[][] capas = {{k.decorCerca, 26, 58, 8, 1}, {k.decorCerca, 26, 58, 8, 1}, {k.decorLejos, 70, 120, 16, 1},
+                         {k.decorLejos, 70, 120, 16, 0}, {k.decorVacio, 130, 260, 30, 0}, {k.decorVacio, 130, 260, 30, 1}};
+        for (int kk = 0; kk < capas.length; kk++) {
+            int[] cp_ = capas[kk];
+            if (!pct(cp_[0])) continue;
             int sgn = pct(50) ? -1 : 1;
-            if (bsd != 0) sgn = -bsd;
-            int d = rnd(dmin, dmax), jit = rnd(-10, 10);
+            if (bsd != 0 && kk < 2) sgn = -bsd;
+            int d = rnd(cp_[1], cp_[2]), jit = rnd(-14, 14);
             int cx = mx + dx * jit + px * sgn * d;
             int cz = mz + dz * jit + pz * sgn * d;
-            int cy = Math.max(k.baseY - k.maxDev, Math.min(k.baseY + k.maxDev, my + rnd(-8, 8)));
-            int roll = rnd(1, 100);
-            String cp = "tiny_" + rnd(1, 4);
-            if (kk < 3) {
-                if (roll > 55) cp = "small_" + rnd(1, 4);
-                if (roll > 85) cp = "small_f" + rnd(1, 2);
-            }
-            Pieza pz2 = Piezas.get(cp);
-            if (freeE(cx, cz, pz2.rm(), NADIE) && !reservado(cx, cz, pz2.rm(), skipt, skipt)) {
-                markE(cx, cz, pz2.rm(), newId());
-                encolar(cp, cx - pz2.c(), cy - Piezas.DECK, cz - pz2.c(), cx + pz2.c(), cz + pz2.c(), null);
-            }
+            int cy = my + rnd(-cp_[3], cp_[3]);
+            if (kk < 2) cy = Math.max(k.baseY - k.maxDev, Math.min(k.baseY + k.maxDev, cy));
+            // se decide mas tarde: asi nunca le quita lugar a una rama o a una estructura
+            e.decorPend.add(new int[]{cx, cy, cz, cp_[4], skipt, e.expansiones + 40});
+        }
+    }
+
+    private void decorPendiente() {
+        int hechas = 0;
+        for (java.util.Iterator<int[]> it = e.decorPend.iterator(); it.hasNext() && hechas < 24; ) {
+            int[] d = it.next();
+            if (d[5] > e.expansiones) continue;
+            it.remove();
+            islita(d[0], d[1], d[2], d[3] == 1, d[4]);
+            hechas++;
+        }
+    }
+
+    /** Unas islitas flotando alrededor de una estructura. */
+    private void islitasAlrededor(int cx, int cy, int cz, int rm) {
+        int n = rnd(3, 5);
+        double a0 = r.nextDouble() * Math.PI * 2;
+        for (int i = 0; i < n; i++) {
+            double a = a0 + i * Math.PI * 2 / n + (r.nextDouble() - 0.5) * 0.8;
+            int d = rm + rnd(20, 60);
+            e.decorPend.add(new int[]{cx + (int) (Math.cos(a) * d), cy + rnd(-20, 20), cz + (int) (Math.sin(a) * d), 1, 0, e.expansiones + 10});
+        }
+    }
+
+    private void islita(int cx, int cy, int cz, boolean chica, int skipt) {
+        int roll = rnd(1, 100);
+        String cp = "tiny_" + rnd(1, 4);
+        if (chica) {
+            if (roll > 50) cp = "small_" + rnd(1, 4);
+            if (roll > 82) cp = "small_f" + rnd(1, 2);
+        }
+        Pieza pz2 = Piezas.get(cp);
+        if (freeE(cx, cz, pz2.rm() + 4, NADIE) && !reservado(cx, cz, pz2.rm(), skipt, skipt)) {
+            markE(cx, cz, pz2.rm(), newId());
+            encolar(cp, cx - pz2.c(), cy - Piezas.DECK, cz - pz2.c(), cx + pz2.c(), cz + pz2.c(), null);
         }
     }
 
@@ -326,6 +356,7 @@ final class Plan {
 
     /** Expande hasta "max" puertos que esten cerca de algun jugador. */
     void crecer(int max) {
+        decorPendiente();
         int hechas = 0;
         for (Integer id : new ArrayList<>(e.puertos.keySet())) {
             if (hechas >= max || e.cola.size() >= k.colaMax) return;
@@ -338,6 +369,7 @@ final class Plan {
 
     /** Expande un puerto cualquiera (para /tod4:aether_fill). */
     boolean expandirAlguno() {
+        decorPendiente();
         if (e.puertos.isEmpty()) return false;
         List<Integer> ids = new ArrayList<>(e.puertos.keySet());
         expandir(ids.get(r.nextInt(ids.size())));
@@ -375,6 +407,11 @@ final class Plan {
                     if (pct(k.casas)) cp = "large_h" + rnd(1, 2);
                     if (pct(k.ruina)) cp = "large_ruin";
                 }
+            }
+            if (!rama && t <= 4 && pct(35)) {
+                // caminos principales: islas con arcos de flores, bancos y canteros
+                if (cp.startsWith("medium_")) cp = "medium_v" + rnd(1, 2);
+                else if (cp.matches("large_[1-4]")) cp = "large_v" + rnd(1, 2);
             }
             if (rama) {
                 if (cp.startsWith("medium_")) cp = "bm_" + rnd(1, 4);
@@ -485,11 +522,13 @@ final class Plan {
         }
 
         soltar(id);
+        e.expansiones++;
         int nuevo = newId();
         if (!sp.isEmpty()) {
             e.loc.computeIfAbsent(sp, s -> new ArrayList<>()).add(new int[]{cx, cy, cz});
             e.force = null;
             log.accept("Estructura " + sp + " en (" + cx + ", " + cz + ").");
+            islitasAlrededor(cx, cy, cz, dp.rm());
         }
         String rt = rp < 0 ? "n" + Math.abs(rp) : rp > 0 ? "p" + rp : "z0";
         String bk = "", bpre = "b";
@@ -498,6 +537,7 @@ final class Plan {
         if (bc == 'f') minb = 32;
         if (len >= minb && pct(k.puenteRoto)) bk = "b";
         if (gate && bc == 'f') { bpre = "t"; bk = ""; }
+        else if (!rama && t <= 4 && bc != 'w' && bk.isEmpty()) bk = "f";      // banderines en los caminos principales
         int cc = dp.c();
         encolar(cp, cx - cc, cy - Piezas.DECK, cz - cc, cx + cc, cz + cc, rot);
         encolar(bpre + (axX ? "x" : "z") + bk + "_" + len + "_" + rt, bx0, by, bz0, bx1, bz1, null);
