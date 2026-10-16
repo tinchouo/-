@@ -76,6 +76,7 @@ public final class Revivir implements Listener {
         this.pl = pl;
         this.st = new Store(pl, "revivir");
         this.SELECTOR = new NamespacedKey(pl, "selector_altar");
+        this.K_XP = new NamespacedKey(pl, "xp_guardada");
         Bukkit.getPluginManager().registerEvents(this, pl);
         for (World w : Bukkit.getWorlds()) w.setGameRule(GameRule.DO_IMMEDIATE_RESPAWN, true);
         if (!st.y().contains("item_normal")) {
@@ -552,7 +553,7 @@ public final class Revivir implements Listener {
 
     // ---- experiencia guardada en la tumba
 
-    private final NamespacedKey K_XP = new NamespacedKey(pl, "xp_guardada");
+    private final NamespacedKey K_XP;
     private static final int SLOT_XP = 53;
 
     /** Puntos de experiencia que hacen falta para llegar a ese nivel desde 0 (formula del juego). */
