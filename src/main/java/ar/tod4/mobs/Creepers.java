@@ -11,7 +11,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.UUID;
 
-import com.destroystokyo.paper.entity.ai.VanillaGoal;
+import com.destroystokyo.paper.entity.ai.Goal;
 import org.bukkit.Bukkit;
 import org.bukkit.Color;
 import org.bukkit.GameMode;
@@ -205,7 +205,10 @@ public final class Creepers implements Listener {
         // el "swell" de vanilla frena al creeper mientras se infla: sin eso sigue corriendo con la mecha prendida
         if (!c.getScoreboardTags().contains("mini_listo")) {
             c.addScoreboardTag("mini_listo");
-            try { Bukkit.getMobGoals().removeGoal(c, VanillaGoal.CREEPER_SWELL); } catch (Throwable ignored) { }
+            try {
+                for (Goal<Creeper> g : new ArrayList<>(Bukkit.getMobGoals().getAllGoals(c)))
+                    if (g.getKey().getNamespacedKey().getKey().toLowerCase().contains("swell")) Bukkit.getMobGoals().removeGoal(c, g);
+            } catch (Throwable ignored) { }
         }
         Player p = c.getTarget() instanceof Player t && !t.isDead() && t.getWorld() == c.getWorld() ? t : null;
         if (p == null && c.isIgnited()) {         // perdio el objetivo pero la mecha sigue: va al jugador mas cercano
