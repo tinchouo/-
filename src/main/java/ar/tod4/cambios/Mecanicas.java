@@ -87,7 +87,6 @@ final class Mecanicas implements Listener {
         Bukkit.getScheduler().runTaskTimer(pl, this::cada20, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada40, 40L, 40L);
         cb.hook("d2.hornos", this::recetasD2);
-        cb.hook("d3.hornos", this::recetasD3);
         cb.hook("d4.mesa", on -> pl.mesa().setActiva(on));
     }
 
@@ -336,7 +335,7 @@ final class Mecanicas implements Listener {
     /** Dia 3: la bola de fuego del Blaze le pega a quien tiene resistencia al fuego (el juego la anula): se le hace el dano a mano. */
     @EventHandler(ignoreCancelled = true)
     public void blaze(ProjectileHitEvent e) {
-        if (!on("d3.blaze") || !(e.getEntity() instanceof SmallFireball bola) || !(bola.getShooter() instanceof Blaze blaze)) return;
+        if (!on("d3.lava") || !(e.getEntity() instanceof SmallFireball bola) || !(bola.getShooter() instanceof Blaze blaze)) return;
         if (!(e.getHitEntity() instanceof Player p) || !juega(p) || !p.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)) return;
         p.damage(pl.getConfig().getDouble("cambios.blaze_dano", 5.0),
                 DamageSource.builder(DamageType.MOB_PROJECTILE).withCausingEntity(blaze).withDirectEntity(bola).build());

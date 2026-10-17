@@ -91,6 +91,20 @@ public final class Avisos implements Listener {
         return s != null ? s : st.y().createSection("bienvenidas." + id);
     }
 
+    /** Crea un mensaje una sola vez (si no existe y nunca se sembro antes, asi un mensaje borrado no vuelve). */
+    public boolean sembrar(String id, int paleta, String titulo, int sonido, int dia, List<String> lineas) {
+        if (existe(id) || st.y().getBoolean("sembrados." + id, false)) return false;
+        ConfigurationSection c = msg(id);
+        c.set("paleta", paleta);
+        c.set("titulo", titulo);
+        c.set("sonido", sonido);
+        c.set("ruleta", true);
+        c.set("dia", dia);
+        c.set("lineas", lineas);
+        st.set("sembrados." + id, true);
+        return true;
+    }
+
     public boolean existe(String id) { return st.y().isConfigurationSection("mensajes." + id); }
 
     private List<String> ids(String seccion) {

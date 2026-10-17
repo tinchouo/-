@@ -54,12 +54,10 @@ public final class Cambios {
         add(new Cambio("d2.mending", 2, "Recordatorio: Mending", true, "&7Esto lo hace el datapack", "&7de ítems prohibidos."));
         add(new Cambio("d2.saplings", 2, "Hojas sin brotes ni manzanas", false, "&7Las hojas no sueltan brotes", "&7ni manzanas."));
         add(new Cambio("d2.silverfish", 2, "Silverfish en las cuevas", false, "&7Picando debajo de Y 0 puede salir", "&7un silverfish que da fatiga minera."));
-        add(new Cambio("d2.hornos", 2, "Hornos Especiales", false, "&7Alto horno: arena, piedra, basalto,", "&7arenisca, terracotas -> esmaltadas.", "&7Ahumador: cactus, pepino de mar,", "&7chorus, troncos (carbón), esponja."));
+        add(new Cambio("d2.hornos", 3, "Hornos Especiales", false, "&7Alto horno: arena, piedra, basalto,", "&7arenisca, terracotas -> esmaltadas.", "&7Ahumador: cactus, pepino de mar,", "&7chorus, troncos (carbón), esponja."));
         // ---- Dia 3
-        add(new Cambio("d3.hornos", 3, "Hornos iguales al horno", false, "&7El alto horno y el ahumador cocinan", "&7todo lo que cocina el horno normal."));
         add(new Cambio("d3.leche", 3, "Sin leche", false, "&7No se puede sacar ni tomar leche", "&7(no se pueden borrar efectos)."));
-        add(new Cambio("d3.lava", 3, "Lava + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava: quema como siempre."));
-        add(new Cambio("d3.blaze", 3, "Blazes + Res. al fuego", false, "&7Las bolas de fuego de los blazes", "&7te pegan aunque tengas resistencia", "&7al fuego."));
+        add(new Cambio("d3.lava", 3, "Lava y Blazes + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava ni de las bolas de fuego", "&7de los Blazes."));
         // ---- Dia 4
         add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
         add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido."));
@@ -83,11 +81,20 @@ public final class Cambios {
         new Mecanicas(pl, this);
         new MecanicasExtra(pl, this);
         new Sueno(pl, this);
+        AvisosCambios.sembrar(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)
         for (Cambio c : todos.values()) if (c.alCambiar != null && on(c.id)) c.alCambiar.accept(true);
     }
 
     private void add(Cambio c) { todos.put(c.id, c); }
+
+    /** Vincula un aviso a un cambio, solo si todavia no tiene ninguno. */
+    boolean vincular(String cambioId, String avisoId) {
+        if (!todos.containsKey(cambioId) || todos.get(cambioId).nota) return false;
+        if (st.y().getString("avisos." + cambioId) != null) return false;
+        st.set("avisos." + cambioId, avisoId);
+        return true;
+    }
 
     private void mob(Cambio c) { c.grupo = "Mobs"; add(c); }
 
