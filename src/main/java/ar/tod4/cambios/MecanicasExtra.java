@@ -96,30 +96,40 @@ final class MecanicasExtra implements Listener {
 
     // ================================================================= Dia 1: Warden en las Ancient City
 
+    private boolean avisoCiudad = false;
+
+    /** Esta dentro de una Ancient City? Por la estructura; si el servidor no la sabe leer, por el bioma Deep Dark. */
+    private boolean enCiudad(Player p) {
+        Location pos = p.getLocation();
+        try {
+            Collection<GeneratedStructure> ciudades = pos.getChunk().getStructures(Structure.ANCIENT_CITY);
+            for (GeneratedStructure g : ciudades) if (g.getBoundingBox().contains(pos.toVector())) return true;
+            return false;
+        } catch (Throwable t) {
+            if (!avisoCiudad) { avisoCiudad = true; pl.getLogger().warning("Warden: no pude leer las estructuras (" + t + "); uso el bioma Deep Dark."); }
+            return pos.getBlock().getBiome() == org.bukkit.block.Biome.DEEP_DARK;
+        }
+    }
+
+    /**
+     * Cada tanto, a cada jugador que esta dentro de una Ancient City: si no hay ningun Warden cerca (config warden_distancia),
+     * con cierta chance aparece uno. No hay limite de wardens: si te alejas de los que hay, puede aparecer otro.
+     */
     private void wardens() {
         double chance = pl.getConfig().getDouble("cambios.warden_chance", 0.25);
-        int max = pl.getConfig().getInt("cambios.warden_max_por_ciudad", 1);
+        double dist = pl.getConfig().getDouble("cambios.warden_distancia", 40);
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!juega(p) || p.getWorld().getEnvironment() != World.Environment.NORMAL) continue;
-            Location pos = p.getLocation();
-            if (pos.getY() > 0) continue;
-            Collection<GeneratedStructure> ciudades;
-            try { ciudades = pos.getChunk().getStructures(Structure.ANCIENT_CITY); } catch (Throwable t) { return; }
-            for (GeneratedStructure g : ciudades) {
-                BoundingBox bb = g.getBoundingBox();
-                if (!bb.contains(pos.toVector())) continue;
-                int hay = p.getWorld().getNearbyEntities(bb, en -> en.getType() == EntityType.WARDEN).size();
-                if (hay < max && rnd.nextDouble() < chance) {
-                    Location l = lugarWarden(p, bb);
-                    if (l != null) aparecerWarden(l);
-                }
-                break;
-            }
+            if (p.getLocation().getY() > 0 || !enCiudad(p)) continue;
+            boolean hay = !p.getWorld().getNearbyEntities(p.getLocation(), dist, dist, dist, en -> en.getType() == EntityType.WARDEN).isEmpty();
+            if (hay || rnd.nextDouble() >= chance) continue;
+            Location l = lugarWarden(p);
+            if (l != null) aparecerWarden(l);
         }
     }
 
     /** Un lugar con piso y 3 de alto libre, a 8-20 bloques del jugador, dentro de la ciudad. */
-    private Location lugarWarden(Player p, BoundingBox bb) {
+    private Location lugarWarden(Player p) {
         Location base = p.getLocation();
         for (int i = 0; i < 25; i++) {
             double ang = rnd.nextDouble() * Math.PI * 2, dist = 8 + rnd.nextDouble() * 12;
@@ -127,7 +137,6 @@ final class MecanicasExtra implements Listener {
             int z = (int) Math.floor(base.getZ() + Math.sin(ang) * dist);
             for (int dy = 4; dy >= -4; dy--) {
                 Block b = base.getWorld().getBlockAt(x, base.getBlockY() + dy, z);
-                if (!bb.contains(b.getX() + 0.5, b.getY() + 0.5, b.getZ() + 0.5)) continue;
                 if (b.getType().isSolid() && b.getRelative(0, 1, 0).isPassable() && b.getRelative(0, 2, 0).isPassable()
                         && b.getRelative(0, 3, 0).isPassable() && !b.getRelative(0, 1, 0).isLiquid())
                     return b.getLocation().add(0.5, 1, 0.5);

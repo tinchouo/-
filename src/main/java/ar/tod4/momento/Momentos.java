@@ -102,6 +102,7 @@ public final class Momentos implements Listener {
     private final Set<UUID> participantes = new HashSet<>();
     private final Map<UUID, Long> congelados = new HashMap<>();
     private BukkitTask tarea;
+    private ModoMob modoMob;
     private String avisoActual;                                // aviso del ultimo paso activado (arriba en la sidebar)
 
     public Momentos(TOD4 pl) {
@@ -110,11 +111,17 @@ public final class Momentos implements Listener {
         this.K_PASO = new NamespacedKey(pl, "momento_paso");
         this.K_FIN = new NamespacedKey(pl, "momento_fin");
         migrar();
+        this.modoMob = new ModoMob(pl, this);
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::tickCorazones, 20L, 20L);
     }
 
     public Store store() { return st; }
+
+    ModoMob modoMob() { return modoMob; }
+
+    /** Al apagar el server: el que estaba eligiendo un mob recupera su inventario. */
+    public void apagar() { if (modoMob != null) modoMob.cerrarTodo(); }
 
     /** Los momentos de antes (un solo objetivo) pasan a tener un unico paso. */
     private void migrar() {

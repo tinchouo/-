@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 10;
+    private static final int CONFIG_VERSION = 11;
 
     private Store core;
     private Avisos avisos;
@@ -127,6 +127,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (video != null) video.terminarTodos();
         if (aether != null) aether.apagar();
         if (creepers != null) creepers.apagar();
+        if (momentos != null) momentos.apagar();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
                 misiones == null ? null : misiones.store(), momentos == null ? null : momentos.store(),
                 equipos == null ? null : equipos.store()})

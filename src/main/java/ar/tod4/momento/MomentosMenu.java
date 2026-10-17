@@ -208,11 +208,16 @@ public final class MomentosMenu {
             ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("nombre", Txt.strip(txt).trim()); touch(); pasoSpawn(p, path); });
         });
         m.set(11, Items.of(Material.CREEPER_HEAD, "&6&lMob: &f" + c.getString("spawn.mob", "creeper_cargado"), "",
-                "&7Puede ser:", "&f creeper_cargado &8(creeper eléctrico)", "&f tod4:nuclear &8(random, mini, calamar, void)", "&f mythic:NombreInterno",
-                "&f cualquier mob de vanilla &8(zombie, skeleton...)", "", "&e▶ Click para cambiar"), e -> {
+                "&e▶ Click: elegir con la vara", "&7  (click derecho al mob; sirve con MythicMobs)", "",
+                "&7Click derecho: escribir el nombre", "&8  creeper_cargado, mythic:Id, zombie..."), e -> {
+            if (e.isRightClick()) {
+                p.closeInventory();
+                Style.info(p, "Escribe el mob &8(o cancel)&7:");
+                ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("spawn.mob", Txt.strip(txt).trim()); touch(); pasoSpawn(p, path); });
+                return;
+            }
             p.closeInventory();
-            Style.info(p, "Escribe el mob &8(o cancel)&7:");
-            ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("spawn.mob", Txt.strip(txt).trim()); touch(); pasoSpawn(p, path); });
+            mo.modoMob().entrar(p, false, obj -> { c.set("spawn.mob", ModoMob.paraSpawn(obj)); touch(); }, () -> pasoSpawn(p, path));
         });
         int cant = c.getInt("spawn.cant", 1);
         m.set(12, Items.of(Material.PAPER, "&e&lCantidad por jugador: &f" + cant, "", "&7Click: +1 | Click derecho: -1"),
@@ -337,6 +342,15 @@ public final class MomentosMenu {
             });
         }
         if (t == Momentos.Tipo.MATAR) {
+            m.set(41, Items.of(Material.BLAZE_ROD, "&c&lElegir mobs con la vara", "", "&7Click derecho a cada mob que cuente.", "&7Sirve con MythicMobs."), e -> {
+                guardar.run();
+                p.closeInventory();
+                mo.modoMob().entrar(p, true, obj -> {
+                    List<String> l = c.getStringList("objetivo.objs");
+                    if (!l.contains(obj)) l.add(obj);
+                    c.set("objetivo.objs", l); touch();
+                }, () -> configurar(p, id, t));
+            });
             m.set(42, Items.of(Material.WITHER_SKELETON_SKULL, "&d&lAgregar MythicMob"), e -> {
                 guardar.run();
                 p.closeInventory();

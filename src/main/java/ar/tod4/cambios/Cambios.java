@@ -60,8 +60,8 @@ public final class Cambios {
         add(new Cambio("d3.lava", 3, "Lava y Blazes + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava ni de las bolas de fuego", "&7de los Blazes."));
         // ---- Dia 4
         add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
-        add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido."));
-        add(new Cambio("d4.puertas", 4, "Botones y puertas", false, "&7Usarlos te mata (el tótem te salva)."));
+        add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido y sin", "&7burbujas el agua pega medio corazón", "&7cada 0,5 s."));
+        add(new Cambio("d4.puertas", 4, "Botones, puertas y más", false, "&7Botones, palancas, placas de presión,", "&7puertas, portones y trampillas te matan", "&7(el tótem te salva; los de hierro no)."));
         add(new Cambio("d4.crianza", 4, "Sin crianza", false, "&7Los animales no se reproducen."));
         add(new Cambio("d4.perla", 4, "Perlas con más daño", false, "&7Cada perla te saca 4 corazones."));
         // ---- Dia 5

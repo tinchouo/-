@@ -74,7 +74,9 @@ final class Mecanicas implements Listener {
     private final NamespacedKey LEGAL;
     private final Set<Location> hornos = new HashSet<>();
     private final Map<UUID, Integer> calor = new HashMap<>();
-    private final Set<UUID> quemando = new HashSet<>();   // dano del calor del Nether en curso (ignora armadura y resistencia)
+    private final Set<UUID> quemando = new HashSet<>();   // dano fijo en curso (calor del Nether, agua): ignora armadura y resistencia
+    private final Map<UUID, Long> proximoAhogo = new HashMap<>();
+    private final Set<String> placas = new HashSet<>();   // placas de presion ya pisadas (uuid;bloque) hasta que el jugador se baje
     private final List<NamespacedKey> recetasD2 = new ArrayList<>();
     private final List<NamespacedKey> recetasD3 = new ArrayList<>();
 
@@ -84,6 +86,7 @@ final class Mecanicas implements Listener {
         this.LEGAL = new NamespacedKey(pl, "aldeano_legal");
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada10, 10L, 10L);
+        Bukkit.getScheduler().runTaskTimer(pl, this::ahogo, 10L, 10L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada20, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada40, 40L, 40L);
         cb.hook("d2.hornos", this::recetasD2);
@@ -114,8 +117,7 @@ final class Mecanicas implements Listener {
         if (on("d3.lava")) {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 if (!juega(p) || !p.hasPotionEffect(PotionEffectType.FIRE_RESISTANCE)) continue;
-                Location l = p.getLocation();
-                if (l.getBlock().getType() == Material.LAVA || l.clone().add(0, 1, 0).getBlock().getType() == Material.LAVA) {
+                if (tocaLava(p)) {
                     p.setFireTicks(Math.max(p.getFireTicks(), 300));
                     // la lava de verdad no le pega a quien tiene resistencia al fuego: por eso va con otro tipo de dano
                     // y se anota la causa para que el mensaje de muerte diga lava
@@ -124,6 +126,17 @@ final class Mecanicas implements Listener {
                 }
             }
         }
+    }
+
+    /** Toca lava en cuanto el cuerpo roza un bloque de lava (como el juego, no solo con los pies o la cabeza adentro). */
+    private static boolean tocaLava(Player p) {
+        org.bukkit.util.BoundingBox bb = p.getBoundingBox().expand(0.02);
+        World w = p.getWorld();
+        for (int x = (int) Math.floor(bb.getMinX()); x <= (int) Math.floor(bb.getMaxX()); x++)
+            for (int y = (int) Math.floor(bb.getMinY()); y <= (int) Math.floor(bb.getMaxY()); y++)
+                for (int z = (int) Math.floor(bb.getMinZ()); z <= (int) Math.floor(bb.getMaxZ()); z++)
+                    if (w.getBlockAt(x, y, z).getType() == Material.LAVA) return true;
+        return false;
     }
 
     private void cada20() {
@@ -290,19 +303,43 @@ final class Mecanicas implements Listener {
             e.getDrops().removeIf(i -> i.getType() == Material.TOTEM_OF_UNDYING);
     }
 
+    private static boolean mata(Material t) {
+        String n = t.name();
+        if (n.contains("IRON")) return false;
+        return n.contains("BUTTON") || n.contains("DOOR") || n.contains("FENCE_GATE") || n.equals("LEVER") || n.contains("PRESSURE_PLATE");
+    }
+
+    /** Placas de presion: mata al pisarlas; si te quedas encima no mata de nuevo hasta que te bajes y la pises otra vez. */
+    @EventHandler(ignoreCancelled = true)
+    public void placa(PlayerInteractEvent e) {
+        if (e.getAction() != Action.PHYSICAL || e.getClickedBlock() == null || !on("d4.puertas")) return;
+        Player p = e.getPlayer();
+        Block b = e.getClickedBlock();
+        if (!b.getType().name().contains("PRESSURE_PLATE") || !juega(p)) return;
+        String clave = p.getUniqueId() + ";" + b.getWorld().getName() + ";" + b.getX() + ";" + b.getY() + ";" + b.getZ();
+        if (!placas.add(clave)) return;
+        Bukkit.getScheduler().runTaskLater(pl, () -> bajoDePlaca(clave, p, b), 5L);
+        p.damage(1000.0);
+    }
+
+    /** Cada 5 ticks mira si el jugador sigue sobre la placa; cuando se baja, se libera. */
+    private void bajoDePlaca(String clave, Player p, Block b) {
+        boolean encima = p.isOnline() && !p.isDead() && p.getWorld().equals(b.getWorld())
+                && p.getBoundingBox().expand(0.05).overlaps(b.getBoundingBox().expand(0.1, 0.35, 0.1));
+        if (encima && b.getType().name().contains("PRESSURE_PLATE")) { Bukkit.getScheduler().runTaskLater(pl, () -> bajoDePlaca(clave, p, b), 5L); return; }
+        placas.remove(clave);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void calderoNether(PlayerInteractEvent e) {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null) return;
         Player p = e.getPlayer();
         Material t = e.getClickedBlock().getType();
-        // Dia 4: botones y puertas matan (menos los de hierro)
-        if (on("d4.puertas") && juega(p)) {
-            String n = t.name();
-            if ((n.contains("BUTTON") || n.contains("DOOR")) && !n.contains("IRON")) {
-                // golpe mortal normal: si tiene un totem en la mano, lo salva
-                p.damage(1000.0);
-                return;
-            }
+        // Dia 4: botones, palancas, puertas, portones y trampillas matan (menos los de hierro, que no se abren a mano)
+        if (on("d4.puertas") && juega(p) && mata(t)) {
+            // golpe mortal normal: si tiene un totem en la mano, lo salva
+            p.damage(1000.0);
+            return;
         }
         // Dia 1: en el Nether no se puede llenar un caldero
         if (on("d1.nether") && p.getWorld().getEnvironment() == World.Environment.NETHER
@@ -317,8 +354,9 @@ final class Mecanicas implements Listener {
     @SuppressWarnings("deprecation")
     public void fuegoNether(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof Player p)) return;
+        if (on("d4.agua") && e.getCause() == EntityDamageEvent.DamageCause.DROWNING && !quemando.contains(p.getUniqueId())) { e.setCancelled(true); return; }
         if (quemando.contains(p.getUniqueId())) {
-            // el calor del Nether pega exactamente 1 de vida: sin armadura, encantamientos ni Resistencia
+            // dano fijo (calor del Nether o agua): exactamente lo que se pidio, sin armadura, encantamientos ni Resistencia
             for (EntityDamageEvent.DamageModifier m : new EntityDamageEvent.DamageModifier[]{EntityDamageEvent.DamageModifier.ARMOR,
                     EntityDamageEvent.DamageModifier.RESISTANCE, EntityDamageEvent.DamageModifier.MAGIC})
                 if (e.isApplicable(m)) e.setDamage(m, 0);
@@ -328,8 +366,13 @@ final class Mecanicas implements Listener {
                 && (e.getCause() == EntityDamageEvent.DamageCause.FIRE || e.getCause() == EntityDamageEvent.DamageCause.FIRE_TICK))
             e.setCancelled(true);
         // Dia 4: la perla hace mas dano (como si el juego lo tuviera asi)
-        if (on("d4.perla") && e.getDamageSource().getDamageType().getKey().getKey().equals("ender_pearl") && juega(p))
-            e.setDamage(pl.getConfig().getDouble("cambios.perla_corazones", 4) * 2.0);
+        if (on("d4.perla") && e.getDamageSource().getDamageType().getKey().getKey().equals("ender_pearl") && juega(p)) {
+            // siempre 4 corazones: sin importar armadura, Proteccion, Resistencia ni nada
+            e.setDamage(EntityDamageEvent.DamageModifier.BASE, pl.getConfig().getDouble("cambios.perla_corazones", 4) * 2.0);
+            for (EntityDamageEvent.DamageModifier m : new EntityDamageEvent.DamageModifier[]{EntityDamageEvent.DamageModifier.ARMOR,
+                    EntityDamageEvent.DamageModifier.RESISTANCE, EntityDamageEvent.DamageModifier.MAGIC})
+                if (e.isApplicable(m)) e.setDamage(m, 0);
+        }
     }
 
     /** Dia 3: la bola de fuego del Blaze le pega a quien tiene resistencia al fuego (el juego la anula): se le hace el dano a mano. */
@@ -377,7 +420,28 @@ final class Mecanicas implements Listener {
         int viejo = p.getRemainingAir(), nuevo = e.getAmount();
         if (nuevo >= viejo) return;
         int factor = pl.getConfig().getInt("cambios.agua_factor", 5);
-        e.setAmount(Math.max(-20, viejo - (viejo - nuevo) * factor));
+        // el aire se gasta 5 veces mas rapido (la Respiracion sigue ayudando como siempre) y nunca baja de 0:
+        // el dano lo da ahogo(), no el juego
+        e.setAmount(Math.max(0, viejo - (viejo - nuevo) * factor));
+    }
+
+    /** Dia 4: sin burbujas, el agua pega medio corazon fijo cada 0,5 s (sin importar armadura, Respiracion ni Resistencia). */
+    private void ahogo() {
+        if (!on("d4.agua")) { if (!proximoAhogo.isEmpty()) proximoAhogo.clear(); return; }
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!juega(p) || p.getRemainingAir() > 0 || p.hasPotionEffect(PotionEffectType.WATER_BREATHING)
+                    || p.hasPotionEffect(PotionEffectType.CONDUIT_POWER)) continue;
+            Block ojos = p.getEyeLocation().getBlock();
+            boolean agua = ojos.getType() == Material.WATER || ojos.getType() == Material.BUBBLE_COLUMN
+                    || (ojos.getBlockData() instanceof org.bukkit.block.data.Waterlogged w && w.isWaterlogged());
+            if (!agua) continue;
+            quemando.add(p.getUniqueId());
+            try {
+                p.damage(1.0, DamageSource.builder(DamageType.DROWN).build());
+            } finally {
+                quemando.remove(p.getUniqueId());
+            }
+        }
     }
 
     @EventHandler

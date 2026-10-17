@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 10
+config_version: 11
 
 sidebar:
   activa: true
@@ -52,7 +52,7 @@ cambios:
   perla_corazones: 4        # dia 4: dano de cada perla
   warden_intervalo_seg: 30  # dia 1: cada cuanto se prueba si aparece un Warden (con alguien adentro de una Ancient City)
   warden_chance: 0.25       # dia 1: chance en cada prueba
-  warden_max_por_ciudad: 1  # dia 1: maximo de Wardens a la vez en una ciudad
+  warden_distancia: 40      # dia 1: si no hay ningun Warden a esta distancia del jugador, puede aparecer uno (sin limite total)
   silverfish_chance: 0.033  # dia 2: chance por bloque picado debajo de Y 0 (0.033 = 1 de cada 30)
   silverfish_y_max: 0
   silverfish_fatiga_seg: 5      # dia 2: cada mordida suma estos segundos de fatiga minera
