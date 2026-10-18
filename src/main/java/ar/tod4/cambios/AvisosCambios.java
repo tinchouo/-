@@ -22,7 +22,7 @@ final class AvisosCambios {
         {"cambio_hornos", "d1.hornos", "1", "d",
             "Los *hornos comunes* empezaron a fallar. Ahora tienen una pequeña posibilidad de *explotar* al usarlos.",
             "Si explotan, se pierden *todos los ítems* que estaban dentro."},
-        {"cambio_warden", "d1.warden", "1", "d",
+        {"cambio_warden", "d1.warden", "4", "d",
             "Los *Wardens* aparecen de forma natural en las *Ancient City*.",
             "Ya no hace falta hacer ruido para despertarlos."},
         {"cambio_aldeanos", "d1.aldeanos", "1", "d",
@@ -91,6 +91,7 @@ final class AvisosCambios {
             }
         }
         if (nuevo) pl.getLogger().info("Mensajes de los cambios cargados (nombres cambio_* y aviso_*).");
+        pl.avisos().cambiarDia("cambio_warden", 1, 4);   // el Warden paso al dia 4
     }
 
     /** Parte un parrafo en renglones que no pasen de {@code max} pixeles; un *resaltado* que cruza el renglon se cierra y se reabre. */

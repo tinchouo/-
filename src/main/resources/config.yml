@@ -4,7 +4,7 @@
 # ==========================================================
 
 # no tocar: sirve para actualizar este archivo solo cuando cambia el plugin
-config_version: 11
+config_version: 12
 
 sidebar:
   activa: true
@@ -46,7 +46,7 @@ mundos:
 
 cambios:
   horno_chance: 0.01        # dia 1: chance por segundo de que explote un horno prendido
-  lava_dano: 1.5           # dia 3: dano de la lava con resistencia al fuego, cada medio segundo (1.5 = a veces medio corazon, a veces uno)
+  lava_dano: 1.5           # dia 3: dano de la lava con resistencia al fuego, cada medio segundo; fijo, la armadura no lo baja (3.0 = el doble)
   blaze_dano: 5.0          # dia 3: dano de la bola de fuego del blaze a quien tiene resistencia al fuego (5 = como siempre)
   agua_factor: 5            # dia 4: el aire baja X veces mas rapido (el ahogo en si es el de siempre)
   perla_corazones: 4        # dia 4: dano de cada perla

@@ -394,6 +394,12 @@ public final class Momentos implements Listener {
         if (mid == null) return;
         if (ruleta) { Style.err(admin, "Espera: la ruleta todavía está girando."); return; }
         if (!existe(path.substring(0, path.indexOf('.')))) return;
+        // sin ruleta: el paso se aplica al instante (por ejemplo un spawn por sorpresa)
+        if (!m(path).getBoolean("ruleta", !esSpawn(path))) {
+            if (!iniciado) vinetaATodos();
+            aplicar(path);
+            return;
+        }
         ruleta = true;
         pl.avisos().ruletaGlobal(Paleta.ROJO, () -> { if (!iniciado) vinetaATodos(); }, () -> {
             ruleta = false;
@@ -527,19 +533,24 @@ public final class Momentos implements Listener {
         double vida = c.getDouble("spawn.vida", 0);
         int azar = c.getInt("spawn.azar", 0);
         List<Player> objetivo = new ArrayList<>();
-        for (UUID u : participantes) {
-            Player p = Bukkit.getPlayer(u);
-            if (p != null && !p.isDead() && afecta(p) && !exento(p)) objetivo.add(p);
-        }
+        // le toca a todos los que estan jugando en este momento (no solo a los que estaban al empezar)
+        for (Player p : Bukkit.getOnlinePlayers()) if (!p.isDead() && afecta(p) && !exento(p)) objetivo.add(p);
         if (azar > 0 && azar < objetivo.size()) { Collections.shuffle(objetivo); objetivo = objetivo.subList(0, azar); }
         for (Player p : objetivo) for (int i = 0; i < cant; i++) {
             Entity e = hacerAparecer(mob, p.getLocation());
             if (e instanceof LivingEntity le && vida > 0) {
-                AttributeInstance a = le.getAttribute(Attribute.MAX_HEALTH);
-                if (a != null) a.setBaseValue(vida);
-                le.setHealth(Math.min(vida, a != null ? a.getValue() : vida));
+                le.getPersistentDataContainer().set(pl.creepers().vidaFija(), PersistentDataType.BYTE, (byte) 1);
+                poner(le, vida);
+                // MythicMobs y otros plugins pueden volver a poner su vida un instante despues: se vuelve a fijar
+                for (long d : new long[]{2, 10, 40}) Bukkit.getScheduler().runTaskLater(pl, () -> { if (le.isValid()) poner(le, vida); }, d);
             }
         }
+    }
+
+    private static void poner(LivingEntity le, double vida) {
+        AttributeInstance a = le.getAttribute(Attribute.MAX_HEALTH);
+        if (a != null) a.setBaseValue(vida);
+        le.setHealth(Math.min(vida, a != null ? a.getValue() : vida));
     }
 
     /** mythic:Id | tod4:nuclear (random, mini, calamar, void) | creeper_cargado | cualquier mob de vanilla. */

@@ -32,7 +32,7 @@ import ar.tod4.util.Style;
  */
 public final class TOD4 extends JavaPlugin implements TabCompleter {
 
-    private static final int CONFIG_VERSION = 11;
+    private static final int CONFIG_VERSION = 12;
 
     private Store core;
     private Avisos avisos;

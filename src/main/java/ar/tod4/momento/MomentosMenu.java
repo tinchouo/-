@@ -248,6 +248,11 @@ public final class MomentosMenu {
             Style.info(p, "Escribe el renglón de la sidebar &8(corto, o cancel)&7:");
             ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("texto", Txt.strip(txt).trim()); touch(); otra.run(); });
         });
+        boolean rul = c.getBoolean("ruleta", !mo.esSpawn(path));
+        m.set(21, Items.of(rul ? Material.LIME_DYE : Material.RED_DYE, rul ? "&a&lRuleta y aviso: SÍ" : "&c&lRuleta y aviso: NO", "",
+                rul ? "&7Al activarlo gira la ruleta y sale el aviso" : "&7Se aplica al instante, sin ruleta (sorpresa).",
+                rul ? "&7antes de que pase." : "&7El aviso, si tiene, sale igual.", "", "&e▶ Click para cambiar"),
+                e -> { c.set("ruleta", !rul); touch(); otra.run(); });
         String av = c.getString("aviso");
         m.set(20, Items.of(Material.ENCHANTED_BOOK, "&b&lAviso vinculado", "", "&7Se muestra después de la ruleta", "&7y queda arriba en la sidebar (sin el título):", av != null ? "&f" + av : "&8ninguno", "",
                 "&e▶ Click para elegir"), e -> pl.avisos().elegir(p, "&8Aviso para: " + mo.nombre(path), sel -> { c.set("aviso", sel); touch(); otra.run(); }));

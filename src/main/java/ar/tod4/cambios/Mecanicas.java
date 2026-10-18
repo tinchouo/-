@@ -87,6 +87,7 @@ final class Mecanicas implements Listener {
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada10, 10L, 10L);
         Bukkit.getScheduler().runTaskTimer(pl, this::ahogo, 10L, 10L);
+        Bukkit.getScheduler().runTaskTimer(pl, this::aireRapido, 1L, 1L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada20, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada40, 40L, 40L);
         cb.hook("d2.hornos", this::recetasD2);
@@ -122,7 +123,12 @@ final class Mecanicas implements Listener {
                     // la lava de verdad no le pega a quien tiene resistencia al fuego: por eso va con otro tipo de dano
                     // y se anota la causa para que el mensaje de muerte diga lava
                     Causas.anotar(p.getUniqueId(), Component.translatable("death.attack.lava", Component.text(p.getName())));
-                    p.damage(pl.getConfig().getDouble("cambios.lava_dano", 1.5), DamageSource.builder(DamageType.GENERIC).build());
+                    quemando.add(p.getUniqueId());   // dano fijo: la armadura no lo baja
+                    try {
+                        p.damage(pl.getConfig().getDouble("cambios.lava_dano", 1.5), DamageSource.builder(DamageType.GENERIC).build());
+                    } finally {
+                        quemando.remove(p.getUniqueId());
+                    }
                 }
             }
         }
@@ -417,12 +423,21 @@ final class Mecanicas implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void aire(EntityAirChangeEvent e) {
         if (!on("d4.agua") || !(e.getEntity() instanceof Player p) || !juega(p)) return;
-        int viejo = p.getRemainingAir(), nuevo = e.getAmount();
-        if (nuevo >= viejo) return;
+        // el aire que baja lo maneja el plugin (aireRapido): asi la Respiracion del casco no cuenta y no hay inconsistencias
+        if (e.getAmount() < p.getRemainingAir()) e.setCancelled(true);
+    }
+
+    /** Dia 4: cada tick bajo el agua el aire baja agua_factor (5) veces mas que en el juego; sin Respiracion ni nada; nunca baja de 0. */
+    private void aireRapido() {
+        if (!on("d4.agua")) return;
         int factor = pl.getConfig().getInt("cambios.agua_factor", 5);
-        // el aire se gasta 5 veces mas rapido (la Respiracion sigue ayudando como siempre) y nunca baja de 0:
-        // el dano lo da ahogo(), no el juego
-        e.setAmount(Math.max(0, viejo - (viejo - nuevo) * factor));
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            if (!juega(p) || p.hasPotionEffect(PotionEffectType.WATER_BREATHING) || p.hasPotionEffect(PotionEffectType.CONDUIT_POWER)) continue;
+            Block ojos = p.getEyeLocation().getBlock();
+            boolean agua = ojos.getType() == Material.WATER || ojos.getType() == Material.BUBBLE_COLUMN
+                    || (ojos.getBlockData() instanceof org.bukkit.block.data.Waterlogged w && w.isWaterlogged());
+            if (agua && p.getRemainingAir() > 0) p.setRemainingAir(Math.max(0, p.getRemainingAir() - factor));
+        }
     }
 
     /** Dia 4: sin burbujas, el agua pega medio corazon fijo cada 0,5 s (sin importar armadura, Respiracion ni Resistencia). */

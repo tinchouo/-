@@ -135,6 +135,9 @@ public final class Creepers implements Listener {
     }
 
     /** Hace aparecer un creeper especial (tambien lo usa /tod4:creeper). */
+    /** Marca de "esta vida la puso un Momento Truco": el plugin no la sube. */
+    public org.bukkit.NamespacedKey vidaFija() { return new org.bukkit.NamespacedKey(pl, "vida_fija"); }
+
     public Entity aparecer(String tipo, Location l) {
         Entity en = Ext.mythicSpawn(cfg.getString("mythic." + tipo, ""), l);
         if (en != null) preparar(en, tipo);
@@ -345,7 +348,9 @@ public final class Creepers implements Listener {
     private void nuclearBase(Creeper c) {
         double vida = cfg.getDouble("nuclear.vida", 50);
         AttributeInstance a = c.getAttribute(Attribute.MAX_HEALTH);
-        if (a != null && a.getBaseValue() < vida) { a.setBaseValue(vida); c.setHealth(vida); }
+        // si un Momento Truco le puso una vida a medida (vida_fija), se respeta
+        boolean fija = c.getPersistentDataContainer().has(vidaFija(), org.bukkit.persistence.PersistentDataType.BYTE);
+        if (!fija && a != null && a.getBaseValue() < vida) { a.setBaseValue(vida); c.setHealth(vida); }
         if (!c.isSilent()) c.setSilent(true);
     }
 

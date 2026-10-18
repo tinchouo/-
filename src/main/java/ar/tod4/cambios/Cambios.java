@@ -45,7 +45,7 @@ public final class Cambios {
         this.st = new Store(pl, "cambios");
         // ---- Dia 1
         add(new Cambio("d1.hornos", 1, "Explosión de Hornos", false, "&7Los hornos prendidos pueden", "&7explotar de la nada."));
-        add(new Cambio("d1.warden", 1, "Warden en las Ancient City", false, "&7El Warden aparece solo en las", "&7Ancient City (saliendo del piso)."));
+        add(new Cambio("d1.warden", 4, "Warden en las Ancient City", false, "&7El Warden aparece solo en las", "&7Ancient City (saliendo del piso)."));
         add(new Cambio("d1.aldeanos", 1, "Bloqueo de Aldeanos", false, "&7Los aldeanos naturales desaparecen.", "&7Solo quedan los de huevo/comando."));
         add(new Cambio("d1.totems", 1, "Bloqueo de Tótems", false, "&7Los invocadores no sueltan tótem."));
         add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemas (medio corazón", "&7por segundo) sin Resistencia al fuego", "&7y no hay agua."));

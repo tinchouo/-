@@ -105,6 +105,11 @@ public final class Avisos implements Listener {
         return true;
     }
 
+    /** Cambia el dia de un mensaje solo si todavia tiene el de antes (si lo cambiaste a mano, no se toca). */
+    public void cambiarDia(String id, int de, int a) {
+        if (existe(id) && msg(id).getInt("dia", 0) == de) { msg(id).set("dia", a); st.touch(); }
+    }
+
     public boolean existe(String id) { return st.y().isConfigurationSection("mensajes." + id); }
 
     private List<String> ids(String seccion) {
