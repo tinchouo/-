@@ -48,6 +48,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.aether.Aether aether;
     private ar.tod4.equipos.Equipos equipos;
     private ar.tod4.mobs.Creepers creepers;
+    private ar.tod4.clones.Clones clones;
 
     @Override
     public void onEnable() {
@@ -70,6 +71,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         aether = new ar.tod4.aether.Aether(this);
         equipos = new ar.tod4.equipos.Equipos(this);
         new ar.tod4.core.Chat(this);
+        clones = new ar.tod4.clones.Clones(this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Papi(this).register();
@@ -85,7 +87,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
 
     private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video",
             "aether_pocion", "aether_init", "aether_reset", "aether_tp", "aether_locate", "aether_goto", "aether_fill",
-            "aether_test", "aether_force", "aether_music", "equipo", "creeper");
+            "aether_test", "aether_force", "aether_music", "equipo", "creeper", "clones");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
     private void soloConPrefijo() {
@@ -128,9 +130,10 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (aether != null) aether.apagar();
         if (creepers != null) creepers.apagar();
         if (momentos != null) momentos.apagar();
+        if (clones != null) clones.apagar();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
                 misiones == null ? null : misiones.store(), momentos == null ? null : momentos.store(),
-                equipos == null ? null : equipos.store()})
+                equipos == null ? null : equipos.store(), clones == null ? null : clones.store()})
             if (s != null) s.save();
     }
 
@@ -164,6 +167,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         Player p = s instanceof Player pp ? pp : null;
         if (c.startsWith("aether_")) return aether.comando(s, c, a);
         if (c.equals("equipo")) { equipos.comandoAdmin(s, a); return true; }
+        if (c.equals("clones")) { clones.comando(s, a); return true; }
         if (c.equals("creeper")) {
             if (p == null) return true;
             if (a.length == 0 || !creepers.tipos().contains(a[0].toLowerCase())) { Style.info(s, "Uso: &e/tod4:creeper <" + String.join("|", creepers.tipos()) + ">"); return true; }
@@ -276,6 +280,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     public List<String> onTabComplete(CommandSender s, Command cmd, String label, String[] a) {
         List<String> out = new ArrayList<>();
         String c = cmd.getName().toLowerCase();
+        if (c.equals("clones")) return s.hasPermission("tod4.admin") ? clones.tab(a) : out;
         if (c.equals("eq") || c.equals("equipo")) {
             if (c.equals("eq") && s instanceof Player p) out.addAll(equipos.tabEq(p, a));
             if (c.equals("equipo") && s.hasPermission("tod4.admin")) out.addAll(equipos.tabAdmin(a));

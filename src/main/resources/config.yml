@@ -102,6 +102,23 @@ momentos:
   sonido_fin: "entity.wither.spawn"
   sonido_fin_tono: 0.6
 
+# Cosmic Clones: /tod4:clones pos1, pos2, crear <nombre>, modo <zona> <fila|gigante>
+clones:
+  disfraz: "cosmic_clone"     # disfraz guardado de LibsDisguises (/savedisguise cosmic_clone ...)
+  dano: 6.0                   # 3 corazones fijos por golpe (no lo baja nada)
+  inmune_seg: 1.0             # despues de un golpe, este tiempo sin que otro clon te pegue
+  empujon: 0.7
+  cantidad: 10                # modo fila
+  retraso_seg: 2.0            # el primero de la fila
+  separacion_seg: 0.5         # cada uno de los siguientes, cuanto mas atras
+  radio: 0.8
+  velocidad_alcance: 1.5      # el que se fue al final vuelve a su lugar un poco mas rapido
+  gigante_retraso_seg: 3.0
+  gigante_tamano: 3.0
+  gigante_retroceso_seg: 2.0  # el gigante, al pegar, se va esto mas atras
+  radio_gigante: 2.0
+  brillo: false               # contorno brillante (blanco)
+
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"
   sonido_activar_op: "block.note_block.chime"

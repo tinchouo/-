@@ -4,7 +4,7 @@ main: ar.tod4.TOD4
 api-version: '1.21'
 author: TrucOfDeath
 description: TrucOfDeath 4 - misiones, momentos truco, cambios, avisos, revivir, sidebar.
-softdepend: [PlaceholderAPI, Skript, Oraxen, MythicMobs]
+softdepend: [PlaceholderAPI, Skript, Oraxen, MythicMobs, LibsDisguises]
 permissions:
   tod4.admin:
     default: op
@@ -60,3 +60,5 @@ commands:
     description: Chat y opciones de tu equipo
   creeper:
     description: Hace aparecer un creeper especial (prueba)
+  clones:
+    description: Zonas de Cosmic Clones
