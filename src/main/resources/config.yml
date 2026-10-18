@@ -98,6 +98,9 @@ momentos:
   tag_exento: exento_momento
   # simbolo del tiempo en la sidebar
   simbolo_tiempo: "⌚"
+  # sonido para todos cuando termina el Momento Truco (no sale nada en el chat)
+  sonido_fin: "entity.wither.spawn"
+  sonido_fin_tono: 0.6
 
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"

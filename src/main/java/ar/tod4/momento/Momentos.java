@@ -104,6 +104,8 @@ public final class Momentos implements Listener {
     private BukkitTask tarea;
     private ModoMob modoMob;
     private String avisoActual;                                // aviso del ultimo paso activado (arriba en la sidebar)
+    private final Set<String> spawnListos = new HashSet<>();   // pasos de spawn ya anunciados: su item ahora spawnea con cada clic
+    private final Map<UUID, Long> ultimoClic = new HashMap<>();
 
     public Momentos(TOD4 pl) {
         this.pl = pl;
@@ -339,7 +341,11 @@ public final class Momentos implements Listener {
         if (paso == null && !fin) return;
         e.setCancelled(true);
         if (e.getAction() == Action.PHYSICAL) return;
-        if (fin) { terminarTodo(true); Style.broadcast("&c✖ El Momento Truco terminó."); return; }
+        // un clic puede llegar dos veces (bloque + aire): se ignora el segundo
+        long ahora = System.currentTimeMillis();
+        Long antes = ultimoClic.put(e.getPlayer().getUniqueId(), ahora);
+        if (antes != null && ahora - antes < 150) return;
+        if (fin) { terminarTodo(true); return; }
         activar(e.getPlayer(), paso);
     }
 
@@ -367,18 +373,49 @@ public final class Momentos implements Listener {
         quitarItems(admin);
         for (String pid : pasos(mid)) {
             String path = mid + ".pasos." + pid;
-            Material mat = esSpawn(path) ? Material.CREEPER_HEAD : tipo(path).icono;
-            ItemStack it = Items.of(mat, "&c&l⚡ " + nombre(path), "", "&7" + textoSidebar(path), "", "&e▶ Click para activar");
-            ItemMeta meta = it.getItemMeta();
-            meta.getPersistentDataContainer().set(K_PASO, PersistentDataType.STRING, path);
-            it.setItemMeta(meta);
-            admin.getInventory().addItem(it).values().forEach(r -> Style.err(admin, "No hay lugar en tu inventario para todos los ítems."));
+            admin.getInventory().addItem(itemPaso(path)).values().forEach(r -> Style.err(admin, "No hay lugar en tu inventario para todos los ítems."));
         }
         ItemStack fin = Items.of(Material.BARRIER, "&c&l✖ TERMINAR MOMENTO", "", "&7Termina todo sin castigar a nadie.");
         ItemMeta meta = fin.getItemMeta();
         meta.getPersistentDataContainer().set(K_FIN, PersistentDataType.BYTE, (byte) 1);
         fin.setItemMeta(meta);
         admin.getInventory().addItem(fin);
+    }
+
+    /** El item de un paso: antes de anunciarlo "activar"; un spawn ya anunciado pasa a ser el item que spawnea con cada clic. */
+    private ItemStack itemPaso(String path) {
+        ItemStack it;
+        if (esSpawn(path) && spawnListos.contains(path)) {
+            ConfigurationSection c = m(path);
+            double vida = c.getDouble("spawn.vida", 0);
+            it = Items.of(Material.SPAWNER, "&4&l☠ SPAWNEAR: &c&l" + nombre(path), "",
+                    "&7Mob: &f" + c.getString("spawn.mob", "creeper") + " &7x" + Math.max(1, c.getInt("spawn.cant", 1)) + " por jugador",
+                    "&7Vida: &f" + (vida > 0 ? corazones(vida) : "la normal"), "",
+                    "&7Cada clic lo hace aparecer al instante en", "&7la posición de todos los participantes.", "",
+                    "&e▶ Click para spawnear (las veces que quieras)");
+        } else {
+            Material mat = esSpawn(path) ? Material.CREEPER_HEAD : tipo(path).icono;
+            it = Items.of(mat, "&c&l⚡ " + nombre(path), "", "&7" + textoSidebar(path), "",
+                    esSpawn(path) ? "&e▶ Click: ruleta y aviso. Después este ítem" : "&e▶ Click para activar",
+                    esSpawn(path) ? "&e  pasa a spawnear el mob con cada clic." : "");
+        }
+        ItemMeta meta = it.getItemMeta();
+        meta.getPersistentDataContainer().set(K_PASO, PersistentDataType.STRING, path);
+        it.setItemMeta(meta);
+        return it;
+    }
+
+    /** Cambia el item de ese paso (en el inventario de quien lo tenga) por su version actual. */
+    private void actualizarItem(String path) {
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            ItemStack[] cont = p.getInventory().getContents();
+            for (int i = 0; i < cont.length; i++) {
+                ItemStack it = cont[i];
+                if (it == null || !it.hasItemMeta()) continue;
+                if (path.equals(it.getItemMeta().getPersistentDataContainer().get(K_PASO, PersistentDataType.STRING)))
+                    p.getInventory().setItem(i, itemPaso(path));
+            }
+        }
     }
 
     private void quitarItems(Player p) {
@@ -389,13 +426,23 @@ public final class Momentos implements Listener {
         }
     }
 
-    /** Activa un paso: ruleta roja, aviso vinculado y efecto. */
+    /**
+     * Activa un paso: ruleta roja, aviso vinculado y efecto.
+     * Spawn: el primer clic es solo el anuncio (ruleta + aviso) y el item pasa a ser de spawn; desde ahi cada clic hace
+     * aparecer el mob al instante en todos los participantes, sin ruleta, las veces que haga falta.
+     */
     public void activar(Player admin, String path) {
         if (mid == null) return;
-        if (ruleta) { Style.err(admin, "Espera: la ruleta todavía está girando."); return; }
         if (!existe(path.substring(0, path.indexOf('.')))) return;
+        if (esSpawn(path) && spawnListos.contains(path)) {
+            int n = spawnear(m(path));
+            admin.sendActionBar(Txt.c("&4☠ &cAparecieron &f" + n + " &cmobs"));
+            admin.playSound(admin.getLocation(), "entity.evoker.prepare_summon", SoundCategory.MASTER, 0.6f, 1.2f);
+            return;
+        }
+        if (ruleta) { Style.err(admin, "Espera: la ruleta todavía está girando."); return; }
         // sin ruleta: el paso se aplica al instante (por ejemplo un spawn por sorpresa)
-        if (!m(path).getBoolean("ruleta", !esSpawn(path))) {
+        if (!m(path).getBoolean("ruleta", true)) {
             if (!iniciado) vinetaATodos();
             aplicar(path);
             return;
@@ -418,7 +465,9 @@ public final class Momentos implements Listener {
         a.path = path;
         a.texto = textoSidebar(path);
         if (esSpawn(path)) {
-            spawnear(c);
+            // el anuncio no hace aparecer nada: desde ahora el item del admin spawnea con cada clic
+            spawnListos.add(path);
+            actualizarItem(path);
         } else {
             a.tipo = tipo(path);
             int dur = c.getInt("duracion", 0);
@@ -506,15 +555,23 @@ public final class Momentos implements Listener {
         participantes.clear();
         iniciado = false;
         ruleta = false;
+        boolean habia = mid != null;
         mid = null;
         avisoActual = null;
+        spawnListos.clear();
         sacarVinetas();
+        // sin mensajes en el chat: solo un sonido grave para todos
+        if (avisar && habia) {
+            String son = pl.getConfig().getString("momentos.sonido_fin", "entity.wither.spawn");
+            float pitch = (float) pl.getConfig().getDouble("momentos.sonido_fin_tono", 0.6);
+            for (Player p : Bukkit.getOnlinePlayers()) p.playSound(p.getLocation(), son, SoundCategory.MASTER, 0.8f, pitch);
+        }
     }
 
     public void cancelar(Player quien) {
         if (mid == null) { Style.err(quien, "No hay ningún Momento Truco activo."); return; }
         terminarTodo(true);
-        Style.broadcast("&c✖ El Momento Truco fue cancelado.");
+        Style.ok(quien, "Momento Truco cancelado.");
     }
 
     @SuppressWarnings("unchecked")
@@ -527,7 +584,7 @@ public final class Momentos implements Listener {
 
     // ================================================================= spawn de mobs
 
-    private void spawnear(ConfigurationSection c) {
+    private int spawnear(ConfigurationSection c) {
         String mob = c.getString("spawn.mob", "creeper");
         int cant = Math.max(1, Math.min(20, c.getInt("spawn.cant", 1)));
         double vida = c.getDouble("spawn.vida", 0);
@@ -536,8 +593,10 @@ public final class Momentos implements Listener {
         // le toca a todos los que estan jugando en este momento (no solo a los que estaban al empezar)
         for (Player p : Bukkit.getOnlinePlayers()) if (!p.isDead() && afecta(p) && !exento(p)) objetivo.add(p);
         if (azar > 0 && azar < objetivo.size()) { Collections.shuffle(objetivo); objetivo = objetivo.subList(0, azar); }
+        int n = 0;
         for (Player p : objetivo) for (int i = 0; i < cant; i++) {
             Entity e = hacerAparecer(mob, p.getLocation());
+            if (e != null) n++;
             if (e instanceof LivingEntity le && vida > 0) {
                 le.getPersistentDataContainer().set(pl.creepers().vidaFija(), PersistentDataType.BYTE, (byte) 1);
                 poner(le, vida);
@@ -545,6 +604,7 @@ public final class Momentos implements Listener {
                 for (long d : new long[]{2, 10, 40}) Bukkit.getScheduler().runTaskLater(pl, () -> { if (le.isValid()) poner(le, vida); }, d);
             }
         }
+        return n;
     }
 
     private static void poner(LivingEntity le, double vida) {
@@ -745,11 +805,11 @@ public final class Momentos implements Listener {
         }
         long ahora = System.currentTimeMillis();
         for (Act a : activos.values()) {
-            // como "■ Mundo": el cuadradito y el texto del paso; abajo el reloj (sin el guion gris) si tiene tiempo
+            // como "■ Perfil": el cuadradito rojo y el texto del paso; abajo, con la linea gris, el tiempo en rojo (si tiene)
             out.addAll(Ancho.cortar("&c&l" + Txt.norm(a.texto), "&4■ ", "&4  ", ancho));
             if (a.fin > 0) {
                 long r = Math.max(0, (a.fin - ahora + 999) / 1000);
-                out.add(" &c" + pl.getConfig().getString("momentos.simbolo_tiempo", "⌚") + " &f" + String.format("%d:%02d", r / 60, r % 60));
+                out.add(" &8| &c" + pl.getConfig().getString("momentos.simbolo_tiempo", "⌚") + " " + String.format("%d:%02d", r / 60, r % 60));
             }
         }
         if (activos.isEmpty()) out.add("&4■ &c&lEsperando el siguiente paso...");
