@@ -118,6 +118,17 @@ clones:
   gigante_retroceso_seg: 2.0  # el gigante, al pegar, se va esto mas atras
   radio_gigante: 2.0
   brillo: false               # contorno brillante (blanco)
+  # skin: si skin_valor tiene algo, se usa esa (valor y firma de MineSkin); si se deja vacio, se usa el disfraz guardado
+  # (si estas lineas no estan, se usa la skin del Cosmic Clone que viene con el plugin)
+  nombre: "Cosmic"
+  ambiente_cada_ticks: 40     # cada cuanto suena el susurro de humo de cada clon
+  # sonidos ("" = ninguno). Se puede cambiar el tono y el volumen con <clave>_tono y <clave>_volumen
+  sonidos:
+    aparece: "entity.illusioner.prepare_mirror"
+    aparece2: "block.fire.extinguish"
+    vuelve: "entity.illusioner.mirror_move"
+    vuelve2: "block.fire.extinguish"
+    ambiente: "particle.soul_escape"
 
 misiones:
   sonido_activar_dia: "block.end_portal.spawn"

@@ -106,6 +106,11 @@ public final class Clones implements Listener {
     private final Map<UUID, Sesion> sesiones = new HashMap<>();
     private final Map<UUID, Location[]> seleccion = new HashMap<>();
     private boolean avisoDisfraz;
+    private String estadoDisfraz = "todavía no apareció ningún clon";
+
+    /** Skin del Cosmic Clone (MineSkin): valor y firma. Se pueden cambiar en clones.skin_valor / clones.skin_firma. */
+    private static final String SKIN_VALOR = "ewogICJ0aW1lc3RhbXAiIDogMTc5MjMzNDE1NDY2NiwKICAicHJvZmlsZUlkIiA6ICJhYTUwNjRmMDUzOWQ0YmFhYTVkOGMzODllY2JiNGFlMSIsCiAgInByb2ZpbGVOYW1lIiA6ICJ4WF9FbXBsb3ltZW50X1h4IiwKICAic2lnbmF0dXJlUmVxdWlyZWQiIDogdHJ1ZSwKICAidGV4dHVyZXMiIDogewogICAgIlNLSU4iIDogewogICAgICAidXJsIiA6ICJodHRwOi8vdGV4dHVyZXMubWluZWNyYWZ0Lm5ldC90ZXh0dXJlLzdkY2ExNjliYmE3MTBlODk2ZDNlMzQyMTk3MTg1MjUzMzk2NjU3MDVkNjA3NGY2MDA2ZjZhMDU2NzhlYzQ1MGEiCiAgICB9CiAgfQp9";
+    private static final String SKIN_FIRMA = "irWT75lnt9oNYm5l0mKOjI2lJ/DDo44N2VK533B2r5AHTyDdZc6rTSQZUFoyUv8EqR33JMFec5dH0zhjvbLTGHZt1CAn3s6luDTAHVymaYTbD2EZIvxMxEdktnWejJe+S/tTj2W8j8/BO64yea172xJehUljqvXQFa1uCfTKFJFRgIk+28PwR8ZkO+C5kokww4ANz9iwhs0z9j3lrrsEfPXlA/42u6NbEUcVR84Fp849kRCbylNhxFNSHylG32kgE7w5hd+VQCYaaljsaqSGrMLyInjB+L9nJhifTq8WIK5uQfR7F1u4IaMJ/9euaRDY8m9Y7D3x0Jzu0ub94KnE57Lnyf+3ydHEfll/NrikrHbzg3MCvoYTS/LYP/+i5Jbj7qFqyLuS+ZqfBGq/Zk/iaF6dX7QxYw5zvfrYk6vmKNY1Bq5D0ztdfAXBjInqZHTZCvrzxYnjvRwhYp3S/cHNBiVAMalKbE1TnydA5WOYkYEnbPQAzbSjy3HB3OBNVTKETgkXeS9tEuNx7RtusYdoI8t7JpLljXtPWSFy9v+WlruRXJMQYJxvywkNMeXK2mpE3ylORDuaSh0TKWMYo/n7rPVd4QrS/1nws6nlixgDzFu7zdp6w0L1fDOvdApRHRtDO0PuL2rZPQ2rDRii7jp2SaI6imIamc1Rmrn7UHTlsUM=";
 
     public Clones(TOD4 pl) {
         this.pl = pl;
@@ -185,12 +190,16 @@ public final class Clones implements Listener {
             if (c.host == null || !c.host.isValid()) {
                 crear(c, l, s.gigante);
                 rafaga(l, s.gigante);
-                s.mundo.playSound(l, "entity.illusioner.prepare_mirror", SoundCategory.HOSTILE, 0.8f, 0.7f);
+                sonido(l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
+                sonido(l, "aparece2", "block.fire.extinguish", 0.6, 0.5);
             } else {
                 c.host.teleport(l);
             }
             if (f.sneak != c.agachado) { c.agachado = f.sneak; agachar(c); }
             if (particulas) estela(l, s.gigante);
+            // cada tanto un susurro de humo que sale del clon (cada uno a su ritmo)
+            if ((s.t + i * 7L) % Math.max(10, cfgI("ambiente_cada_ticks", 40)) == 0)
+                sonido(l, "ambiente", "particle.soul_escape", 0.7, 0.5);
         }
         if (ahora >= s.inmuneHasta) golpes(p, s, ahora);
     }
@@ -209,7 +218,8 @@ public final class Clones implements Listener {
             pegar(p, cl);
             // al final de la fila (el gigante: unos segundos mas atras); desaparece entre particulas y reaparece atras
             rafaga(cl, s.gigante);
-            s.mundo.playSound(cl, "entity.illusioner.mirror_move", SoundCategory.HOSTILE, 1f, 0.6f);
+            sonido(cl, "vuelve", "entity.illusioner.mirror_move", 1.0, 0.6);
+            sonido(cl, "vuelve2", "block.fire.extinguish", 0.8, 0.6);
             s.fila.remove(c);
             s.fila.add(c);
             double obj = s.objetivo(s.fila.size() - 1);
@@ -223,6 +233,15 @@ public final class Clones implements Listener {
             }
             return;
         }
+    }
+
+    /** Sonido configurable: clones.sonidos.<clave> = "sonido" (o "" para ninguno), clones.sonidos.<clave>_tono, _volumen. */
+    private void sonido(Location l, String clave, String def, double vol, double tono) {
+        String id = pl.getConfig().getString("clones.sonidos." + clave, def);
+        if (id == null || id.isBlank()) return;
+        l.getWorld().playSound(l, id, SoundCategory.HOSTILE,
+                (float) pl.getConfig().getDouble("clones.sonidos." + clave + "_volumen", vol),
+                (float) pl.getConfig().getDouble("clones.sonidos." + clave + "_tono", tono));
     }
 
     private void pegar(Player p, Location desde) {
@@ -329,21 +348,47 @@ public final class Clones implements Listener {
 
     private Method mGetCustom, mDisguiseToAll, mGetWatcher, mSetSneaking;
 
+    private static Throwable causa(Throwable t) {
+        while (t instanceof java.lang.reflect.InvocationTargetException && t.getCause() != null) t = t.getCause();
+        return t;
+    }
+
+    /**
+     * 1) Si hay skin en el config (o la de fabrica): disfraz de jugador con esa skin (valor + firma de MineSkin).
+     * 2) Si no: el disfraz guardado de LibsDisguises (clones.disfraz).
+     * Sin LibsDisguises: null (se ve con armadura violeta).
+     */
     private Object disfrazar(Entity host, double tam) {
-        if (Bukkit.getPluginManager().getPlugin("LibsDisguises") == null) return null;
+        if (Bukkit.getPluginManager().getPlugin("LibsDisguises") == null) {
+            estadoDisfraz = "LibsDisguises no está instalado";
+            return null;
+        }
         try {
             Class<?> api = Class.forName("me.libraryaddict.disguise.DisguiseAPI");
             Class<?> dc = Class.forName("me.libraryaddict.disguise.disguisetypes.Disguise");
-            if (mGetCustom == null) mGetCustom = api.getMethod("getCustomDisguise", String.class);
             if (mDisguiseToAll == null) mDisguiseToAll = api.getMethod("disguiseToAll", Entity.class, dc);
-            String nombre = pl.getConfig().getString("clones.disfraz", "cosmic_clone");
-            Object d = mGetCustom.invoke(null, nombre);
-            if (d == null) {
-                if (!avisoDisfraz) {
-                    avisoDisfraz = true;
-                    pl.getLogger().warning("Clones: no existe el disfraz guardado '" + nombre + "' de LibsDisguises. Se ven con armadura violeta.");
+            Object d = null;
+            String valor = pl.getConfig().getString("clones.skin_valor", SKIN_VALOR);
+            String firma = pl.getConfig().getString("clones.skin_firma", SKIN_FIRMA);
+            String nombreFalso = pl.getConfig().getString("clones.nombre", "Cosmic");
+            if (valor != null && !valor.isBlank()) {
+                Class<?> pd = Class.forName("me.libraryaddict.disguise.disguisetypes.PlayerDisguise");
+                d = pd.getConstructor(String.class).newInstance(nombreFalso);
+                String json = "{\"id\":\"aa5064f0-539d-4baa-a5d8-c389ecbb4ae1\",\"name\":\"" + nombreFalso
+                        + "\",\"properties\":[{\"name\":\"textures\",\"value\":\"" + valor + "\""
+                        + (firma != null && !firma.isBlank() ? ",\"signature\":\"" + firma + "\"" : "") + "}]}";
+                pd.getMethod("setSkin", String.class).invoke(d, json);
+                estadoDisfraz = "disfraz de jugador con la skin del config";
+            } else {
+                String nombre = pl.getConfig().getString("clones.disfraz", "cosmic_clone");
+                if (mGetCustom == null) mGetCustom = api.getMethod("getCustomDisguise", String.class);
+                d = mGetCustom.invoke(null, nombre);
+                if (d == null) {
+                    estadoDisfraz = "no existe el disfraz guardado '" + nombre + "'";
+                    if (!avisoDisfraz) { avisoDisfraz = true; pl.getLogger().warning("Clones: " + estadoDisfraz + ". Se ven con armadura violeta."); }
+                    return null;
                 }
-                return null;
+                estadoDisfraz = "disfraz guardado '" + nombre + "'";
             }
             try { d.getClass().getMethod("setNameVisible", boolean.class).invoke(d, false); } catch (Exception ignored) { }
             if (tam != 1.0) {
@@ -356,9 +401,11 @@ public final class Clones implements Listener {
             mDisguiseToAll.invoke(null, host, d);
             return d;
         } catch (Throwable ex) {
+            Throwable c = causa(ex);
+            estadoDisfraz = "error con LibsDisguises: " + c;
             if (!avisoDisfraz) {
                 avisoDisfraz = true;
-                pl.getLogger().warning("Clones: no pude usar LibsDisguises (" + ex + "). Se ven con armadura violeta.");
+                pl.getLogger().warning("Clones: no pude usar LibsDisguises (" + c + "). Se ven con armadura violeta.");
             }
             return null;
         }
@@ -464,6 +511,18 @@ public final class Clones implements Listener {
                 for (Sesion se : new ArrayList<>(sesiones.values())) if (se.zona.equals(id)) terminar(se);
                 Style.ok(s, "Zona &f" + id + "&a borrada.");
             }
+            case "probar" -> {
+                if (p == null) return;
+                Location l = p.getLocation().add(p.getLocation().getDirection().setY(0).normalize().multiply(3));
+                l.setYaw(p.getLocation().getYaw() + 180);
+                Clon c = new Clon();
+                avisoDisfraz = false;
+                crear(c, l, a.length > 1 && a[1].equalsIgnoreCase("gigante"));
+                rafaga(l, false);
+                sonido(l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
+                Style.info(p, "Clon de prueba (10 s). Aspecto: &f" + estadoDisfraz);
+                Bukkit.getScheduler().runTaskLater(pl, () -> sacar(c, true), 200L);
+            }
             case "lista" -> {
                 if (zonas().isEmpty()) { Style.info(s, "No hay zonas de clones."); return; }
                 for (Zona z : zonas())
@@ -476,13 +535,14 @@ public final class Clones implements Listener {
                 Style.raw(s, " &e/tod4:clones crear <nombre> &8- &7crea la zona");
                 Style.raw(s, " &e/tod4:clones modo <zona> <fila|gigante>");
                 Style.raw(s, " &e/tod4:clones borrar <zona> &7/ &elista");
+                Style.raw(s, " &e/tod4:clones probar [gigante] &8- &7hace aparecer uno adelante tuyo y dice cómo se ve");
             }
         }
     }
 
     public List<String> tab(String[] a) {
         List<String> out = new ArrayList<>();
-        if (a.length == 1) out.addAll(List.of("pos1", "pos2", "crear", "modo", "borrar", "lista"));
+        if (a.length == 1) out.addAll(List.of("pos1", "pos2", "crear", "modo", "borrar", "lista", "probar"));
         else if (a.length == 2 && (a[0].equalsIgnoreCase("modo") || a[0].equalsIgnoreCase("borrar")))
             for (Zona z : zonas()) out.add(z.id());
         else if (a.length == 3 && a[0].equalsIgnoreCase("modo")) out.addAll(List.of("fila", "gigante"));

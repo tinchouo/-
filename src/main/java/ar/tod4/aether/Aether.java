@@ -470,9 +470,10 @@ public final class Aether implements Listener {
             Location sp = spawn();
             if (!e.listo || sp == null || mundo() == null || mundo().equals(ow)) {
                 Long a = aviso.get(p.getUniqueId());
-                if (a == null || System.currentTimeMillis() - a > 15_000) {
+                // a los jugadores no se les dice nada (no pasa nada y listo); solo los admins ven el aviso
+                if (p.hasPermission("tod4.admin") && (a == null || System.currentTimeMillis() - a > 15_000)) {
                     aviso.put(p.getUniqueId(), System.currentTimeMillis());
-                    Style.err(p, "El Aether todavía no está listo. Avísale a un admin.");
+                    Style.err(p, "&7(Admin) El Aether no está listo: &e/tod4:aether_init&7.");
                 }
                 continue;
             }
