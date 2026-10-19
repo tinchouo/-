@@ -105,7 +105,7 @@ momentos:
 # Cosmic Clones: /tod4:clones pos1, pos2, crear <nombre>, modo <zona> <fila|gigante>
 clones:
   disfraz: "cosmic_clone"     # disfraz guardado de LibsDisguises (/savedisguise cosmic_clone ...)
-  dano: 6.0                   # 3 corazones fijos por golpe (no lo baja nada)
+  dano: 6.0                   # 3 corazones fijos por golpe (no lo baja nada; si te mataria, el totem te salva)
   inmune_seg: 1.0             # despues de un golpe, este tiempo sin que otro clon te pegue
   empujon: 0.7
   cantidad: 10                # modo fila
@@ -115,7 +115,9 @@ clones:
   velocidad_recuperar: 2.0    # cuando uno se va al final, los demas van x2 hasta volver a quedar a su distancia
   gigante_retraso_seg: 3.0
   gigante_tamano: 3.0
-  gigante_retroceso_seg: 2.0  # el gigante, al pegar, se va esto mas atras
+  gigante_cantidad: 1         # cuantos gigantes (fila de gigantes)
+  gigante_distancia_seg: 3.0
+  transicion_seg: 3.0         # al pegar: el clon queda como particulas que viajan al final de la fila
   radio_gigante: 2.0
   brillo: false               # contorno brillante (blanco)
   # skin: si skin_valor tiene algo, se usa esa (valor y firma de MineSkin); si se deja vacio, se usa el disfraz guardado

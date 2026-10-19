@@ -68,6 +68,8 @@ public final class Clones implements Listener {
         Object disfraz;                 // disfraz de LibsDisguises (o null)
         double atraso;                  // en ticks (puede ser decimal mientras alcanza su lugar en la fila)
         boolean agachado;
+        long volviendoHasta;            // despues de pegar: solo particulas que viajan al final de la fila
+        Location desde;                 // donde pego (de ahi salen las particulas)
     }
 
     private final class Sesion {
@@ -85,12 +87,12 @@ public final class Clones implements Listener {
             this.zona = zona;
             this.gigante = gigante;
             this.mundo = p.getWorld();
-            int n = gigante ? 1 : Math.max(1, Math.min(30, cfgI("cantidad", 10)));
+            int n = gigante ? Math.max(1, Math.min(10, cfgI("gigante_cantidad", 1))) : Math.max(1, Math.min(30, cfgI("cantidad", 10)));
             for (int i = 0; i < n; i++) { Clon c = new Clon(); c.atraso = objetivo(i); fila.add(c); }
         }
 
         double objetivo(int i) {
-            if (gigante) return cfgD("gigante_retraso_seg", 3.0) * 20.0;
+            if (gigante) return cfgD("gigante_retraso_seg", 3.0) * 20.0 + i * cfgD("gigante_distancia_seg", 3.0) * 20.0;
             return cfgD("retraso_seg", 2.0) * 20.0 + i * cfgD("distancia_seg", 2.0) * 20.0;
         }
 
@@ -187,6 +189,16 @@ public final class Clones implements Listener {
             Frame f = s.frame(s.t - Math.round(c.atraso));
             if (f == null) { if (c.host != null) sacar(c, false); continue; }
             Location l = new Location(s.mundo, f.x, f.y, f.z, f.yaw, f.pitch);
+            // volviendo al final de la fila: no hay cuerpo, solo una bola de particulas que viaja hasta su lugar
+            if (c.volviendoHasta > ahora) {
+                long total = (long) (cfgD("transicion_seg", 3.0) * 1000);
+                double prog = 1.0 - (c.volviendoHasta - ahora) / (double) Math.max(1, total);
+                Location desde = c.desde != null && c.desde.getWorld() == l.getWorld() ? c.desde : l;
+                Location orbe = desde.clone().add(l.clone().subtract(desde).toVector().multiply(Math.max(0, Math.min(1, prog))));
+                orbe(orbe, s.gigante);
+                continue;
+            }
+            c.volviendoHasta = 0;
             if (c.host == null || !c.host.isValid()) {
                 crear(c, l, s.gigante);
                 rafaga(l, s.gigante);
@@ -216,21 +228,20 @@ public final class Clones implements Listener {
             if (dx * dx + dz * dz > radio * radio || dy < -1.6 || dy > alto) continue;
             s.inmuneHasta = ahora + (long) (cfgD("inmune_seg", 1.0) * 1000);
             pegar(p, cl);
-            // al final de la fila (el gigante: unos segundos mas atras); desaparece entre particulas y reaparece atras
+            // el cuerpo se deshace en particulas (el gigante explota) y esas particulas viajan al final de la fila
             rafaga(cl, s.gigante);
+            if (s.gigante) {
+                s.mundo.spawnParticle(Particle.EXPLOSION_EMITTER, cl.clone().add(0, 2, 0), 1);
+                sonido(cl, "explota", "entity.generic.explode", 1.2, 0.7);
+            }
             sonido(cl, "vuelve", "entity.illusioner.mirror_move", 1.0, 0.6);
             sonido(cl, "vuelve2", "block.fire.extinguish", 0.8, 0.6);
+            sacar(c, false);
             s.fila.remove(c);
             s.fila.add(c);
-            double obj = s.objetivo(s.fila.size() - 1);
-            c.atraso = Math.max(obj, c.atraso) + (s.gigante ? cfgD("gigante_retroceso_seg", 2.0) * 20.0 : 0);
-            Frame f = s.frame(s.t - Math.round(c.atraso));
-            if (f == null) { sacar(c, false); }
-            else {
-                Location nl = new Location(s.mundo, f.x, f.y, f.z, f.yaw, f.pitch);
-                c.host.teleport(nl);
-                rafaga(nl, s.gigante);
-            }
+            c.atraso = Math.max(s.objetivo(s.fila.size() - 1), c.atraso);
+            c.desde = cl.clone();
+            c.volviendoHasta = ahora + (long) (cfgD("transicion_seg", 3.0) * 1000);
             return;
         }
     }
@@ -251,10 +262,10 @@ public final class Clones implements Listener {
         Vector v = p.getLocation().toVector().subtract(desde.toVector()).setY(0);
         if (v.lengthSquared() < 0.0001) v = p.getLocation().getDirection().setY(0);
         if (v.lengthSquared() > 0.0001) p.setVelocity(v.normalize().multiply(cfgD("empujon", 0.7)).setY(0.3));
-        // dano fijo: no lo baja nada (armadura, escudo, resistencia, encantamientos) y no salva el totem
+        // dano fijo: no lo baja nada (armadura, escudo, resistencia, encantamientos). Si te mataria, el totem si te salva.
         if (p.getHealth() - dano <= 0) {
             Causas.anotar(p.getUniqueId(), Component.text(p.getName() + " fue atrapado por su clon cósmico"));
-            p.setHealth(0);
+            p.damage(1_000_000, org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.GENERIC).build());
         } else {
             p.setHealth(p.getHealth() - dano);
         }
@@ -276,7 +287,7 @@ public final class Clones implements Listener {
             as.setPersistent(false);
             as.setBasePlate(false);
             as.setArms(true);
-            as.setInvisible(true);
+            // NO invisible: LibsDisguises copia la invisibilidad al disfraz y el clon no se veria
             as.addScoreboardTag("tod4_clon");
             as.getPersistentDataContainer().set(K_CLON, PersistentDataType.BYTE, (byte) 1);
         });
@@ -303,15 +314,35 @@ public final class Clones implements Listener {
         c.disfraz = null;
     }
 
-    /** Sin LibsDisguises: soporte de armaduras visible con armadura de cuero violeta oscuro. */
-    private static void aspectoSinDisfraz(ArmorStand a) {
+    /** Sin disfraz: soporte de armaduras con la cabeza del Cosmic Clone (la skin) y armadura azul noche. */
+    private void aspectoSinDisfraz(ArmorStand a) {
         a.setInvisible(false);
         EntityEquipment eq = a.getEquipment();
-        Color col = Color.fromRGB(28, 20, 80);
-        eq.setHelmet(cuero(Material.LEATHER_HELMET, col));
+        Color col = Color.fromRGB(18, 16, 62);
+        eq.setHelmet(cabeza());
         eq.setChestplate(cuero(Material.LEATHER_CHESTPLATE, col));
         eq.setLeggings(cuero(Material.LEATHER_LEGGINGS, col));
         eq.setBoots(cuero(Material.LEATHER_BOOTS, col));
+    }
+
+    private ItemStack cabezaCache;
+
+    /** Cabeza de jugador con la skin del Cosmic Clone (valor + firma), sin depender de LibsDisguises. */
+    private ItemStack cabeza() {
+        if (cabezaCache != null) return cabezaCache.clone();
+        ItemStack it = new ItemStack(Material.PLAYER_HEAD);
+        try {
+            if (it.getItemMeta() instanceof org.bukkit.inventory.meta.SkullMeta sm) {
+                com.destroystokyo.paper.profile.PlayerProfile prof =
+                        Bukkit.createProfile(UUID.fromString("aa5064f0-539d-4baa-a5d8-c389ecbb4ae1"), "Cosmic");
+                prof.setProperty(new com.destroystokyo.paper.profile.ProfileProperty("textures",
+                        pl.getConfig().getString("clones.skin_valor", SKIN_VALOR), pl.getConfig().getString("clones.skin_firma", SKIN_FIRMA)));
+                sm.setPlayerProfile(prof);
+                it.setItemMeta(sm);
+            }
+        } catch (Throwable ignored) { }
+        cabezaCache = it;
+        return it.clone();
     }
 
     private static ItemStack cuero(Material m, Color c) {
@@ -331,6 +362,16 @@ public final class Clones implements Listener {
         Location c = l.clone().add(0, 0.9 * k, 0);
         l.getWorld().spawnParticle(Particle.DUST, c, (int) (3 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, VIOLETA);
         l.getWorld().spawnParticle(Particle.DUST, c, (int) (2 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, NEGRO);
+    }
+
+    /** La "bola" de particulas que viaja al final de la fila despues de pegar. */
+    private static void orbe(Location l, boolean gigante) {
+        double k = gigante ? 2.5 : 1;
+        Location c = l.clone().add(0, 0.9 * k, 0);
+        World w = l.getWorld();
+        w.spawnParticle(Particle.DUST, c, (int) (6 * k), 0.2 * k, 0.3 * k, 0.2 * k, 0, VIOLETA);
+        w.spawnParticle(Particle.DUST, c, (int) (4 * k), 0.2 * k, 0.3 * k, 0.2 * k, 0, NEGRO);
+        w.spawnParticle(Particle.REVERSE_PORTAL, c, (int) (3 * k), 0.15 * k, 0.2 * k, 0.15 * k, 0.01);
     }
 
     private static void rafaga(Location l, boolean gigante) {
@@ -406,6 +447,8 @@ public final class Clones implements Listener {
                     catch (Exception e1) { try { w.getClass().getMethod("setScale", float.class).invoke(w, (float) tam); } catch (Exception ignored) { } }
                 }
             }
+            Object wt = watcher(d);
+            if (wt != null) try { wt.getClass().getMethod("setInvisible", boolean.class).invoke(wt, false); } catch (Exception ignored) { }
             mDisguiseToAll.invoke(null, host, d);
             return d;
         } catch (Throwable ex) {
@@ -417,6 +460,34 @@ public final class Clones implements Listener {
             }
             return null;
         }
+    }
+
+    /** Para /tod4:clones probar: que hay de LibsDisguises y que disfraces guardados encuentra. */
+    private void diagnostico(CommandSender s) {
+        org.bukkit.plugin.Plugin libs = Bukkit.getPluginManager().getPlugin("LibsDisguises");
+        if (libs == null) { Style.raw(s, " &8- &cLibsDisguises no está instalado (o no cargó)."); return; }
+        Style.raw(s, " &8- &7LibsDisguises: &f" + libs.getPluginMeta().getVersion() + (libs.isEnabled() ? " &a(activo)" : " &c(desactivado)"));
+        String nombre = pl.getConfig().getString("clones.disfraz", "cosmic_clone");
+        try {
+            Class<?> api = Class.forName("me.libraryaddict.disguise.DisguiseAPI");
+            Object d = api.getMethod("getCustomDisguise", String.class).invoke(null, nombre);
+            Style.raw(s, " &8- &7Disfraz guardado '&f" + nombre + "&7': " + (d != null ? "&aencontrado" : "&cno existe con ese nombre"));
+        } catch (Throwable ex) {
+            Style.raw(s, " &8- &cNo pude buscar el disfraz guardado: &f" + causa(ex));
+        }
+        try {
+            Class<?> cfg = Class.forName("me.libraryaddict.disguise.DisguiseConfig");
+            Object m = cfg.getMethod("getCustomDisguises").invoke(null);
+            if (m instanceof Map<?, ?> mapa) {
+                List<String> nombres = new ArrayList<>();
+                for (Object k : mapa.keySet()) {
+                    String n;
+                    try { n = String.valueOf(k.getClass().getMethod("toReadable").invoke(k)); } catch (Exception e) { n = String.valueOf(k); }
+                    nombres.add(n);
+                }
+                Style.raw(s, " &8- &7Disfraces guardados en LibsDisguises: &f" + (nombres.isEmpty() ? "ninguno" : String.join(", ", nombres)));
+            }
+        } catch (Throwable ignored) { }
     }
 
     private Object watcher(Object d) {
@@ -529,6 +600,7 @@ public final class Clones implements Listener {
                 rafaga(l, false);
                 sonido(l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
                 Style.info(p, "Clon de prueba (10 s). Aspecto: &f" + estadoDisfraz);
+                diagnostico(p);
                 Bukkit.getScheduler().runTaskLater(pl, () -> sacar(c, true), 200L);
             }
             case "lista" -> {
