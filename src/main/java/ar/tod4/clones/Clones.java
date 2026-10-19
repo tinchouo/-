@@ -368,28 +368,36 @@ public final class Clones implements Listener {
             Class<?> dc = Class.forName("me.libraryaddict.disguise.disguisetypes.Disguise");
             if (mDisguiseToAll == null) mDisguiseToAll = api.getMethod("disguiseToAll", Entity.class, dc);
             Object d = null;
+            // 1) el disfraz guardado (el que hizo Trick: cosmic_clone); 2) si no existe, la skin que viene en el plugin
+            String nombre = pl.getConfig().getString("clones.disfraz", "cosmic_clone");
+            if (nombre != null && !nombre.isBlank()) {
+                try {
+                    if (mGetCustom == null) mGetCustom = api.getMethod("getCustomDisguise", String.class);
+                    d = mGetCustom.invoke(null, nombre);
+                    if (d != null) estadoDisfraz = "disfraz guardado '" + nombre + "'";
+                } catch (Throwable ex) {
+                    estadoDisfraz = "no pude leer el disfraz guardado: " + causa(ex);
+                }
+            }
             String valor = pl.getConfig().getString("clones.skin_valor", SKIN_VALOR);
             String firma = pl.getConfig().getString("clones.skin_firma", SKIN_FIRMA);
             String nombreFalso = pl.getConfig().getString("clones.nombre", "Cosmic");
-            if (valor != null && !valor.isBlank()) {
+            if (d == null && valor != null && !valor.isBlank()) {
                 Class<?> pd = Class.forName("me.libraryaddict.disguise.disguisetypes.PlayerDisguise");
                 d = pd.getConstructor(String.class).newInstance(nombreFalso);
                 String json = "{\"id\":\"aa5064f0-539d-4baa-a5d8-c389ecbb4ae1\",\"name\":\"" + nombreFalso
                         + "\",\"properties\":[{\"name\":\"textures\",\"value\":\"" + valor + "\""
                         + (firma != null && !firma.isBlank() ? ",\"signature\":\"" + firma + "\"" : "") + "}]}";
                 pd.getMethod("setSkin", String.class).invoke(d, json);
-                estadoDisfraz = "disfraz de jugador con la skin del config";
-            } else {
-                String nombre = pl.getConfig().getString("clones.disfraz", "cosmic_clone");
-                if (mGetCustom == null) mGetCustom = api.getMethod("getCustomDisguise", String.class);
-                d = mGetCustom.invoke(null, nombre);
-                if (d == null) {
-                    estadoDisfraz = "no existe el disfraz guardado '" + nombre + "'";
-                    if (!avisoDisfraz) { avisoDisfraz = true; pl.getLogger().warning("Clones: " + estadoDisfraz + ". Se ven con armadura violeta."); }
-                    return null;
-                }
-                estadoDisfraz = "disfraz guardado '" + nombre + "'";
+                estadoDisfraz = "skin que viene en el plugin (no encontré el disfraz '" + nombre + "')";
             }
+            if (d == null) {
+                estadoDisfraz = "no existe el disfraz guardado '" + nombre + "'";
+                if (!avisoDisfraz) { avisoDisfraz = true; pl.getLogger().warning("Clones: " + estadoDisfraz + ". Se ven con armadura violeta."); }
+                return null;
+            }
+            // el disfraz guardado se comparte: cada clon necesita su copia
+            try { d = d.getClass().getMethod("clone").invoke(d); } catch (Exception ignored) { }
             try { d.getClass().getMethod("setNameVisible", boolean.class).invoke(d, false); } catch (Exception ignored) { }
             if (tam != 1.0) {
                 Object w = watcher(d);
