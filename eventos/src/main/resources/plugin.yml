@@ -1,0 +1,15 @@
+name: TOD4Eventos
+version: 1.0.0
+main: ar.tod4.eventos.TOD4Eventos
+api-version: '1.21'
+author: TrucOfDeath
+description: TrucOfDeath 4 - eventos (ofrendas con boss bar, lava que sube).
+softdepend: [Oraxen]
+permissions:
+  tod4eventos.admin:
+    default: op
+commands:
+  ofrenda:
+    description: Cofres de ofrenda (almas) que abren una puerta
+  lava:
+    description: Lava que sube por capas dentro de un volcan

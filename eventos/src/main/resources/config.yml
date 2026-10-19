@@ -1,0 +1,15 @@
+# TOD4Eventos
+ofrendas:
+  # texto de la boss bar: {titulo} {n} {total}
+  barra: "&c&l{titulo} &f{n} &7/ &f{total}"
+  color: RED            # PINK, BLUE, RED, GREEN, YELLOW, PURPLE, WHITE
+  sonido_entrega: "block.respawn_anchor.charge"
+  sonido_entrega2: "particle.soul_escape"
+  sonido_abrir: "block.end_portal.spawn"
+  bloques_por_tick: 40  # la puerta se borra de a poco, de arriba hacia abajo
+  ocultar_barra_seg: 6  # cuando se completa, la barra queda llena estos segundos
+
+lava:
+  segundos_por_capa: 20
+  max_bloques_capa: 5000   # si una capa necesita mas, la lava se esta escapando: se frena y avisa
+  bloques_por_tick: 1500
