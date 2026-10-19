@@ -80,6 +80,7 @@ public final class Clones implements Listener {
         final Frame[] frames = new Frame[BUFFER];
         long t = -1;                    // ultimo tick grabado
         long inmuneHasta;
+        Location portal;                // donde entro: ahi se abre el portal del que salen los clones
         final List<Clon> fila = new ArrayList<>();
 
         Sesion(Player p, String zona, boolean gigante) {
@@ -87,6 +88,7 @@ public final class Clones implements Listener {
             this.zona = zona;
             this.gigante = gigante;
             this.mundo = p.getWorld();
+            this.portal = p.getLocation().clone();
             int n = gigante ? Math.max(1, Math.min(10, cfgI("gigante_cantidad", 1))) : Math.max(1, Math.min(30, cfgI("cantidad", 10)));
             for (int i = 0; i < n; i++) { Clon c = new Clon(); c.atraso = objetivo(i); fila.add(c); }
         }
@@ -182,6 +184,13 @@ public final class Clones implements Listener {
         double alcance = Math.max(0, cfgD("velocidad_recuperar", 2.0) - 1.0);   // cuanto mas rapido va el que quedo atras
         long ahora = System.currentTimeMillis();
         boolean particulas = s.t % 2 == 0;
+        // el portal queda abierto en la entrada hasta que salio el ultimo clon
+        if (s.portal != null) {
+            boolean faltan = false;
+            for (Clon c : s.fila) if (c.host == null && c.volviendoHasta == 0) { faltan = true; break; }
+            if (faltan) { if (particulas) portal(s.portal, s.gigante, s.t); }
+            else s.portal = null;
+        }
         for (int i = 0; i < s.fila.size(); i++) {
             Clon c = s.fila.get(i);
             double obj = s.objetivo(i);
@@ -203,7 +212,7 @@ public final class Clones implements Listener {
                 crear(c, l, s.gigante);
                 rafaga(l, s.gigante);
                 sonido(l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
-                sonido(l, "aparece2", "block.fire.extinguish", 0.6, 0.5);
+                sonido(l, "aparece2", "block.amethyst_block.resonate", 0.8, 0.8);
             } else {
                 c.host.teleport(l);
             }
@@ -231,11 +240,19 @@ public final class Clones implements Listener {
             // el cuerpo se deshace en particulas (el gigante explota) y esas particulas viajan al final de la fila
             rafaga(cl, s.gigante);
             if (s.gigante) {
-                s.mundo.spawnParticle(Particle.EXPLOSION_EMITTER, cl.clone().add(0, 2, 0), 1);
-                sonido(cl, "explota", "entity.generic.explode", 1.2, 0.7);
+                // estallido cosmico (no una explosion de Minecraft): rafaga de viento, estrellas y anillo violeta
+                Location m = cl.clone().add(0, 2.5, 0);
+                s.mundo.spawnParticle(Particle.GUST, m, 3, 1.0, 1.0, 1.0, 0);
+                s.mundo.spawnParticle(Particle.END_ROD, m, 80, 0.3, 0.3, 0.3, 0.35);
+                for (int i = 0; i < 24; i++) {
+                    double ang = i * Math.PI / 12;
+                    s.mundo.spawnParticle(Particle.DUST, m.clone().add(Math.cos(ang) * 3, 0, Math.sin(ang) * 3), 3, 0.1, 0.1, 0.1, 0, VIOLETA);
+                }
+                sonido(cl, "explota", "entity.wind_charge.wind_burst", 1.5, 0.6);
+                sonido(cl, "explota2", "block.beacon.deactivate", 1.5, 1.4);
             }
             sonido(cl, "vuelve", "entity.illusioner.mirror_move", 1.0, 0.6);
-            sonido(cl, "vuelve2", "block.fire.extinguish", 0.8, 0.6);
+            sonido(cl, "vuelve2", "entity.breeze.shoot", 0.9, 0.7);
             sacar(c, false);
             s.fila.remove(c);
             s.fila.add(c);
@@ -249,6 +266,7 @@ public final class Clones implements Listener {
     /** Sonido configurable: clones.sonidos.<clave> = "sonido" (o "" para ninguno), clones.sonidos.<clave>_tono, _volumen. */
     private void sonido(Location l, String clave, String def, double vol, double tono) {
         String id = pl.getConfig().getString("clones.sonidos." + clave, def);
+        if ("block.fire.extinguish".equals(id)) id = def;   // el sonido viejo (de humo) pasa al nuevo, cosmico
         if (id == null || id.isBlank()) return;
         l.getWorld().playSound(l, id, SoundCategory.HOSTILE,
                 (float) pl.getConfig().getDouble("clones.sonidos." + clave + "_volumen", vol),
@@ -300,7 +318,8 @@ public final class Clones implements Listener {
         c.host = a;
         c.agachado = false;
         c.disfraz = disfrazar(a, tam);
-        if (c.disfraz == null) aspectoSinDisfraz(a);
+        // sin skin no se muestra ningun cuerpo: el clon queda solo como particulas
+        if (c.disfraz == null) a.setInvisible(true);
     }
 
     private boolean cfgB(String k, boolean def) { return pl.getConfig().getBoolean("clones." + k, def); }
@@ -362,6 +381,19 @@ public final class Clones implements Listener {
         Location c = l.clone().add(0, 0.9 * k, 0);
         l.getWorld().spawnParticle(Particle.DUST, c, (int) (3 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, VIOLETA);
         l.getWorld().spawnParticle(Particle.DUST, c, (int) (2 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, NEGRO);
+    }
+
+    /** Portal cosmico en la entrada: un anillo violeta que gira, del que salen los clones. */
+    private static void portal(Location l, boolean gigante, long t) {
+        double r = gigante ? 2.2 : 1.0;
+        World w = l.getWorld();
+        Location c = l.clone().add(0, gigante ? 2.5 : 1.0, 0);
+        for (int i = 0; i < 6; i++) {
+            double ang = t * 0.25 + i * Math.PI / 3;
+            Location q = c.clone().add(Math.cos(ang) * r, Math.sin(ang) * r, 0);
+            w.spawnParticle(Particle.DUST, q, 1, 0, 0, 0, 0, i % 2 == 0 ? VIOLETA : NEGRO);
+        }
+        w.spawnParticle(Particle.REVERSE_PORTAL, c, 4, r * 0.4, r * 0.4, 0.1, 0.02);
     }
 
     /** La "bola" de particulas que viaja al final de la fila despues de pegar. */

@@ -127,9 +127,11 @@ clones:
   # sonidos ("" = ninguno). Se puede cambiar el tono y el volumen con <clave>_tono y <clave>_volumen
   sonidos:
     aparece: "entity.illusioner.prepare_mirror"
-    aparece2: "block.fire.extinguish"
+    aparece2: "block.amethyst_block.resonate"
     vuelve: "entity.illusioner.mirror_move"
-    vuelve2: "block.fire.extinguish"
+    vuelve2: "entity.breeze.shoot"
+    explota: "entity.wind_charge.wind_burst"
+    explota2: "block.beacon.deactivate"
     ambiente: "particle.soul_escape"
 
 misiones:
