@@ -91,7 +91,7 @@ public final class Clones implements Listener {
 
         double objetivo(int i) {
             if (gigante) return cfgD("gigante_retraso_seg", 3.0) * 20.0;
-            return cfgD("retraso_seg", 2.0) * 20.0 + i * cfgD("separacion_seg", 0.5) * 20.0;
+            return cfgD("retraso_seg", 2.0) * 20.0 + i * cfgD("distancia_seg", 2.0) * 20.0;
         }
 
         Frame frame(long tick) {
@@ -177,7 +177,7 @@ public final class Clones implements Listener {
     private void avanzar(Player p, Sesion s) {
         s.t++;
         s.frames[(int) (s.t % BUFFER)] = new Frame(p.getLocation(), p.isSneaking());
-        double alcance = Math.max(0, cfgD("velocidad_alcance", 1.5) - 1.0);   // cuanto mas rapido va el que quedo atras
+        double alcance = Math.max(0, cfgD("velocidad_recuperar", 2.0) - 1.0);   // cuanto mas rapido va el que quedo atras
         long ahora = System.currentTimeMillis();
         boolean particulas = s.t % 2 == 0;
         for (int i = 0; i < s.fila.size(); i++) {

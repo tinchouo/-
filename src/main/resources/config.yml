@@ -110,9 +110,9 @@ clones:
   empujon: 0.7
   cantidad: 10                # modo fila
   retraso_seg: 2.0            # el primero de la fila
-  separacion_seg: 0.5         # cada uno de los siguientes, cuanto mas atras
+  distancia_seg: 2.0          # distancia entre un clon y el siguiente
   radio: 0.8
-  velocidad_alcance: 1.5      # el que se fue al final vuelve a su lugar un poco mas rapido
+  velocidad_recuperar: 2.0    # cuando uno se va al final, los demas van x2 hasta volver a quedar a su distancia
   gigante_retraso_seg: 3.0
   gigante_tamano: 3.0
   gigante_retroceso_seg: 2.0  # el gigante, al pegar, se va esto mas atras
