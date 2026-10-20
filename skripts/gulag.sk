@@ -28,6 +28,8 @@ options:
     cargas: 3
     distancia-llaves: 8
     radio-gente: 12
+    # cuantas llaves salen por ronda (tambien se cambia en el juego con /gulag llaves <n>)
+    llaves-por-ronda: 3
 
 # ------------------------------------------------------------ utilidades
 
@@ -59,6 +61,24 @@ function gulagChispas(l: location, tipo: text, n: number, r: number):
         draw 40 totem of undying particles with offset vector(0.4, 0.6, 0.4) with an extra value of 0.45 at {_l}
     else:
         draw 40 end rod particles with offset vector(0.4, 0.4, 0.4) with an extra value of 0.08 at {_l}
+
+function gulagCantLlaves() :: number:
+    if {gulag::cantllaves} is set:
+        return {gulag::cantllaves}
+    return {@llaves-por-ronda}
+
+function gulagVarita() :: item:
+    set {_v} to blaze rod named "&9&lVarita del Gulag"
+    set lore of {_v} to "&7Clic izquierdo: &fpos1" and "&7Clic derecho: &fpos2"
+    return {_v}
+
+function gulagMarcar(p: player, n: text, b: block):
+    set {_l} to location of {_b}
+    if {gulag::sel::%uuid of {_p}%::%{_n}%} is {_l}:
+        stop
+    set {gulag::sel::%uuid of {_p}%::%{_n}%} to {_l}
+    send "{@p}&a%{_n}% marcado en &f%x-coordinate of {_b}% %y-coordinate of {_b}% %z-coordinate of {_b}%&a." to {_p}
+    play sound "block.note_block.pling" with volume 0.6 with pitch 1.6 to {_p}
 
 function gulagAhora() :: number:
     return unix timestamp of now
@@ -109,7 +129,7 @@ function gulagGente(l: location) :: number:
     return {_n}
 
 # El punto con menos gente cerca, lejos de otras llaves y que no salió en la ronda anterior.
-function gulagElegir(relajar: boolean) :: text:
+function gulagElegir(relajar: number) :: text:
     if {lootgrupos::gulag::*} is set:
         loop {lootgrupos::gulag::*}:
             if {lootpuntos::%loop-index%} is set:
@@ -123,12 +143,13 @@ function gulagElegir(relajar: boolean) :: text:
         set {_n} to loop-value
         if {gulag::estaronda::%{_n}%} is set:
             continue
-        if {_relajar} is false:
+        if {_relajar} < 1:
             if {gulag::previos::%{_n}%} is set:
                 continue
         set {_l} to {lootpuntos::%{_n}%}
-        if gulagCerca({_l}) is true:
-            continue
+        if {_relajar} < 2:
+            if gulagCerca({_l}) is true:
+                continue
         set {_s} to gulagGente({_l}) + random number between 0 and 0.9
         if {_s} < {_puntaje}:
             set {_puntaje} to {_s}
@@ -190,12 +211,14 @@ function gulagRonda():
     loop {gulag::estaronda::*}:
         set {gulag::previos::%loop-index%} to true
     delete {gulag::estaronda::*}
-    set {_cant} to {gulag::cantllaves} ? 3
+    set {_cant} to gulagCantLlaves()
     set {_hechas} to 0
     loop {_cant} times:
-        set {_n} to gulagElegir(false)
+        set {_n} to gulagElegir(0)
         if {_n} is "":
-            set {_n} to gulagElegir(true)
+            set {_n} to gulagElegir(1)
+        if {_n} is "":
+            set {_n} to gulagElegir(2)
         if {_n} is not "":
             gulagCrearLlave({_n})
             add 1 to {_hechas}
@@ -385,7 +408,24 @@ every 5 ticks:
     set {_dz} to (z-coordinate of {_b} - z-coordinate of {_a} + 1) / 2
     draw 8 happy villager particles with offset vector({_dx}, {_dy}, {_dz}) at {_c}
 
+on left click:
+    if player's tool is gulagVarita():
+        cancel event
+        if player has permission "{@permiso}":
+            if clicked block is set:
+                gulagMarcar(player, "pos1", clicked block)
+
+on break:
+    if player's tool is gulagVarita():
+        cancel event
+
 on right click:
+    if player's tool is gulagVarita():
+        cancel event
+        if player has permission "{@permiso}":
+            if clicked block is set:
+                gulagMarcar(player, "pos2", clicked block)
+        stop
     if {gulag::fase} is not "jugando":
         stop
     if clicked block is not set:
@@ -716,12 +756,21 @@ command /gulag [<text>] [<text>]:
             stop
 
         if {_sub} is "llaves":
-            set {_n} to arg-2 parsed as integer
+            set {_n} to arg-2 parsed as number
             if {_n} is not set:
-                send "{@p}&7Uso: &e/gulag llaves <cantidad por ronda>"
+                send "{@p}&7Uso: &e/gulag llaves <cantidad por ronda> &7(ahora: &f%gulagCantLlaves()%&7)"
+                stop
+            set {_n} to rounded {_n}
+            if {_n} < 1:
+                send "{@p}&cTiene que ser al menos 1."
                 stop
             set {gulag::cantllaves} to {_n}
             send "{@p}&aAhora salen &f%{_n}% &allaves por ronda."
+            stop
+
+        if {_sub} is "varita":
+            give gulagVarita() to player
+            send "{@p}&aVarita: &fclic izquierdo &a= pos1, &fclic derecho &a= pos2. Después &f/gulag puerta <n> &ao &f/gulag zonaesp&a."
             stop
 
         if {_sub} is "texto" or "textoesp":
@@ -850,7 +899,7 @@ command /gulag [<text>] [<text>]:
                 set {_falta} to "%{_falta}% zonaesp"
             if {gulag::puerta::1::a} is not set:
                 set {_falta} to "%{_falta}% puertas"
-            send "{@p}&7Fase: &f%{_fase}% &7| ronda &f%{gulag::ronda} ? 0% &7| llaves por ronda &f%{gulag::cantllaves} ? 3%"
+            send "{@p}&7Fase: &f%{_fase}% &7| ronda &f%{gulag::ronda} ? 0% &7| llaves por ronda &f%gulagCantLlaves()%"
             send "{@p}&7En juego: &f%{gulag::n::juego} ? 0% &7| a salvo: &f%{gulag::n::salvos} ? 0% &7| llaves en el mapa: &f%size of {gulag::kids::*}% &7| puerta abierta: &f%{_puerta}%"
             if {_falta} is not "":
                 send "{@p}&cFalta configurar:&f%{_falta}%"
@@ -860,7 +909,7 @@ command /gulag [<text>] [<text>]:
         send "&9&lGULAG"
         send "&e/gulag agregar|sacar <jugador> &7- lista del gulag  &e/gulag lista|limpiar"
         send "&e/gulag spawn [radio] &7- spawn del mapa (donde estás)"
-        send "&e/gulag pos1|pos2 &7(mirando) + &e/gulag puerta <1|2|3> &7o &e/gulag zonaesp"
+        send "&e/gulag varita &7(o &e/gulag pos1|pos2 &7mirando) + &e/gulag puerta <1|2|3> &7o &e/gulag zonaesp"
         send "&e/gulag salida &7- donde van los salvados al final"
         send "&e/gulag punto <nombre> &7- punto de llave  &e/gulag llaves <n>"
         send "&e/gulag texto|textoesp <mensaje> &7- texto de la sidebar"

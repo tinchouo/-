@@ -34,7 +34,7 @@ jobs:
       - name: Arrancar y cargar los scripts
         run: |
           cd srv
-          (sleep 150; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
+          (sleep 120; echo "gulag llaves 5"; sleep 2; echo "gulag estado"; sleep 2; echo "gulag llaves"; sleep 3; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
           # todo lo de Skript sale como aviso para poder leerlo desde afuera
           # todos los problemas de Skript juntos en un solo aviso (GitHub corta a 10 avisos por paso)
           M=$( { grep -A2 "\.sk)" log.txt | grep -vE "^--$" | sed -E 's/^\[[0-9:]+ INFO\]: +//' | grep -vE "^Line: " | tr '\n' ' ' | sed 's/\[Skript\]/\n/g' | head -c 60000 | tr '\n' '#'; } || true)
@@ -42,4 +42,5 @@ jobs:
           grep -iE "loaded [0-9]+ scripts?|encountered" log.txt | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
           if grep -q "\.sk)" log.txt; then echo "::error::Hay problemas en los scripts (ver el aviso)"; exit 1; fi
+          grep -E "GULAG|gulag" log.txt | grep -vE "\.sk|Loading|Line" | tail -8 | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
           echo "::notice::Scripts sin errores"

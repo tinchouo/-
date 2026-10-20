@@ -16,7 +16,7 @@ import org.bukkit.event.server.TabCompleteEvent;
  */
 public final class GulagTab implements Listener {
 
-    private static final List<String> SUBS = List.of("agregar", "sacar", "lista", "limpiar", "pos1", "pos2", "puerta", "zonaesp",
+    private static final List<String> SUBS = List.of("agregar", "sacar", "lista", "limpiar", "varita", "pos1", "pos2", "puerta", "zonaesp",
             "spawn", "salida", "punto", "llaves", "texto", "textoesp", "preparar", "espectadores", "empezar", "ronda", "fin",
             "liberar", "estado");
 
