@@ -6,6 +6,10 @@ on:
 jobs:
   probar:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        skript: ['2.10.2', '2.11.2']
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -18,8 +22,8 @@ jobs:
           if [ -z "$URL" ] || [ "$URL" = "null" ]; then echo "::error::No pude obtener Paper: ${J:0:300}"; exit 1; fi
           curl -sL -o paper.jar "$URL"
           mkdir -p plugins/Skript/scripts
-          R=$(curl -s https://api.github.com/repos/SkriptLang/Skript/releases)
-          U=$(echo "$R" | jq -r '[.[] | select(.prerelease==false)][0].assets[] | select(.name|endswith(".jar")) | .browser_download_url' | head -1)
+          R=$(curl -s https://api.github.com/repos/SkriptLang/Skript/releases/tags/${{ matrix.skript }})
+          U=$(echo "$R" | jq -r '.assets[] | select(.name|endswith(".jar")) | .browser_download_url' | head -1)
           if [ -z "$U" ]; then echo "::error::No pude obtener Skript"; exit 1; fi
           echo "::notice::Paper $URL | Skript $U"
           curl -sL -o plugins/Skript.jar "$U"
