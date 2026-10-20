@@ -645,10 +645,22 @@ command /gulag [<text>] [<text>]:
                 stop
             set {_u} to uuid of {_o}
             if {_sub} is "agregar":
+                if {gulag::lista::%{_u}%} is set:
+                    send "{@p}&e%name of {_o}% &fya estaba en la lista."
+                    stop
                 set {gulag::lista::%{_u}%} to name of {_o}
                 delete {gulag::salvado::%{_u}%}
                 send "{@p}&a%name of {_o}% &fentró a la lista del gulag."
+                # si el gulag ya esta en curso y esta conectado, va directo al spawn del mapa
+                if {gulag::fase} is "preparado" or "jugando":
+                    set {_pj} to gulagJugadorPorUuid({_u})
+                    if {_pj} is set:
+                        gulagAlSpawn({_pj})
+                        send "{@p}&7El gulag ya está en curso: lo mandé al spawn del mapa."
             else:
+                if {gulag::lista::%{_u}%} is not set:
+                    send "{@p}&e%name of {_o}% &fno estaba en la lista."
+                    stop
                 delete {gulag::lista::%{_u}%}
                 delete {gulag::salvado::%{_u}%}
                 delete {gulag::preparado::%{_u}%}
@@ -663,9 +675,9 @@ command /gulag [<text>] [<text>]:
             send "{@p}&9Lista del gulag (%size of {gulag::lista::*}%):"
             loop {gulag::lista::*}:
                 if {gulag::salvado::%loop-index%} is set:
-                    send " &a✔ &f%loop-value%"
+                    send " &9• &f%loop-value% &a(a salvo)"
                 else:
-                    send " &c✖ &f%loop-value%"
+                    send " &9• &f%loop-value%"
             stop
 
         if {_sub} is "limpiar":
@@ -782,6 +794,9 @@ command /gulag [<text>] [<text>]:
             stop
 
         if {_sub} is "preparar":
+            if {gulag::fase} is "jugando" or "fin":
+                send "{@p}&cYa hay un gulag en curso. Termínalo con &f/gulag fin &cy &f/gulag liberar&c."
+                stop
             if {gulag::spawn} is not set:
                 send "{@p}&cFalta el spawn: &f/gulag spawn [radio]"
                 stop
@@ -798,6 +813,9 @@ command /gulag [<text>] [<text>]:
             stop
 
         if {_sub} is "espectadores":
+            if {gulag::fase} is "fin":
+                send "{@p}&cEl gulag ya terminó."
+                stop
             if {gulag::esp::centro} is not set:
                 send "{@p}&cFalta la zona: &f/gulag pos1&c, &fpos2 &cy &f/gulag zonaesp"
                 stop
@@ -819,7 +837,16 @@ command /gulag [<text>] [<text>]:
                 send "{@p}&cPrimero &f/gulag preparar&c."
                 stop
             if {gulag::puerta::1::a} is not set:
-                send "{@p}&cFalta al menos una puerta: &f/gulag puerta 1"
+                if {gulag::puerta::2::a} is not set:
+                    if {gulag::puerta::3::a} is not set:
+                        send "{@p}&cNo hay ninguna puerta: &f/gulag varita &cy &f/gulag puerta 1"
+                        stop
+            if {lootgrupos::gulag::*} is not set:
+                if {lootpuntos::*} is not set:
+                    send "{@p}&cNo hay puntos donde puedan salir llaves: &f/gulag punto <nombre>"
+                    stop
+            if {gulag::salida} is not set:
+                send "{@p}&cFalta el lugar adonde van los que sobreviven: &f/gulag salida &c(antes de empezar)."
                 stop
             set {gulag::fase} to "jugando"
             set {gulag::ronda} to 0
@@ -862,6 +889,17 @@ command /gulag [<text>] [<text>]:
             stop
 
         if {_sub} is "liberar":
+            if {gulag::fase} is "jugando":
+                send "{@p}&cEl gulag sigue en juego: primero &f/gulag fin&c."
+                stop
+            if {gulag::fase} is not set:
+                if {gulag::espgm::*} is not set:
+                    send "{@p}&cNo hay ningún gulag para liberar."
+                    stop
+            if {gulag::salvado::*} is set:
+                if {gulag::salida} is not set:
+                    send "{@p}&cNo hay lugar de salida para los que sobrevivieron: &f/gulag salida &c(parado donde quieras) y repite &f/gulag liberar&c."
+                    stop
             gulagBorrarLlaves()
             # los salvados van a la salida (si estan desconectados, cuando entren)
             loop {gulag::salvado::*}:

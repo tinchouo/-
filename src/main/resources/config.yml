@@ -9,6 +9,9 @@ config_version: 12
 sidebar:
   activa: true
   titulo: "&f&r &#55ff55&lT&#4ef14e&lR&#47e447&lU&#40d640&lC&#39c939&lO&#33bb33&lF&#2cae2c&lD&#25a025&lE&#1e931e&lA&#178517&lT&#117811&lH &f&l4 &f&r"
+  # logos del titulo durante el Momento Truco (rojo) y el gulag (azul): caracteres del resource pack
+  logo_rojo: "\ue901"
+  logo_azul: "\ue902"
   jugadores_max: 100
   # {jugador} {ping} {dia} {mundo} {jugadores} {equipo} | {separador} = la linea gris
   #  (si una linea tiene {equipo} y el jugador no tiene equipo, esa linea no se muestra)

@@ -47,7 +47,7 @@ public final class Sidebar implements Listener {
     private final Map<UUID, Scoreboard> boards = new HashMap<>();
     private final Map<UUID, String> tabCache = new HashMap<>();
     private final Map<UUID, List<String>> lineasCache = new HashMap<>();
-    private final Set<UUID> tituloTruco = new HashSet<>();
+    private final Map<UUID, String> tituloModo = new HashMap<>();   // normal | truco | gulag
     private final Random rnd = new Random();
     private String calma = null;
     private long calmaHasta = 0;
@@ -81,7 +81,7 @@ public final class Sidebar implements Listener {
         boards.remove(e.getPlayer().getUniqueId());
         tabCache.remove(e.getPlayer().getUniqueId());
         lineasCache.remove(e.getPlayer().getUniqueId());
-        tituloTruco.remove(e.getPlayer().getUniqueId());
+        tituloModo.remove(e.getPlayer().getUniqueId());
     }
 
     private void attach(Player p) {
@@ -128,14 +128,32 @@ public final class Sidebar implements Listener {
 
     // ================================================================= sidebar
 
+    /** TRUCOFDEATH en degrade (como el verde de siempre) con el logo del color a cada lado. */
+    private String titulo(String modo) {
+        if (modo.equals("normal")) return pl.getConfig().getString("sidebar.titulo", "&a&lTOD4");
+        boolean rojo = modo.equals("truco");
+        String logo = pl.getConfig().getString(rojo ? "sidebar.logo_rojo" : "sidebar.logo_azul", rojo ? "\ue901" : "\ue902");
+        int[] a = rojo ? new int[]{0xff, 0x55, 0x55} : new int[]{0x55, 0xaa, 0xff};
+        int[] b = rojo ? new int[]{0x78, 0x11, 0x11} : new int[]{0x11, 0x33, 0x88};
+        String txt = "TRUCOFDEATH";
+        StringBuilder sb = new StringBuilder("&f" + logo + "&r ");
+        for (int i = 0; i < txt.length(); i++) {
+            double t = i / (double) (txt.length() - 1);
+            int r = (int) Math.round(a[0] + (b[0] - a[0]) * t), g = (int) Math.round(a[1] + (b[1] - a[1]) * t), bl = (int) Math.round(a[2] + (b[2] - a[2]) * t);
+            sb.append(String.format("&#%02x%02x%02x&l", r, g, bl)).append(txt.charAt(i));
+        }
+        sb.append(" &f&l4 &f").append(logo).append("&r");
+        return sb.toString();
+    }
+
     private void render(Player p, Scoreboard sb) {
         Objective o = sb.getObjective("tod4");
         if (o == null) return;
-        // durante el Momento Truco el titulo cambia (calavera roja, MOMENTO TRUCO, calavera roja)
-        boolean truco = pl.momentos() != null && pl.momentos().enCurso();
-        if (truco != tituloTruco.contains(p.getUniqueId())) {
-            o.displayName(Txt.c(truco ? Momentos.tituloSidebar() : pl.getConfig().getString("sidebar.titulo", "&a&lTOD4")));
-            if (truco) tituloTruco.add(p.getUniqueId()); else tituloTruco.remove(p.getUniqueId());
+        // el titulo es el mismo TRUCOFDEATH 4 con su logo, pero en rojo durante el Momento Truco y en azul en el gulag
+        String modo = pl.momentos() != null && pl.momentos().enCurso() ? "truco" : ar.tod4.hook.Gulag.activo() ? "gulag" : "normal";
+        if (!modo.equals(tituloModo.get(p.getUniqueId()))) {
+            o.displayName(Txt.c(titulo(modo)));
+            tituloModo.put(p.getUniqueId(), modo);
         }
         List<String> lines = build(p);
         if (lines.equals(lineasCache.get(p.getUniqueId()))) return;
