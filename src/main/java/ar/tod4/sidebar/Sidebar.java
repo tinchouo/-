@@ -162,6 +162,8 @@ public final class Sidebar implements Listener {
     private List<String> build(Player p) {
         // Momento Truco: sidebar nueva que reemplaza todo (sin perfil, mundo ni misiones)
         if (pl.momentos() != null && pl.momentos().enCurso()) return pl.momentos().sidebar(p, separador(), anchoMax());
+        // Gulag (script gulag.sk): su propia sidebar en azul
+        if (ar.tod4.hook.Gulag.activo()) return ar.tod4.hook.Gulag.sidebar(p, separador(), anchoMax());
         ConfigurationSection c = pl.getConfig().getConfigurationSection("sidebar");
         List<String> out = new ArrayList<>();
         String equipo = pl.equipos() == null ? null : pl.equipos().sidebar(p.getUniqueId());
@@ -277,6 +279,10 @@ public final class Sidebar implements Listener {
             if (!pre.equals(tm.prefix())) tm.prefix(pre);
             net.kyori.adventure.text.format.NamedTextColor col = pl.equipos() == null ? null : pl.equipos().color(t.getUniqueId());
             if (col == null) col = net.kyori.adventure.text.format.NamedTextColor.WHITE;
+            // gulag: el brillo del que tiene la llave es amarillo mientras es inmune y blanco despues
+            String llave = ar.tod4.hook.Gulag.llave(t.getUniqueId());
+            if ("inmune".equals(llave)) col = net.kyori.adventure.text.format.NamedTextColor.YELLOW;
+            else if ("si".equals(llave)) col = net.kyori.adventure.text.format.NamedTextColor.WHITE;
             if (!tm.hasColor() || !col.equals(tm.color())) tm.color(col);
             if (!tm.hasEntry(t.getName())) tm.addEntry(t.getName());
         }

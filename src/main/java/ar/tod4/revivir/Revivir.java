@@ -486,6 +486,8 @@ public final class Revivir implements Listener {
         net.kyori.adventure.text.Component vanilla = e.deathMessage();
         net.kyori.adventure.text.Component propio = ar.tod4.core.Causas.sacar(v.getUniqueId());   // causa anotada por un cambio (lava, etc.)
         if (propio != null) vanilla = propio;
+        // gulag: solo "X murió"
+        if (ar.tod4.hook.Gulag.muereEnGulag(v.getUniqueId())) vanilla = Txt.c(n + " murió");
         if (vanilla == null) vanilla = Txt.c(n + " ha muerto");
         e.deathMessage(Txt.c("&4☠ ").append(colorear(vanilla, net.kyori.adventure.text.format.NamedTextColor.GRAY,
                 net.kyori.adventure.text.format.NamedTextColor.RED)));

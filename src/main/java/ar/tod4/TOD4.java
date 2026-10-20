@@ -72,6 +72,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         equipos = new ar.tod4.equipos.Equipos(this);
         new ar.tod4.core.Chat(this);
         clones = new ar.tod4.clones.Clones(this);
+        Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             new Papi(this).register();
