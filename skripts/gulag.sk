@@ -1,0 +1,873 @@
+# ============================================================
+#  GULAG - TOD4
+#  Requiere: Skript (sin addons). Usa los puntos del script de loot flotante de Trick
+#  ({lootpuntos::*} y el grupo "gulag") para que aparezcan las llaves.
+#  La sidebar, el color del brillo y el mensaje de muerte los pone el plugin TOD4 leyendo estas variables.
+#
+#  PASOS:
+#   1) /gulag agregar <jugador>  (los que juegan)       /gulag lista
+#   2) /gulag spawn [radio]       (parado en el spawn del mapa)
+#      /gulag pos1 + pos2 + /gulag puerta <1|2|3>   (mirando las esquinas de cada puerta)
+#      /gulag pos1 + pos2 + /gulag zonaesp          (zona de espectadores)
+#      /gulag salida                (donde aparecen los que se salvaron al final)
+#      /gulag punto <nombre>        (puntos donde pueden salir llaves)
+#   3) /gulag preparar     -> los de la lista van al spawn, sin daño ni hambre
+#      /gulag espectadores -> el resto pasa a espectador en la zona
+#   4) /gulag empezar      -> rugido + titulo, y a los 3 s salen las llaves (ronda 1)
+#      /gulag ronda        -> nuevas llaves + cargas de viento hasta 3
+#   5) /gulag fin          -> titulo, y mueren uno cada 5 s los que no se salvaron
+#   6) /gulag liberar      -> espectadores a su lugar, salvados a la salida
+# ============================================================
+
+options:
+    permiso: gulag.admin
+    p: &8[&9&lGULAG&8] &r
+    golpes: 3
+    inmune: 3
+    radio-recogida: 1.6
+    cargas: 3
+    distancia-llaves: 8
+    radio-gente: 12
+
+# ------------------------------------------------------------ utilidades
+
+function gulagLlave() :: item:
+    return trial key named "&c&lLLAVE DEL GULAG"
+
+function gulagEsJugador(p: player) :: boolean:
+    if {gulag::lista::%uuid of {_p}%} is not set:
+        return false
+    if {gulag::salvado::%uuid of {_p}%} is set:
+        return false
+    return true
+
+function gulagContar():
+    set {_j} to 0
+    set {_s} to 0
+    loop {gulag::lista::*}:
+        if {gulag::salvado::%loop-index%} is set:
+            add 1 to {_s}
+        else:
+            add 1 to {_j}
+    set {gulag::n::juego} to {_j}
+    set {gulag::n::salvos} to {_s}
+    set {gulag::n::llaves} to size of {gulag::kids::*}
+
+function gulagAhora() :: number:
+    return unix timestamp of now
+
+# ------------------------------------------------------------ llave en mano: brillo e inmunidad
+
+function gulagDarLlave(p: player, robada: boolean):
+    set {_u} to uuid of {_p}
+    give gulagLlave() to {_p}
+    set {gulag::llave::%{_u}%} to "inmune"
+    set {gulag::inmuneHasta::%{_u}%} to gulagAhora() + {@inmune}
+    delete {gulag::golpes::%{_u}%::*}
+    execute console command "effect give %name of {_p}% minecraft:glowing infinite 0 true"
+    set {_n} to {@inmune}
+    while {_n} > 0:
+        if {gulag::llave::%{_u}%} is not "inmune":
+            stop
+        send action bar "&e⛨ &fInmune: &e%{_n}%" to {_p}
+        wait 1 second
+        remove 1 from {_n}
+    if {gulag::llave::%{_u}%} is "inmune":
+        set {gulag::llave::%{_u}%} to "si"
+
+function gulagSacarLlave(p: player):
+    set {_u} to uuid of {_p}
+    remove all gulagLlave() from {_p}'s inventory
+    delete {gulag::llave::%{_u}%}
+    delete {gulag::inmuneHasta::%{_u}%}
+    execute console command "effect clear %name of {_p}% minecraft:glowing"
+
+# ------------------------------------------------------------ llaves flotando
+
+function gulagCerca(l: location) :: boolean:
+    loop {gulag::kids::*}:
+        set {_kl} to {gulag::k::%loop-value%::loc}
+        if world of {_kl} is world of {_l}:
+            if distance between {_kl} and {_l} < {@distancia-llaves}:
+                return true
+    return false
+
+function gulagGente(l: location) :: number:
+    set {_n} to 0
+    loop all players:
+        if gulagEsJugador(loop-player) is true:
+            if world of loop-player is world of {_l}:
+                if distance between loop-player and {_l} <= {@radio-gente}:
+                    add 1 to {_n}
+    return {_n}
+
+# El punto con menos gente cerca, lejos de otras llaves y que no salió en la ronda anterior.
+function gulagElegir(relajar: boolean) :: text:
+    if {lootgrupos::gulag::*} is set:
+        loop {lootgrupos::gulag::*}:
+            if {lootpuntos::%loop-index%} is set:
+                add loop-index to {_cand::*}
+    else:
+        loop {lootpuntos::*}:
+            add loop-index to {_cand::*}
+    set {_mejor} to ""
+    set {_puntaje} to 999999
+    loop {_cand::*}:
+        set {_n} to loop-value
+        if {gulag::estaronda::%{_n}%} is set:
+            continue
+        if {_relajar} is false:
+            if {gulag::previos::%{_n}%} is set:
+                continue
+        set {_l} to {lootpuntos::%{_n}%}
+        if gulagCerca({_l}) is true:
+            continue
+        set {_s} to gulagGente({_l}) + random number between 0 and 0.9
+        if {_s} < {_puntaje}:
+            set {_puntaje} to {_s}
+            set {_mejor} to {_n}
+    return {_mejor}
+
+function gulagCrearLlave(n: text):
+    set {_loc} to {lootpuntos::%{_n}%}
+    add 1 to y-coordinate of {_loc}
+    add 1 to {gulag::contador}
+    set {_id} to "%{gulag::contador}%"
+    spawn an item display at {_loc}
+    set {_d} to last spawned entity
+    set the item of {_d} to gulagLlave()
+    set billboard of {_d} to fixed
+    add "gulag_ent" to scoreboard tags of {_d}
+    add "gulagk_%{_id}%" to scoreboard tags of {_d}
+    set {_lt} to {_loc}
+    add 0.55 to y-coordinate of {_lt}
+    spawn a text display at {_lt}
+    set {_td} to last spawned entity
+    set billboard of {_td} to center
+    set text of {_td} to "&c&lLLAVE DEL GULAG"
+    add "gulag_ent" to scoreboard tags of {_td}
+    add "gulagk_%{_id}%" to scoreboard tags of {_td}
+    # brillo amarillo que se ve desde lejos y a traves de las paredes
+    execute console command "execute as @e[tag=gulagk_%{_id}%,type=minecraft:item_display] run data merge entity @s {Glowing:1b,glow_color_override:16766720,view_range:6f}"
+    add {_id} to {gulag::kids::*}
+    set {gulag::k::%{_id}%::loc} to {_loc}
+    set {gulag::k::%{_id}%::e} to {_d}
+    set {gulag::k::%{_id}%::te} to {_td}
+    set {gulag::k::%{_id}%::t} to 0
+    set {gulag::k::%{_id}%::punto} to {_n}
+    set {gulag::estaronda::%{_n}%} to true
+    play sound "block.beacon.activate" with volume 0.8 with pitch 1.6 at {_loc}
+    play sound "entity.evoker.cast_spell" with volume 0.6 with pitch 1.2 at {_loc}
+    draw 40 end rod particles with offset vector(0.4, 0.4, 0.4) with an extra value of 0.08 at {_loc}
+
+function gulagBorrarLlave(id: text):
+    loop all entities:
+        if scoreboard tags of loop-entity contains "gulagk_%{_id}%":
+            delete loop-entity
+    remove {_id} from {gulag::kids::*}
+    delete {gulag::k::%{_id}%::*}
+
+function gulagBorrarLlaves():
+    loop {gulag::kids::*}:
+        add loop-value to {_ids::*}
+    loop {_ids::*}:
+        gulagBorrarLlave(loop-value)
+    delete {gulag::kids::*}
+
+function gulagRonda():
+    if {gulag::fase} is not "jugando":
+        stop
+    add 1 to {gulag::ronda}
+    # los de la ronda anterior no se repiten
+    delete {gulag::previos::*}
+    loop {gulag::estaronda::*}:
+        set {gulag::previos::%loop-index%} to true
+    delete {gulag::estaronda::*}
+    set {_cant} to {gulag::cantllaves} ? 3
+    set {_hechas} to 0
+    loop {_cant} times:
+        set {_n} to gulagElegir(false)
+        if {_n} is "":
+            set {_n} to gulagElegir(true)
+        if {_n} is not "":
+            gulagCrearLlave({_n})
+            add 1 to {_hechas}
+    broadcast "&9⚔ &fRonda %{gulag::ronda}%: &9aparecieron %{_hechas}% llaves&f."
+    loop all players:
+        play sound "block.bell.use" with volume 1 with pitch 0.6 to loop-player
+        if gulagEsJugador(loop-player) is true:
+            set {_tiene} to amount of wind charge in loop-player's inventory
+            if {_tiene} < {@cargas}:
+                give ({@cargas} - {_tiene}) of wind charge to loop-player
+    gulagContar()
+    if {_hechas} < {_cant}:
+        loop all players:
+            if loop-player has permission "{@permiso}":
+                send "{@p}&cSolo había lugar para %{_hechas}% llaves (faltan puntos: &f/gulag punto <nombre>&c)." to loop-player
+
+# ------------------------------------------------------------ cada tick: llaves flotando y recogida
+
+every tick:
+    if {gulag::kids::*} is not set:
+        stop
+    loop {gulag::kids::*}:
+        set {_id} to loop-value
+        set {_e} to {gulag::k::%{_id}%::e}
+        if {_e} is not set:
+            add {_id} to {_borrar::*}
+            continue
+        add 1 to {gulag::k::%{_id}%::t}
+        set {_t} to {gulag::k::%{_id}%::t}
+        set {_base} to {gulag::k::%{_id}%::loc}
+        set {_pos} to {_base}
+        add sin({_t} * 4) * 0.08 to y-coordinate of {_pos}
+        set yaw of {_pos} to {_t} * 4
+        teleport {_e} to {_pos}
+        set {_te} to {gulag::k::%{_id}%::te}
+        if {_te} is set:
+            set {_pt} to {_pos}
+            add 0.55 to y-coordinate of {_pt}
+            teleport {_te} to {_pt}
+        if mod({_t}, 2) is 0:
+            set {_a} to {_t} * 10
+            set {_p1} to {_pos}
+            add cos({_a}) * 0.5 to x-coordinate of {_p1}
+            add sin({_a}) * 0.5 to z-coordinate of {_p1}
+            draw an end rod particle with an extra value of 0 at {_p1}
+        if mod({_t}, 60) is 0:
+            play sound "block.amethyst_block.chime" with volume 0.5 with pitch 1.3 at {_pos}
+        if {gulag::fase} is "jugando":
+            set {_quien} to gulagQuienAgarra({_pos})
+            if {_quien} is set:
+                add {_id} to {_borrar::*}
+                set {gulag::estaronda::%{gulag::k::%{_id}%::punto}%} to true
+                play sound "entity.player.levelup" with volume 1 with pitch 1.2 at {_pos}
+                play sound "item.totem.use" with volume 0.5 with pitch 1.4 at {_pos}
+                draw 40 totem of undying particles with offset vector(0.4, 0.6, 0.4) with an extra value of 0.45 at {_pos}
+                broadcast "&e✦ &f%name of {_quien}% &eagarró una llave."
+                gulagDarLlave({_quien}, false)
+    loop {_borrar::*}:
+        gulagBorrarLlave(loop-value)
+    if {_borrar::*} is set:
+        gulagContar()
+
+# El jugador que agarra la llave (el mas cerca, en juego y sin otra llave), o nada.
+function gulagQuienAgarra(pos: location) :: player:
+    set {_dmin} to 99
+    loop all players in world of {_pos}:
+        if gulagEsJugador(loop-player) is true:
+            if gamemode of loop-player is not spectator:
+                if {gulag::llave::%uuid of loop-player%} is not set:
+                    set {_c} to location of loop-player
+                    add 0.9 to y-coordinate of {_c}
+                    set {_d} to distance between {_c} and {_pos}
+                    if {_d} <= {@radio-recogida}:
+                        if {_d} < {_dmin}:
+                            set {_dmin} to {_d}
+                            set {_p} to loop-player
+    return {_p}
+
+# ------------------------------------------------------------ cada segundo: mensajes, puertas y zona de espectadores
+
+every second:
+    if {gulag::fase} is not set:
+        stop
+    # el que tiene la llave (ya no inmune) ve siempre a donde ir
+    loop all players:
+        if {gulag::llave::%uuid of loop-player%} is "si":
+            send action bar "&e✦ &fTienes una llave: &e¡busca una puerta para escapar!" to loop-player
+    # los espectadores no se pueden ir de la zona
+    if {gulag::esp::a} is set:
+        loop all players:
+            set {_u} to uuid of loop-player
+            if {gulag::espgm::%{_u}%} is set:
+                gulagEnZona(loop-player)
+            else if {gulag::salvado::%{_u}%} is set:
+                if gamemode of loop-player is spectator:
+                    gulagEnZona(loop-player)
+
+function gulagEnZona(p: player):
+    if gamemode of {_p} is not spectator:
+        stop
+    set {_a} to {gulag::esp::a}
+    set {_b} to {gulag::esp::b}
+    set {_l} to location of {_p}
+    if world of {_l} is world of {_a}:
+        if x-coordinate of {_l} >= x-coordinate of {_a}:
+            if x-coordinate of {_l} <= x-coordinate of {_b} + 1:
+                if y-coordinate of {_l} >= y-coordinate of {_a}:
+                    if y-coordinate of {_l} <= y-coordinate of {_b} + 1:
+                        if z-coordinate of {_l} >= z-coordinate of {_a}:
+                            if z-coordinate of {_l} <= z-coordinate of {_b} + 1:
+                                stop
+    teleport {_p} to {gulag::esp::centro}
+
+# ------------------------------------------------------------ puertas
+
+function gulagPuertaDe(b: block) :: number:
+    loop 3 times:
+        set {_i} to loop-number
+        if {gulag::puerta::%{_i}%::a} is set:
+            set {_a} to {gulag::puerta::%{_i}%::a}
+            set {_c} to {gulag::puerta::%{_i}%::b}
+            if world of {_b} is world of {_a}:
+                if x-coordinate of {_b} >= x-coordinate of {_a}:
+                    if x-coordinate of {_b} <= x-coordinate of {_c}:
+                        if y-coordinate of {_b} >= y-coordinate of {_a}:
+                            if y-coordinate of {_b} <= y-coordinate of {_c}:
+                                if z-coordinate of {_b} >= z-coordinate of {_a}:
+                                    if z-coordinate of {_b} <= z-coordinate of {_c}:
+                                        return {_i}
+    return 0
+
+function gulagCartel(i: number):
+    loop all entities:
+        if scoreboard tags of loop-entity contains "gulagp_%{_i}%":
+            delete loop-entity
+    if {gulag::puerta::%{_i}%::a} is not set:
+        stop
+    set {_a} to {gulag::puerta::%{_i}%::a}
+    set {_b} to {gulag::puerta::%{_i}%::b}
+    set {_l} to {_a}
+    set x-coordinate of {_l} to (x-coordinate of {_a} + x-coordinate of {_b} + 1) / 2
+    set y-coordinate of {_l} to y-coordinate of {_b} + 1.6
+    set z-coordinate of {_l} to (z-coordinate of {_a} + z-coordinate of {_b} + 1) / 2
+    spawn a text display at {_l}
+    set {_td} to last spawned entity
+    set billboard of {_td} to center
+    if {gulag::abierta} is {_i}:
+        set text of {_td} to "&a&lPUERTA %{_i}%"
+    else:
+        set text of {_td} to "&c&lPUERTA %{_i}%"
+    add "gulag_ent" to scoreboard tags of {_td}
+    add "gulagp_%{_i}%" to scoreboard tags of {_td}
+
+function gulagCarteles():
+    loop 3 times:
+        gulagCartel(loop-number)
+
+# Abre una puerta al azar distinta de la que estaba abierta.
+function gulagAbrirOtra() :: number:
+    loop 3 times:
+        if {gulag::puerta::%loop-number%::a} is set:
+            if loop-number is not {gulag::abierta}:
+                add loop-number to {_op::*}
+    if {_op::*} is not set:
+        return {gulag::abierta} ? 0
+    set {_r} to random integer between 1 and size of {_op::*}
+    set {_n} to {_op::%{_r}%}
+    set {gulag::abierta} to {_n}
+    return {_n}
+
+every 5 ticks:
+    if {gulag::fase} is not "jugando":
+        stop
+    set {_i} to {gulag::abierta}
+    if {_i} is not set:
+        stop
+    if {gulag::puerta::%{_i}%::a} is not set:
+        stop
+    set {_a} to {gulag::puerta::%{_i}%::a}
+    set {_b} to {gulag::puerta::%{_i}%::b}
+    set {_c} to {_a}
+    set x-coordinate of {_c} to (x-coordinate of {_a} + x-coordinate of {_b} + 1) / 2
+    set y-coordinate of {_c} to (y-coordinate of {_a} + y-coordinate of {_b} + 1) / 2
+    set z-coordinate of {_c} to (z-coordinate of {_a} + z-coordinate of {_b} + 1) / 2
+    set {_dx} to (x-coordinate of {_b} - x-coordinate of {_a} + 1) / 2
+    set {_dy} to (y-coordinate of {_b} - y-coordinate of {_a} + 1) / 2
+    set {_dz} to (z-coordinate of {_b} - z-coordinate of {_a} + 1) / 2
+    draw 8 happy villager particles with offset vector({_dx}, {_dy}, {_dz}) at {_c}
+
+on right click:
+    if {gulag::fase} is not "jugando":
+        stop
+    if clicked block is not set:
+        stop
+    set {_i} to gulagPuertaDe(clicked block)
+    if {_i} is 0:
+        stop
+    cancel event
+    if gulagEsJugador(player) is false:
+        stop
+    if {_i} is not {gulag::abierta}:
+        send action bar "&cEsta puerta está cerrada." to player
+        stop
+    if {gulag::llave::%uuid of player%} is not set:
+        send action bar "&cNecesitas una llave para escapar." to player
+        play sound "block.iron_door.close" with volume 0.6 with pitch 1.4 to player
+        stop
+    gulagEscapar(player, {_i})
+
+function gulagEscapar(p: player, i: number):
+    set {_u} to uuid of {_p}
+    gulagSacarLlave({_p})
+    set {gulag::salvado::%{_u}%} to true
+    set gamemode of {_p} to spectator
+    if {gulag::esp::centro} is set:
+        teleport {_p} to {gulag::esp::centro}
+    send title "&a&l¡SOBREVIVISTE!" with subtitle "&7Escapaste del Gulag" to {_p} for 3 seconds
+    play sound "ui.toast.challenge_complete" with volume 1 with pitch 1 to {_p}
+    broadcast "&a✔ &f%name of {_p}% &asobrevivió al Gulag."
+    set {_nueva} to gulagAbrirOtra()
+    if {_nueva} is not 0:
+        if {_nueva} is not {_i}:
+            broadcast "&6» &fSe cerró la &c&lPUERTA %{_i}% &fy se abrió la &a&lPUERTA %{_nueva}%&f."
+    loop all players:
+        play sound "block.iron_door.open" with volume 1 with pitch 0.7 to loop-player
+    gulagCarteles()
+    gulagContar()
+
+# ------------------------------------------------------------ sin daño ni hambre, y robar la llave
+
+on damage of player:
+    if {gulag::fase} is not set:
+        stop
+    set {_victima} to victim
+    set {_v} to uuid of {_victima}
+    if {gulag::lista::%{_v}%} is not set:
+        stop
+    if {gulag::muere::%{_v}%} is set:
+        stop
+    # sin daño ni animacion de golpe (tampoco caidas ni las mecanicas de los dias)
+    cancel event
+    if {gulag::fase} is not "jugando":
+        stop
+    if damage cause is not attack:
+        stop
+    set {_ladron} to attacker
+    if {_ladron} is not a player:
+        stop
+    if gulagEsJugador({_victima}) is false:
+        stop
+    if gulagEsJugador({_ladron}) is false:
+        stop
+    set {_a} to uuid of {_ladron}
+    if {gulag::llave::%{_v}%} is not set:
+        stop
+    if {gulag::llave::%{_a}%} is set:
+        send action bar "&7Ya tienes una llave." to {_ladron}
+        stop
+    if {gulag::llave::%{_v}%} is "inmune":
+        set {_r} to ceil({gulag::inmuneHasta::%{_v}%} - gulagAhora())
+        if {_r} < 1:
+            set {_r} to 1
+        send action bar "&eEs inmune (%{_r}% s)" to {_ladron}
+        stop
+    add 1 to {gulag::golpes::%{_v}%::%{_a}%}
+    set {_g} to {gulag::golpes::%{_v}%::%{_a}%}
+    play sound "entity.player.attack.strong" with volume 0.7 with pitch 1.2 at {_victima}
+    if {_g} < {@golpes}:
+        send action bar "&7Golpes: &f%{_g}%/{@golpes}" to {_ladron}
+        stop
+    # robo: la llave pasa al que pego 3 veces
+    gulagSacarLlave({_victima})
+    send "&c✖ Te han robado la llave." to {_victima}
+    play sound "block.beacon.deactivate" with volume 0.8 with pitch 1.2 to {_victima}
+    send "&e✔ Has robado una llave." to {_ladron}
+    play sound "entity.item.pickup" with volume 1 with pitch 0.8 to {_ladron}
+    play sound "block.note_block.chime" with volume 0.8 with pitch 1.5 to {_ladron}
+    gulagDarLlave({_ladron}, true)
+
+on hunger meter change:
+    if {gulag::fase} is set:
+        if {gulag::lista::%uuid of player%} is set:
+            cancel event
+
+on drop:
+    if {gulag::fase} is set:
+        if event-item is gulagLlave():
+            cancel event
+
+on join:
+    set {_u} to uuid of player
+    if {gulag::fase} is set:
+        # los de la lista que entran tarde van al spawn
+        if gulagEsJugador(player) is true:
+            if {gulag::preparado::%{_u}%} is not set:
+                gulagAlSpawn(player)
+            stop
+        if {gulag::salvado::%{_u}%} is set:
+            stop
+        if {gulag::espactivo} is set:
+            if player does not have permission "{@permiso}":
+                gulagAEspectador(player)
+        stop
+    # ya termino: devolverle su lugar si estaba desconectado al liberar
+    if {gulag::espgm::%{_u}%} is set:
+        wait 1 second
+        gulagDevolver(player)
+    if {gulag::pendsalida::%{_u}%} is set:
+        wait 1 second
+        gulagASalida(player)
+
+# ------------------------------------------------------------ preparar / espectadores / liberar
+
+function gulagAlSpawn(p: player):
+    set {_u} to uuid of {_p}
+    set {_l} to {gulag::spawn}
+    if {_l} is not set:
+        stop
+    set {_r} to {gulag::spawnradio} ? 1
+    add (random number between -1 * {_r} and {_r}) to x-coordinate of {_l}
+    add (random number between -1 * {_r} and {_r}) to z-coordinate of {_l}
+    set gamemode of {_p} to adventure
+    teleport {_p} to {_l}
+    heal {_p}
+    set {_p}'s food level to 20
+    set {gulag::preparado::%{_u}%} to true
+
+function gulagAEspectador(p: player):
+    set {_u} to uuid of {_p}
+    if {gulag::espgm::%{_u}%} is not set:
+        set {gulag::esploc::%{_u}%} to location of {_p}
+        set {gulag::espgm::%{_u}%} to "%gamemode of {_p}%"
+    set gamemode of {_p} to spectator
+    if {gulag::esp::centro} is set:
+        teleport {_p} to {gulag::esp::centro}
+
+function gulagDevolver(p: player):
+    set {_u} to uuid of {_p}
+    set {_gm} to {gulag::espgm::%{_u}%}
+    if {gulag::esploc::%{_u}%} is set:
+        teleport {_p} to {gulag::esploc::%{_u}%}
+    if {_gm} is "creative":
+        set gamemode of {_p} to creative
+    else if {_gm} is "adventure":
+        set gamemode of {_p} to adventure
+    else if {_gm} is "spectator":
+        set gamemode of {_p} to spectator
+    else:
+        set gamemode of {_p} to survival
+    delete {gulag::espgm::%{_u}%}
+    delete {gulag::esploc::%{_u}%}
+
+function gulagASalida(p: player):
+    set {_u} to uuid of {_p}
+    if {gulag::salida} is set:
+        teleport {_p} to {gulag::salida}
+    set gamemode of {_p} to survival
+    delete {gulag::pendsalida::%{_u}%}
+
+function gulagJugadorPorUuid(u: text) :: player:
+    loop all players:
+        if "%uuid of loop-player%" is {_u}:
+            return loop-player
+
+function gulagMorir():
+    loop {gulag::lista::*}:
+        if {gulag::salvado::%loop-index%} is not set:
+            add loop-index to {_us::*}
+    while size of {_us::*} > 0:
+        set {_r} to random integer between 1 and size of {_us::*}
+        set {_k} to 0
+        loop {_us::*}:
+            add 1 to {_k}
+            if {_k} is {_r}:
+                set {_u} to loop-value
+        remove {_u} from {_us::*}
+        set {_pp} to gulagJugadorPorUuid({_u})
+        if {_pp} is set:
+            gulagSacarLlave({_pp})
+            set {gulag::muere::%{_u}%} to true
+            play sound "entity.wither.hurt" with volume 0.5 with pitch 0.5 at {_pp}
+            set health of {_pp} to 0
+            wait 2 ticks
+            delete {gulag::muere::%{_u}%}
+            wait 5 seconds
+        else:
+            loop all players:
+                if loop-player has permission "{@permiso}":
+                    send "{@p}&e%{gulag::lista::%{_u}%}% &cestá desconectado: no murió." to loop-player
+
+# ------------------------------------------------------------ comando
+
+command /gulag [<text>] [<text>]:
+    permission: {@permiso}
+    permission message: &cNo tienes permiso.
+    trigger:
+        set {_sub} to arg-1 ? ""
+        set {_sub} to {_sub} in lowercase
+
+        if {_sub} is "agregar" or "sacar":
+            if arg-2 is not set:
+                send "{@p}&7Uso: &e/gulag %{_sub}% <jugador>"
+                stop
+            set {_o} to arg-2 parsed as offline player
+            if {_o} is not set:
+                send "{@p}&cNo encuentro a &f%arg-2%&c."
+                stop
+            set {_u} to uuid of {_o}
+            if {_sub} is "agregar":
+                set {gulag::lista::%{_u}%} to name of {_o}
+                delete {gulag::salvado::%{_u}%}
+                send "{@p}&a%name of {_o}% &fentró a la lista del gulag."
+            else:
+                delete {gulag::lista::%{_u}%}
+                delete {gulag::salvado::%{_u}%}
+                delete {gulag::preparado::%{_u}%}
+                send "{@p}&c%name of {_o}% &fsalió de la lista del gulag."
+            gulagContar()
+            stop
+
+        if {_sub} is "lista":
+            if {gulag::lista::*} is not set:
+                send "{@p}&7La lista está vacía."
+                stop
+            send "{@p}&9Lista del gulag (%size of {gulag::lista::*}%):"
+            loop {gulag::lista::*}:
+                if {gulag::salvado::%loop-index%} is set:
+                    send " &a✔ &f%loop-value%"
+                else:
+                    send " &c✖ &f%loop-value%"
+            stop
+
+        if {_sub} is "limpiar":
+            if {gulag::fase} is set:
+                send "{@p}&cPrimero termina el gulag (&f/gulag liberar&c)."
+                stop
+            delete {gulag::lista::*}
+            delete {gulag::salvado::*}
+            delete {gulag::preparado::*}
+            gulagContar()
+            send "{@p}&aLista del gulag vacía."
+            stop
+
+        if {_sub} is "pos1" or "pos2":
+            set {_b} to targeted block of player
+            if {_b} is not set:
+                send "{@p}&cMira un bloque (a menos de 100 bloques)."
+                stop
+            set {gulag::sel::%uuid of player%::%{_sub}%} to location of {_b}
+            send "{@p}&a%{_sub}% marcado en &f%x-coordinate of {_b}% %y-coordinate of {_b}% %z-coordinate of {_b}%&a."
+            stop
+
+        if {_sub} is "puerta" or "zonaesp":
+            set {_l1} to {gulag::sel::%uuid of player%::pos1}
+            set {_l2} to {gulag::sel::%uuid of player%::pos2}
+            if {_l1} is not set:
+                send "{@p}&cPrimero marca &f/gulag pos1 &cy &f/gulag pos2 &c(mirando las esquinas)."
+                stop
+            if {_l2} is not set:
+                send "{@p}&cPrimero marca &f/gulag pos1 &cy &f/gulag pos2 &c(mirando las esquinas)."
+                stop
+            set {_a} to {_l1}
+            set {_b} to {_l1}
+            set x-coordinate of {_a} to min(x-coordinate of {_l1}, x-coordinate of {_l2})
+            set y-coordinate of {_a} to min(y-coordinate of {_l1}, y-coordinate of {_l2})
+            set z-coordinate of {_a} to min(z-coordinate of {_l1}, z-coordinate of {_l2})
+            set x-coordinate of {_b} to max(x-coordinate of {_l1}, x-coordinate of {_l2})
+            set y-coordinate of {_b} to max(y-coordinate of {_l1}, y-coordinate of {_l2})
+            set z-coordinate of {_b} to max(z-coordinate of {_l1}, z-coordinate of {_l2})
+            if {_sub} is "zonaesp":
+                set {gulag::esp::a} to {_a}
+                set {gulag::esp::b} to {_b}
+                set {_c} to {_a}
+                set x-coordinate of {_c} to (x-coordinate of {_a} + x-coordinate of {_b} + 1) / 2
+                set y-coordinate of {_c} to (y-coordinate of {_a} + y-coordinate of {_b} + 1) / 2
+                set z-coordinate of {_c} to (z-coordinate of {_a} + z-coordinate of {_b} + 1) / 2
+                set {gulag::esp::centro} to {_c}
+                send "{@p}&aZona de espectadores guardada."
+                stop
+            set {_n} to arg-2 parsed as integer
+            if {_n} is not set:
+                send "{@p}&7Uso: &e/gulag puerta <1|2|3>"
+                stop
+            if {_n} < 1:
+                send "{@p}&cLa puerta tiene que ser 1, 2 o 3."
+                stop
+            if {_n} > 3:
+                send "{@p}&cLa puerta tiene que ser 1, 2 o 3."
+                stop
+            set {gulag::puerta::%{_n}%::a} to {_a}
+            set {gulag::puerta::%{_n}%::b} to {_b}
+            send "{@p}&aPuerta &f%{_n}% &aguardada."
+            if {gulag::fase} is set:
+                gulagCarteles()
+            stop
+
+        if {_sub} is "spawn":
+            set {gulag::spawn} to location of player
+            set {_r} to arg-2 parsed as number
+            set {gulag::spawnradio} to {_r} ? 1
+            send "{@p}&aSpawn del gulag guardado (radio &f%{gulag::spawnradio}%&a)."
+            stop
+
+        if {_sub} is "salida":
+            set {gulag::salida} to location of player
+            send "{@p}&aSalida guardada: ahí aparecen los que se salvaron con &f/gulag liberar&a."
+            stop
+
+        if {_sub} is "punto":
+            if arg-2 is not set:
+                send "{@p}&7Uso: &e/gulag punto <nombre> &7(donde estás parado)"
+                stop
+            set {_n} to arg-2 in lowercase
+            set {lootpuntos::%{_n}%} to location of player
+            set {lootgrupos::gulag::%{_n}%} to true
+            set {lootgruponames::gulag} to true
+            send "{@p}&aPunto de llave &f%{_n}% &aguardado (grupo gulag)."
+            stop
+
+        if {_sub} is "llaves":
+            set {_n} to arg-2 parsed as integer
+            if {_n} is not set:
+                send "{@p}&7Uso: &e/gulag llaves <cantidad por ronda>"
+                stop
+            set {gulag::cantllaves} to {_n}
+            send "{@p}&aAhora salen &f%{_n}% &allaves por ronda."
+            stop
+
+        if {_sub} is "texto" or "textoesp":
+            if arg-2 is not set:
+                send "{@p}&7Uso: &e/gulag %{_sub}% <mensaje>"
+                stop
+            set {gulag::%{_sub}%} to arg-2
+            send "{@p}&aTexto cambiado."
+            stop
+
+        if {_sub} is "preparar":
+            if {gulag::spawn} is not set:
+                send "{@p}&cFalta el spawn: &f/gulag spawn [radio]"
+                stop
+            if {gulag::lista::*} is not set:
+                send "{@p}&cLa lista está vacía: &f/gulag agregar <jugador>"
+                stop
+            set {gulag::fase} to "preparado"
+            delete {gulag::preparado::*}
+            loop all players:
+                if gulagEsJugador(loop-player) is true:
+                    gulagAlSpawn(loop-player)
+            gulagContar()
+            send "{@p}&aLos de la lista están en el spawn, sin daño ni hambre. Sigue: &f/gulag espectadores &ay &f/gulag empezar"
+            stop
+
+        if {_sub} is "espectadores":
+            if {gulag::esp::centro} is not set:
+                send "{@p}&cFalta la zona: &f/gulag pos1&c, &fpos2 &cy &f/gulag zonaesp"
+                stop
+            if {gulag::fase} is not set:
+                send "{@p}&cPrimero &f/gulag preparar&c."
+                stop
+            set {gulag::espactivo} to true
+            set {_n} to 0
+            loop all players:
+                if {gulag::lista::%uuid of loop-player%} is not set:
+                    if loop-player does not have permission "{@permiso}":
+                        gulagAEspectador(loop-player)
+                        add 1 to {_n}
+            send "{@p}&a%{_n}% jugadores pasaron a espectador (los admins no)."
+            stop
+
+        if {_sub} is "empezar":
+            if {gulag::fase} is not "preparado":
+                send "{@p}&cPrimero &f/gulag preparar&c."
+                stop
+            if {gulag::puerta::1::a} is not set:
+                send "{@p}&cFalta al menos una puerta: &f/gulag puerta 1"
+                stop
+            set {gulag::fase} to "jugando"
+            set {gulag::ronda} to 0
+            delete {gulag::previos::*}
+            delete {gulag::estaronda::*}
+            delete {gulag::golpes::*}
+            delete {gulag::abierta}
+            set {_n} to gulagAbrirOtra()
+            gulagCarteles()
+            loop all players:
+                play sound "entity.ender_dragon.growl" with volume 1 with pitch 1 to loop-player
+                send title "&9&l¡EMPIEZA EL GULAG!" with subtitle "&7Agarra una llave y escapa" to loop-player for 2 seconds with fade in 10 ticks and fade out 20 ticks
+            # el titulo dura ~3 s y a los 3 s de que se va, salen las llaves
+            wait 6 seconds
+            gulagRonda()
+            stop
+
+        if {_sub} is "ronda":
+            if {gulag::fase} is not "jugando":
+                send "{@p}&cEl gulag no empezó (&f/gulag empezar&c)."
+                stop
+            gulagRonda()
+            stop
+
+        if {_sub} is "fin":
+            if {gulag::fase} is not "jugando":
+                send "{@p}&cEl gulag no está en juego."
+                stop
+            set {gulag::fase} to "fin"
+            gulagBorrarLlaves()
+            delete {gulag::abierta}
+            gulagCarteles()
+            gulagContar()
+            loop all players:
+                send title "&4☠ &c&lFIN DEL GULAG &4☠" with subtitle "&7Felicidades a los supervivientes" to loop-player for 4 seconds with fade in 10 ticks and fade out 20 ticks
+                play sound "entity.wither.death" with volume 0.7 with pitch 0.6 to loop-player
+            wait 5 seconds
+            gulagMorir()
+            send "{@p}&aTerminaron las muertes. Para devolver a todos: &f/gulag liberar"
+            stop
+
+        if {_sub} is "liberar":
+            gulagBorrarLlaves()
+            # los salvados van a la salida (si estan desconectados, cuando entren)
+            loop {gulag::salvado::*}:
+                set {gulag::pendsalida::%loop-index%} to true
+            loop all players:
+                set {_u} to uuid of loop-player
+                if {gulag::llave::%{_u}%} is set:
+                    gulagSacarLlave(loop-player)
+                if {gulag::espgm::%{_u}%} is set:
+                    gulagDevolver(loop-player)
+                else if {gulag::pendsalida::%{_u}%} is set:
+                    gulagASalida(loop-player)
+            delete {gulag::fase}
+            delete {gulag::espactivo}
+            delete {gulag::abierta}
+            delete {gulag::llave::*}
+            delete {gulag::golpes::*}
+            loop all entities:
+                if scoreboard tags of loop-entity contains "gulag_ent":
+                    delete loop-entity
+            send "{@p}&aGulag cerrado: espectadores a su lugar y salvados a la salida. La lista sigue (&f/gulag limpiar &apara vaciarla)."
+            stop
+
+        if {_sub} is "estado":
+            set {_fase} to {gulag::fase} ? "apagado"
+            set {_puerta} to "ninguna"
+            if {gulag::abierta} is set:
+                set {_puerta} to "%{gulag::abierta}%"
+            set {_falta} to ""
+            if {gulag::spawn} is not set:
+                set {_falta} to "%{_falta}% spawn"
+            if {gulag::salida} is not set:
+                set {_falta} to "%{_falta}% salida"
+            if {gulag::esp::centro} is not set:
+                set {_falta} to "%{_falta}% zonaesp"
+            if {gulag::puerta::1::a} is not set:
+                set {_falta} to "%{_falta}% puertas"
+            send "{@p}&7Fase: &f%{_fase}% &7| ronda &f%{gulag::ronda} ? 0% &7| llaves por ronda &f%{gulag::cantllaves} ? 3%"
+            send "{@p}&7En juego: &f%{gulag::n::juego} ? 0% &7| a salvo: &f%{gulag::n::salvos} ? 0% &7| llaves en el mapa: &f%size of {gulag::kids::*}% &7| puerta abierta: &f%{_puerta}%"
+            if {_falta} is not "":
+                send "{@p}&cFalta configurar:&f%{_falta}%"
+            stop
+
+        send "&8&m------------------------------"
+        send "&9&lGULAG"
+        send "&e/gulag agregar|sacar <jugador> &7- lista del gulag  &e/gulag lista|limpiar"
+        send "&e/gulag spawn [radio] &7- spawn del mapa (donde estás)"
+        send "&e/gulag pos1|pos2 &7(mirando) + &e/gulag puerta <1|2|3> &7o &e/gulag zonaesp"
+        send "&e/gulag salida &7- donde van los salvados al final"
+        send "&e/gulag punto <nombre> &7- punto de llave  &e/gulag llaves <n>"
+        send "&e/gulag texto|textoesp <mensaje> &7- texto de la sidebar"
+        send "&e/gulag preparar &7→ &e/gulag espectadores &7→ &e/gulag empezar &7→ &e/gulag ronda &7→ &e/gulag fin &7→ &e/gulag liberar"
+        send "&e/gulag estado"
+        send "&8&m------------------------------"
+
+on load:
+    wait 1 second
+    loop all entities:
+        if scoreboard tags of loop-entity contains "gulag_ent":
+            delete loop-entity
+    delete {gulag::kids::*}
+    delete {gulag::k::*}
+    if {gulag::fase} is set:
+        gulagCarteles()
+    gulagContar()
