@@ -307,7 +307,7 @@ every second:
         if {gulag::llave::%uuid of loop-player%} is "si":
             send action bar "&e✦ &fTienes una llave: &e¡busca una puerta para escapar!" to loop-player
     # los espectadores no se pueden ir de la zona
-    if {gulag::esp::a} is set:
+    if {gulag::esp::x1} is set:
         loop all players:
             set {_u} to uuid of loop-player
             if {gulag::espgm::%{_u}%} is set:
@@ -319,49 +319,57 @@ every second:
 function gulagEnZona(p: player):
     if gamemode of {_p} is not spectator:
         stop
-    set {_a} to {gulag::esp::a}
-    set {_b} to {gulag::esp::b}
     set {_l} to location of {_p}
-    if world of {_l} is world of {_a}:
-        if x-coordinate of {_l} >= x-coordinate of {_a}:
-            if x-coordinate of {_l} <= x-coordinate of {_b} + 1:
-                if y-coordinate of {_l} >= y-coordinate of {_a}:
-                    if y-coordinate of {_l} <= y-coordinate of {_b} + 1:
-                        if z-coordinate of {_l} >= z-coordinate of {_a}:
-                            if z-coordinate of {_l} <= z-coordinate of {_b} + 1:
+    if "%world of {_l}%" is {gulag::esp::mundo}:
+        if x-coordinate of {_l} >= {gulag::esp::x1}:
+            if x-coordinate of {_l} < {gulag::esp::x2} + 1:
+                if y-coordinate of {_l} >= {gulag::esp::y1}:
+                    if y-coordinate of {_l} < {gulag::esp::y2} + 1:
+                        if z-coordinate of {_l} >= {gulag::esp::z1}:
+                            if z-coordinate of {_l} < {gulag::esp::z2} + 1:
                                 stop
     teleport {_p} to {gulag::esp::centro}
 
 # ------------------------------------------------------------ puertas
 
 function gulagPuertaDe(b: block) :: number:
-    loop 3 times:
-        set {_i} to loop-number
-        if {gulag::puerta::%{_i}%::a} is set:
-            set {_a} to {gulag::puerta::%{_i}%::a}
-            set {_c} to {gulag::puerta::%{_i}%::b}
-            if world of {_b} is world of {_a}:
-                if x-coordinate of {_b} >= x-coordinate of {_a}:
-                    if x-coordinate of {_b} <= x-coordinate of {_c}:
-                        if y-coordinate of {_b} >= y-coordinate of {_a}:
-                            if y-coordinate of {_b} <= y-coordinate of {_c}:
-                                if z-coordinate of {_b} >= z-coordinate of {_a}:
-                                    if z-coordinate of {_b} <= z-coordinate of {_c}:
-                                        return {_i}
+    set {_w} to "%world of {_b}%"
+    set {_x} to floor(x-coordinate of {_b})
+    set {_y} to floor(y-coordinate of {_b})
+    set {_z} to floor(z-coordinate of {_b})
+    loop {gulag::puertaids::*}:
+        set {_i} to loop-value
+        if {gulag::puerta::%{_i}%::mundo} is {_w}:
+            if {_x} >= {gulag::puerta::%{_i}%::x1}:
+                if {_x} <= {gulag::puerta::%{_i}%::x2}:
+                    if {_y} >= {gulag::puerta::%{_i}%::y1}:
+                        if {_y} <= {gulag::puerta::%{_i}%::y2}:
+                            if {_z} >= {gulag::puerta::%{_i}%::z1}:
+                                if {_z} <= {gulag::puerta::%{_i}%::z2}:
+                                    return {_i}
     return 0
 
+# El centro de la puerta (alto = 0 al medio, 1 arriba de todo).
+function gulagPuertaPunto(i: number, arriba: boolean) :: location:
+    set {_w} to world({gulag::puerta::%{_i}%::mundo})
+    set {_x} to ({gulag::puerta::%{_i}%::x1} + {gulag::puerta::%{_i}%::x2} + 1) / 2
+    set {_z} to ({gulag::puerta::%{_i}%::z1} + {gulag::puerta::%{_i}%::z2} + 1) / 2
+    if {_arriba} is true:
+        set {_y} to {gulag::puerta::%{_i}%::y2} + 1.4
+    else:
+        set {_y} to ({gulag::puerta::%{_i}%::y1} + {gulag::puerta::%{_i}%::y2} + 1) / 2
+    return location({_x}, {_y}, {_z}, {_w})
+
+# Cartel arriba de la puerta: siempre visible (a traves de los bloques). Verde si esta abierta, rojo si no.
 function gulagCartel(i: number):
     loop all entities:
         if scoreboard tags of loop-entity contains "gulagp_%{_i}%":
             delete loop-entity
-    if {gulag::puerta::%{_i}%::a} is not set:
+    if {gulag::puertaids::%{_i}%} is not set:
         stop
-    set {_a} to {gulag::puerta::%{_i}%::a}
-    set {_b} to {gulag::puerta::%{_i}%::b}
-    set {_l} to {_a}
-    set x-coordinate of {_l} to (x-coordinate of {_a} + x-coordinate of {_b} + 1) / 2
-    set y-coordinate of {_l} to y-coordinate of {_b} + 1.6
-    set z-coordinate of {_l} to (z-coordinate of {_a} + z-coordinate of {_b} + 1) / 2
+    set {_l} to gulagPuertaPunto({_i}, true)
+    if {_l} is not set:
+        stop
     spawn a text display at {_l}
     set {_td} to last spawned entity
     set billboard of {_td} to center
@@ -369,19 +377,19 @@ function gulagCartel(i: number):
         set text of {_td} to "&a&lPUERTA %{_i}%"
     else:
         set text of {_td} to "&c&lPUERTA %{_i}%"
-    add "gulag_ent" to scoreboard tags of {_td}
+    add "gulag_cartel" to scoreboard tags of {_td}
     add "gulagp_%{_i}%" to scoreboard tags of {_td}
+    execute console command "execute as @e[tag=gulagp_%{_i}%,type=minecraft:text_display] run data merge entity @s {see_through:1b,shadow:1b,view_range:4f,transformation:{left_rotation:[0f,0f,0f,1f],right_rotation:[0f,0f,0f,1f],translation:[0f,0f,0f],scale:[1.6f,1.6f,1.6f]}}"
 
 function gulagCarteles():
-    loop 3 times:
-        gulagCartel(loop-number)
+    loop {gulag::puertaids::*}:
+        gulagCartel(loop-value)
 
 # Abre una puerta al azar distinta de la que estaba abierta.
 function gulagAbrirOtra() :: number:
-    loop 3 times:
-        if {gulag::puerta::%loop-number%::a} is set:
-            if loop-number is not {gulag::abierta}:
-                add loop-number to {_op::*}
+    loop {gulag::puertaids::*}:
+        if loop-value is not {gulag::abierta}:
+            add loop-value to {_op::*}
     if {_op::*} is not set:
         return {gulag::abierta} ? 0
     set {_r} to random integer between 1 and size of {_op::*}
@@ -395,17 +403,12 @@ every 5 ticks:
     set {_i} to {gulag::abierta}
     if {_i} is not set:
         stop
-    if {gulag::puerta::%{_i}%::a} is not set:
+    if {gulag::puertaids::%{_i}%} is not set:
         stop
-    set {_a} to {gulag::puerta::%{_i}%::a}
-    set {_b} to {gulag::puerta::%{_i}%::b}
-    set {_c} to {_a}
-    set x-coordinate of {_c} to (x-coordinate of {_a} + x-coordinate of {_b} + 1) / 2
-    set y-coordinate of {_c} to (y-coordinate of {_a} + y-coordinate of {_b} + 1) / 2
-    set z-coordinate of {_c} to (z-coordinate of {_a} + z-coordinate of {_b} + 1) / 2
-    set {_dx} to (x-coordinate of {_b} - x-coordinate of {_a} + 1) / 2
-    set {_dy} to (y-coordinate of {_b} - y-coordinate of {_a} + 1) / 2
-    set {_dz} to (z-coordinate of {_b} - z-coordinate of {_a} + 1) / 2
+    set {_c} to gulagPuertaPunto({_i}, false)
+    set {_dx} to ({gulag::puerta::%{_i}%::x2} - {gulag::puerta::%{_i}%::x1} + 1) / 2
+    set {_dy} to ({gulag::puerta::%{_i}%::y2} - {gulag::puerta::%{_i}%::y1} + 1) / 2
+    set {_dz} to ({gulag::puerta::%{_i}%::z2} - {gulag::puerta::%{_i}%::z1} + 1) / 2
     draw 8 happy villager particles with offset vector({_dx}, {_dy}, {_dz}) at {_c}
 
 on left click:
@@ -709,39 +712,74 @@ command /gulag [<text>] [<text>]:
             if {_l2} is not set:
                 send "{@p}&cPrimero marca &f/gulag pos1 &cy &f/gulag pos2 &c(mirando las esquinas)."
                 stop
-            set {_a} to {_l1}
-            set {_b} to {_l1}
-            set x-coordinate of {_a} to min(x-coordinate of {_l1}, x-coordinate of {_l2})
-            set y-coordinate of {_a} to min(y-coordinate of {_l1}, y-coordinate of {_l2})
-            set z-coordinate of {_a} to min(z-coordinate of {_l1}, z-coordinate of {_l2})
-            set x-coordinate of {_b} to max(x-coordinate of {_l1}, x-coordinate of {_l2})
-            set y-coordinate of {_b} to max(y-coordinate of {_l1}, y-coordinate of {_l2})
-            set z-coordinate of {_b} to max(z-coordinate of {_l1}, z-coordinate of {_l2})
+            if world of {_l1} is not world of {_l2}:
+                send "{@p}&cLos dos puntos tienen que estar en el mismo mundo."
+                stop
+            set {_w} to "%world of {_l1}%"
+            set {_x1} to floor(min(x-coordinate of {_l1}, x-coordinate of {_l2}))
+            set {_y1} to floor(min(y-coordinate of {_l1}, y-coordinate of {_l2}))
+            set {_z1} to floor(min(z-coordinate of {_l1}, z-coordinate of {_l2}))
+            set {_x2} to floor(max(x-coordinate of {_l1}, x-coordinate of {_l2}))
+            set {_y2} to floor(max(y-coordinate of {_l1}, y-coordinate of {_l2}))
+            set {_z2} to floor(max(z-coordinate of {_l1}, z-coordinate of {_l2}))
             if {_sub} is "zonaesp":
-                set {gulag::esp::a} to {_a}
-                set {gulag::esp::b} to {_b}
-                set {_c} to {_a}
-                set x-coordinate of {_c} to (x-coordinate of {_a} + x-coordinate of {_b} + 1) / 2
-                set y-coordinate of {_c} to (y-coordinate of {_a} + y-coordinate of {_b} + 1) / 2
-                set z-coordinate of {_c} to (z-coordinate of {_a} + z-coordinate of {_b} + 1) / 2
-                set {gulag::esp::centro} to {_c}
+                set {gulag::esp::mundo} to {_w}
+                set {gulag::esp::x1} to {_x1}
+                set {gulag::esp::y1} to {_y1}
+                set {gulag::esp::z1} to {_z1}
+                set {gulag::esp::x2} to {_x2}
+                set {gulag::esp::y2} to {_y2}
+                set {gulag::esp::z2} to {_z2}
+                set {gulag::esp::centro} to location(({_x1} + {_x2} + 1) / 2, ({_y1} + {_y2} + 1) / 2, ({_z1} + {_z2} + 1) / 2, world of {_l1})
                 send "{@p}&aZona de espectadores guardada."
                 stop
             set {_n} to arg-2 parsed as integer
             if {_n} is not set:
-                send "{@p}&7Uso: &e/gulag puerta <1|2|3>"
+                send "{@p}&7Uso: &e/gulag puerta <número>"
                 stop
             if {_n} < 1:
-                send "{@p}&cLa puerta tiene que ser 1, 2 o 3."
+                send "{@p}&cEl número de puerta tiene que ser 1 o más."
                 stop
-            if {_n} > 3:
-                send "{@p}&cLa puerta tiene que ser 1, 2 o 3."
+            set {gulag::puerta::%{_n}%::mundo} to {_w}
+            set {gulag::puerta::%{_n}%::x1} to {_x1}
+            set {gulag::puerta::%{_n}%::y1} to {_y1}
+            set {gulag::puerta::%{_n}%::z1} to {_z1}
+            set {gulag::puerta::%{_n}%::x2} to {_x2}
+            set {gulag::puerta::%{_n}%::y2} to {_y2}
+            set {gulag::puerta::%{_n}%::z2} to {_z2}
+            set {gulag::puertaids::%{_n}%} to {_n}
+            gulagCartel({_n})
+            send "{@p}&aPuerta &f%{_n}% &aguardada (%{_x2} - {_x1} + 1%x%{_y2} - {_y1} + 1%x%{_z2} - {_z1} + 1% bloques)."
+            stop
+
+        if {_sub} is "borrarpuerta":
+            set {_n} to arg-2 parsed as integer
+            if {_n} is not set:
+                send "{@p}&7Uso: &e/gulag borrarpuerta <número>"
                 stop
-            set {gulag::puerta::%{_n}%::a} to {_a}
-            set {gulag::puerta::%{_n}%::b} to {_b}
-            send "{@p}&aPuerta &f%{_n}% &aguardada."
-            if {gulag::fase} is set:
-                gulagCarteles()
+            if {gulag::puertaids::%{_n}%} is not set:
+                send "{@p}&cNo existe la puerta &f%{_n}%&c."
+                stop
+            if {gulag::abierta} is {_n}:
+                if {gulag::fase} is "jugando":
+                    send "{@p}&cEsa puerta está abierta ahora: no se puede borrar en pleno gulag."
+                    stop
+            delete {gulag::puertaids::%{_n}%}
+            delete {gulag::puerta::%{_n}%::*}
+            gulagCartel({_n})
+            send "{@p}&aPuerta &f%{_n}% &aborrada."
+            stop
+
+        if {_sub} is "puertas":
+            if {gulag::puertaids::*} is not set:
+                send "{@p}&7No hay puertas. Usa &f/gulag varita &7y &f/gulag puerta <número>&7."
+                stop
+            loop {gulag::puertaids::*}:
+                set {_i} to loop-value
+                set {_e} to "&c(cerrada)"
+                if {gulag::abierta} is {_i}:
+                    set {_e} to "&a(abierta)"
+                send " &9• &fPuerta %{_i}% %{_e}% &7en %{gulag::puerta::%{_i}%::x1}% %{gulag::puerta::%{_i}%::y1}% %{gulag::puerta::%{_i}%::z1}%"
             stop
 
         if {_sub} is "spawn":
@@ -836,11 +874,9 @@ command /gulag [<text>] [<text>]:
             if {gulag::fase} is not "preparado":
                 send "{@p}&cPrimero &f/gulag preparar&c."
                 stop
-            if {gulag::puerta::1::a} is not set:
-                if {gulag::puerta::2::a} is not set:
-                    if {gulag::puerta::3::a} is not set:
-                        send "{@p}&cNo hay ninguna puerta: &f/gulag varita &cy &f/gulag puerta 1"
-                        stop
+            if {gulag::puertaids::*} is not set:
+                send "{@p}&cNo hay ninguna puerta: &f/gulag varita &cy &f/gulag puerta 1"
+                stop
             if {lootgrupos::gulag::*} is not set:
                 if {lootpuntos::*} is not set:
                     send "{@p}&cNo hay puntos donde puedan salir llaves: &f/gulag punto <nombre>"
@@ -860,7 +896,11 @@ command /gulag [<text>] [<text>]:
                 play sound "entity.ender_dragon.growl" with volume 1 with pitch 1 to loop-player
                 send title "&9&l¡EMPIEZA EL GULAG!" with subtitle "&7Agarra una llave y escapa" to loop-player for 2 seconds with fade in 10 ticks and fade out 20 ticks
             # el titulo dura ~3 s y a los 3 s de que se va, salen las llaves
-            wait 6 seconds
+            wait 3 seconds
+            broadcast "&6» &fSe abrió la &a&lPUERTA %{_n}%&f."
+            loop all players:
+                play sound "block.iron_door.open" with volume 1 with pitch 0.7 to loop-player
+            wait 3 seconds
             gulagRonda()
             stop
 
@@ -920,6 +960,7 @@ command /gulag [<text>] [<text>]:
             loop all entities:
                 if scoreboard tags of loop-entity contains "gulag_ent":
                     delete loop-entity
+            gulagCarteles()
             send "{@p}&aGulag cerrado: espectadores a su lugar y salvados a la salida. La lista sigue (&f/gulag limpiar &apara vaciarla)."
             stop
 
@@ -935,7 +976,7 @@ command /gulag [<text>] [<text>]:
                 set {_falta} to "%{_falta}% salida"
             if {gulag::esp::centro} is not set:
                 set {_falta} to "%{_falta}% zonaesp"
-            if {gulag::puerta::1::a} is not set:
+            if {gulag::puertaids::*} is not set:
                 set {_falta} to "%{_falta}% puertas"
             send "{@p}&7Fase: &f%{_fase}% &7| ronda &f%{gulag::ronda} ? 0% &7| llaves por ronda &f%gulagCantLlaves()%"
             send "{@p}&7En juego: &f%{gulag::n::juego} ? 0% &7| a salvo: &f%{gulag::n::salvos} ? 0% &7| llaves en el mapa: &f%size of {gulag::kids::*}% &7| puerta abierta: &f%{_puerta}%"
@@ -947,7 +988,8 @@ command /gulag [<text>] [<text>]:
         send "&9&lGULAG"
         send "&e/gulag agregar|sacar <jugador> &7- lista del gulag  &e/gulag lista|limpiar"
         send "&e/gulag spawn [radio] &7- spawn del mapa (donde estás)"
-        send "&e/gulag varita &7(o &e/gulag pos1|pos2 &7mirando) + &e/gulag puerta <1|2|3> &7o &e/gulag zonaesp"
+        send "&e/gulag varita &7(o &e/gulag pos1|pos2 &7mirando) + &e/gulag puerta <n> &7o &e/gulag zonaesp"
+        send "&e/gulag puertas &7- lista  &e/gulag borrarpuerta <n>"
         send "&e/gulag salida &7- donde van los salvados al final"
         send "&e/gulag punto <nombre> &7- punto de llave  &e/gulag llaves <n>"
         send "&e/gulag texto|textoesp <mensaje> &7- texto de la sidebar"
@@ -958,10 +1000,38 @@ command /gulag [<text>] [<text>]:
 on load:
     wait 1 second
     loop all entities:
-        if scoreboard tags of loop-entity contains "gulag_ent":
+        if scoreboard tags of loop-entity contains "gulag_ent" or "gulag_cartel":
             delete loop-entity
     delete {gulag::kids::*}
     delete {gulag::k::*}
-    if {gulag::fase} is set:
-        gulagCarteles()
+    # puertas guardadas con la version anterior
+    loop 20 times:
+        set {_i} to loop-number
+        if {gulag::puerta::%{_i}%::a} is set:
+            set {_a} to {gulag::puerta::%{_i}%::a}
+            set {_b} to {gulag::puerta::%{_i}%::b}
+            set {gulag::puerta::%{_i}%::mundo} to "%world of {_a}%"
+            set {gulag::puerta::%{_i}%::x1} to floor(x-coordinate of {_a})
+            set {gulag::puerta::%{_i}%::y1} to floor(y-coordinate of {_a})
+            set {gulag::puerta::%{_i}%::z1} to floor(z-coordinate of {_a})
+            set {gulag::puerta::%{_i}%::x2} to floor(x-coordinate of {_b})
+            set {gulag::puerta::%{_i}%::y2} to floor(y-coordinate of {_b})
+            set {gulag::puerta::%{_i}%::z2} to floor(z-coordinate of {_b})
+            set {gulag::puertaids::%{_i}%} to {_i}
+            delete {gulag::puerta::%{_i}%::a}
+            delete {gulag::puerta::%{_i}%::b}
+    if {gulag::esp::a} is set:
+        set {_a} to {gulag::esp::a}
+        set {_b} to {gulag::esp::b}
+        set {gulag::esp::mundo} to "%world of {_a}%"
+        set {gulag::esp::x1} to floor(x-coordinate of {_a})
+        set {gulag::esp::y1} to floor(y-coordinate of {_a})
+        set {gulag::esp::z1} to floor(z-coordinate of {_a})
+        set {gulag::esp::x2} to floor(x-coordinate of {_b})
+        set {gulag::esp::y2} to floor(y-coordinate of {_b})
+        set {gulag::esp::z2} to floor(z-coordinate of {_b})
+        set {gulag::esp::centro} to location(({gulag::esp::x1} + {gulag::esp::x2} + 1) / 2, ({gulag::esp::y1} + {gulag::esp::y2} + 1) / 2, ({gulag::esp::z1} + {gulag::esp::z2} + 1) / 2, world of {_a})
+        delete {gulag::esp::a}
+        delete {gulag::esp::b}
+    gulagCarteles()
     gulagContar()

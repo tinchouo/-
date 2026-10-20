@@ -55,18 +55,18 @@ public final class Gulag {
         out.add(sep);
         if (participa(p.getUniqueId())) {
             out.add("&9■ &9&lGULAG");
-            List<String> t = Ancho.cortar("&b" + texto("gulag::texto", "Agarra una llave y escapa por la puerta abierta."), "&9  ", "&9  ", ancho);
+            List<String> t = Ancho.cortar("&9" + texto("gulag::texto", "Agarra una llave y escapa por la puerta abierta."), "&9  ", "&9  ", ancho);
             out.addAll(t.size() > 6 ? t.subList(0, 6) : t);
             out.add(sep);
             out.add(salvado(p.getUniqueId()) ? "&a✔ &aEstás a salvo" : "&c✖ &cNo estás a salvo");
         } else {
-            out.add("&9■ &9&lGULAG EN CURSO");
-            List<String> t = Ancho.cortar("&b" + texto("gulag::textoesp", "Mira quién logra escapar."), "&9  ", "&9  ", ancho);
+            out.add("&9■ &9&lGULAG");
+            List<String> t = Ancho.cortar("&9" + texto("gulag::textoesp", "Mira quién logra escapar."), "&9  ", "&9  ", ancho);
             out.addAll(t.size() > 5 ? t.subList(0, 5) : t);
             out.add(sep);
-            out.add("&a✔ &fA salvo: &a" + numero("gulag::n::salvos"));
-            out.add("&c✖ &fEn juego: &c" + numero("gulag::n::juego"));
-            out.add("&e✦ &fLlaves en el mapa: &e" + numero("gulag::n::llaves"));
+            out.add("&9✔ A salvo: &f" + numero("gulag::n::salvos"));
+            out.add("&9✖ En juego: &f" + numero("gulag::n::juego"));
+            out.add("&9✦ Llaves en el mapa: &f" + numero("gulag::n::llaves"));
         }
         out.add(sep);
         return out;

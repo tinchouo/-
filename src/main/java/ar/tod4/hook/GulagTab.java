@@ -16,7 +16,7 @@ import org.bukkit.event.server.TabCompleteEvent;
  */
 public final class GulagTab implements Listener {
 
-    private static final List<String> SUBS = List.of("agregar", "sacar", "lista", "limpiar", "varita", "pos1", "pos2", "puerta", "zonaesp",
+    private static final List<String> SUBS = List.of("agregar", "sacar", "lista", "limpiar", "varita", "pos1", "pos2", "puerta", "puertas", "borrarpuerta", "zonaesp",
             "spawn", "salida", "punto", "llaves", "texto", "textoesp", "preparar", "espectadores", "empezar", "ronda", "fin",
             "liberar", "estado");
 
@@ -37,8 +37,8 @@ public final class GulagTab implements Listener {
                 if (n != null && n.toLowerCase().startsWith(pre)) out.add(n);
             }
             out.sort(String.CASE_INSENSITIVE_ORDER);
-        } else if (a.length == 2 && a[0].equalsIgnoreCase("puerta")) {
-            for (String s : List.of("1", "2", "3")) if (s.startsWith(pre)) out.add(s);
+        } else if (a.length == 2 && (a[0].equalsIgnoreCase("puerta") || a[0].equalsIgnoreCase("borrarpuerta"))) {
+            for (String s : List.of("1", "2", "3", "4", "5", "6")) if (s.startsWith(pre)) out.add(s);
         } else {
             return;
         }
