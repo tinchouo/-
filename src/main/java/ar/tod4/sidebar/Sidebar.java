@@ -132,7 +132,7 @@ public final class Sidebar implements Listener {
     private String titulo(String modo) {
         if (modo.equals("normal")) return pl.getConfig().getString("sidebar.titulo", "&a&lTOD4");
         boolean rojo = modo.equals("truco");
-        String logo = pl.getConfig().getString(rojo ? "sidebar.logo_rojo" : "sidebar.logo_azul", rojo ? "\ue901" : "\ue902");
+        String logo = pl.getConfig().getString(rojo ? "sidebar.logo_rojo" : "sidebar.logo_azul", rojo ? "\ue905" : "\ue906");
         int[] a = rojo ? new int[]{0xff, 0x55, 0x55} : new int[]{0x55, 0xaa, 0xff};
         int[] b = rojo ? new int[]{0x78, 0x11, 0x11} : new int[]{0x11, 0x33, 0x88};
         String txt = "TRUCOFDEATH";
