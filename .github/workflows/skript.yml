@@ -12,24 +12,26 @@ jobs:
         with: { distribution: temurin, java-version: '21' }
       - name: Bajar Paper 1.21.4 y Skript
         run: |
-          set -e
           mkdir srv && cd srv
-          B=$(curl -s https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds | jq -r '.builds | map(select(.channel=="default")) | last | .build')
-          curl -sL -o paper.jar "https://api.papermc.io/v2/projects/paper/versions/1.21.4/builds/$B/downloads/paper-1.21.4-$B.jar"
+          J=$(curl -s -H "User-Agent: tod4-ci" https://fill.papermc.io/v3/projects/paper/versions/1.21.4/builds)
+          URL=$(echo "$J" | jq -r 'max_by(.id) | .downloads."server:default".url' 2>/dev/null)
+          if [ -z "$URL" ] || [ "$URL" = "null" ]; then echo "::error::No pude obtener Paper: ${J:0:300}"; exit 1; fi
+          curl -sL -o paper.jar "$URL"
           mkdir -p plugins/Skript/scripts
-          U=$(curl -s https://api.github.com/repos/SkriptLang/Skript/releases | jq -r '[.[] | select(.prerelease==false)][0].assets[] | select(.name|endswith(".jar")) | .browser_download_url' | head -1)
-          echo "Skript: $U"
+          R=$(curl -s https://api.github.com/repos/SkriptLang/Skript/releases)
+          U=$(echo "$R" | jq -r '[.[] | select(.prerelease==false)][0].assets[] | select(.name|endswith(".jar")) | .browser_download_url' | head -1)
+          if [ -z "$U" ]; then echo "::error::No pude obtener Skript"; exit 1; fi
+          echo "::notice::Paper $URL | Skript $U"
           curl -sL -o plugins/Skript.jar "$U"
           cp ../skripts/*.sk plugins/Skript/scripts/
           echo "eula=true" > eula.txt
           printf "online-mode=false\nlevel-type=minecraft\\:flat\nspawn-protection=0\n" > server.properties
+          ls -la . plugins
       - name: Arrancar y cargar los scripts
         run: |
           cd srv
           (sleep 150; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
-          grep -iE "skript|error|warn|line [0-9]+|\.sk" log.txt | grep -v "^\s*$" | head -150
-          echo "----"
-          if grep -qE "Encountered [1-9][0-9]* errors? while reading|\[Skript\].*(error|Error)" log.txt; then
-            grep -nE "Line [0-9]+|line [0-9]+|error" log.txt | head -80 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
-            exit 1
-          fi
+          # todo lo de Skript sale como aviso para poder leerlo desde afuera
+          grep -n -iE "skript|\.sk|line [0-9]+" log.txt | head -120 | while IFS= read -r l; do echo "::warning::${l//%/%25}"; done
+          grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
+          if grep -qiE "error|encountered [1-9]" <(grep -iE "skript|line [0-9]+|\.sk" log.txt); then exit 1; fi
