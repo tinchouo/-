@@ -56,9 +56,9 @@ function gulagContar():
 # Partículas alrededor de un punto (sintaxis nueva de Skript, la misma del script de Trick).
 function gulagChispas(l: location, tipo: text, n: number, r: number):
     if {_tipo} is "totem":
-        draw {_n} totem of undying particles with offset vector({_r}, {_r}, {_r}) with an extra value of 0.45 at {_l}
+        draw 40 totem of undying particles with offset vector(0.4, 0.6, 0.4) with an extra value of 0.45 at {_l}
     else:
-        draw {_n} end rod particles with offset vector({_r}, {_r}, {_r}) with an extra value of 0.08 at {_l}
+        draw 40 end rod particles with offset vector(0.4, 0.4, 0.4) with an extra value of 0.08 at {_l}
 
 function gulagAhora() :: number:
     return unix timestamp of now
