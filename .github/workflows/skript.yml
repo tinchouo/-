@@ -36,8 +36,9 @@ jobs:
           cd srv
           (sleep 150; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
           # todo lo de Skript sale como aviso para poder leerlo desde afuera
-          # cada problema de Skript con su explicacion (la linea de antes y la de despues)
-          grep -n -B2 -A1 "\.sk)" log.txt | grep -vE "^--$" | head -48 | while IFS= read -r l; do echo "::warning::${l//%/%25}"; done
+          # todos los problemas de Skript juntos en un solo aviso (GitHub corta a 10 avisos por paso)
+          M=$(grep -A2 "\.sk)" log.txt | grep -vE "^--$" | sed -E 's/^\[[0-9:]+ INFO\]: +//' | grep -vE "^Line: " | tr '\n' ' ' | sed 's/\[Skript\]/\n/g' | head -c 60000 | tr '\n' '#')
+          echo "::warning::${M//%/%25}"
           grep -iE "loaded [0-9]+ scripts?|encountered" log.txt | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
           if grep -qiE "error|encountered [1-9]" <(grep -iE "skript|line [0-9]+|\.sk" log.txt); then exit 1; fi
