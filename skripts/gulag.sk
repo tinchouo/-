@@ -53,17 +53,12 @@ function gulagContar():
     set {gulag::n::salvos} to {_s}
     set {gulag::n::llaves} to size of {gulag::kids::*}
 
-# Partículas repartidas alrededor de un punto (Skript sin addons no tiene "offset").
+# Partículas alrededor de un punto (sintaxis nueva de Skript, la misma del script de Trick).
 function gulagChispas(l: location, tipo: text, n: number, r: number):
-    loop {_n} times:
-        set {_p} to {_l}
-        add (random number between -1 * {_r} and {_r}) to x-coordinate of {_p}
-        add (random number between -1 * {_r} and {_r}) to y-coordinate of {_p}
-        add (random number between -1 * {_r} and {_r}) to z-coordinate of {_p}
-        if {_tipo} is "totem":
-            play 3 totem of undying at {_p}
-        else:
-            play 2 end rod at {_p}
+    if {_tipo} is "totem":
+        draw {_n} totem of undying particles with offset vector({_r}, {_r}, {_r}) with an extra value of 0.45 at {_l}
+    else:
+        draw {_n} end rod particles with offset vector({_r}, {_r}, {_r}) with an extra value of 0.08 at {_l}
 
 function gulagAhora() :: number:
     return unix timestamp of now
@@ -245,7 +240,7 @@ every tick:
             set {_p1} to {_pos}
             add cos({_a}) * 0.5 to x-coordinate of {_p1}
             add sin({_a}) * 0.5 to z-coordinate of {_p1}
-            play end rod at {_p1}
+            draw an end rod particle with an extra value of 0 at {_p1}
         if mod({_t}, 60) is 0:
             play sound "block.amethyst_block.chime" with volume 0.5 with pitch 1.3 at {_pos}
         if {gulag::fase} is "jugando":
@@ -388,12 +383,7 @@ every 5 ticks:
     set {_dx} to (x-coordinate of {_b} - x-coordinate of {_a} + 1) / 2
     set {_dy} to (y-coordinate of {_b} - y-coordinate of {_a} + 1) / 2
     set {_dz} to (z-coordinate of {_b} - z-coordinate of {_a} + 1) / 2
-    loop 6 times:
-        set {_r} to {_c}
-        add (random number between -1 * {_dx} and {_dx}) to x-coordinate of {_r}
-        add (random number between -1 * {_dy} and {_dy}) to y-coordinate of {_r}
-        add (random number between -1 * {_dz} and {_dz}) to z-coordinate of {_r}
-        play happy villager at {_r}
+    draw 8 happy villager particles with offset vector({_dx}, {_dy}, {_dz}) at {_c}
 
 on right click:
     if {gulag::fase} is not "jugando":
