@@ -36,8 +36,8 @@ jobs:
           cd srv
           (sleep 150; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
           # todo lo de Skript sale como aviso para poder leerlo desde afuera
-          # solo lo que dice Skript al leer los scripts (errores con su linea)
-          sed -n '/Loading variables\|Loading scripts\|scripts\//,$p' log.txt | grep -vE "aliases|Peter|Download it|new version" | grep -iE "sk|line|error|warn|loaded|\^|>" | head -45 | while IFS= read -r l; do echo "::warning::${l//%/%25}"; done
+          # cada problema de Skript con su explicacion (la linea de antes y la de despues)
+          grep -n -B2 -A1 "\.sk)" log.txt | grep -vE "^--$" | head -48 | while IFS= read -r l; do echo "::warning::${l//%/%25}"; done
           grep -iE "loaded [0-9]+ scripts?|encountered" log.txt | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
           if grep -qiE "error|encountered [1-9]" <(grep -iE "skript|line [0-9]+|\.sk" log.txt); then exit 1; fi
