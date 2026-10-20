@@ -41,4 +41,5 @@ jobs:
           [ -n "$M" ] && echo "::warning::${M//%/%25}"
           grep -iE "loaded [0-9]+ scripts?|encountered" log.txt | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
-          if grep -qiE "error|encountered [1-9]" <(grep -iE "skript|line [0-9]+|\.sk" log.txt); then exit 1; fi
+          if grep -q "\.sk)" log.txt; then echo "::error::Hay problemas en los scripts (ver el aviso)"; exit 1; fi
+          echo "::notice::Scripts sin errores"
