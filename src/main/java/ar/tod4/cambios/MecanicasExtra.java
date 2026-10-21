@@ -85,7 +85,7 @@ final class MecanicasExtra implements Listener {
     private boolean on(String id) { return cb.on(id); }
 
     private static boolean juega(Player p) {
-        return p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE;
+        return (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) && !ar.tod4.hook.Cuyes.activo(p);
     }
 
     private void cada10() {
@@ -112,17 +112,18 @@ final class MecanicasExtra implements Listener {
     }
 
     /**
-     * Cada tanto, a cada jugador que esta dentro de una Ancient City: si no hay ningun Warden cerca (config warden_distancia),
-     * con cierta chance aparece uno. No hay limite de wardens: si te alejas de los que hay, puede aparecer otro.
+     * Cada tanto, a cada jugador que esta dentro de una Ancient City le aparece un Warden (sin chance), salvo que ya haya
+     * warden_maximo de este sistema a menos de warden_radio. Los Wardens que salen por ruido (sensor) no se tocan ni cuentan.
      */
     private void wardens() {
-        double chance = pl.getConfig().getDouble("cambios.warden_chance", 0.25);
-        double dist = pl.getConfig().getDouble("cambios.warden_distancia", 40);
+        int max = pl.getConfig().getInt("cambios.warden_maximo", 10);
+        double dist = pl.getConfig().getDouble("cambios.warden_radio", 50);
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (!juega(p) || p.getWorld().getEnvironment() != World.Environment.NORMAL) continue;
             if (p.getLocation().getY() > 0 || !enCiudad(p)) continue;
-            boolean hay = !p.getWorld().getNearbyEntities(p.getLocation(), dist, dist, dist, en -> en.getType() == EntityType.WARDEN).isEmpty();
-            if (hay || rnd.nextDouble() >= chance) continue;
+            long hay = p.getWorld().getNearbyEntities(p.getLocation(), dist, dist, dist,
+                    en -> en.getType() == EntityType.WARDEN && en.getPersistentDataContainer().has(NATURAL, PersistentDataType.BYTE)).size();
+            if (hay >= max) continue;
             Location l = lugarWarden(p);
             if (l != null) aparecerWarden(l);
         }

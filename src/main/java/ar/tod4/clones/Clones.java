@@ -164,7 +164,7 @@ public final class Clones implements Listener {
     // ================================================================= tick
 
     private static boolean afecta(Player p) {
-        return p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE;
+        return (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) && !ar.tod4.hook.Cuyes.activo(p);
     }
 
     private void tick() {

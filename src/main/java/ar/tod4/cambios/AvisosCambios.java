@@ -22,7 +22,7 @@ final class AvisosCambios {
         {"cambio_hornos", "d1.hornos", "1", "d",
             "Los *hornos comunes* empezaron a fallar. Ahora tienen una pequeña posibilidad de *explotar* al usarlos.",
             "Si explotan, se pierden *todos los ítems* que estaban dentro."},
-        {"cambio_warden", "d1.warden", "4", "d",
+        {"cambio_warden", "d1.warden", "1", "d",
             "Los *Wardens* aparecen de forma natural en las *Ancient City*.",
             "Ya no hace falta hacer ruido para despertarlos."},
         {"cambio_aldeanos", "d1.aldeanos", "1", "d",
@@ -48,7 +48,7 @@ final class AvisosCambios {
             "Las *vacas* ya no dan *leche*."},
         {"cambio_lava_blaze", "d3.lava", "3", "d",
             "La *resistencia al fuego* ya no protege de la *lava* ni de las *bolas de fuego* de los *Blazes*."},
-        {"aviso_mesa", "d4.mesa", "4", "a",
+        {"aviso_mesa", "d4.mesa", "1", "a",
             "La *mesa de encantamientos* desbloquea un nuevo nivel. Con *30 estanterías* aparece un *nivel 40* con encantamientos mucho mejores.",
             "Además, hay una pequeña posibilidad de obtener *Reparación* al encantar libros."},
         {"cambio_ahogo", "d4.agua", "4", "d",
@@ -65,10 +65,15 @@ final class AvisosCambios {
             "Para festejar el *Día Mundial del Creeper* se descubrieron *6 nuevos tipos de creeper*:",
             "el *Random Creeper*, el *Mini Creeper*, el *Creeper Calamar*, el *Void Creeper*, el *Creeper Nuclear* y el *Flash Creeper*.",
             "Además, los creepers normales ahora son *eléctricos*."},
+        {"cambio_poder", "d2.poder", "2", "d",
+            "El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
+            "Algunos mobs con ballesta pueden tenerlo."},
         {"cambio_caida", "d6.caida", "6", "d",
             "La *protección de la armadura* ya no reduce el daño por *caída*."},
         {"cambio_noches", "d6.noches", "6", "d",
             "Ya no se puede *saltar la noche* durmiendo."},
+        {"cambio_phantoms", "d6.phantoms", "6", "d",
+            "Los *Phantoms* ya no se queman con la *luz del sol*."},
         {"cambio_bedrock", "d6.bedrock", "6", "d",
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
     };
@@ -91,7 +96,8 @@ final class AvisosCambios {
             }
         }
         if (nuevo) pl.getLogger().info("Mensajes de los cambios cargados (nombres cambio_* y aviso_*).");
-        pl.avisos().cambiarDia("cambio_warden", 1, 4);   // el Warden paso al dia 4
+        pl.avisos().cambiarDia("cambio_warden", 4, 1);   // el Warden vuelve al dia 1
+        pl.avisos().cambiarDia("aviso_mesa", 4, 1);      // la mesa de encantamientos pasa al dia 1
     }
 
     /** Parte un parrafo en renglones que no pasen de {@code max} pixeles; un *resaltado* que cruza el renglon se cierra y se reabre. */

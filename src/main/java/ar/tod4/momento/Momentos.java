@@ -267,6 +267,7 @@ public final class Momentos implements Listener {
 
     /** Los exentos (como las nutrias de Desafio): tienen el tag configurado en momentos.tag_exento. */
     private boolean exento(Player p) {
+        if (ar.tod4.hook.Cuyes.activo(p)) return true;   // los cuyes (script cuyes.sk) nunca cuentan
         return p.getScoreboardTags().contains(pl.getConfig().getString("momentos.tag_exento", "exento_momento"));
     }
 

@@ -42,6 +42,9 @@ import org.bukkit.event.block.LeavesDecayEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.EntityAirChangeEvent;
 import org.bukkit.event.entity.EntityBreedEvent;
+import org.bukkit.event.entity.EntityCombustByBlockEvent;
+import org.bukkit.event.entity.EntityCombustByEntityEvent;
+import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
@@ -75,7 +78,6 @@ final class Mecanicas implements Listener {
     private final Set<Location> hornos = new HashSet<>();
     private final Map<UUID, Integer> calor = new HashMap<>();
     private final Set<UUID> quemando = new HashSet<>();   // dano fijo en curso (calor del Nether, agua): ignora armadura y resistencia
-    private final Map<UUID, Long> proximoAhogo = new HashMap<>();
     private final Set<String> placas = new HashSet<>();   // placas de presion ya pisadas (uuid;bloque) hasta que el jugador se baje
     private final List<NamespacedKey> recetasD2 = new ArrayList<>();
     private final List<NamespacedKey> recetasD3 = new ArrayList<>();
@@ -86,18 +88,17 @@ final class Mecanicas implements Listener {
         this.LEGAL = new NamespacedKey(pl, "aldeano_legal");
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada10, 10L, 10L);
-        Bukkit.getScheduler().runTaskTimer(pl, this::ahogo, 10L, 10L);
-        Bukkit.getScheduler().runTaskTimer(pl, this::aireRapido, 1L, 1L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada20, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada40, 40L, 40L);
         cb.hook("d2.hornos", this::recetasD2);
         cb.hook("d4.mesa", on -> pl.mesa().setActiva(on));
+        cb.hook("d2.poder", on -> pl.mesa().setPoderBallesta(on));
     }
 
     private boolean on(String id) { return cb.on(id); }
 
     private static boolean juega(Player p) {
-        return p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE;
+        return (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) && !ar.tod4.hook.Cuyes.activo(p);
     }
 
     // ================================================================= tareas
@@ -360,7 +361,11 @@ final class Mecanicas implements Listener {
     @SuppressWarnings("deprecation")
     public void fuegoNether(EntityDamageEvent e) {
         if (!(e.getEntity() instanceof Player p)) return;
-        if (on("d4.agua") && e.getCause() == EntityDamageEvent.DamageCause.DROWNING && !quemando.contains(p.getUniqueId())) { e.setCancelled(true); return; }
+        // Dia 4: el ahogo del juego (con su armadura/proteccion/totem) pega X veces mas
+        if (on("d4.agua") && e.getCause() == EntityDamageEvent.DamageCause.DROWNING && juega(p)) {
+            e.setDamage(e.getDamage() * pl.getConfig().getDouble("cambios.agua_dano_factor", 2.0));
+            return;
+        }
         if (quemando.contains(p.getUniqueId())) {
             // dano fijo (calor del Nether o agua): exactamente lo que se pidio, sin armadura, encantamientos ni Resistencia
             for (EntityDamageEvent.DamageModifier m : new EntityDamageEvent.DamageModifier[]{EntityDamageEvent.DamageModifier.ARMOR,
@@ -415,47 +420,37 @@ final class Mecanicas implements Listener {
         }
     }
 
+    /** Dia 6: los Phantoms no se prenden fuego con el sol (el fuego de lava, flechas o bloques sigue andando). */
+    @EventHandler(ignoreCancelled = true)
+    public void phantomSol(EntityCombustEvent e) {
+        if (e.getEntityType() != EntityType.PHANTOM || !on("d6.phantoms")) return;
+        if (e instanceof EntityCombustByEntityEvent || e instanceof EntityCombustByBlockEvent) return;
+        e.setCancelled(true);
+    }
+
     @EventHandler(ignoreCancelled = true)
     public void leche(PlayerItemConsumeEvent e) {
         if (on("d3.leche") && e.getItem().getType() == Material.MILK_BUCKET) e.setCancelled(true);
     }
 
+    /**
+     * Dia 4: con aire, el aire baja agua_factor veces mas rapido (la Respiracion sigue alargandolo, es del juego).
+     * Sin aire, el aire sigue bajando para que el golpe del ahogo salga cada agua_golpe_ticks (10 = cada 0,5 s)
+     * en vez de cada 20 ticks; el golpe lo da el juego al llegar a -20.
+     */
     @EventHandler(ignoreCancelled = true)
     public void aire(EntityAirChangeEvent e) {
         if (!on("d4.agua") || !(e.getEntity() instanceof Player p) || !juega(p)) return;
-        // el aire que baja lo maneja el plugin (aireRapido): asi la Respiracion del casco no cuenta y no hay inconsistencias
-        if (e.getAmount() < p.getRemainingAir()) e.setCancelled(true);
-    }
-
-    /** Dia 4: cada tick bajo el agua el aire baja agua_factor (5) veces mas que en el juego; sin Respiracion ni nada; nunca baja de 0. */
-    private void aireRapido() {
-        if (!on("d4.agua")) return;
-        int factor = pl.getConfig().getInt("cambios.agua_factor", 5);
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!juega(p) || p.hasPotionEffect(PotionEffectType.WATER_BREATHING) || p.hasPotionEffect(PotionEffectType.CONDUIT_POWER)) continue;
-            Block ojos = p.getEyeLocation().getBlock();
-            boolean agua = ojos.getType() == Material.WATER || ojos.getType() == Material.BUBBLE_COLUMN
-                    || (ojos.getBlockData() instanceof org.bukkit.block.data.Waterlogged w && w.isWaterlogged());
-            if (agua && p.getRemainingAir() > 0) p.setRemainingAir(Math.max(0, p.getRemainingAir() - factor));
-        }
-    }
-
-    /** Dia 4: sin burbujas, el agua pega medio corazon fijo cada 0,5 s (sin importar armadura, Respiracion ni Resistencia). */
-    private void ahogo() {
-        if (!on("d4.agua")) { if (!proximoAhogo.isEmpty()) proximoAhogo.clear(); return; }
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (!juega(p) || p.getRemainingAir() > 0 || p.hasPotionEffect(PotionEffectType.WATER_BREATHING)
-                    || p.hasPotionEffect(PotionEffectType.CONDUIT_POWER)) continue;
-            Block ojos = p.getEyeLocation().getBlock();
-            boolean agua = ojos.getType() == Material.WATER || ojos.getType() == Material.BUBBLE_COLUMN
-                    || (ojos.getBlockData() instanceof org.bukkit.block.data.Waterlogged w && w.isWaterlogged());
-            if (!agua) continue;
-            quemando.add(p.getUniqueId());
-            try {
-                p.damage(1.0, DamageSource.builder(DamageType.DROWN).build());
-            } finally {
-                quemando.remove(p.getUniqueId());
-            }
+        int viejo = p.getRemainingAir(), nuevo = e.getAmount();
+        if (nuevo >= viejo) return;
+        int baja = viejo - nuevo;
+        if (viejo > 0) {
+            int factor = Math.max(1, pl.getConfig().getInt("cambios.agua_factor", 5));
+            e.setAmount(Math.max(0, viejo - baja * factor));
+        } else {
+            int golpe = Math.max(1, Math.min(20, pl.getConfig().getInt("cambios.agua_golpe_ticks", 10)));
+            int paso = Math.max(1, 20 / golpe);
+            e.setAmount(Math.max(-20, viejo - baja * paso));
         }
     }
 

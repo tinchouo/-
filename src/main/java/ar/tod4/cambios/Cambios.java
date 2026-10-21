@@ -45,7 +45,7 @@ public final class Cambios {
         this.st = new Store(pl, "cambios");
         // ---- Dia 1
         add(new Cambio("d1.hornos", 1, "Explosión de Hornos", false, "&7Los hornos prendidos pueden", "&7explotar de la nada."));
-        add(new Cambio("d1.warden", 4, "Warden en las Ancient City", false, "&7El Warden aparece solo en las", "&7Ancient City (saliendo del piso)."));
+        add(new Cambio("d1.warden", 1, "Warden en las Ancient City", false, "&7Aparecen Wardens solos en las", "&7Ancient City, sin despertarlos."));
         add(new Cambio("d1.aldeanos", 1, "Bloqueo de Aldeanos", false, "&7Los aldeanos naturales desaparecen.", "&7Solo quedan los de huevo/comando."));
         add(new Cambio("d1.totems", 1, "Bloqueo de Tótems", false, "&7Los invocadores no sueltan tótem."));
         add(new Cambio("d1.nether", 1, "Calor del Nether", false, "&7En el Nether te quemas (medio corazón", "&7por segundo) sin Resistencia al fuego", "&7y no hay agua."));
@@ -54,13 +54,14 @@ public final class Cambios {
         add(new Cambio("d2.mending", 2, "Recordatorio: Mending", true, "&7Esto lo hace el datapack", "&7de ítems prohibidos."));
         add(new Cambio("d2.saplings", 2, "Hojas sin brotes ni manzanas", false, "&7Las hojas no sueltan brotes", "&7ni manzanas."));
         add(new Cambio("d2.silverfish", 2, "Silverfish en las cuevas", false, "&7Picando debajo de Y 0 puede salir", "&7un silverfish que da fatiga minera."));
+        add(new Cambio("d2.poder", 2, "Poder en la ballesta", false, "&7Poder sale en la mesa y el yunque", "&7para la ballesta y suma daño."));
         add(new Cambio("d2.hornos", 3, "Hornos Especiales", false, "&7Alto horno: arena, piedra, basalto,", "&7arenisca, terracotas -> esmaltadas.", "&7Ahumador: cactus, pepino de mar,", "&7chorus, troncos (carbón), esponja."));
         // ---- Dia 3
         add(new Cambio("d3.leche", 3, "Sin leche", false, "&7No se puede sacar ni tomar leche", "&7(no se pueden borrar efectos)."));
         add(new Cambio("d3.lava", 3, "Lava y Blazes + Res. al fuego", false, "&7La resistencia al fuego no te salva", "&7de la lava ni de las bolas de fuego", "&7de los Blazes."));
         // ---- Dia 4
-        add(new Cambio("d4.mesa", 4, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
-        add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido y sin", "&7burbujas el agua pega medio corazón", "&7cada 0,5 s."));
+        add(new Cambio("d4.mesa", 1, "Mesa de encantamientos", false, "&7Con 30 estanterías: botones 15/30/40", "&7y encantamientos mejores."));
+        add(new Cambio("d4.agua", 4, "Ahogo rápido", false, "&7Te ahogas 5 veces más rápido y sin", "&7aire el golpe sale cada 0,5 s", "&7con más daño."));
         add(new Cambio("d4.puertas", 4, "Botones, puertas y más", false, "&7Botones, palancas, placas de presión,", "&7puertas, portones y trampillas te matan", "&7(el tótem te salva; los de hierro no)."));
         add(new Cambio("d4.crianza", 4, "Sin crianza", false, "&7Los animales no se reproducen."));
         add(new Cambio("d4.perla", 4, "Perlas con más daño", false, "&7Cada perla te saca 4 corazones."));
@@ -76,10 +77,12 @@ public final class Cambios {
         // ---- Dia 6
         add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
         add(new Cambio("d6.noches", 6, "Noches eternas", false, "&7La noche no se puede saltar.", "&7Acostarte igual resetea los phantoms."));
+        add(new Cambio("d6.phantoms", 6, "Phantoms sin sol", false, "&7Los Phantoms no se queman", "&7con la luz del sol."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
         new Mecanicas(pl, this);
         new MecanicasExtra(pl, this);
+        new PoderBallesta(pl, this);
         new Sueno(pl, this);
         AvisosCambios.sembrar(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)

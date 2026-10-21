@@ -61,6 +61,21 @@ public final class Mesa implements Listener {
 
     public void setActiva(boolean v) { activa = v; }
 
+    // Dia 2: Poder tambien sale en la ballesta (mesa mejorada y libros); la mesa vanilla lo hace PoderBallesta
+    private boolean poderBallesta;
+    private final Set<UUID> manejado = new HashSet<>();
+
+    public void setPoderBallesta(boolean v) { poderBallesta = v; }
+
+    /** Si esta mesa ya decidio los encantamientos de la ballesta de este jugador (y lo borra). */
+    public boolean tomarManejado(Player p) { return manejado.remove(p.getUniqueId()); }
+
+    /** Poder en una ballesta no es compatible en el juego: aca si, cuando el cambio esta prendido. */
+    private boolean puede(Enchantment e, ItemStack item, boolean book) {
+        if (book || canEnchant(e, item)) return true;
+        return poderBallesta && item.getType() == Material.CROSSBOW && e.getKey().getKey().equals("power");
+    }
+
     public void recargar() { conf = YamlConfiguration.loadConfiguration(new File(pl.getDataFolder(), "mesa.yml")); }
 
 
@@ -272,9 +287,11 @@ public final class Mesa implements Listener {
 
         // principal
         List<Enchantment> mains = new ArrayList<>();
-        for (String k : p.main) {
+        String[] mainKeys = p.main;
+        if (poderBallesta && "ballesta".equals(cat)) mainKeys = new String[]{"quick_charge", "power"};
+        for (String k : mainKeys) {
             Enchantment e = ench(k);
-            if (e != null && (book || canEnchant(e, item))) mains.add(e);
+            if (e != null && puede(e, item, book)) mains.add(e);
         }
         if (mains.isEmpty()) return out;
         Enchantment main = mains.get(r.nextInt(mains.size()));
@@ -412,6 +429,7 @@ public final class Mesa implements Listener {
             Map<Enchantment, Integer> add = e.getEnchantsToAdd();
             add.clear();
             add.putAll(res);
+            if ("ballesta".equals(cat)) manejado.add(p.getUniqueId());
         } finally {
             seeds.put(p.getUniqueId(), seedRng.nextLong());
         }
