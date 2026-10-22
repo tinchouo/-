@@ -148,7 +148,7 @@ final class Mecanicas implements Listener {
 
     private void cada20() {
         calorNether();
-        // Dia 1: hornos prendidos cerca de jugadores -> 1% por segundo de explotar
+        // Dia 1: cualquier horno prendido -> horno_chance por segundo de explotar
         if (on("d1.hornos")) {
             Iterator<Location> it = hornos.iterator();
             while (it.hasNext()) {
@@ -158,9 +158,8 @@ final class Mecanicas implements Listener {
                 if (b.getType() != Material.FURNACE) { it.remove(); continue; }
                 BlockState s = b.getState();
                 if (!(s instanceof Furnace f) || f.getBurnTime() <= 0) { it.remove(); continue; }
-                boolean cerca = false;
-                for (Player p : l.getWorld().getPlayers()) if (p.getLocation().distanceSquared(l) <= 64) { cerca = true; break; }
-                if (cerca && Math.random() < pl.getConfig().getDouble("cambios.horno_chance", 0.01)) {
+                // cualquier horno prendido, haya o no alguien cerca
+                if (Math.random() < pl.getConfig().getDouble("cambios.horno_chance", 0.01)) {
                     f.getInventory().clear();
                     b.setType(Material.AIR);
                     it.remove();

@@ -48,7 +48,7 @@ mundos:
     backrooms: "&e???"
 
 cambios:
-  horno_chance: 0.01        # dia 1: chance por segundo de que explote un horno prendido
+  horno_chance: 0.01        # dia 1: chance por segundo de que explote cada horno prendido (haya o no alguien cerca)
   lava_dano: 1.5           # dia 3: dano de la lava con resistencia al fuego, cada medio segundo; fijo, la armadura no lo baja (3.0 = el doble)
   blaze_dano: 5.0          # dia 3: dano de la bola de fuego del blaze a quien tiene resistencia al fuego (5 = como siempre)
   agua_factor: 5            # dia 4: el aire baja X veces mas rapido (la Respiracion sigue ayudando)
