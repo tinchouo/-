@@ -105,7 +105,8 @@ public final class Clones implements Listener {
         }
 
         double objetivo(int i) {
-            if (gigante) return cfgD("gigante_retraso_seg", 3.0) * 20.0 + i * cfgD("gigante_distancia_seg", 3.0) * 20.0;
+            // el gigante va siempre a 2 s (el mismo retraso que el primero de la fila)
+            if (gigante) return cfgD("retraso_seg", 2.0) * 20.0 + i * cfgD("gigante_distancia_seg", 3.0) * 20.0;
             return cfgD("retraso_seg", 2.0) * 20.0 + i * cfgD("distancia_seg", 2.0) * 20.0;
         }
 
@@ -240,6 +241,11 @@ public final class Clones implements Listener {
             Location l = new Location(s.mundo, f.x, f.y, f.z, f.yaw, f.pitch);
             // volviendo al final de la fila: no hay cuerpo, solo una bola de particulas que viaja hasta su lugar
             if (c.volviendoHasta > ahora) {
+                if (s.gigante) {
+                    // el gigante: la sombra de particulas sigue en su lugar (2 s detras) hasta que vuelve a aparecer
+                    orbe(p, l, s.tam);
+                    continue;
+                }
                 long total = (long) (cfgD("transicion_seg", 3.0) * 1000);
                 double prog = 1.0 - (c.volviendoHasta - ahora) / (double) Math.max(1, total);
                 Location desde = c.desde != null && c.desde.getWorld() == l.getWorld() ? c.desde : l;
@@ -278,7 +284,7 @@ public final class Clones implements Listener {
             double dx = cl.getX() - pl0.getX(), dz = cl.getZ() - pl0.getZ(), dy = pl0.getY() - cl.getY();
             if (dx * dx + dz * dz > radio * radio || dy < -1.6 || dy > alto) continue;
             s.inmuneHasta = ahora + (long) (cfgD("inmune_seg", 1.0) * 1000);
-            pegar(p, cl);
+            pegar(p, cl, s.gigante);
             // el cuerpo se deshace en particulas (el gigante explota) y esas particulas viajan al final de la fila
             rafaga(p, cl, s.tam);
             if (s.gigante) {
@@ -301,7 +307,7 @@ public final class Clones implements Listener {
             s.fila.add(c);
             c.atraso = Math.max(s.objetivo(s.fila.size() - 1), c.atraso);
             c.desde = cl.clone();
-            c.volviendoHasta = ahora + (long) (cfgD("transicion_seg", 3.0) * 1000);
+            c.volviendoHasta = ahora + (long) ((s.gigante ? cfgD("retraso_seg", 2.0) : cfgD("transicion_seg", 3.0)) * 1000);
             return;
         }
     }
@@ -317,7 +323,21 @@ public final class Clones implements Listener {
                 (float) pl.getConfig().getDouble("clones.sonidos." + clave + "_tono", tono));
     }
 
-    private void pegar(Player p, Location desde) {
+    /** Jugadores a los que un golpe letal de clon esta pegando ahora (para que nada baje ese danio). */
+    private final java.util.Set<UUID> letal = new java.util.HashSet<>();
+
+    /** El golpe letal no lo baja nada: armadura, proteccion, Resistencia ni absorcion (el totem si salva). */
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+    @SuppressWarnings("deprecation")
+    public void golpeLetal(EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !letal.contains(p.getUniqueId())) return;
+        e.setCancelled(false);
+        for (EntityDamageEvent.DamageModifier m : EntityDamageEvent.DamageModifier.values())
+            if (m != EntityDamageEvent.DamageModifier.BASE && e.isApplicable(m)) e.setDamage(m, 0);
+    }
+
+    /** gigante = te mata de un golpe siempre. */
+    private void pegar(Player p, Location desde, boolean gigante) {
         double dano = cfgD("dano", 6.0);
         p.playHurtAnimation(0);
         p.getWorld().playSound(p.getLocation(), "entity.player.hurt", SoundCategory.PLAYERS, 1f, 1f);
@@ -325,9 +345,15 @@ public final class Clones implements Listener {
         if (v.lengthSquared() < 0.0001) v = p.getLocation().getDirection().setY(0);
         if (v.lengthSquared() > 0.0001) p.setVelocity(v.normalize().multiply(cfgD("empujon", 0.7)).setY(0.3));
         // dano fijo: no lo baja nada (armadura, escudo, resistencia, encantamientos). Si te mataria, el totem si te salva.
-        if (p.getHealth() - dano <= 0) {
+        // (GENERIC no gasta la armadura; el totem salva porque no es un danio que lo saltee)
+        if (gigante || p.getHealth() - dano <= 0) {
             Causas.anotar(p.getUniqueId(), Component.text(p.getName() + " fue atrapado por su clon cósmico"));
-            p.damage(1_000_000, org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.GENERIC).build());
+            letal.add(p.getUniqueId());
+            try {
+                p.damage(1_000_000, org.bukkit.damage.DamageSource.builder(org.bukkit.damage.DamageType.GENERIC).build());
+            } finally {
+                letal.remove(p.getUniqueId());
+            }
         } else {
             p.setHealth(p.getHealth() - dano);
         }

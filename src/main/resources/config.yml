@@ -116,11 +116,10 @@ clones:
   inmune_seg: 1.0             # despues de un golpe, este tiempo sin que otro clon te pegue
   empujon: 0.7
   cantidad: 10                # modo fila
-  retraso_seg: 2.0            # el primero de la fila
+  retraso_seg: 2.0            # el primero de la fila (y el gigante)
   distancia_seg: 2.0          # distancia entre un clon y el siguiente
   radio: 0.8                  # distancia a la que pega (el gigante: esto x su tamanio)
   velocidad_recuperar: 2.0    # cuando uno se va al final, los demas van x2 hasta volver a quedar a su distancia
-  gigante_retraso_seg: 3.0
   gigante_escala: 2.0         # el gigante mide esto x el tamanio del jugador (el clon normal mide lo mismo que el jugador)
   gigante_cantidad: 1         # cuantos gigantes (fila de gigantes)
   gigante_distancia_seg: 3.0
