@@ -574,7 +574,7 @@ public final class Momentos implements Listener {
         mid = null;
         avisoActual = null;
         spawnListos.clear();
-        pl.clones().momentoTerminar();
+        if (pl.clones() != null) pl.clones().momentoTerminar();
         sacarVinetas();
         // sin mensajes en el chat: solo un sonido grave para todos
         if (avisar && habia) {
