@@ -3,8 +3,8 @@ version: 1.0.0
 main: ar.tod4.eventos.TOD4Eventos
 api-version: '1.21'
 author: TrucOfDeath
-description: TrucOfDeath 4 - eventos (ofrendas con boss bar, lava que sube).
-softdepend: [Oraxen]
+description: TrucOfDeath 4 - eventos (ofrendas con boss bar, lava que sube, invasion goblin).
+softdepend: [Oraxen, MythicMobs, Shopkeepers]
 permissions:
   tod4eventos.admin:
     default: op
@@ -13,3 +13,5 @@ commands:
     description: Cofres de ofrenda (almas) que abren una puerta
   lava:
     description: Lava que sube por capas dentro de un volcan
+  goblins:
+    description: Invasion Goblin (raid con mobs de MythicMobs)

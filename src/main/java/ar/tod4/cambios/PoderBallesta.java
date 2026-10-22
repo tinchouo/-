@@ -8,8 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.AbstractArrow;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Piglin;
 import org.bukkit.entity.Pillager;
 import org.bukkit.event.EventHandler;
@@ -17,7 +15,6 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.EntityEquipment;
@@ -33,7 +30,7 @@ import net.kyori.adventure.text.Component;
  * Dia 2: el encantamiento Poder tambien vale en la ballesta.
  *  - Mesa mejorada: lo decide Mesa (ver Mesa.setPoderBallesta). Mesa vanilla (o un boton que la mesa mejorada no decide): aca, con una chance.
  *  - Yunque: ballesta + libro con Poder.
- *  - Danio: la flecha de una ballesta con Poder pega como la del arco (+0,5 por nivel, mas 0,5), sea quien sea que dispare.
+ *  - Danio: lo aplica el juego solo (Poder se lee del arma que disparo la flecha), igual que en el arco.
  *  - Mobs: algunos pillagers y piglins nacen con Poder en la ballesta.
  */
 final class PoderBallesta implements Listener {
@@ -125,21 +122,8 @@ final class PoderBallesta implements Listener {
     }
 
     // ------------------------------------------------------------------ danio
-
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void dispara(ProjectileLaunchEvent e) {
-        if (!(e.getEntity() instanceof AbstractArrow flecha) || !on()) return;
-        if (!(flecha.getShooter() instanceof LivingEntity tirador)) return;
-        Enchantment po = poder();
-        EntityEquipment eq = tirador.getEquipment();
-        if (po == null || eq == null) return;
-        ItemStack arma = eq.getItemInMainHand().getType() == Material.CROSSBOW ? eq.getItemInMainHand()
-                : eq.getItemInOffHand().getType() == Material.CROSSBOW ? eq.getItemInOffHand() : null;
-        if (arma == null) return;
-        int lvl = arma.getEnchantmentLevel(po);
-        if (lvl <= 0) return;
-        flecha.setDamage(flecha.getDamage() + 0.5 * lvl + 0.5);
-    }
+    // No hace falta nada: desde 1.21 el juego aplica Poder segun el arma que disparo la flecha (tambien la ballesta).
+    // Antes se sumaba aca otra vez y la ballesta pegaba el doble.
 
     // ------------------------------------------------------------------ mobs
 

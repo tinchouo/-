@@ -13,3 +13,34 @@ lava:
   segundos_por_capa: 20
   max_bloques_capa: 5000   # si una capa necesita mas, la lava se esta escapando: se frena y avisa
   bloques_por_tick: 1500
+
+# Invasion Goblin (como una raid de Minecraft, barra azul)
+goblins:
+  titulo: "Invasión Goblin"
+  probabilidad: 0.03          # chance de que un trade con un aldeano la empiece (0.03 = 3%). Los de Shopkeepers no cuentan.
+  solo_aldeano_goblin: false  # true = solo tradear con el "Aldeano Goblin" puede empezarla
+  aldeano_goblin: "Aldeano Goblin"   # pegarle a un aldeano con este nombre la empieza seguro
+  cooldown_seg: 1800          # espera entre invasiones
+  radio: 96                   # los jugadores a esta distancia participan (ven la barra)
+  espera_inicio_seg: 15       # la barra se llena antes de la primera oleada
+  espera_entre_seg: 15        # y entre oleadas
+  distancia_min: 24           # los goblins aparecen en un punto a esta distancia del aldeano
+  distancia_max: 32
+  pocos_restantes: 2          # con estos o menos: "Goblins restantes: N" y brillan
+  rezagados_seg: 180          # despues de esto, los que quedaron lejos se acercan
+  mult_por_jugador: 0.35      # mas goblins por cada jugador extra
+  mult_max: 2.5
+  sin_multiplicar: ["GoblinRey"]
+  # una linea por oleada: "IdDeMythicMobs:cantidad, ..."
+  oleadas:
+    - "DuendeRapido:4, GoblinGuerrero:3"
+    - "DuendeRapido:3, GoblinGuerrero:3, GoblinLancero:2"
+    - "GoblinGuerrero:3, GoblinLancero:3, GoblinBombardero:2, GoblinChaman:1"
+    - "GoblinGuerrero:4, GoblinLancero:3, GoblinBombardero:3, GoblinChaman:2, GoblinGrandote:1"
+    - "GoblinGuerrero:4, GoblinLancero:4, GoblinBombardero:3, GoblinChaman:2, GoblinGrandote:2, GoblinRey:1"
+  # comandos de consola para cada jugador al ganar (%player%)
+  recompensas:
+    - "effect give %player% minecraft:hero_of_the_village 1500 1"
+    - "give %player% minecraft:emerald 24"
+    - "give %player% minecraft:totem_of_undying 1"
+    - "xp add %player% 400 points"
