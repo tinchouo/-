@@ -46,8 +46,10 @@ import net.kyori.adventure.text.Component;
  * violetas repiten exactamente sus movimientos con atraso. Si uno lo toca: 3 corazones fijos (sin armadura, escudo,
  * resistencia ni totem), un empujon, y ese clon se va al final de la fila entre particulas.
  *
- * Modos por zona: FILA (10 clones, el primero a 2 s y cada uno 0,5 s mas atras) o GIGANTE (uno solo, grande, a 3 s).
+ * Modos por zona: FILA (10 clones del tamanio del jugador) o GIGANTE (x2, a 3 s).
  * El modo se toma al entrar: si se cambia con alguien adentro, ese sigue con el que tenia.
+ * Paso del Momento Truco: mientras esta activo, todos los jugadores tienen clones en cualquier lugar.
+ * Cada jugador ve solo sus clones (y sus particulas y sonidos). Los clones copian la pose y el brazo del jugador.
  *
  * Aspecto: disfraz guardado de LibsDisguises (clones.disfraz, por defecto "cosmic_clone"). Sin LibsDisguises o sin ese
  * disfraz, se ve como un soporte de armaduras con armadura violeta oscura (para poder probar igual).
@@ -60,7 +62,11 @@ public final class Clones implements Listener {
         final double x, y, z;
         final float yaw, pitch;
         final boolean sneak;
-        Frame(Location l, boolean s) { x = l.getX(); y = l.getY(); z = l.getZ(); yaw = l.getYaw(); pitch = l.getPitch(); sneak = s; }
+        final String pose;              // pose del jugador (parado, agachado, nadando, elytra, tridente, durmiendo...)
+        final boolean swing;            // ese tick movio el brazo (pegar, usar)
+        Frame(Location l, boolean s, String pose, boolean swing) {
+            x = l.getX(); y = l.getY(); z = l.getZ(); yaw = l.getYaw(); pitch = l.getPitch(); sneak = s; this.pose = pose; this.swing = swing;
+        }
     }
 
     private static final class Clon {
@@ -68,6 +74,7 @@ public final class Clones implements Listener {
         Object disfraz;                 // disfraz de LibsDisguises (o null)
         double atraso;                  // en ticks (puede ser decimal mientras alcanza su lugar en la fila)
         boolean agachado;
+        String pose = "STANDING";
         long volviendoHasta;            // despues de pegar: solo particulas que viajan al final de la fila
         Location desde;                 // donde pego (de ahi salen las particulas)
     }
@@ -76,20 +83,24 @@ public final class Clones implements Listener {
         final UUID jugador;
         final String zona;
         final boolean gigante;
+        final double tam;               // tamanio de los clones (el del jugador; x2 el gigante)
         final World mundo;
+        boolean swingPendiente;
         final Frame[] frames = new Frame[BUFFER];
         long t = -1;                    // ultimo tick grabado
         long inmuneHasta;
         Location portal;                // donde entro: ahi se abre el portal del que salen los clones
         final List<Clon> fila = new ArrayList<>();
 
-        Sesion(Player p, String zona, boolean gigante) {
+        Sesion(Player p, String zona, boolean gigante, int cantidad) {
             this.jugador = p.getUniqueId();
             this.zona = zona;
             this.gigante = gigante;
+            this.tam = escalaDe(p) * (gigante ? Math.max(0.1, cfgD("gigante_escala", 2.0)) : 1.0);
             this.mundo = p.getWorld();
             this.portal = p.getLocation().clone();
-            int n = gigante ? Math.max(1, Math.min(10, cfgI("gigante_cantidad", 1))) : Math.max(1, Math.min(30, cfgI("cantidad", 10)));
+            int n = cantidad > 0 ? Math.min(30, cantidad)
+                    : gigante ? Math.max(1, Math.min(10, cfgI("gigante_cantidad", 1))) : Math.max(1, Math.min(30, cfgI("cantidad", 10)));
             for (int i = 0; i < n; i++) { Clon c = new Clon(); c.atraso = objetivo(i); fila.add(c); }
         }
 
@@ -167,20 +178,49 @@ public final class Clones implements Listener {
         return (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE) && !ar.tod4.hook.Cuyes.activo(p);
     }
 
+    // ---- paso de clones del Momento Truco: a todos los jugadores, en cualquier lugar
+    private static final String MOMENTO = "#momento";
+    private boolean momentoOn, momentoGigante;
+    private int momentoCant;
+
+    /** Desde ahora todos los jugadores (menos exentos y cuyes) tienen clones, esten donde esten. */
+    public void momento(boolean gigante, int cantidad) {
+        momentoTerminar();
+        momentoOn = true;
+        momentoGigante = gigante;
+        momentoCant = Math.max(1, Math.min(10, cantidad));
+    }
+
+    /** Termina el paso de clones del Momento Truco: sus clones se deshacen. */
+    public void momentoTerminar() {
+        momentoOn = false;
+        for (Sesion s : new ArrayList<>(sesiones.values())) if (MOMENTO.equals(s.zona)) terminar(s);
+    }
+
+    private static double escalaDe(Player p) {
+        AttributeInstance a = p.getAttribute(Attribute.SCALE);
+        return a != null ? a.getValue() : 1.0;
+    }
+
     private void tick() {
         for (Player p : Bukkit.getOnlinePlayers()) {
             Sesion s = sesiones.get(p.getUniqueId());
             boolean puede = afecta(p) && !p.isDead();
-            Zona z = puede ? zonaEn(p.getLocation()) : null;
-            if (s != null && (z == null || !z.id().equals(s.zona) || p.getWorld() != s.mundo)) { terminar(s); s = null; }
-            if (s == null && z != null) { s = new Sesion(p, z.id(), z.gigante()); sesiones.put(p.getUniqueId(), s); }
+            String zid = null;
+            boolean gig = false;
+            int cant = 0;
+            if (puede && momentoOn && !pl.momentos().exentoDeMomentos(p)) { zid = MOMENTO; gig = momentoGigante; cant = momentoCant; }
+            else if (puede) { Zona z = zonaEn(p.getLocation()); if (z != null) { zid = z.id(); gig = z.gigante(); } }
+            if (s != null && (zid == null || !zid.equals(s.zona) || p.getWorld() != s.mundo)) { terminar(s); s = null; }
+            if (s == null && zid != null) { s = new Sesion(p, zid, gig, cant); sesiones.put(p.getUniqueId(), s); }
             if (s != null) avanzar(p, s);
         }
     }
 
     private void avanzar(Player p, Sesion s) {
         s.t++;
-        s.frames[(int) (s.t % BUFFER)] = new Frame(p.getLocation(), p.isSneaking());
+        s.frames[(int) (s.t % BUFFER)] = new Frame(p.getLocation(), p.isSneaking(), p.getPose().name(), s.swingPendiente);
+        s.swingPendiente = false;
         double alcance = Math.max(0, cfgD("velocidad_recuperar", 2.0) - 1.0);   // cuanto mas rapido va el que quedo atras
         long ahora = System.currentTimeMillis();
         boolean particulas = s.t % 2 == 0;
@@ -188,7 +228,7 @@ public final class Clones implements Listener {
         if (s.portal != null) {
             boolean faltan = false;
             for (Clon c : s.fila) if (c.host == null && c.volviendoHasta == 0) { faltan = true; break; }
-            if (faltan) { if (particulas) portal(s.portal, s.gigante, s.t); }
+            if (faltan) { if (particulas) portal(p, s.portal, s.tam, s.t); }
             else s.portal = null;
         }
         for (int i = 0; i < s.fila.size(); i++) {
@@ -196,7 +236,7 @@ public final class Clones implements Listener {
             double obj = s.objetivo(i);
             if (c.atraso > obj) c.atraso = Math.max(obj, c.atraso - alcance);
             Frame f = s.frame(s.t - Math.round(c.atraso));
-            if (f == null) { if (c.host != null) sacar(c, false); continue; }
+            if (f == null) { if (c.host != null) sacar(c, false, p); continue; }
             Location l = new Location(s.mundo, f.x, f.y, f.z, f.yaw, f.pitch);
             // volviendo al final de la fila: no hay cuerpo, solo una bola de particulas que viaja hasta su lugar
             if (c.volviendoHasta > ahora) {
@@ -204,31 +244,33 @@ public final class Clones implements Listener {
                 double prog = 1.0 - (c.volviendoHasta - ahora) / (double) Math.max(1, total);
                 Location desde = c.desde != null && c.desde.getWorld() == l.getWorld() ? c.desde : l;
                 Location orbe = desde.clone().add(l.clone().subtract(desde).toVector().multiply(Math.max(0, Math.min(1, prog))));
-                orbe(orbe, s.gigante);
+                orbe(p, orbe, s.tam);
                 continue;
             }
             c.volviendoHasta = 0;
             if (c.host == null || !c.host.isValid()) {
-                crear(c, l, s.gigante);
-                rafaga(l, s.gigante);
-                sonido(l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
-                sonido(l, "aparece2", "block.amethyst_block.resonate", 0.8, 0.8);
+                crear(c, l, s.tam, p);
+                rafaga(p, l, s.tam);
+                sonido(p, l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
+                sonido(p, l, "aparece2", "block.amethyst_block.resonate", 0.8, 0.8);
             } else {
                 c.host.teleport(l);
             }
             if (f.sneak != c.agachado) { c.agachado = f.sneak; agachar(c); }
-            if (particulas) estela(l, s.gigante);
+            if (f.pose != null && !f.pose.equals(c.pose)) { c.pose = f.pose; posar(c); }
+            if (f.swing && c.host != null) try { c.host.swingMainHand(); } catch (Throwable ignored) { }
+            if (particulas) estela(p, l, s.tam);
             // cada tanto un susurro de humo que sale del clon (cada uno a su ritmo)
             if ((s.t + i * 7L) % Math.max(10, cfgI("ambiente_cada_ticks", 40)) == 0)
-                sonido(l, "ambiente", "particle.soul_escape", 0.7, 0.5);
+                sonido(p, l, "ambiente", "particle.soul_escape", 0.7, 0.5);
         }
         if (ahora >= s.inmuneHasta) golpes(p, s, ahora);
     }
 
     /** Si un clon toca al jugador: 3 corazones fijos, empujon y ese clon al final de la fila. */
     private void golpes(Player p, Sesion s, long ahora) {
-        double radio = s.gigante ? cfgD("radio_gigante", 2.0) : cfgD("radio", 0.8);
-        double alto = s.gigante ? 1.8 * cfgD("gigante_tamano", 3.0) : 1.8;
+        double radio = cfgD("radio", 0.8) * s.tam;
+        double alto = 1.8 * s.tam;
         Location pl0 = p.getLocation();
         for (Clon c : new ArrayList<>(s.fila)) {
             if (c.host == null || !c.host.isValid()) continue;
@@ -238,22 +280,23 @@ public final class Clones implements Listener {
             s.inmuneHasta = ahora + (long) (cfgD("inmune_seg", 1.0) * 1000);
             pegar(p, cl);
             // el cuerpo se deshace en particulas (el gigante explota) y esas particulas viajan al final de la fila
-            rafaga(cl, s.gigante);
+            rafaga(p, cl, s.tam);
             if (s.gigante) {
                 // estallido cosmico (no una explosion de Minecraft): rafaga de viento, estrellas y anillo violeta
-                Location m = cl.clone().add(0, 2.5, 0);
-                s.mundo.spawnParticle(Particle.GUST, m, 3, 1.0, 1.0, 1.0, 0);
-                s.mundo.spawnParticle(Particle.END_ROD, m, 80, 0.3, 0.3, 0.3, 0.35);
+                double r = 1.5 * s.tam;
+                Location m = cl.clone().add(0, 0.9 * s.tam, 0);
+                p.spawnParticle(Particle.GUST, m, 3, 0.5 * s.tam, 0.5 * s.tam, 0.5 * s.tam, 0);
+                p.spawnParticle(Particle.END_ROD, m, 60, 0.3, 0.3, 0.3, 0.25);
                 for (int i = 0; i < 24; i++) {
                     double ang = i * Math.PI / 12;
-                    s.mundo.spawnParticle(Particle.DUST, m.clone().add(Math.cos(ang) * 3, 0, Math.sin(ang) * 3), 3, 0.1, 0.1, 0.1, 0, VIOLETA);
+                    p.spawnParticle(Particle.DUST, m.clone().add(Math.cos(ang) * r, 0, Math.sin(ang) * r), 3, 0.1, 0.1, 0.1, 0, VIOLETA);
                 }
-                sonido(cl, "explota", "entity.wind_charge.wind_burst", 1.5, 0.6);
-                sonido(cl, "explota2", "block.beacon.deactivate", 1.5, 1.4);
+                sonido(p, cl, "explota", "entity.wind_charge.wind_burst", 1.5, 0.6);
+                sonido(p, cl, "explota2", "block.beacon.deactivate", 1.5, 1.4);
             }
-            sonido(cl, "vuelve", "entity.illusioner.mirror_move", 1.0, 0.6);
-            sonido(cl, "vuelve2", "entity.breeze.shoot", 0.9, 0.7);
-            sacar(c, false);
+            sonido(p, cl, "vuelve", "entity.illusioner.mirror_move", 1.0, 0.6);
+            sonido(p, cl, "vuelve2", "entity.breeze.shoot", 0.9, 0.7);
+            sacar(c, false, p);
             s.fila.remove(c);
             s.fila.add(c);
             c.atraso = Math.max(s.objetivo(s.fila.size() - 1), c.atraso);
@@ -264,11 +307,12 @@ public final class Clones implements Listener {
     }
 
     /** Sonido configurable: clones.sonidos.<clave> = "sonido" (o "" para ninguno), clones.sonidos.<clave>_tono, _volumen. */
-    private void sonido(Location l, String clave, String def, double vol, double tono) {
+    private void sonido(Player v, Location l, String clave, String def, double vol, double tono) {
         String id = pl.getConfig().getString("clones.sonidos." + clave, def);
         if ("block.fire.extinguish".equals(id)) id = def;   // el sonido viejo (de humo) pasa al nuevo, cosmico
         if (id == null || id.isBlank()) return;
-        l.getWorld().playSound(l, id, SoundCategory.HOSTILE,
+        if (v == null || !v.isOnline()) return;
+        v.playSound(l, id, SoundCategory.HOSTILE,
                 (float) pl.getConfig().getDouble("clones.sonidos." + clave + "_volumen", vol),
                 (float) pl.getConfig().getDouble("clones.sonidos." + clave + "_tono", tono));
     }
@@ -291,13 +335,16 @@ public final class Clones implements Listener {
 
     private void terminar(Sesion s) {
         sesiones.remove(s.jugador);
-        for (Clon c : s.fila) if (c.host != null) sacar(c, true);
+        Player v = Bukkit.getPlayer(s.jugador);
+        for (Clon c : s.fila) if (c.host != null) sacar(c, true, v);
     }
 
     // ================================================================= el clon
 
-    private void crear(Clon c, Location l, boolean gigante) {
+    /** El clon solo lo ve su duenio (los demas jugadores no lo reciben). */
+    private void crear(Clon c, Location l, double tam, Player duenio) {
         ArmorStand a = l.getWorld().spawn(l, ArmorStand.class, as -> {
+            as.setVisibleByDefault(false);
             as.setMarker(true);              // sin caja: no se le puede pegar ni empujar
             as.setGravity(false);
             as.setInvulnerable(true);
@@ -309,24 +356,23 @@ public final class Clones implements Listener {
             as.addScoreboardTag("tod4_clon");
             as.getPersistentDataContainer().set(K_CLON, PersistentDataType.BYTE, (byte) 1);
         });
-        double tam = gigante ? cfgD("gigante_tamano", 3.0) : 1.0;
-        if (tam != 1.0) {
-            AttributeInstance sc = a.getAttribute(Attribute.SCALE);
-            if (sc != null) sc.setBaseValue(tam);
-        }
+        AttributeInstance sc = a.getAttribute(Attribute.SCALE);
+        if (sc != null) sc.setBaseValue(tam);
         if (cfgB("brillo", false)) a.setGlowing(true);
+        if (duenio != null) duenio.showEntity(pl, a);
         c.host = a;
         c.agachado = false;
-        c.disfraz = disfrazar(a, tam);
+        c.pose = "STANDING";
+        c.disfraz = disfrazar(a, tam, duenio);
         // sin skin no se muestra ningun cuerpo: el clon queda solo como particulas
         if (c.disfraz == null) a.setInvisible(true);
     }
 
     private boolean cfgB(String k, boolean def) { return pl.getConfig().getBoolean("clones." + k, def); }
 
-    private void sacar(Clon c, boolean conEfecto) {
+    private void sacar(Clon c, boolean conEfecto, Player v) {
         if (c.host != null && c.host.isValid()) {
-            if (conEfecto) rafaga(c.host.getLocation(), false);
+            if (conEfecto && v != null && v.isOnline() && v.getWorld() == c.host.getWorld()) rafaga(v, c.host.getLocation(), 1.0);
             c.host.remove();
         }
         c.host = null;
@@ -376,18 +422,17 @@ public final class Clones implements Listener {
     private static final Particle.DustOptions VIOLETA_OSC = new Particle.DustOptions(Color.fromRGB(60, 15, 110), 1.5f);
     private static final Particle.DustOptions NEGRO = new Particle.DustOptions(Color.fromRGB(12, 8, 24), 1.5f);
 
-    private static void estela(Location l, boolean gigante) {
-        double k = gigante ? 3 : 1;
+    // las particulas y sonidos de los clones solo los ve/escucha su duenio (v)
+    private static void estela(Player v, Location l, double k) {
         Location c = l.clone().add(0, 0.9 * k, 0);
-        l.getWorld().spawnParticle(Particle.DUST, c, (int) (3 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, VIOLETA);
-        l.getWorld().spawnParticle(Particle.DUST, c, (int) (2 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, NEGRO);
+        v.spawnParticle(Particle.DUST, c, (int) Math.ceil(3 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, VIOLETA);
+        v.spawnParticle(Particle.DUST, c, (int) Math.ceil(2 * k), 0.25 * k, 0.5 * k, 0.25 * k, 0, NEGRO);
     }
 
     /** Portal cosmico en la entrada: un anillo violeta que gira, del que salen los clones. */
-    private static void portal(Location l, boolean gigante, long t) {
-        double r = gigante ? 2.2 : 1.0;
-        World w = l.getWorld();
-        Location c = l.clone().add(0, gigante ? 2.5 : 1.0, 0);
+    private static void portal(Player w, Location l, double k, long t) {
+        double r = 1.0 * k;
+        Location c = l.clone().add(0, 1.0 * k, 0);
         for (int i = 0; i < 6; i++) {
             double ang = t * 0.25 + i * Math.PI / 3;
             Location q = c.clone().add(Math.cos(ang) * r, Math.sin(ang) * r, 0);
@@ -397,19 +442,15 @@ public final class Clones implements Listener {
     }
 
     /** La "bola" de particulas que viaja al final de la fila despues de pegar. */
-    private static void orbe(Location l, boolean gigante) {
-        double k = gigante ? 2.5 : 1;
+    private static void orbe(Player w, Location l, double k) {
         Location c = l.clone().add(0, 0.9 * k, 0);
-        World w = l.getWorld();
         w.spawnParticle(Particle.DUST, c, (int) (6 * k), 0.2 * k, 0.3 * k, 0.2 * k, 0, VIOLETA);
         w.spawnParticle(Particle.DUST, c, (int) (4 * k), 0.2 * k, 0.3 * k, 0.2 * k, 0, NEGRO);
         w.spawnParticle(Particle.REVERSE_PORTAL, c, (int) (3 * k), 0.15 * k, 0.2 * k, 0.15 * k, 0.01);
     }
 
-    private static void rafaga(Location l, boolean gigante) {
-        double k = gigante ? 3 : 1;
+    private static void rafaga(Player w, Location l, double k) {
         Location c = l.clone().add(0, 0.9 * k, 0);
-        World w = l.getWorld();
         w.spawnParticle(Particle.DUST, c, (int) (40 * k), 0.4 * k, 0.8 * k, 0.4 * k, 0, VIOLETA);
         w.spawnParticle(Particle.DUST, c, (int) (30 * k), 0.4 * k, 0.8 * k, 0.4 * k, 0, VIOLETA_OSC);
         w.spawnParticle(Particle.DUST, c, (int) (30 * k), 0.4 * k, 0.8 * k, 0.4 * k, 0, NEGRO);
@@ -431,7 +472,7 @@ public final class Clones implements Listener {
      * 2) Si no: el disfraz guardado de LibsDisguises (clones.disfraz).
      * Sin LibsDisguises: null (se ve con armadura violeta).
      */
-    private Object disfrazar(Entity host, double tam) {
+    private Object disfrazar(Entity host, double tam, Player duenio) {
         if (Bukkit.getPluginManager().getPlugin("LibsDisguises") == null) {
             estadoDisfraz = "LibsDisguises no está instalado";
             return null;
@@ -472,7 +513,8 @@ public final class Clones implements Listener {
             // el disfraz guardado se comparte: cada clon necesita su copia
             try { d = d.getClass().getMethod("clone").invoke(d); } catch (Exception ignored) { }
             try { d.getClass().getMethod("setNameVisible", boolean.class).invoke(d, false); } catch (Exception ignored) { }
-            if (tam != 1.0) {
+            // siempre el tamanio pedido (si el disfraz guardado traia otro tamanio, se pisa)
+            {
                 Object w = watcher(d);
                 if (w != null) {
                     try { w.getClass().getMethod("setScale", double.class).invoke(w, tam); }
@@ -481,7 +523,15 @@ public final class Clones implements Listener {
             }
             Object wt = watcher(d);
             if (wt != null) try { wt.getClass().getMethod("setInvisible", boolean.class).invoke(wt, false); } catch (Exception ignored) { }
-            mDisguiseToAll.invoke(null, host, d);
+            // solo para el duenio (ademas el soporte esta oculto para los demas)
+            boolean listo = false;
+            if (duenio != null) {
+                try {
+                    api.getMethod("disguiseToPlayers", Entity.class, dc, java.util.Collection.class).invoke(null, host, d, List.of(duenio));
+                    listo = true;
+                } catch (Throwable ignored) { }
+            }
+            if (!listo) mDisguiseToAll.invoke(null, host, d);
             return d;
         } catch (Throwable ex) {
             Throwable c = causa(ex);
@@ -537,6 +587,44 @@ public final class Clones implements Listener {
             if (mSetSneaking == null) mSetSneaking = w.getClass().getMethod("setSneaking", boolean.class);
             mSetSneaking.invoke(w, c.agachado);
         } catch (Exception ignored) { }
+    }
+
+    /** Copia la pose del jugador al disfraz (nadar, elytra, tridente, dormir, agacharse...). Lo que no exista en LibsDisguises se ignora. */
+    private void posar(Clon c) {
+        if (c.disfraz == null) return;
+        Object w = watcher(c.disfraz);
+        if (w == null) return;
+        String pose = c.pose;
+        try {
+            Class<?> ep = Class.forName("me.libraryaddict.disguise.disguisetypes.EntityPose");
+            Object val = null;
+            for (String n : pose.equals("SNEAKING") ? new String[]{"SNEAKING", "CROUCHING"} : new String[]{pose}) {
+                try { val = ep.getMethod("valueOf", String.class).invoke(null, n); break; } catch (Throwable ignored) { }
+            }
+            if (val != null) llamar(w, "setEntityPose", val);
+        } catch (Throwable ignored) { }
+        llamar(w, "setSwimming", pose.equals("SWIMMING"));
+        llamar(w, "setFlyingWithElytra", pose.equals("FALL_FLYING"));
+        llamar(w, "setSpinning", pose.equals("SPIN_ATTACK"));
+        llamar(w, "setSleeping", pose.equals("SLEEPING"));
+    }
+
+    /** Llama a un metodo de un argumento si existe (por nombre); si no, no hace nada. */
+    private static void llamar(Object o, String metodo, Object arg) {
+        for (Method m : o.getClass().getMethods()) {
+            if (!m.getName().equals(metodo) || m.getParameterCount() != 1) continue;
+            Class<?> t = m.getParameterTypes()[0];
+            boolean ok = arg instanceof Boolean ? (t == boolean.class || t == Boolean.class) : t.isInstance(arg);
+            if (!ok) continue;
+            try { m.invoke(o, arg); } catch (Throwable ignored) { }
+            return;
+        }
+    }
+
+    @EventHandler
+    public void brazo(org.bukkit.event.player.PlayerAnimationEvent e) {
+        Sesion s = sesiones.get(e.getPlayer().getUniqueId());
+        if (s != null) s.swingPendiente = true;
     }
 
     // ================================================================= limpieza y eventos
@@ -628,12 +716,14 @@ public final class Clones implements Listener {
                 l.setYaw(p.getLocation().getYaw() + 180);
                 Clon c = new Clon();
                 avisoDisfraz = false;
-                crear(c, l, a.length > 1 && a[1].equalsIgnoreCase("gigante"));
-                rafaga(l, false);
-                sonido(l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
+                boolean gig = a.length > 1 && a[1].equalsIgnoreCase("gigante");
+                double tam = escalaDe(p) * (gig ? Math.max(0.1, cfgD("gigante_escala", 2.0)) : 1.0);
+                crear(c, l, tam, p);
+                rafaga(p, l, tam);
+                sonido(p, l, "aparece", "entity.illusioner.prepare_mirror", 0.8, 0.7);
                 Style.info(p, "Clon de prueba (10 s). Aspecto: &f" + estadoDisfraz);
                 diagnostico(p);
-                Bukkit.getScheduler().runTaskLater(pl, () -> sacar(c, true), 200L);
+                Bukkit.getScheduler().runTaskLater(pl, () -> sacar(c, true, p), 200L);
             }
             case "lista" -> {
                 if (zonas().isEmpty()) { Style.info(s, "No hay zonas de clones."); return; }

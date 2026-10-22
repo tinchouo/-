@@ -42,7 +42,7 @@ public final class MomentosMenu {
 
     /** Vuelve al menu que corresponde: el del paso (regla o spawn) o el del momento. */
     private void volver(Player p, String id) {
-        if (id.contains(".pasos.")) { if (mo.esSpawn(id)) pasoSpawn(p, id); else pasoEditor(p, id); }
+        if (id.contains(".pasos.")) { if (mo.esSpawn(id)) pasoSpawn(p, id); else if (mo.esClones(id)) pasoClones(p, id); else pasoEditor(p, id); }
         else editor(p, id);
     }
 
@@ -115,7 +115,8 @@ public final class MomentosMenu {
         for (String pid : mo.pasos(id)) {
             if (s >= 45) break;
             String path = id + ".pasos." + pid;
-            boolean sp = mo.esSpawn(path);
+            boolean cl = mo.esClones(path);
+            boolean sp = mo.esSpawn(path) || cl;
             List<String> lore = new ArrayList<>();
             lore.add("");
             lore.add("&7" + mo.objetivoCorto(path));
@@ -125,19 +126,20 @@ public final class MomentosMenu {
             lore.add("");
             lore.add("&e▶ Click para editar");
             lore.add("&c▶ Shift+click derecho para borrar");
-            m.set(s++, Items.of(sp ? Material.CREEPER_HEAD : mo.tipo(path).icono, "&c&l" + (s) + ". &f" + mo.nombre(path), lore), e -> {
+            m.set(s++, Items.of(cl ? Material.ECHO_SHARD : sp ? Material.CREEPER_HEAD : mo.tipo(path).icono, "&c&l" + (s) + ". &f" + mo.nombre(path), lore), e -> {
                 if (e.isShiftClick() && e.isRightClick()) { mo.st.set("momentos." + path, null); pasos(p, id); return; }
                 volver(p, path);
             });
         }
         for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.RED_STAINED_GLASS_PANE));
         m.set(45, Items.of(Material.ARROW, "&7◀ Volver"), e -> editor(p, id));
-        m.set(48, Items.of(Material.LIME_CONCRETE, "&a&l➕ Agregar regla", "", "&7Tocar, altura, punto, dimensión...", "&7con tiempo, gas y castigo."), e -> nuevoPaso(p, id, false));
-        m.set(50, Items.of(Material.CREEPER_HEAD, "&a&l➕ Agregar spawn de mob", "", "&7Hace aparecer un mob en la posición", "&7de cada jugador."), e -> nuevoPaso(p, id, true));
+        m.set(48, Items.of(Material.LIME_CONCRETE, "&a&l➕ Agregar regla", "", "&7Tocar, altura, punto, dimensión...", "&7con tiempo, gas y castigo."), e -> nuevoPaso(p, id, "REGLA"));
+        m.set(50, Items.of(Material.CREEPER_HEAD, "&a&l➕ Agregar spawn de mob", "", "&7Hace aparecer un mob en la posición", "&7de cada jugador."), e -> nuevoPaso(p, id, "SPAWN"));
+        m.set(52, Items.of(Material.ECHO_SHARD, "&5&l➕ Agregar clones cósmicos", "", "&7Mientras dure el momento, a cada jugador", "&7lo siguen sus clones (fila o gigante),", "&7esté donde esté. Cada uno ve solo los suyos."), e -> nuevoPaso(p, id, "CLONES"));
         m.open(p);
     }
 
-    private void nuevoPaso(Player p, String id, boolean spawn) {
+    private void nuevoPaso(Player p, String id, String tipo) {
         p.closeInventory();
         Style.info(p, "Escribe el &enombre &7del paso &8(o cancel)&7:");
         ChatInput.ask(p, txt -> {
@@ -149,7 +151,9 @@ public final class MomentosMenu {
             String path = id + ".pasos." + n;
             ConfigurationSection c = mo.m(path);
             c.set("nombre", nom);
-            if (spawn) {
+            if (tipo.equals("CLONES")) {
+                c.set("tipo_paso", "CLONES"); c.set("clones.modo", "fila"); c.set("clones.cant", 10);
+            } else if (tipo.equals("SPAWN")) {
                 c.set("tipo_paso", "SPAWN"); c.set("spawn.mob", "creeper_cargado"); c.set("spawn.cant", 1); c.set("spawn.vida", 1); c.set("spawn.azar", 0);
             } else {
                 c.set("tipo_paso", "REGLA"); c.set("duracion", 0); c.set("modo", "una_vez");
@@ -188,6 +192,37 @@ public final class MomentosMenu {
         m.set(15, Items.of(Material.CHEST, "&6&lRecompensa", "", "&7Para los que lo consiguen (opcional).", "&7Ítems: &f" + mo.recompensas(path).size(), "",
                 "&e▶ Click para editar"), e -> recompensas(p, path));
         textoYAviso(m, p, path, c, () -> pasoEditor(p, path));
+        m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> pasos(p, id));
+        m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
+            if (!e.isShiftClick()) { Style.err(p, "Usa shift+click para borrar."); return; }
+            mo.st.set("momentos." + path, null); pasos(p, id);
+        });
+        m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    /** Un paso de Cosmic Clones: modo (fila o gigante) y cuantos. */
+    void pasoClones(Player p, String path) {
+        Style.click(p);
+        ConfigurationSection c = mo.m(path);
+        String id = raiz(path);
+        Menu m = new Menu(4, "&5&l✦ &8" + mo.nombre(path));
+        m.set(10, Items.of(Material.NAME_TAG, "&e&lNombre", "", "&7" + mo.nombre(path), "", "&e▶ Click para cambiar"), e -> {
+            p.closeInventory();
+            Style.info(p, "Escribe el nuevo nombre &8(o cancel)&7:");
+            ChatInput.ask(p, txt -> { ChatInput.cancel(p); c.set("nombre", Txt.strip(txt).trim()); touch(); pasoClones(p, path); });
+        });
+        boolean gig = "gigante".equals(c.getString("clones.modo", "fila"));
+        m.set(11, Items.of(gig ? Material.AMETHYST_BLOCK : Material.ECHO_SHARD, gig ? "&5&lModo: gigante" : "&5&lModo: fila", "",
+                gig ? "&7Clones grandes (x2), a 3 s de distancia." : "&7Clones del tamaño del jugador, en fila.", "", "&e▶ Click para cambiar"), e -> {
+            c.set("clones.modo", gig ? "fila" : "gigante");
+            c.set("clones.cant", gig ? 10 : 1);
+            touch(); pasoClones(p, path);
+        });
+        int cant = c.getInt("clones.cant", gig ? 1 : 10);
+        m.set(12, Items.of(Material.PAPER, "&e&lClones por jugador: &f" + cant, "", "&7Click: +1 | Click derecho: -1", "&8Ojo: con muchos jugadores, muchos clones", "&8son muchas entidades."),
+                e -> { c.set("clones.cant", Math.max(1, Math.min(10, cant + (e.isRightClick() ? -1 : 1)))); touch(); pasoClones(p, path); });
+        m.set(13, Items.of(Material.BOOK, "&7&lCómo funciona", "", "&7Al activarlo, a cada jugador (menos los", "&7exentos y cuyes) lo siguen sus clones", "&7en cualquier lugar, hasta que termine", "&7el momento. Cada uno ve solo los suyos."));
+        textoYAviso(m, p, path, c, () -> pasoClones(p, path));
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> pasos(p, id));
         m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {
             if (!e.isShiftClick()) { Style.err(p, "Usa shift+click para borrar."); return; }

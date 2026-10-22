@@ -118,14 +118,13 @@ clones:
   cantidad: 10                # modo fila
   retraso_seg: 2.0            # el primero de la fila
   distancia_seg: 2.0          # distancia entre un clon y el siguiente
-  radio: 0.8
+  radio: 0.8                  # distancia a la que pega (el gigante: esto x su tamanio)
   velocidad_recuperar: 2.0    # cuando uno se va al final, los demas van x2 hasta volver a quedar a su distancia
   gigante_retraso_seg: 3.0
-  gigante_tamano: 3.0
+  gigante_escala: 2.0         # el gigante mide esto x el tamanio del jugador (el clon normal mide lo mismo que el jugador)
   gigante_cantidad: 1         # cuantos gigantes (fila de gigantes)
   gigante_distancia_seg: 3.0
   transicion_seg: 3.0         # al pegar: el clon queda como particulas que viajan al final de la fila
-  radio_gigante: 2.0
   brillo: false               # contorno brillante (blanco)
   # skin: si skin_valor tiene algo, se usa esa (valor y firma de MineSkin); si se deja vacio, se usa el disfraz guardado
   # (si estas lineas no estan, se usa la skin del Cosmic Clone que viene con el plugin)

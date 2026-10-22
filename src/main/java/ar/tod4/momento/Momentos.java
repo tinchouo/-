@@ -169,6 +169,9 @@ public final class Momentos implements Listener {
 
     public boolean esSpawn(String path) { return "SPAWN".equals(m(path).getString("tipo_paso", "REGLA")); }
 
+    /** Paso de Cosmic Clones: mientras el momento sigue, a todos los jugadores los persiguen sus clones (en cualquier lugar). */
+    public boolean esClones(String path) { return "CLONES".equals(m(path).getString("tipo_paso", "REGLA")); }
+
     Tipo tipo(String path) {
         try { return Tipo.valueOf(m(path).getString("objetivo.tipo", "TOCAR")); } catch (Exception e) { return Tipo.TOCAR; }
     }
@@ -184,6 +187,8 @@ public final class Momentos implements Listener {
     public String objetivoCorto(String path) {
         ConfigurationSection c = m(path);
         if (esSpawn(path)) return "Aparece: " + c.getString("spawn.mob", "?") + " x" + c.getInt("spawn.cant", 1);
+        if (esClones(path)) return "gigante".equals(c.getString("clones.modo", "fila")) ? "Clones cósmicos: gigante x" + c.getInt("clones.cant", 1)
+                : "Clones cósmicos: fila de " + c.getInt("clones.cant", 10);
         List<String> objs = c.getStringList("objetivo.objs");
         String lista = objs.isEmpty() ? "?" : Txt.plain(Obj.nombre(objs.get(0))) + (objs.size() > 1 ? " (o similar)" : "");
         switch (tipo(path)) {
@@ -266,6 +271,9 @@ public final class Momentos implements Listener {
     }
 
     /** Los exentos (como las nutrias de Desafio): tienen el tag configurado en momentos.tag_exento. */
+    /** Para otros sistemas (clones): no participa de los Momentos Truco. */
+    public boolean exentoDeMomentos(Player p) { return exento(p); }
+
     private boolean exento(Player p) {
         if (ar.tod4.hook.Cuyes.activo(p)) return true;   // los cuyes (script cuyes.sk) nunca cuentan
         return p.getScoreboardTags().contains(pl.getConfig().getString("momentos.tag_exento", "exento_momento"));
@@ -395,7 +403,7 @@ public final class Momentos implements Listener {
                     "&7Cada clic lo hace aparecer al instante en", "&7la posición de todos los participantes.", "",
                     "&e▶ Click para spawnear (las veces que quieras)");
         } else {
-            Material mat = esSpawn(path) ? Material.CREEPER_HEAD : tipo(path).icono;
+            Material mat = esSpawn(path) ? Material.CREEPER_HEAD : esClones(path) ? Material.ECHO_SHARD : tipo(path).icono;
             it = Items.of(mat, "&c&l⚡ " + nombre(path), "", "&7" + textoSidebar(path), "",
                     esSpawn(path) ? "&e▶ Click: ruleta y aviso. Después este ítem" : "&e▶ Click para activar",
                     esSpawn(path) ? "&e  pasa a spawnear el mob con cada clic." : "");
@@ -465,6 +473,12 @@ public final class Momentos implements Listener {
         Act a = new Act();
         a.path = path;
         a.texto = textoSidebar(path);
+        if (esClones(path)) {
+            // desde ahora (y hasta que termine el momento) a cada jugador lo siguen sus clones, este donde este
+            pl.clones().momento("gigante".equals(c.getString("clones.modo", "fila")), c.getInt("clones.cant", 10));
+            activos.put("clones", a);
+            return;
+        }
         if (esSpawn(path)) {
             // el anuncio no hace aparecer nada: desde ahora el item del admin spawnea con cada clic
             spawnListos.add(path);
@@ -560,6 +574,7 @@ public final class Momentos implements Listener {
         mid = null;
         avisoActual = null;
         spawnListos.clear();
+        pl.clones().momentoTerminar();
         sacarVinetas();
         // sin mensajes en el chat: solo un sonido grave para todos
         if (avisar && habia) {

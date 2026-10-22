@@ -148,6 +148,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     public Cambios cambios() { return cambios; }
     public Misiones misiones() { return misiones; }
     public Momentos momentos() { return momentos; }
+    public ar.tod4.clones.Clones clones() { return clones; }
     public ar.tod4.equipos.Equipos equipos() { return equipos; }
 
     // ================================================================= comandos
