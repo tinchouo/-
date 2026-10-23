@@ -357,6 +357,9 @@ public final class Revivir implements Listener {
         for (Player o : Bukkit.getOnlinePlayers())
             o.playSound(o.getLocation(), pl.getConfig().getString("revivir.sonido_ritual", "tod4:revivir"), SoundCategory.MASTER, 1f, 1f);
         Style.broadcast("&e✦ &e&l" + quien + " &7ha revivido a &e&l" + n + "&7.");
+        // contador de revividos (los OP no cuentan, igual que sus muertes)
+        org.bukkit.OfflinePlayer rev = Bukkit.getOfflinePlayerIfCached(n);
+        if (pl.extras() != null && (rev == null || !rev.isOp())) pl.extras().contar("revividos");
         Player t = Bukkit.getPlayerExact(n);
         if (t != null) descenso(t);
         else {

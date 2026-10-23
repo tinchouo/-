@@ -117,28 +117,60 @@ public final class Extras implements Listener {
         return t;
     }
 
-    /** /tod4 muertes  |  /tod4 muertes poner <dia> <cantidad> */
+    // ---- revividos y totems (misma lista)
+
+    /** Suma 1 al contador del dia de hoy: "muertes", "revividos" o "totems". */
+    public void contar(String tipo) {
+        String k = tipo + "." + pl.dia();
+        pl.datos().set(k, pl.datos().y().getInt(k, 0) + 1);
+    }
+
+    public int del(String tipo, int dia) { return pl.datos().y().getInt(tipo + "." + dia, 0); }
+
+    public int total(String tipo) {
+        ConfigurationSection s = pl.datos().y().getConfigurationSection(tipo);
+        int t = 0;
+        if (s != null) for (String k : s.getKeys(false)) t += s.getInt(k, 0);
+        return t;
+    }
+
+    /** Totems: no cuentan los OP, los cuyes ni el gulag. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void totem(org.bukkit.event.entity.EntityResurrectEvent e) {
+        if (!(e.getEntity() instanceof Player p)) return;
+        if (p.isOp() || ar.tod4.hook.Cuyes.activo(p) || (ar.tod4.hook.Gulag.activo() && ar.tod4.hook.Gulag.participa(p.getUniqueId()))) return;
+        contar("totems");
+    }
+
+    private static final String[] TIPOS = {"muertes", "revividos", "totems"};
+
+    /** /tod4 muertes  |  /tod4 muertes poner <dia> <cantidad> [muertes|revividos|totems] */
     public void cmdMuertes(CommandSender s, String[] a) {
-        if (a.length >= 4 && a[1].equalsIgnoreCase("poner")) {
+        if (a.length >= 2 && a[1].equalsIgnoreCase("poner")) {
+            String tipo = a.length >= 5 ? a[4].toLowerCase() : "muertes";
             try {
+                if (a.length < 4 || !java.util.Arrays.asList(TIPOS).contains(tipo)) throw new NumberFormatException();
                 int d = Integer.parseInt(a[2]), n = Integer.parseInt(a[3]);
                 if (d < 1 || n < 0) throw new NumberFormatException();
-                pl.datos().set("muertes." + d, n);
-                Style.ok(s, "Muertes del día &f" + d + "&a: &f" + n);
-            } catch (NumberFormatException e) { Style.err(s, "Uso: &e/tod4 muertes poner <día> <cantidad>"); }
+                pl.datos().set(tipo + "." + d, n);
+                Style.ok(s, "Día &f" + d + "&a, " + tipo + ": &f" + n);
+            } catch (NumberFormatException e) { Style.err(s, "Uso: &e/tod4 muertes poner <día> <cantidad> [muertes|revividos|totems]"); }
             return;
         }
-        Map<Integer, Integer> por = new TreeMap<>();
-        ConfigurationSection sec = pl.datos().y().getConfigurationSection("muertes");
-        if (sec != null) for (String k : sec.getKeys(false)) {
-            try { por.put(Integer.parseInt(k), sec.getInt(k, 0)); } catch (NumberFormatException ignored) { }
+        java.util.TreeSet<Integer> dias = new java.util.TreeSet<>();
+        for (String t : TIPOS) {
+            ConfigurationSection sec = pl.datos().y().getConfigurationSection(t);
+            if (sec != null) for (String k : sec.getKeys(false)) {
+                try { dias.add(Integer.parseInt(k)); } catch (NumberFormatException ignored) { }
+            }
         }
-        Style.raw(s, "&8&m--------------&r &c&lMuertes &8&m--------------");
-        if (por.isEmpty()) Style.raw(s, "&7Todavía no hay muertes anotadas.");
-        for (Map.Entry<Integer, Integer> en : por.entrySet())
-            Style.raw(s, " &8| &7Día " + en.getKey() + ": &c" + en.getValue() + (en.getKey() == pl.dia() ? " &8(hoy)" : ""));
-        Style.raw(s, " &8| &7Total: &c" + muertesTotal());
-        Style.raw(s, "&8Para corregir un día: &e/tod4 muertes poner <día> <cantidad>");
+        Style.raw(s, "&8&m-----------&r &c&lMuertes &8· &e&lRevividos &8· &6&lTótems &8&m-----------");
+        if (dias.isEmpty()) Style.raw(s, "&7Todavía no hay nada anotado.");
+        for (int d : dias)
+            Style.raw(s, " &8| &7Día " + d + ": &c☠ " + del("muertes", d) + " &8· &e✦ " + del("revividos", d)
+                    + " &8· &6⚝ " + del("totems", d) + (d == pl.dia() ? " &8(hoy)" : ""));
+        Style.raw(s, " &8| &fTotal: &c☠ " + total("muertes") + " &8· &e✦ " + total("revividos") + " &8· &6⚝ " + total("totems"));
+        Style.raw(s, "&8Corregir: &e/tod4 muertes poner <día> <cantidad> [muertes|revividos|totems]");
     }
 
     // ================================================================= donde
