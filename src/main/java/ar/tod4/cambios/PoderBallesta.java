@@ -27,7 +27,7 @@ import ar.tod4.TOD4;
 import net.kyori.adventure.text.Component;
 
 /**
- * Dia 2: el encantamiento Poder tambien vale en la ballesta.
+ * Dia 2: los encantamientos Poder e Infinidad tambien valen en la ballesta (Infinidad: no gasta flechas comunes, como en el arco).
  *  - Mesa mejorada: lo decide Mesa (ver Mesa.setPoderBallesta). Mesa vanilla (o un boton que la mesa mejorada no decide): aca, con una chance.
  *  - Yunque: ballesta + libro con Poder.
  *  - Danio: lo aplica el juego solo (Poder se lee del arma que disparo la flecha), igual que en el arco.
@@ -49,18 +49,28 @@ final class PoderBallesta implements Listener {
 
     // ------------------------------------------------------------------ mesa vanilla
 
+    private static Enchantment infinidad() { return Registry.ENCHANTMENT.get(NamespacedKey.minecraft("infinity")); }
+
+    private static Enchantment reparacion() { return Registry.ENCHANTMENT.get(NamespacedKey.minecraft("mending")); }
+
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void mesa(EnchantItemEvent e) {
         if (e.getItem().getType() != Material.CROSSBOW) return;
         boolean laMesaMejoradaLoDecidio = pl.mesa().tomarManejado(e.getEnchanter());
-        Enchantment po = poder();
-        if (!on() || laMesaMejoradaLoDecidio || po == null) return;
+        if (!on() || laMesaMejoradaLoDecidio) return;
         Map<Enchantment, Integer> add = e.getEnchantsToAdd();
-        if (add.containsKey(po)) return;
-        if (ThreadLocalRandom.current().nextDouble() >= pl.getConfig().getDouble("cambios.poder_ballesta_mesa", 0.4)) return;
-        // como en el juego: Poder I desde nivel 1, II desde 11, III desde 21, IV desde 31, V desde 41
-        int lvl = Math.max(1, Math.min(po.getMaxLevel(), (e.getExpLevelCost() - 1) / 10 + 1));
-        add.put(po, lvl);
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        Enchantment po = poder();
+        if (po != null && !add.containsKey(po) && r.nextDouble() < pl.getConfig().getDouble("cambios.poder_ballesta_mesa", 0.4)) {
+            // como en el juego: Poder I desde nivel 1, II desde 11, III desde 21, IV desde 31, V desde 41
+            int lvl = Math.max(1, Math.min(po.getMaxLevel(), (e.getExpLevelCost() - 1) / 10 + 1));
+            add.put(po, lvl);
+        }
+        // Infinidad (no va con Reparacion, como en el arco)
+        Enchantment inf = infinidad(), rep = reparacion();
+        if (inf != null && !add.containsKey(inf) && (rep == null || !add.containsKey(rep))
+                && r.nextDouble() < pl.getConfig().getDouble("cambios.infinidad_ballesta_mesa", 0.15))
+            add.put(inf, 1);
     }
 
     // ------------------------------------------------------------------ yunque
@@ -72,20 +82,20 @@ final class PoderBallesta implements Listener {
         ItemStack izq = inv.getItem(0), der = inv.getItem(1);
         if (izq == null || izq.getType() != Material.CROSSBOW || der == null || der.getType() != Material.ENCHANTED_BOOK) return;
         if (!(der.getItemMeta() instanceof EnchantmentStorageMeta libro)) return;
-        Enchantment po = poder();
-        if (po == null) return;
-        int delLibro = libro.getStoredEnchantLevel(po);
-        if (delLibro <= 0) return;
+        Enchantment po = poder(), inf = infinidad(), rep = reparacion();
+        int delLibroPo = po == null ? 0 : libro.getStoredEnchantLevel(po);
+        int delLibroInf = inf == null ? 0 : libro.getStoredEnchantLevel(inf);
+        if (delLibroPo <= 0 && delLibroInf <= 0) return;
 
         ItemStack res = e.getResult();
         boolean habia = res != null && !res.getType().isAir();
         ItemStack out = habia ? res.clone() : izq.clone();
         out.setAmount(1);
         if (!habia) {
-            // el juego no arma nada (el libro solo trae Poder): se agregan tambien los demas encantamientos compatibles del libro
+            // el juego no arma nada (el libro solo trae Poder/Infinidad): se agregan tambien los demas encantamientos compatibles del libro
             for (Map.Entry<Enchantment, Integer> en : libro.getStoredEnchants().entrySet()) {
                 Enchantment k = en.getKey();
-                if (k.equals(po) || !k.canEnchantItem(izq)) continue;
+                if (k.equals(po) || k.equals(inf) || !k.canEnchantItem(izq)) continue;
                 boolean choca = false;
                 for (Enchantment ya : out.getEnchantments().keySet()) if (!ya.equals(k) && (ya.conflictsWith(k) || k.conflictsWith(ya))) choca = true;
                 if (choca) continue;
@@ -94,9 +104,19 @@ final class PoderBallesta implements Listener {
                 out.addUnsafeEnchantment(k, lvl);
             }
         }
-        int actual = out.getEnchantmentLevel(po);
-        int lvl = actual == delLibro ? Math.min(po.getMaxLevel(), delLibro + 1) : Math.max(actual, delLibro);
-        out.addUnsafeEnchantment(po, lvl);
+        int costo = 0;
+        if (delLibroPo > 0) {
+            int actual = out.getEnchantmentLevel(po);
+            int lvl = actual == delLibroPo ? Math.min(po.getMaxLevel(), delLibroPo + 1) : Math.max(actual, delLibroPo);
+            out.addUnsafeEnchantment(po, lvl);
+            costo += Math.max(1, lvl);
+        }
+        // Infinidad: no va con Reparacion (como en el arco)
+        if (delLibroInf > 0 && (rep == null || out.getEnchantmentLevel(rep) == 0) && out.getEnchantmentLevel(inf) == 0) {
+            out.addUnsafeEnchantment(inf, 1);
+            costo += 4;
+        }
+        if (out.isSimilar(izq) && !habia) return;   // no se agrego nada
 
         int penalidad = 0;
         if (izq.getItemMeta() instanceof Repairable r) penalidad = r.getRepairCost();
@@ -108,9 +128,9 @@ final class PoderBallesta implements Listener {
             out.setItemMeta(m);
         }
         e.setResult(out);
-        int costo = habia ? safeCost(e) + Math.max(1, lvl) : Math.max(1, lvl) + penalidad;
-        Bukkit.getScheduler().runTask(pl, () -> fijar(e, costo));
-        fijar(e, costo);
+        int total = habia ? safeCost(e) + Math.max(1, costo) : Math.max(1, costo) + penalidad;
+        Bukkit.getScheduler().runTask(pl, () -> fijar(e, total));
+        fijar(e, total);
     }
 
     private static int safeCost(PrepareAnvilEvent e) {

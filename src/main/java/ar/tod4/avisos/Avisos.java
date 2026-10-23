@@ -105,6 +105,11 @@ public final class Avisos implements Listener {
         return true;
     }
 
+    /** Cambia el texto de un mensaje solo si todavia tiene el de antes (si lo editaste a mano, no se toca). */
+    public void cambiarTexto(String id, List<String> antes, List<String> ahora) {
+        if (existe(id) && antes.equals(msg(id).getStringList("lineas"))) { msg(id).set("lineas", ahora); st.touch(); }
+    }
+
     /** Cambia el dia de un mensaje solo si todavia tiene el de antes (si lo cambiaste a mano, no se toca). */
     public void cambiarDia(String id, int de, int a) {
         if (existe(id) && msg(id).getInt("dia", 0) == de) { msg(id).set("dia", a); st.touch(); }

@@ -16,8 +16,9 @@ final class AvisosCambios {
 
     private static final String DIF = "⚠ CAMBIO DE DIFICULTAD ⚠";
     private static final String AVI = "✦ AVISO ✦";
+    private static final String DUN = "✦ NUEVA DUNGEON ✦";
 
-    /** {id del mensaje, id del cambio (o ""), dia, "d" dificultad | "a" aviso, parrafos...} */
+    /** {id del mensaje, id del cambio (o ""), dia, "d" dificultad | "a" aviso | "n" nueva dungeon, parrafos...} */
     private static final String[][] M = {
         {"cambio_hornos", "d1.hornos", "1", "d",
             "Los *hornos comunes* empezaron a fallar. Ahora tienen una pequeña posibilidad de *explotar* al usarlos.",
@@ -65,9 +66,13 @@ final class AvisosCambios {
             "Para festejar el *Día Mundial del Creeper* se descubrieron *6 nuevos tipos de creeper*:",
             "el *Random Creeper*, el *Mini Creeper*, el *Creeper Calamar*, el *Void Creeper*, el *Creeper Nuclear* y el *Flash Creeper*.",
             "Además, los creepers normales ahora son *eléctricos*."},
-        {"cambio_poder", "d2.poder", "2", "d",
-            "El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
-            "Algunos mobs con ballesta pueden tenerlo."},
+        {"cambio_poder", "d2.poder", "2", "d", PODER_1, PODER_2},
+        {"aviso_equipos", "", "2", "a",
+            "Las *tumbas* de los jugadores que tienen *equipo* ahora solo pueden abrirlas o romperlas *su dueño y su equipo*.",
+            "Si el jugador no tiene equipo, cualquiera puede abrirla, como siempre. Además, las tumbas ya no se rompen con *explosiones*."},
+        {"aviso_bunker", "", "2", "n",
+            "Tras derrotar al *viejo amigo de Trick*, este nos dio una *llave*, la cual nos dejó acceder a su *búnker secreto*.",
+            "Una *nueva dungeon* repleta de *cofres* espera en su interior."},
         {"cambio_caida", "d6.caida", "6", "d",
             "La *protección de la armadura* ya no reduce el daño por *caída*."},
         {"cambio_noches", "d6.noches", "6", "d",
@@ -78,19 +83,32 @@ final class AvisosCambios {
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
     };
 
+    private static final String PODER_1 = "Los encantamientos *Poder* e *Infinidad* ahora también se pueden usar en la *ballesta*.";
+    private static final String PODER_2 = "*Poder* aumenta su daño e *Infinidad* hace que no gaste *flechas comunes*. Algunos mobs con ballesta pueden tener Poder.";
+    /** El texto que tenia antes (sin Infinidad): si nadie lo edito, se cambia por el nuevo. */
+    private static final String[] PODER_VIEJO = {"El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
+            "Algunos mobs con ballesta pueden tenerlo."};
+
+    private static List<String> armar(String[] parrafos, int desde, int max) {
+        List<String> lineas = new ArrayList<>();
+        for (int i = desde; i < parrafos.length; i++) {
+            if (i > desde) lineas.add(".");
+            lineas.addAll(envolver(parrafos[i], max));
+        }
+        return lineas;
+    }
+
     static void sembrar(TOD4 pl, Cambios cb) {
         // el largo de la linea de arriba y de abajo del mensaje (40 guiones en negrita) menos la sangria de 3 espacios
         int max = Ancho.de("&l" + "-".repeat(40)) - Ancho.de("   ") - 4;
         boolean nuevo = false;
         for (String[] m : M) {
-            boolean dif = m[3].equals("d");
-            List<String> lineas = new ArrayList<>();
-            for (int i = 4; i < m.length; i++) {
-                if (i > 4) lineas.add(".");
-                lineas.addAll(envolver(m[i], max));
-            }
-            // naranja (Cambio de dificultad) o celeste (Avisos)
-            if (pl.avisos().sembrar(m[0], dif ? 2 : 6, dif ? DIF : AVI, dif ? 4 : 7, Integer.parseInt(m[2]), lineas)) {
+            List<String> lineas = armar(m, 4, max);
+            // naranja (Cambio de dificultad), celeste (Avisos) o azul (Nueva dungeon)
+            int paleta = switch (m[3]) { case "d" -> 2; case "n" -> 5; default -> 6; };
+            String titulo = switch (m[3]) { case "d" -> DIF; case "n" -> DUN; default -> AVI; };
+            int sonido = switch (m[3]) { case "d" -> 4; case "n" -> 6; default -> 7; };
+            if (pl.avisos().sembrar(m[0], paleta, titulo, sonido, Integer.parseInt(m[2]), lineas)) {
                 nuevo = true;
                 if (!m[1].isEmpty()) cb.vincular(m[1], m[0]);
             }
@@ -98,6 +116,7 @@ final class AvisosCambios {
         if (nuevo) pl.getLogger().info("Mensajes de los cambios cargados (nombres cambio_* y aviso_*).");
         pl.avisos().cambiarDia("cambio_warden", 4, 1);   // el Warden vuelve al dia 1
         pl.avisos().cambiarDia("aviso_mesa", 4, 1);      // la mesa de encantamientos pasa al dia 1
+        pl.avisos().cambiarTexto("cambio_poder", armar(PODER_VIEJO, 0, max), armar(new String[]{PODER_1, PODER_2}, 0, max));   // + Infinidad
     }
 
     /** Parte un parrafo en renglones que no pasen de {@code max} pixeles; un *resaltado* que cruza el renglon se cierra y se reabre. */

@@ -54,7 +54,7 @@ public final class Cambios {
         add(new Cambio("d2.mending", 2, "Recordatorio: Mending", true, "&7Esto lo hace el datapack", "&7de ítems prohibidos."));
         add(new Cambio("d2.saplings", 2, "Hojas sin brotes ni manzanas", false, "&7Las hojas no sueltan brotes", "&7ni manzanas."));
         add(new Cambio("d2.silverfish", 2, "Silverfish en las cuevas", false, "&7Picando debajo de Y 0 puede salir", "&7un silverfish que da fatiga minera."));
-        add(new Cambio("d2.poder", 2, "Poder en la ballesta", false, "&7Poder sale en la mesa y el yunque", "&7para la ballesta y suma daño."));
+        add(new Cambio("d2.poder", 2, "Poder e Infinidad en la ballesta", false, "&7Poder e Infinidad salen en la mesa y el yunque", "&7para la ballesta (Infinidad: no gasta flechas)."));
         add(new Cambio("d2.hornos", 3, "Hornos Especiales", false, "&7Alto horno: arena, piedra, basalto,", "&7arenisca, terracotas -> esmaltadas.", "&7Ahumador: cactus, pepino de mar,", "&7chorus, troncos (carbón), esponja."));
         // ---- Dia 3
         add(new Cambio("d3.leche", 3, "Sin leche", false, "&7No se puede sacar ni tomar leche", "&7(no se pueden borrar efectos)."));

@@ -73,7 +73,7 @@ public final class Mesa implements Listener {
     /** Poder en una ballesta no es compatible en el juego: aca si, cuando el cambio esta prendido. */
     private boolean puede(Enchantment e, ItemStack item, boolean book) {
         if (book || canEnchant(e, item)) return true;
-        return poderBallesta && item.getType() == Material.CROSSBOW && e.getKey().getKey().equals("power");
+        return poderBallesta && item.getType() == Material.CROSSBOW && (e.getKey().getKey().equals("power") || e.getKey().getKey().equals("infinity"));
     }
 
     public void recargar() { conf = YamlConfiguration.loadConfiguration(new File(pl.getDataFolder(), "mesa.yml")); }
@@ -311,6 +311,11 @@ public final class Mesa implements Listener {
         for (String k : p.minor) {
             Enchantment e = ench(k);
             if (e != null && (book || canEnchant(e, item))) { cand.add(e); candKeys.add(k); }
+        }
+        // dia 2: la ballesta tambien puede sacar Infinidad como secundario
+        if (poderBallesta && "ballesta".equals(cat) && !book) {
+            Enchantment inf = ench("infinity");
+            if (inf != null) { cand.add(inf); candKeys.add("infinity"); }
         }
         while (out.size() < n) {
             for (int i = cand.size() - 1; i >= 0; i--) {
