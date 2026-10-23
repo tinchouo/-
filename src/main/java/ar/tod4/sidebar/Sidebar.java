@@ -193,7 +193,9 @@ public final class Sidebar implements Listener {
                     .replace("{ping}", String.valueOf(p.getPing()))
                     .replace("{dia}", String.valueOf(pl.dia()))
                     .replace("{mundo}", mundo(pl, p.getWorld()))
-                    .replace("{jugadores}", jugadores(pl)));
+                    .replace("{jugadores}", jugadores(pl))
+                    .replace("{muertes_hoy}", pl.extras() == null ? "0" : String.valueOf(pl.extras().muertesHoy()))
+                    .replace("{muertes}", pl.extras() == null ? "0" : String.valueOf(pl.extras().muertesTotal())));
         }
         String sep = separador();
         out.add(sep);

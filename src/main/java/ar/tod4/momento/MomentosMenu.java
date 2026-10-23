@@ -96,8 +96,12 @@ public final class MomentosMenu {
         m.set(12, Items.of(Material.WRITABLE_BOOK, "&6&lPasos", "", "&7Cosas que pueden pasar en este momento.", "&7Pasos: &f" + mo.pasos(id).size(), "", "&e▶ Click para administrar"),
                 e -> pasos(p, id));
         boolean bloq = c.getBoolean("bloquear_portales", false);
-        m.set(13, Items.of(bloq ? Material.OBSIDIAN : Material.END_PORTAL_FRAME, bloq ? "&c&lPortales: bloqueados" : "&a&lPortales: permitidos", "",
-                "&7Si están bloqueados, nadie cambia de dimensión", "&7mientras dura el momento.", "", "&e▶ Click para cambiar"),
+        List<String> loreP = new ArrayList<>(List.of("", "&7Si están bloqueados, nadie cambia de dimensión", "&7mientras dura el momento.", ""));
+        List<String> fuera = pl.extras().fueraDelOverworld();
+        if (fuera.isEmpty()) loreP.add("&aAhora están todos en el Overworld.");
+        else { loreP.add("&eAhora fuera del Overworld:"); for (String f : fuera) loreP.add(" &8• " + f); }
+        loreP.add(""); loreP.add("&e▶ Click para cambiar");
+        m.set(13, Items.of(bloq ? Material.OBSIDIAN : Material.END_PORTAL_FRAME, bloq ? "&c&lPortales: bloqueados" : "&a&lPortales: permitidos", loreP.toArray(new String[0])),
                 e -> { c.set("bloquear_portales", !bloq); touch(); editor(p, id); });
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver"), e -> lista(p));
         m.set(35, Items.of(Material.BARRIER, "&c&l🗑 Borrar", "", "&cShift+click para borrar"), e -> {

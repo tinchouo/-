@@ -49,6 +49,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.equipos.Equipos equipos;
     private ar.tod4.mobs.Creepers creepers;
     private ar.tod4.clones.Clones clones;
+    private ar.tod4.core.Extras extras;
 
     @Override
     public void onEnable() {
@@ -72,6 +73,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         equipos = new ar.tod4.equipos.Equipos(this);
         new ar.tod4.core.Chat(this);
         clones = new ar.tod4.clones.Clones(this);
+        extras = new ar.tod4.core.Extras(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -137,6 +139,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 equipos == null ? null : equipos.store(), clones == null ? null : clones.store()})
             if (s != null) s.save();
     }
+
+    public ar.tod4.core.Extras extras() { return extras; }
 
     public int dia() { return core.y().getInt("dia", 1); }
 
@@ -238,6 +242,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&6&lTOD4 &7- comandos de admin &8(escribe /tod4: para verlos todos)");
             Style.raw(s, "&e/tod4 dia [número] &8- &7ver o cambiar el día actual");
             Style.raw(s, "&e/tod4 recargar &8- &7recarga config.yml y mesa.yml");
+            Style.raw(s, "&e/tod4 muertes &8- &7muertes por día &8(&7poner <día> <n> para corregir&8)");
+            Style.raw(s, "&e/tod4 donde &8- &7en qué dimensión está cada jugador");
             Style.raw(s, "&e/tod4:panel &8- &7panel de misiones (crear, editar, activar)");
             Style.raw(s, "&e/tod4:completar <jugador|todos> <id> &8- &7completar una misión o su evento");
             Style.raw(s, "&e/misiones &8- &7misiones del jugador (para todos)");
@@ -265,6 +271,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                     Style.ok(s, "Día actual: &f" + d);
                 } catch (NumberFormatException e) { Style.err(s, "Usa un número: &e/tod4 dia 3"); }
                 return true;
+            case "muertes": extras.cmdMuertes(s, a); return true;
+            case "donde": extras.cmdDonde(s); return true;
             case "recargar":
                 reloadConfig();
                 mesa.recargar();
@@ -292,7 +300,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

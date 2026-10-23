@@ -13,7 +13,7 @@ sidebar:
   logo_rojo: "\ue905"
   logo_azul: "\ue906"
   jugadores_max: 100
-  # {jugador} {ping} {dia} {mundo} {jugadores} {equipo} | {separador} = la linea gris
+  # {jugador} {ping} {dia} {mundo} {jugadores} {equipo} {muertes} {muertes_hoy} | {separador} = la linea gris
   #  (si una linea tiene {equipo} y el jugador no tiene equipo, esa linea no se muestra)
   arriba:
     - "{separador}"
@@ -24,6 +24,7 @@ sidebar:
     - "&a■ &f&lMundo"
     - " &8| &7Día: &f{dia}"
     - " &8| &7Jugadores: &f{jugadores}"
+    - " &8| &7Muertes: &c{muertes_hoy} &8(&7total: &c{muertes}&8)"
     - " &8| &7Dimensión: {mundo}"
   # la linea que separa (va abajo de lo de arriba y al final). Su ancho es el ancho de toda la sidebar:
   # los textos mas largos saltan de renglon solos.

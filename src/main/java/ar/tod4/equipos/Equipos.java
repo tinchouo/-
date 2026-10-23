@@ -155,6 +155,21 @@ public final class Equipos implements Listener {
         return codigo(e.color) + "[" + e.tag + "] " + (u.equals(e.lider) ? simboloLider() + " " : "");
     }
 
+    /** Si el jugador tiene equipo. */
+    public boolean tieneEquipo(UUID u) { return de.get(u) != null; }
+
+    /** Si los dos estan en el mismo equipo (y tienen uno). */
+    public boolean mismoEquipo(UUID a, UUID b) {
+        Equipo e = de.get(a);
+        return e != null && e == de.get(b);
+    }
+
+    /** Tag del equipo con su color ("&aABC"), o null si no tiene. */
+    public String tag(UUID u) {
+        Equipo e = de.get(u);
+        return e == null ? null : codigo(e.color) + e.tag;
+    }
+
     /** Color del equipo del jugador, o null si no tiene. */
     public NamedTextColor color(UUID u) {
         Equipo e = de.get(u);

@@ -34,7 +34,13 @@ public final class Papi extends PlaceholderExpansion {
         switch (id.toLowerCase()) {
             case "dia": return String.valueOf(pl.dia());
             case "jugadores": return Sidebar.jugadores(pl);
-            default: break;
+            case "muertes": return String.valueOf(pl.extras().muertesTotal());
+            case "muertes_hoy": return String.valueOf(pl.extras().muertesHoy());
+            default:
+                if (id.toLowerCase().startsWith("muertes_dia_")) {
+                    try { return String.valueOf(pl.extras().muertesDia(Integer.parseInt(id.substring(12)))); } catch (NumberFormatException ignored) { }
+                }
+                break;
         }
         if (op == null) return "";
         switch (id.toLowerCase()) {

@@ -41,6 +41,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.ExplosionPrimeEvent;
+import org.bukkit.event.player.PlayerInteractEntityEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
@@ -357,6 +359,7 @@ public final class Creepers implements Listener {
     private void nuclear(Creeper c) {
         escala(c, cfg.getDouble("nuclear.tamano", 1.5));
         nuclearBase(c);
+        if (c.getScoreboardTags().contains(MECHERO)) return;   // lo prendieron con un encendedor: se infla y explota solo
         if (c.getMaxFuseTicks() < 32000) { c.setMaxFuseTicks(32000); c.setExplosionRadius(0); }
         if (nukes.containsKey(c.getUniqueId())) return;
         if (!(c.getTarget() instanceof Player p) || p.isDead() || p.getWorld() != c.getWorld()) return;
@@ -373,6 +376,33 @@ public final class Creepers implements Listener {
         Ext.mythicSignal(c, "NUCLEAR");
         c.getWorld().playSound(c.getLocation(), Sound.ENTITY_CREEPER_PRIMED, SoundCategory.HOSTILE, 3f, 0.5f);
         c.getWorld().playSound(c.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.HOSTILE, 4f, 0.6f);
+    }
+
+    private static final String MECHERO = "nuclear_mechero";
+
+    /** Encendedor (o carga de fuego) al creeper nuclear: se infla como uno normal (1,5 s) y explota la nuclear, sin cuenta. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void mechero(PlayerInteractEntityEvent e) {
+        if (!(e.getRightClicked() instanceof Creeper c) || !c.getScoreboardTags().contains("creeper_nuclear")) return;
+        org.bukkit.inventory.ItemStack it = e.getPlayer().getInventory().getItem(e.getHand());
+        if (it == null || (it.getType() != Material.FLINT_AND_STEEL && it.getType() != Material.FIRE_CHARGE)) return;
+        if (c.getScoreboardTags().contains(MECHERO)) return;
+        c.addScoreboardTag(MECHERO);
+        Nuke n = nukes.get(c.getUniqueId());
+        if (n != null) { terminar(n); c.setAI(true); }           // si ya estaba contando, se corta la cuenta
+        c.setMaxFuseTicks(30);                                   // lo de un creeper normal; el juego lo prende e infla
+        Ext.mythicSignal(c, "SWELL");
+        c.getWorld().playSound(c.getLocation(), Sound.ENTITY_CREEPER_PRIMED, SoundCategory.HOSTILE, 3f, 0.5f);   // es silencioso: el sonido lo ponemos nosotros
+    }
+
+    /** Cuando el creeper prendido con encendedor termina de inflarse: en vez de la explosion comun, la nuclear. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void inflado(ExplosionPrimeEvent e) {
+        if (!(e.getEntity() instanceof Creeper c) || !c.getScoreboardTags().contains(MECHERO)) return;
+        e.setCancelled(true);
+        Location l = c.getLocation();
+        detonar(l, c);
+        c.remove();
     }
 
     private void nuke(Nuke n) {

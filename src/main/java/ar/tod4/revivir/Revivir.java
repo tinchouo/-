@@ -280,6 +280,7 @@ public final class Revivir implements Listener {
         String tid = tumbaId(b);
         if (st.y().isConfigurationSection("tumbas." + tid)) {
             e.setCancelled(true);
+            if (!puedeTumba(p, tid)) { negarTumba(p, tid); return; }
             abrirTumba(p, tid);
             return;
         }
@@ -614,9 +615,35 @@ public final class Revivir implements Listener {
         m.lore(Txt.lines("&7#" + (10000 + new java.util.Random().nextInt(90000))));
         cab.setItemMeta(m);
         st.set("tumbas." + id + ".dueno", p.getName());
+        st.set("tumbas." + id + ".dueno_uuid", p.getUniqueId().toString());
         st.set("tumbas." + id + ".cabeza", cab);
         if (xp > 0) st.set("tumbas." + id + ".xp", xp);
         for (int i = 0; i < items.size() && i < 53; i++) st.set("tumbas." + id + ".items." + i, items.get(i));
+    }
+
+    /** Dueño de la tumba (UUID), o null si no se sabe (tumbas viejas de alguien que no esta en cache). */
+    private java.util.UUID duenoTumba(String id) {
+        String u = st.y().getString("tumbas." + id + ".dueno_uuid");
+        if (u != null) try { return java.util.UUID.fromString(u); } catch (IllegalArgumentException ignored) { }
+        String n = st.y().getString("tumbas." + id + ".dueno");
+        if (n == null) return null;
+        org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayerIfCached(n);
+        return op == null ? null : op.getUniqueId();
+    }
+
+    /** Con equipo: solo el dueño y su equipo. Sin equipo: cualquiera (como siempre). Los admins siempre. */
+    private boolean puedeTumba(Player p, String id) {
+        if (p.hasPermission("tod4.admin")) return true;
+        java.util.UUID d = duenoTumba(id);
+        if (d == null || d.equals(p.getUniqueId()) || pl.equipos() == null || !pl.equipos().tieneEquipo(d)) return true;
+        return pl.equipos().mismoEquipo(d, p.getUniqueId());
+    }
+
+    private void negarTumba(Player p, String id) {
+        java.util.UUID d = duenoTumba(id);
+        String tag = d == null || pl.equipos() == null ? null : pl.equipos().tag(d);
+        Style.err(p, "Solo el equipo " + (tag == null ? "del dueño" : tag + "&c") + " puede abrir esta tumba.");
+        p.playSound(p.getLocation(), Sound.BLOCK_CHEST_LOCKED, 1f, 1f);
     }
 
     private void abrirTumba(Player p, String id) {
@@ -702,6 +729,7 @@ public final class Revivir implements Listener {
         String id = tumbaId(b);
         if (!st.y().isConfigurationSection("tumbas." + id)) return;
         e.setCancelled(true);
+        if (!puedeTumba(e.getPlayer(), id)) { negarTumba(e.getPlayer(), id); return; }
         String viendo = tumbaAbiertaPor.get(id);
         if (viendo != null) {
             Player v = Bukkit.getPlayerExact(viendo);
