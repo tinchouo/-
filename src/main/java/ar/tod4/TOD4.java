@@ -244,6 +244,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&e/tod4 recargar &8- &7recarga config.yml y mesa.yml");
             Style.raw(s, "&e/tod4 muertes &8- &7muertes por día &8(&7poner <día> <n> para corregir&8)");
             Style.raw(s, "&e/tod4 donde &8- &7en qué dimensión está cada jugador");
+            Style.raw(s, "&e/tod4 holo <hoy|total|borrar> &8- &7cartel flotante con las muertes");
             Style.raw(s, "&e/tod4:panel &8- &7panel de misiones (crear, editar, activar)");
             Style.raw(s, "&e/tod4:completar <jugador|todos> <id> &8- &7completar una misión o su evento");
             Style.raw(s, "&e/misiones &8- &7misiones del jugador (para todos)");
@@ -273,6 +274,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 return true;
             case "muertes": extras.cmdMuertes(s, a); return true;
             case "donde": extras.cmdDonde(s); return true;
+            case "holo": extras.cmdHolo(s, a); return true;
             case "recargar":
                 reloadConfig();
                 mesa.recargar();
@@ -300,7 +302,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

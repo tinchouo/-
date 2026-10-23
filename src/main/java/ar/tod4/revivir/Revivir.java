@@ -521,6 +521,7 @@ public final class Revivir implements Listener {
         Bukkit.getScheduler().runTaskLater(pl, () -> {
             if (st.y().getBoolean("modo_prueba", false) || !p.isOnline()) return;
             if (!st.y().getStringList("muertos").contains(p.getName())) return;
+            if (p.isOp()) return;   // los admins no se banean al morir
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ban " + p.getName() + " Has muerto y has sido baneado automáticamente.");
             if (p.isOnline()) p.kick(Txt.c("&c&l¡HAS MUERTO!\n\n&7Has sido baneado automáticamente."));
         }, 161L);
@@ -761,8 +762,19 @@ public final class Revivir implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void explotaBloque(BlockExplodeEvent e) { e.blockList().removeIf(this::protegido); }
 
-    private boolean protegido(Block b) {
+    /** Altar o tumba: no los rompen explosiones, la nuclear, pistones ni el agua. */
+    public boolean protegido(Block b) {
         return esAltar(b.getLocation(), 1.5) || st.y().isConfigurationSection("tumbas." + tumbaId(b));
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void piston(org.bukkit.event.block.BlockPistonExtendEvent e) {
+        for (Block b : e.getBlocks()) if (protegido(b)) { e.setCancelled(true); return; }
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void pistonVuelve(org.bukkit.event.block.BlockPistonRetractEvent e) {
+        for (Block b : e.getBlocks()) if (protegido(b)) { e.setCancelled(true); return; }
     }
 
     @EventHandler(ignoreCancelled = true)

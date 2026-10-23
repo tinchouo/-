@@ -32,6 +32,66 @@ public final class Extras implements Listener {
     public Extras(TOD4 pl) {
         this.pl = pl;
         Bukkit.getPluginManager().registerEvents(this, pl);
+        Bukkit.getScheduler().runTaskTimer(pl, this::actualizarHolos, 40L, 100L);   // cada 5 s
+    }
+
+    // ================================================================= hologramas de muertes
+
+    private String textoHolo(String tipo) {
+        int n = tipo.equals("hoy") ? muertesHoy() : muertesTotal();
+        String def = tipo.equals("hoy") ? "&c☠ &fMuertes de hoy: &c{n}" : "&4☠ &fMuertes totales: &4{n}";
+        return pl.getConfig().getString("muertes.holograma_" + tipo, def).replace("{n}", String.valueOf(n));
+    }
+
+    private void actualizarHolos() {
+        for (String tipo : new String[]{"hoy", "total"}) {
+            java.util.List<String> ids = pl.datos().y().getStringList("holos." + tipo);
+            if (ids.isEmpty()) continue;
+            net.kyori.adventure.text.Component t = ar.tod4.util.Txt.c(textoHolo(tipo));
+            for (String id : ids) {
+                try {
+                    org.bukkit.entity.Entity en = Bukkit.getEntity(java.util.UUID.fromString(id));
+                    if (en instanceof org.bukkit.entity.TextDisplay td && !t.equals(td.text())) td.text(t);
+                } catch (IllegalArgumentException ignored) { }
+            }
+        }
+    }
+
+    /** /tod4 holo <hoy|total|borrar>: un cartel flotante que se actualiza solo, donde estas parado. */
+    public void cmdHolo(CommandSender s, String[] a) {
+        if (!(s instanceof Player p)) { Style.err(s, "Solo en el juego."); return; }
+        String sub = a.length > 1 ? a[1].toLowerCase() : "";
+        if (sub.equals("borrar")) {
+            org.bukkit.entity.Entity mejor = null;
+            double d = 9;
+            for (org.bukkit.entity.Entity en : p.getNearbyEntities(3, 3, 3)) {
+                if (!(en instanceof org.bukkit.entity.TextDisplay) || !en.getScoreboardTags().contains("tod4_holo")) continue;
+                double x = en.getLocation().distanceSquared(p.getLocation());
+                if (x < d) { d = x; mejor = en; }
+            }
+            if (mejor == null) { Style.err(s, "No hay ningún cartel de muertes a menos de 3 bloques."); return; }
+            for (String tipo : new String[]{"hoy", "total"}) {
+                java.util.List<String> ids = new ArrayList<>(pl.datos().y().getStringList("holos." + tipo));
+                if (ids.remove(mejor.getUniqueId().toString())) pl.datos().set("holos." + tipo, ids);
+            }
+            mejor.remove();
+            Style.ok(s, "Cartel borrado.");
+            return;
+        }
+        if (!sub.equals("hoy") && !sub.equals("total")) { Style.err(s, "Uso: &e/tod4 holo <hoy|total|borrar>"); return; }
+        org.bukkit.Location l = p.getLocation().getBlock().getLocation().add(0.5, 1.5, 0.5);
+        org.bukkit.entity.TextDisplay td = p.getWorld().spawn(l, org.bukkit.entity.TextDisplay.class, t -> {
+            t.text(ar.tod4.util.Txt.c(textoHolo(sub)));
+            t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+            t.setSeeThrough(false);
+            t.setShadowed(true);
+            t.setPersistent(true);
+            t.addScoreboardTag("tod4_holo");
+        });
+        java.util.List<String> ids = new ArrayList<>(pl.datos().y().getStringList("holos." + sub));
+        ids.add(td.getUniqueId().toString());
+        pl.datos().set("holos." + sub, ids);
+        Style.ok(s, "Cartel de muertes (" + sub + ") puesto. Se actualiza solo. Para sacarlo: &e/tod4 holo borrar");
     }
 
     // ================================================================= muertes
@@ -40,6 +100,8 @@ public final class Extras implements Listener {
     public void muere(PlayerDeathEvent e) {
         // las muertes dentro del gulag no cuentan (ya estaban muertos)
         if (ar.tod4.hook.Gulag.muereEnGulag(e.getEntity().getUniqueId())) return;
+        // los admins (OP) y los cuyes tampoco
+        if (e.getEntity().isOp() || ar.tod4.hook.Cuyes.activo(e.getEntity())) return;
         String k = "muertes." + pl.dia();
         pl.datos().set(k, pl.datos().y().getInt(k, 0) + 1);
     }

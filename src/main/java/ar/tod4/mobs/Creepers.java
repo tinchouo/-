@@ -503,6 +503,7 @@ public final class Creepers implements Listener {
                             Block b = w.getBlockAt(cx + dx, y, cz + dz);
                             Material t = b.getType();
                             if (t.isAir() || b.isLiquid() || DURO.contains(t) || b.getState() instanceof Container) continue;
+                            if (pl.revivir() != null && pl.revivir().protegido(b)) continue;   // tumbas y altar
                             b.setType(Material.AIR, false);
                         }
                     }

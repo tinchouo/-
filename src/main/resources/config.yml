@@ -24,7 +24,6 @@ sidebar:
     - "&a■ &f&lMundo"
     - " &8| &7Día: &f{dia}"
     - " &8| &7Jugadores: &f{jugadores}"
-    - " &8| &7Muertes: &c{muertes_hoy} &8(&7total: &c{muertes}&8)"
     - " &8| &7Dimensión: {mundo}"
   # la linea que separa (va abajo de lo de arriba y al final). Su ancho es el ancho de toda la sidebar:
   # los textos mas largos saltan de renglon solos.
