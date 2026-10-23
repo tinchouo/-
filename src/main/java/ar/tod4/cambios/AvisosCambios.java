@@ -17,6 +17,12 @@ final class AvisosCambios {
     private static final String DIF = "⚠ CAMBIO DE DIFICULTAD ⚠";
     private static final String AVI = "✦ AVISO ✦";
     private static final String DUN = "✦ NUEVA DUNGEON ✦";
+    private static final String PODER_1 = "Los encantamientos *Poder* e *Infinidad* ahora también se pueden usar en la *ballesta*.";
+    private static final String PODER_2 = "*Poder* aumenta su daño e *Infinidad* hace que no gaste *flechas comunes*. Algunos mobs con ballesta pueden tener Poder.";
+    /** El texto que tenia antes (sin Infinidad): si nadie lo edito, se cambia por el nuevo. */
+    private static final String[] PODER_VIEJO = {"El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
+            "Algunos mobs con ballesta pueden tenerlo."};
+
 
     /** {id del mensaje, id del cambio (o ""), dia, "d" dificultad | "a" aviso | "n" nueva dungeon, parrafos...} */
     private static final String[][] M = {
@@ -82,12 +88,6 @@ final class AvisosCambios {
         {"cambio_bedrock", "d6.bedrock", "6", "d",
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
     };
-
-    private static final String PODER_1 = "Los encantamientos *Poder* e *Infinidad* ahora también se pueden usar en la *ballesta*.";
-    private static final String PODER_2 = "*Poder* aumenta su daño e *Infinidad* hace que no gaste *flechas comunes*. Algunos mobs con ballesta pueden tener Poder.";
-    /** El texto que tenia antes (sin Infinidad): si nadie lo edito, se cambia por el nuevo. */
-    private static final String[] PODER_VIEJO = {"El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
-            "Algunos mobs con ballesta pueden tenerlo."};
 
     private static List<String> armar(String[] parrafos, int desde, int max) {
         List<String> lineas = new ArrayList<>();
