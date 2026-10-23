@@ -1,11 +1,15 @@
 # ========================================================
-#        EVENTO: LA CURA DE JEFFREY (MYTHIC MOBS)
+#        MINI EVENTO: LA CURA DE JEFFREY (MYTHIC MOBS)
+#  Objetivos en orden: Redstone > Hilo > Chorus asada > Huesos > Carne podrida.
+#  Barra arriba para todo el server con el objetivo actual.
 # ========================================================
 
 options:
-    prefix: &8[&5&lTRATAMIENTO&8]&r
+    prefix: &8[&5Mini evento&8]&r
     # Mob de MythicMobs que aparece al final (nombre interno)
     mob: jeffreyepstein
+    # Barra de Minecraft (/bossbar). Se borra sola al completar y con /jeffrey reset
+    barra: minecraft:jeffrey_mini
     # Cantidades necesarias (1 stack = 64)
     req-redstone: 448
     req-string: 192
@@ -34,10 +38,22 @@ function jeffreyNombreMat(clave: text) :: text:
     if {_clave} is "string":
         return "Hilo"
     if {_clave} is "chorus":
-        return "Fruta de Chorus asada"
+        return "Fruta de chorus asada"
     if {_clave} is "bone":
         return "Huesos"
     return "Carne podrida"
+
+# Número de objetivo (1 a 5)
+function jeffreyNumero(clave: text) :: number:
+    if {_clave} is "redstone":
+        return 1
+    if {_clave} is "string":
+        return 2
+    if {_clave} is "chorus":
+        return 3
+    if {_clave} is "bone":
+        return 4
+    return 5
 
 # Cuántos faltan de ese material
 function jeffreyFalta(clave: text) :: number:
@@ -48,6 +64,14 @@ function jeffreyFalta(clave: text) :: number:
     if {_f} < 0:
         set {_f} to 0
     return {_f}
+
+# El objetivo actual: el primero que todavía falta ("" si ya están todos)
+function jeffreyActual() :: text:
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    loop {_claves::*}:
+        if jeffreyFalta(loop-value) > 0:
+            return loop-value
+    return ""
 
 # 448 -> "448 (7 stacks)"
 function jeffreyStacks(n: number) :: text:
@@ -63,64 +87,73 @@ function jeffreyStacks(n: number) :: text:
         return "%{_n}% (%{_s}% %{_w}%)"
     return "%{_n}% (%{_s}% %{_w}% + %{_r}%)"
 
-# Cuántos de los 5 materiales ya están completos
-function jeffreyCompletos() :: number:
-    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
-    set {_n} to 0
-    loop {_claves::*}:
-        if jeffreyFalta(loop-value) is 0:
-            add 1 to {_n}
-    return {_n}
-
-# Una sola línea con lo que falta (para el chat)
-function jeffreyFaltaTexto() :: text:
-    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
-    set {_txt} to ""
-    loop {_claves::*}:
-        set {_f} to jeffreyFalta(loop-value)
-        if {_f} > 0:
-            if {_txt} is "":
-                set {_txt} to "&c%{_f}% &f%jeffreyNombreMat(loop-value)%"
-            else:
-                set {_txt} to "%{_txt}%&7, &c%{_f}% &f%jeffreyNombreMat(loop-value)%"
-    return {_txt}
-
-# Texto corto para el nombre del mob: solo lo que falta
-function jeffreyResumen() :: text:
-    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
-    set {_txt} to ""
-    loop {_claves::*}:
-        set {_f} to jeffreyFalta(loop-value)
-        if {_f} > 0:
-            if {_txt} is "":
-                set {_txt} to "&c%{_f}% &f%jeffreyNombreMat(loop-value)%"
-            else:
-                set {_txt} to "%{_txt}% &8| &c%{_f}% &f%jeffreyNombreMat(loop-value)%"
-    if {_txt} is "":
-        return "&a&l✔ Tratamiento completo"
-    return "&5&lJeffrey &8» %{_txt}%"
-
+# El nombre arriba del paciente: limpio
 function jeffreyActualizarNombre():
     if {jeffrey.enfermo} is not set:
         stop
-    set custom name of {jeffrey.enfermo} to jeffreyResumen()
+    set custom name of {jeffrey.enfermo} to "&5&lJeffrey"
     show the custom name of {jeffrey.enfermo}
 
-# Detalle completo (chat)
+# Detalle completo (solo admins: /jeffrey estado)
 function jeffreyEnviarEstado(p: player):
     set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
     send "&8&m--------------------------------" to {_p}
-    send "&5&lPACIENTE: JEFFREY &7(&e%{jeffrey.progreso}%%%&7)" to {_p}
+    send "&5&lJEFFREY &7(&e%{jeffrey.progreso}%%%&7)" to {_p}
     loop {_claves::*}:
         set {_d} to {jeffrey.mat.%loop-value%}
         if {_d} is not set:
             set {_d} to 0
         set {_f} to jeffreyFalta(loop-value)
         if {_f} > 0:
-            send "&f%jeffreyNombreMat(loop-value)%: &e%{_d}%&7/%jeffreyReq(loop-value)% &8- &cfaltan %jeffreyStacks({_f})%" to {_p}
+            send "&7%jeffreyNumero(loop-value)%. &f%jeffreyNombreMat(loop-value)%: &e%{_d}%&7/%jeffreyReq(loop-value)% &8- &cfaltan %jeffreyStacks({_f})%" to {_p}
         else:
-            send "&f%jeffreyNombreMat(loop-value)%: &a✔ completo" to {_p}
+            send "&7%jeffreyNumero(loop-value)%. &f%jeffreyNombreMat(loop-value)%: &a✔ completo" to {_p}
     send "&8&m--------------------------------" to {_p}
+
+# ========================================================
+#        BARRA DE ARRIBA (todo el server)
+# ========================================================
+
+function jeffreyBarraBorrar():
+    if {jeffrey.barra} is true:
+        execute console command "bossbar remove {@barra}"
+    delete {jeffrey.barra}
+
+function jeffreyBarra():
+    if {jeffrey.enfermo} is not set:
+        jeffreyBarraBorrar()
+        stop
+    if {jeffrey.renaciendo} is true:
+        jeffreyBarraBorrar()
+        stop
+    set {_c} to jeffreyActual()
+    if {_c} is "":
+        jeffreyBarraBorrar()
+        stop
+    if {jeffrey.barra} is not true:
+        execute console command "bossbar add {@barra} ""Mini evento"""
+        execute console command "bossbar set {@barra} color purple"
+        execute console command "bossbar set {@barra} style progress"
+        set {jeffrey.barra} to true
+    set {_req} to jeffreyReq({_c})
+    set {_d} to {_req} - jeffreyFalta({_c})
+    set {_n} to jeffreyNumero({_c})
+    set {_mat} to jeffreyNombreMat({_c})
+    execute console command "bossbar set {@barra} max %{_req}%"
+    execute console command "bossbar set {@barra} value %{_d}%"
+    execute console command "bossbar set {@barra} name [{""text"":""Objetivo %{_n}%/5 "",""color"":""light_purple"",""bold"":true},{""text"":""· %{_mat}%  "",""color"":""white"",""bold"":false},{""text"":""%{_d}%/%{_req}%"",""color"":""yellow"",""bold"":false}]"
+    execute console command "bossbar set {@barra} players @a"
+    execute console command "bossbar set {@barra} visible true"
+
+# Los que entran después también la ven
+on join:
+    if {jeffrey.barra} is true:
+        wait 1 second
+        execute console command "bossbar set {@barra} players @a"
+
+# ========================================================
+#        PROGRESO
+# ========================================================
 
 # Recalcula el porcentaje total. Al completar todo -> 100
 function jeffreyActualizar():
@@ -143,15 +176,15 @@ function jeffreyActualizar():
     if {jeffrey.progreso} is 100:
         if {_antes} is not 100:
             broadcast ""
-            broadcast "{@prefix} &a&lTRATAMIENTO COMPLETADO"
-            broadcast "&7El cuerpo asimiló todos los componentes."
-            broadcast "&7Sus signos vitales están mutando a un ritmo alarmante..."
+            broadcast "{@prefix} &a✔ Objetivo 5/5 completado"
+            broadcast "&7El cuerpo asimiló todos los componentes. Sus signos vitales están mutando a un ritmo alarmante..."
             broadcast ""
             play sound "ui.toast.challenge_complete" with volume 1 and pitch 1 to all players
             play sound "block.end_portal.frame_fill" with pitch 0.5 to all players
     jeffreyActualizarNombre()
+    jeffreyBarra()
 
-# Entrega al paciente todo lo que el jugador lleve de ese material (hasta lo que falte)
+# Entrega al paciente lo que el jugador lleve de ese material (hasta lo que falte)
 function jeffreyProcesar(p: player, clave: text) :: number:
     set {_falta} to jeffreyFalta({_clave})
     if {_falta} <= 0:
@@ -190,38 +223,41 @@ on load:
     loop {_claves::*}:
         if {jeffrey.mat.%loop-value%} is not set:
             set {jeffrey.mat.%loop-value%} to 0
+    # el paciente no se guarda al reiniciar: la barra vuelve con /jeffrey setenfermo
+    if {jeffrey.enfermo} is not set:
+        jeffreyBarraBorrar()
 
-# El nombre del paciente se mantiene actualizado con lo que falta
+# El nombre del paciente se mantiene
 every 5 seconds:
     if {jeffrey.enfermo} is set:
         if {jeffrey.renaciendo} is not true:
-            if {jeffrey.progreso} < 101:
-                jeffreyActualizarNombre()
+            jeffreyActualizarNombre()
 
 # ========================================================
 #        COMANDOS DE ADMINISTRACIÓN
 # ========================================================
-command /jeffrey [<text>]:
+command /jeffrey [<text>] [<text>]:
     permission: op
     trigger:
         if arg-1 is not set:
-            send "{@prefix} &7Comandos: &esetenfermo, setspawn, estado, completar, reset, renacer" to player
+            send "{@prefix} &7Comandos: &esetenfermo, setspawn, estado, completar, reset, renacer, barra borrar" to player
             stop
 
         if arg-1 is "setenfermo":
             set {_target} to target entity
             if {_target} is not set:
-                send "{@prefix} &cDebes mirar directamente a la entidad que será Jeffrey Enfermo." to player
+                send "{@prefix} &cDebes mirar directamente a la entidad que será Jeffrey." to player
                 stop
             set {jeffrey.enfermo} to {_target}
             jeffreyActualizarNombre()
-            send "{@prefix} &a✔ Entidad configurada como Paciente Cero." to player
+            jeffreyBarra()
+            send "{@prefix} &a✔ Entidad configurada como paciente." to player
             play sound "entity.zombie_villager.cure" with pitch 0.5 to player
             stop
 
         if arg-1 is "setspawn":
             set {jeffrey.spawn} to player's location
-            send "{@prefix} &a✔ Lugar de aparición del Boss configurado." to player
+            send "{@prefix} &a✔ Lugar de aparición del boss configurado." to player
             play sound "entity.enderman.teleport" to player
             stop
 
@@ -243,8 +279,17 @@ command /jeffrey [<text>]:
             set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
             loop {_claves::*}:
                 set {jeffrey.mat.%loop-value%} to 0
+            jeffreyBarraBorrar()
             jeffreyActualizarNombre()
+            jeffreyBarra()
             send "{@prefix} &a✔ Evento y contadores reiniciados a 0." to player
+            stop
+
+        if arg-1 is "barra":
+            # por si la barra queda trabada
+            execute console command "bossbar remove {@barra}"
+            delete {jeffrey.barra}
+            send "{@prefix} &a✔ Barra borrada. Vuelve sola con la próxima entrega o con /jeffrey setenfermo." to player
             stop
 
         if arg-1 is "renacer":
@@ -259,11 +304,12 @@ command /jeffrey [<text>]:
                 stop
 
             set {jeffrey.renaciendo} to true
+            jeffreyBarraBorrar()
             iniciarRitualJeffrey()
 
 # ========================================================
-#        INTERACCIÓN CON EL PACIENTE (ENTREGA COMUNITARIA)
-#        Se entrega TODO a la vez, en cualquier orden.
+#        INTERACCIÓN CON EL PACIENTE
+#        Un objetivo por vez, en orden.
 # ========================================================
 on right click on entity:
     if {jeffrey.enfermo} is set:
@@ -284,33 +330,25 @@ on right click on entity:
             set {jeffrey.cd.%uuid of player%} to true
 
             set {_p} to player
-            set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
-            set {_total} to 0
-            set {_entrega} to ""
+            set {_c} to jeffreyActual()
+            set {_a} to jeffreyProcesar({_p}, {_c})
 
-            loop {_claves::*}:
-                set {_a} to jeffreyProcesar({_p}, loop-value)
-                if {_a} > 0:
-                    add {_a} to {_total}
-                    if {_entrega} is "":
-                        set {_entrega} to "&a+%{_a}% &f%jeffreyNombreMat(loop-value)%"
-                    else:
-                        set {_entrega} to "%{_entrega}%&7, &a+%{_a}% &f%jeffreyNombreMat(loop-value)%"
-                    if jeffreyFalta(loop-value) is 0:
-                        add jeffreyNombreMat(loop-value) to {_completos::*}
-
-            if {_total} > 0:
+            if {_a} > 0:
                 play sound "entity.experience_orb.pickup" with pitch 1.2 to {_p}
                 play sound "block.brewing_stand.brew" with pitch 1.5 to {_p}
+                send action bar "&a+%{_a}% &f%jeffreyNombreMat({_c})%" to {_p}
                 jeffreyActualizar()
-                # al jugador: una sola línea con lo que dio y el progreso
-                send "{@prefix} &7Entregaste: %{_entrega}% &8(&e%{jeffrey.progreso}%%%&8)" to {_p}
-                # a todos: solo cuando un material se completa
-                loop {_completos::*}:
-                    broadcast "{@prefix} &a✔ &f%loop-value% &acompleto &8(&e%jeffreyCompletos()%&7/&e5&8)"
+                # objetivo completado (el 5/5 lo anuncia jeffreyActualizar)
+                set {_sig} to jeffreyActual()
+                if jeffreyFalta({_c}) is 0:
+                    if {_sig} is not "":
+                        broadcast "{@prefix} &a✔ Objetivo %jeffreyNumero({_c})%/5 completado"
+                        broadcast "&7Siguiente: &f%jeffreyNombreMat({_sig})% &7(%jeffreyStacks(jeffreyReq({_sig}))%)"
+                        play sound "ui.toast.challenge_complete" with volume 0.6 and pitch 1.2 to all players
+                        send title "&a✔ Objetivo %jeffreyNumero({_c})%/5" with subtitle "&7Siguiente: &f%jeffreyNombreMat({_sig})%" to all players in radius 24 around location of {jeffrey.enfermo} for 3 seconds
             else:
                 play sound "entity.villager.no" to {_p}
-                send "{@prefix} &7Falta: %jeffreyFaltaTexto()%" to {_p}
+                send action bar "&cNecesita %jeffreyNombreMat({_c})%&7: faltan &c%jeffreyStacks(jeffreyFalta({_c}))%" to {_p}
 
             wait 3 ticks
             delete {jeffrey.cd.%uuid of {_p}%}
