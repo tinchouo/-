@@ -4,7 +4,7 @@ main: ar.tod4.eventos.TOD4Eventos
 api-version: '1.21'
 author: TrucOfDeath
 description: TrucOfDeath 4 - eventos (ofrendas con boss bar, lava que sube, invasion goblin).
-softdepend: [Oraxen, MythicMobs, Shopkeepers]
+softdepend: [TOD4, Oraxen, MythicMobs, Shopkeepers]
 permissions:
   tod4eventos.admin:
     default: op

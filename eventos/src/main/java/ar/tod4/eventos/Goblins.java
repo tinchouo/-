@@ -2,8 +2,10 @@ package ar.tod4.eventos;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -33,6 +35,8 @@ import org.bukkit.event.entity.EntityCombustByBlockEvent;
 import org.bukkit.event.entity.EntityCombustByEntityEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
@@ -67,6 +71,8 @@ final class Goblins implements Listener {
     private int oleada, totalOleadas, tick, sinJugadores;
     private Location punto;
     private final Set<UUID> mobs = new HashSet<>();
+    /** Ultima vez que se vio cargado cada goblin (los que estan en chunks descargados no cuentan como muertos). */
+    private final Map<UUID, Long> visto = new HashMap<>();
     private double vidaTotal;
     private final Set<UUID> jugadores = new HashSet<>();
     private BossBar barra;
@@ -165,13 +171,14 @@ final class Goblins implements Listener {
         // oleada
         tick++;
         List<LivingEntity> vivos = vivos();
-        if (vivos.isEmpty()) {
+        if (mobs.isEmpty()) {
             if (tick >= 3) {
                 if (oleada >= totalOleadas) terminar(true);
                 else { estado = Estado.ESPERA; tick = seg("espera_entre_seg", 15); barra.progress(0f); }
             }
             return;
         }
+        if (vivos.isEmpty()) return; // quedan goblins, pero en chunks descargados: se espera
         double vida = 0;
         for (LivingEntity e : vivos) vida += e.getHealth();
         barra.progress(clamp((float) (vida / Math.max(1, vidaTotal))));
@@ -257,15 +264,33 @@ final class Goblins implements Listener {
         e.addScoreboardTag("gr_mob");
         if (e instanceof LivingEntity le) le.setRemoveWhenFarAway(false);
         mobs.add(e.getUniqueId());
+        visto.put(e.getUniqueId(), System.currentTimeMillis());
     }
 
+    /** Los goblins cargados y vivos. Los muertos salen de la lista; los que no se encuentran (chunk descargado)
+     *  siguen contando hasta 60 s sin verlos (despues se olvidan y se borran cuando su chunk vuelva a cargar). */
     private List<LivingEntity> vivos() {
         List<LivingEntity> out = new ArrayList<>();
-        for (UUID u : mobs) {
+        long ahora = System.currentTimeMillis();
+        for (java.util.Iterator<UUID> it = mobs.iterator(); it.hasNext(); ) {
+            UUID u = it.next();
             Entity e = Bukkit.getEntity(u);
-            if (e instanceof LivingEntity le && le.isValid() && !le.isDead()) out.add(le);
+            if (e instanceof LivingEntity le && le.isValid() && !le.isDead()) { out.add(le); visto.put(u, ahora); continue; }
+            if (e != null && (e.isDead() || (e instanceof LivingEntity l2 && l2.getHealth() <= 0))) { it.remove(); visto.remove(u); continue; }
+            if (ahora - visto.getOrDefault(u, ahora) > 60_000L) { it.remove(); visto.remove(u); }
         }
         return out;
+    }
+
+    @EventHandler
+    public void muere(EntityDeathEvent e) {
+        if (mobs.remove(e.getEntity().getUniqueId())) visto.remove(e.getEntity().getUniqueId());
+    }
+
+    /** Goblins que quedaron de antes (de una invasion que ya termino) se borran cuando su chunk carga. */
+    @EventHandler
+    public void cargan(EntitiesLoadEvent e) {
+        for (Entity en : e.getEntities()) if (esGoblin(en) && !mobs.contains(en.getUniqueId())) en.remove();
     }
 
     private boolean esGoblin(Entity e) { return e.getPersistentDataContainer().has(K_GOBLIN, PersistentDataType.BYTE); }
@@ -273,6 +298,7 @@ final class Goblins implements Listener {
     private void borrarMobs() {
         for (UUID u : mobs) { Entity e = Bukkit.getEntity(u); if (e != null) e.remove(); }
         mobs.clear();
+        visto.clear();
         borrarSueltos();
     }
 
@@ -365,6 +391,21 @@ final class Goblins implements Listener {
 
     // ================================================================= disparadores
 
+    /** Dia actual de TOD4 (0 si no esta el plugin). */
+    private static int dia() {
+        try {
+            org.bukkit.plugin.Plugin t = Bukkit.getPluginManager().getPlugin("TOD4");
+            if (t != null) return (int) t.getClass().getMethod("dia").invoke(t);
+        } catch (Throwable ignored) { }
+        return 0;
+    }
+
+    /** Antes de goblins.dia_minimo no empieza sola (el comando iniciar si). 0 = cualquier dia. */
+    private boolean antesDeTiempo() {
+        int min = cfg().getInt("goblins.dia_minimo", 0);
+        return min > 0 && dia() < min;
+    }
+
     private boolean enCooldown() { return System.currentTimeMillis() < st.y().getLong("cooldown_hasta", 0); }
 
     /** Los vendedores de Shopkeepers (la tienda) no disparan nada. */
@@ -379,7 +420,7 @@ final class Goblins implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void tradea(PlayerTradeEvent e) {
-        if (activa() || enCooldown() || esTienda(e.getVillager())) return;
+        if (activa() || enCooldown() || antesDeTiempo() || esTienda(e.getVillager())) return;
         if (cfg().getBoolean("goblins.solo_aldeano_goblin", false) && !esAldeanoGoblin(e.getVillager())) return;
         if (ThreadLocalRandom.current().nextDouble() < cfg().getDouble("goblins.probabilidad", 0.03)) empezar(e.getVillager().getLocation());
     }
@@ -389,7 +430,7 @@ final class Goblins implements Listener {
         if (!(e.getEntity() instanceof Villager v) || !esAldeanoGoblin(v) || esTienda(v)) return;
         Entity d = e.getDamager();
         boolean jugador = d instanceof Player || (d instanceof Projectile pr && pr.getShooter() instanceof Player);
-        if (!jugador || activa() || enCooldown()) return;
+        if (!jugador || activa() || enCooldown() || antesDeTiempo()) return;
         empezar(v.getLocation());
     }
 

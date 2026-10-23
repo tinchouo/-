@@ -198,7 +198,15 @@ public final class Sidebar implements Listener {
         String sep = separador();
         out.add(sep);
         List<String> ab = abajo(p);
-        // la sidebar tiene 15 renglones como maximo: si no entra, se recorta lo de abajo
+        // la sidebar tiene 15 renglones como maximo: si no entra, primero se sacan los renglones vacios de arriba,
+        // despues el separador de arriba de todo (queda pegado al titulo) y recien ahi se recorta lo de abajo
+        while (out.size() + ab.size() + 1 > 15) {
+            int vacio = -1;
+            for (int i = 0; i < out.size() - 1; i++) if (Txt.norm(out.get(i)).replaceAll("&.", "").isBlank() && !out.get(i).equals(sep)) { vacio = i; break; }
+            if (vacio >= 0) { out.remove(vacio); continue; }
+            if (out.size() > 1 && out.get(0).equals(sep)) { out.remove(0); continue; }
+            break;
+        }
         while (out.size() + ab.size() + 1 > 15 && !ab.isEmpty()) ab.remove(ab.size() - 1);
         out.addAll(ab);
         out.add(sep);

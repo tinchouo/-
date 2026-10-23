@@ -21,7 +21,6 @@ sidebar:
     - " &8| &7Jugador: &f{jugador}"
     - " &8| &7Ping: &a{ping} ms"
     - " &8| &7Equipo: {equipo}"
-    - ""
     - "&a■ &f&lMundo"
     - " &8| &7Día: &f{dia}"
     - " &8| &7Jugadores: &f{jugadores}"
