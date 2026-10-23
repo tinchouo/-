@@ -1,0 +1,374 @@
+# ========================================================
+#        EVENTO: LA CURA DE JEFFREY (MYTHIC MOBS)
+# ========================================================
+
+options:
+    prefix: &8[&5&lTRATAMIENTO&8]&r
+    # Mob de MythicMobs que aparece al final (nombre interno)
+    mob: jeffreyepstein
+    # Cantidades necesarias (1 stack = 64)
+    req-redstone: 448
+    req-string: 192
+    req-chorus: 96
+    req-bone: 192
+    req-flesh: 64
+
+# ========================================================
+#        DATOS DE LOS MATERIALES
+# ========================================================
+
+function jeffreyReq(clave: text) :: number:
+    if {_clave} is "redstone":
+        return {@req-redstone}
+    if {_clave} is "string":
+        return {@req-string}
+    if {_clave} is "chorus":
+        return {@req-chorus}
+    if {_clave} is "bone":
+        return {@req-bone}
+    return {@req-flesh}
+
+function jeffreyNombreMat(clave: text) :: text:
+    if {_clave} is "redstone":
+        return "Redstone"
+    if {_clave} is "string":
+        return "Hilo"
+    if {_clave} is "chorus":
+        return "Fruta de Chorus asada"
+    if {_clave} is "bone":
+        return "Huesos"
+    return "Carne podrida"
+
+# Cuántos faltan de ese material
+function jeffreyFalta(clave: text) :: number:
+    set {_d} to {jeffrey.mat.%{_clave}%}
+    if {_d} is not set:
+        set {_d} to 0
+    set {_f} to jeffreyReq({_clave}) - {_d}
+    if {_f} < 0:
+        set {_f} to 0
+    return {_f}
+
+# 448 -> "448 (7 stacks)"
+function jeffreyStacks(n: number) :: text:
+    set {_s} to floor({_n} / 64)
+    set {_r} to mod({_n}, 64)
+    if {_s} is 0:
+        return "%{_r}%"
+    if {_s} is 1:
+        set {_w} to "stack"
+    else:
+        set {_w} to "stacks"
+    if {_r} is 0:
+        return "%{_n}% (%{_s}% %{_w}%)"
+    return "%{_n}% (%{_s}% %{_w}% + %{_r}%)"
+
+# Cuántos de los 5 materiales ya están completos
+function jeffreyCompletos() :: number:
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    set {_n} to 0
+    loop {_claves::*}:
+        if jeffreyFalta(loop-value) is 0:
+            add 1 to {_n}
+    return {_n}
+
+# Una sola línea con lo que falta (para el chat)
+function jeffreyFaltaTexto() :: text:
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    set {_txt} to ""
+    loop {_claves::*}:
+        set {_f} to jeffreyFalta(loop-value)
+        if {_f} > 0:
+            if {_txt} is "":
+                set {_txt} to "&c%{_f}% &f%jeffreyNombreMat(loop-value)%"
+            else:
+                set {_txt} to "%{_txt}%&7, &c%{_f}% &f%jeffreyNombreMat(loop-value)%"
+    return {_txt}
+
+# Texto corto para el nombre del mob: solo lo que falta
+function jeffreyResumen() :: text:
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    set {_txt} to ""
+    loop {_claves::*}:
+        set {_f} to jeffreyFalta(loop-value)
+        if {_f} > 0:
+            if {_txt} is "":
+                set {_txt} to "&c%{_f}% &f%jeffreyNombreMat(loop-value)%"
+            else:
+                set {_txt} to "%{_txt}% &8| &c%{_f}% &f%jeffreyNombreMat(loop-value)%"
+    if {_txt} is "":
+        return "&a&l✔ Tratamiento completo"
+    return "&5&lJeffrey &8» %{_txt}%"
+
+function jeffreyActualizarNombre():
+    if {jeffrey.enfermo} is not set:
+        stop
+    set custom name of {jeffrey.enfermo} to jeffreyResumen()
+    show the custom name of {jeffrey.enfermo}
+
+# Detalle completo (chat)
+function jeffreyEnviarEstado(p: player):
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    send "&8&m--------------------------------" to {_p}
+    send "&5&lPACIENTE: JEFFREY &7(&e%{jeffrey.progreso}%%%&7)" to {_p}
+    loop {_claves::*}:
+        set {_d} to {jeffrey.mat.%loop-value%}
+        if {_d} is not set:
+            set {_d} to 0
+        set {_f} to jeffreyFalta(loop-value)
+        if {_f} > 0:
+            send "&f%jeffreyNombreMat(loop-value)%: &e%{_d}%&7/%jeffreyReq(loop-value)% &8- &cfaltan %jeffreyStacks({_f})%" to {_p}
+        else:
+            send "&f%jeffreyNombreMat(loop-value)%: &a✔ completo" to {_p}
+    send "&8&m--------------------------------" to {_p}
+
+# Recalcula el porcentaje total. Al completar todo -> 100
+function jeffreyActualizar():
+    if {jeffrey.renaciendo} is true:
+        stop
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    set {_tot} to 0
+    set {_ent} to 0
+    loop {_claves::*}:
+        add jeffreyReq(loop-value) to {_tot}
+        add jeffreyReq(loop-value) - jeffreyFalta(loop-value) to {_ent}
+    set {_antes} to {jeffrey.progreso}
+    if {_ent} >= {_tot}:
+        set {jeffrey.progreso} to 100
+    else:
+        set {_pct} to floor({_ent} * 100 / {_tot})
+        if {_pct} > 99:
+            set {_pct} to 99
+        set {jeffrey.progreso} to {_pct}
+    if {jeffrey.progreso} is 100:
+        if {_antes} is not 100:
+            broadcast ""
+            broadcast "{@prefix} &a&lTRATAMIENTO COMPLETADO"
+            broadcast "&7El cuerpo asimiló todos los componentes."
+            broadcast "&7Sus signos vitales están mutando a un ritmo alarmante..."
+            broadcast ""
+            play sound "ui.toast.challenge_complete" with volume 1 and pitch 1 to all players
+            play sound "block.end_portal.frame_fill" with pitch 0.5 to all players
+    jeffreyActualizarNombre()
+
+# Entrega al paciente todo lo que el jugador lleve de ese material (hasta lo que falte)
+function jeffreyProcesar(p: player, clave: text) :: number:
+    set {_falta} to jeffreyFalta({_clave})
+    if {_falta} <= 0:
+        return 0
+    if {_clave} is "redstone":
+        set {_it} to redstone
+    else if {_clave} is "string":
+        set {_it} to string
+    else if {_clave} is "chorus":
+        set {_it} to popped chorus fruit
+    else if {_clave} is "bone":
+        set {_it} to bone
+    else:
+        set {_it} to rotten flesh
+    set {_tiene} to amount of {_it} in {_p}'s inventory
+    if {_tiene} <= 0:
+        return 0
+    set {_sacar} to min({_tiene}, {_falta})
+    remove {_sacar} of {_it} from {_p}'s inventory
+    set {_d} to {jeffrey.mat.%{_clave}%}
+    if {_d} is not set:
+        set {_d} to 0
+    set {jeffrey.mat.%{_clave}%} to {_d} + {_sacar}
+    return {_sacar}
+
+# ========================================================
+#        INICIO
+# ========================================================
+
+on load:
+    if {jeffrey.progreso} is not set:
+        set {jeffrey.progreso} to 0
+    if {jeffrey.renaciendo} is not set:
+        set {jeffrey.renaciendo} to false
+    set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+    loop {_claves::*}:
+        if {jeffrey.mat.%loop-value%} is not set:
+            set {jeffrey.mat.%loop-value%} to 0
+
+# El nombre del paciente se mantiene actualizado con lo que falta
+every 5 seconds:
+    if {jeffrey.enfermo} is set:
+        if {jeffrey.renaciendo} is not true:
+            if {jeffrey.progreso} < 101:
+                jeffreyActualizarNombre()
+
+# ========================================================
+#        COMANDOS DE ADMINISTRACIÓN
+# ========================================================
+command /jeffrey [<text>]:
+    permission: op
+    trigger:
+        if arg-1 is not set:
+            send "{@prefix} &7Comandos: &esetenfermo, setspawn, estado, completar, reset, renacer" to player
+            stop
+
+        if arg-1 is "setenfermo":
+            set {_target} to target entity
+            if {_target} is not set:
+                send "{@prefix} &cDebes mirar directamente a la entidad que será Jeffrey Enfermo." to player
+                stop
+            set {jeffrey.enfermo} to {_target}
+            jeffreyActualizarNombre()
+            send "{@prefix} &a✔ Entidad configurada como Paciente Cero." to player
+            play sound "entity.zombie_villager.cure" with pitch 0.5 to player
+            stop
+
+        if arg-1 is "setspawn":
+            set {jeffrey.spawn} to player's location
+            send "{@prefix} &a✔ Lugar de aparición del Boss configurado." to player
+            play sound "entity.enderman.teleport" to player
+            stop
+
+        if arg-1 is "estado":
+            jeffreyEnviarEstado(player)
+            stop
+
+        if arg-1 is "completar":
+            set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+            loop {_claves::*}:
+                set {jeffrey.mat.%loop-value%} to jeffreyReq(loop-value)
+            jeffreyActualizar()
+            send "{@prefix} &a✔ Materiales completados (modo prueba)." to player
+            stop
+
+        if arg-1 is "reset":
+            set {jeffrey.progreso} to 0
+            set {jeffrey.renaciendo} to false
+            set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+            loop {_claves::*}:
+                set {jeffrey.mat.%loop-value%} to 0
+            jeffreyActualizarNombre()
+            send "{@prefix} &a✔ Evento y contadores reiniciados a 0." to player
+            stop
+
+        if arg-1 is "renacer":
+            if {jeffrey.progreso} is not 100:
+                send "{@prefix} &cEl tratamiento aún no se completó." to player
+                stop
+            if {jeffrey.renaciendo} is true:
+                send "{@prefix} &cEl evento ya está en curso." to player
+                stop
+            if {jeffrey.spawn} is not set:
+                send "{@prefix} &cFalta configurar el /jeffrey setspawn." to player
+                stop
+
+            set {jeffrey.renaciendo} to true
+            iniciarRitualJeffrey()
+
+# ========================================================
+#        INTERACCIÓN CON EL PACIENTE (ENTREGA COMUNITARIA)
+#        Se entrega TODO a la vez, en cualquier orden.
+# ========================================================
+on right click on entity:
+    if {jeffrey.enfermo} is set:
+        if event-entity is {jeffrey.enfermo}:
+            cancel event
+
+            if {jeffrey.renaciendo} is true:
+                stop
+
+            if {jeffrey.progreso} >= 100:
+                send action bar "&8El paciente respira pesadamente. La mutación es inminente..." to player
+                play sound "entity.warden.heartbeat" with pitch 0.5 to player
+                stop
+
+            # Evita que el clic se procese dos veces (mano principal / secundaria)
+            if {jeffrey.cd.%uuid of player%} is set:
+                stop
+            set {jeffrey.cd.%uuid of player%} to true
+
+            set {_p} to player
+            set {_claves::*} to "redstone", "string", "chorus", "bone" and "flesh"
+            set {_total} to 0
+            set {_entrega} to ""
+
+            loop {_claves::*}:
+                set {_a} to jeffreyProcesar({_p}, loop-value)
+                if {_a} > 0:
+                    add {_a} to {_total}
+                    if {_entrega} is "":
+                        set {_entrega} to "&a+%{_a}% &f%jeffreyNombreMat(loop-value)%"
+                    else:
+                        set {_entrega} to "%{_entrega}%&7, &a+%{_a}% &f%jeffreyNombreMat(loop-value)%"
+                    if jeffreyFalta(loop-value) is 0:
+                        add jeffreyNombreMat(loop-value) to {_completos::*}
+
+            if {_total} > 0:
+                play sound "entity.experience_orb.pickup" with pitch 1.2 to {_p}
+                play sound "block.brewing_stand.brew" with pitch 1.5 to {_p}
+                jeffreyActualizar()
+                # al jugador: una sola línea con lo que dio y el progreso
+                send "{@prefix} &7Entregaste: %{_entrega}% &8(&e%{jeffrey.progreso}%%%&8)" to {_p}
+                # a todos: solo cuando un material se completa
+                loop {_completos::*}:
+                    broadcast "{@prefix} &a✔ &f%loop-value% &acompleto &8(&e%jeffreyCompletos()%&7/&e5&8)"
+            else:
+                play sound "entity.villager.no" to {_p}
+                send "{@prefix} &7Falta: %jeffreyFaltaTexto()%" to {_p}
+
+            wait 3 ticks
+            delete {jeffrey.cd.%uuid of {_p}%}
+
+# ========================================================
+#        CINEMÁTICA DEL BOSS FIGHT
+# ========================================================
+function iniciarRitualJeffrey():
+    send title "&4⚠" with subtitle "&cLa mutación se ha salido de control" to all players for 3 seconds
+    play sound "block.bell.use" with volume 1 and pitch 0.5 to all players
+
+    set {_loc} to location of {jeffrey.enfermo}
+    execute console command "particle minecraft:smoke %x-coordinate of {_loc}% %y-coordinate of {_loc}% %z-coordinate of {_loc}% 1 2 1 0.05 100 force"
+
+    wait 3 seconds
+
+    send title "&4⚠" with subtitle "&cEl tejido biológico está colapsando" to all players for 3 seconds
+    play sound "entity.warden.heartbeat" with volume 2 and pitch 0.8 to all players
+
+    wait 2 seconds
+    play sound "entity.warden.heartbeat" with volume 2 and pitch 0.9 to all players
+    wait 1.5 seconds
+    play sound "entity.warden.heartbeat" with volume 2 and pitch 1 to all players
+
+    wait 2 seconds
+
+    # Silencio perturbador
+    send title "&8..." with subtitle "&7Actividad cerebral nula..." to all players for 3 seconds
+    play sound "entity.enderman.stare" with volume 1 and pitch 0.5 to all players
+
+    if {jeffrey.enfermo} is set:
+        kill {jeffrey.enfermo}
+        delete {jeffrey.enfermo}
+
+    wait 3 seconds
+
+    # Tensión previa al drop
+    send title "&5☠" with subtitle "&dSUJETO HOSTIL DETECTADO" to all players for 4 seconds
+    play sound "block.beacon.deactivate" with volume 2 and pitch 0.5 to all players
+
+    wait 3 seconds
+
+    # === EL DROP EXACTO (EXPLOSIÓN + SONIDO WEIRD) ===
+    play sound "entity.generic.explode" with volume 2 and pitch 0.8 to all players
+    play sound "entity.elder_guardian.curse" with volume 2 and pitch 0.5 to all players
+    play sound "entity.wither.spawn" with volume 2 and pitch 0.7 to all players
+
+    set {_x} to x-coordinate of {jeffrey.spawn}
+    set {_y} to y-coordinate of {jeffrey.spawn}
+    set {_z} to z-coordinate of {jeffrey.spawn}
+    set {_w} to {jeffrey.spawn}'s world
+
+    execute console command "particle minecraft:explosion_emitter %{_x}% %{_y}% %{_z}% 0 0 0 0 1 force"
+    execute console command "mm m spawn {@mob} 1 %{_w}%,%{_x}%,%{_y}%,%{_z}%"
+
+    wait 2 seconds
+
+    send title "&c&lJEFFREY" with subtitle "&eHa regresado." to all players for 5 seconds
+    play sound "entity.ender_dragon.growl" with volume 1 and pitch 0.6 to all players
+
+    set {jeffrey.progreso} to 101
