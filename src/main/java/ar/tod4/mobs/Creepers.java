@@ -293,7 +293,15 @@ public final class Creepers implements Listener {
         }
     }
 
-    /** Flash: no rompe bloques (el dano es el de un creeper comun) y encandila a todos los que estan cerca y lo ven,
+    /** Flash: su explosion pega menos que la de un creeper comun (flash.dano: 0.5 = la mitad). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void danoFlash(EntityDamageByEntityEvent e) {
+        if (e.getCause() != EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) return;
+        if (!(e.getDamager() instanceof Creeper c) || !c.getScoreboardTags().contains("creeper_flash")) return;
+        e.setDamage(e.getDamage() * cfg.getDouble("flash.dano", 0.5));
+    }
+
+    /** Flash: no rompe bloques y encandila a todos los que estan cerca y lo ven,
      *  aunque la explosion no los lastime (como una granada de verdad). */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void explotaFlash(EntityExplodeEvent e) {
