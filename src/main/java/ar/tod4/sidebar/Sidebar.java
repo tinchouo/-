@@ -91,7 +91,7 @@ public final class Sidebar implements Listener {
         o.setDisplaySlot(DisplaySlot.SIDEBAR);
         o.numberFormat(NumberFormat.blank());
         if (pl.getConfig().getBoolean("tab.vida", true)) {
-            Objective v = sb.registerNewObjective("tod4_vida", Criteria.DUMMY, Txt.c("&cVida"), RenderType.HEARTS);
+            Objective v = sb.registerNewObjective("tod4_vida", Criteria.DUMMY, Txt.c("&cVida"), RenderType.INTEGER);   // el texto lo pone vida()
             v.setDisplaySlot(DisplaySlot.PLAYER_LIST);
         }
         copiarTeams(sb);
@@ -278,15 +278,36 @@ public final class Sidebar implements Listener {
         p.playerListName(Txt.c(nombre));
     }
 
-    /** Corazones del tab (como /scoreboard objectives add vida health + setdisplay list). */
+    /**
+     * Vida en el tab, en corazones y con color: "10❤" (verde > 60%, amarillo 30-60%, rojo < 30%), "+2❤" dorado si tiene absorcion.
+     * Muerto o en espectador: "0" en rojo oscuro. Los OP en espectador (los admins mirando): nada.
+     */
     private void vida(Scoreboard sb) {
         Objective v = sb.getObjective("tod4_vida");
         if (v == null) return;
         for (Player t : Bukkit.getOnlinePlayers()) {
-            int hp = t.isDead() ? 0 : (int) Math.ceil(t.getHealth());
             Score s = v.getScore(t.getName());
-            if (!s.isScoreSet() || s.getScore() != hp) s.setScore(hp);
+            String txt;
+            if (t.getGameMode() == org.bukkit.GameMode.SPECTATOR && t.isOp()) txt = "";
+            else if (t.isDead() || t.getGameMode() == org.bukkit.GameMode.SPECTATOR || t.getHealth() <= 0) txt = "&40";
+            else {
+                org.bukkit.attribute.AttributeInstance mx = t.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                double max = mx != null ? mx.getValue() : 20, hp = t.getHealth(), f = hp / Math.max(1, max);
+                String col = f > 0.6 ? "&a" : f >= 0.3 ? "&e" : "&c";
+                txt = col + corazones(hp) + "&l❤";
+                if (t.getAbsorptionAmount() > 0) txt += " &6+" + corazones(t.getAbsorptionAmount()) + "&l❤";
+            }
+            int orden = (int) Math.ceil(t.isDead() ? 0 : t.getHealth());
+            if (!s.isScoreSet() || s.getScore() != orden) s.setScore(orden);
+            NumberFormat nf = txt.isEmpty() ? NumberFormat.blank() : NumberFormat.fixed(Txt.c(txt));
+            if (!nf.equals(s.numberFormat())) s.numberFormat(nf);
         }
+    }
+
+    /** 20 de vida -> "10", 15 -> "7.5" (redondeado a medio corazon, hacia arriba). */
+    private static String corazones(double hp) {
+        double c = Math.ceil(hp) / 2.0;
+        return c == Math.floor(c) ? String.valueOf((int) c) : String.valueOf(c);
     }
 
     /**
