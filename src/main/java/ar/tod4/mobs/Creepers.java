@@ -195,6 +195,11 @@ public final class Creepers implements Listener {
                 if (tags.contains("creeper_mini")) mini(c);
                 else if (tags.contains("creeper_random")) random(c, tags);
                 else if (tags.contains("creeper_nuclear")) nuclear(c);
+                else if (tags.contains("creeper_flash") && tick % 4 == 0) {
+                    // sin modelo propio: chispas blancas alrededor para reconocerlo
+                    w.spawnParticle(Particle.ELECTRIC_SPARK, c.getLocation().add(0, 1, 0), 4, 0.3, 0.5, 0.3, 0.02);
+                    if (tick % 16 == 0) w.spawnParticle(Particle.END_ROD, c.getLocation().add(0, 1.2, 0), 1, 0.2, 0.3, 0.2, 0.01);
+                }
                 // los modelos de Better Model no muestran el fuego: llamitas cuando se esta quemando
                 if (tick % 4 == 0 && c.getFireTicks() > 0 && (tags.contains("creeper_mini") || tags.contains("creeper_random")
                         || tags.contains("creeper_nuclear") || tags.contains("creeper_calamar") || tags.contains("lobotomia"))) {
@@ -497,7 +502,8 @@ public final class Creepers implements Listener {
         double mortal = cfg.getDouble("nuclear.radio_mortal", 22), dano = cfg.getDouble("nuclear.radio_dano", 40);
         double max = cfg.getDouble("nuclear.dano_centro", 800), min = cfg.getDouble("nuclear.dano_borde_mortal", 400);
         int veneno = cfg.getInt("nuclear.veneno_seg", 10);
-        w.createExplosion(l, 6f, false, true);
+        boolean sinBloques = causa != null && causa.getScoreboardTags().contains("creeper_tumba");   // el que sale donde murio alguien
+        w.createExplosion(l, 6f, false, !sinBloques);
         w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 16f, 0.5f);
         w.playSound(l, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.HOSTILE, 16f, 0.6f);
         DamageSource.Builder sb = DamageSource.builder(DamageType.EXPLOSION).withDamageLocation(l);
@@ -514,7 +520,7 @@ public final class Creepers implements Listener {
         for (Entity en : w.getNearbyEntities(l, mortal, mortal, mortal)) {
             if (en instanceof LivingEntity le && !(en instanceof Player) && le.getLocation().distance(l) <= mortal) le.damage(200, src);
         }
-        crater(l, (int) Math.round(mortal));
+        if (!sinBloques) crater(l, (int) Math.round(mortal));
         hongo(l);
     }
 

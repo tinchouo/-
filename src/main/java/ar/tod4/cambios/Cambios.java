@@ -79,8 +79,9 @@ public final class Cambios {
         add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
         add(new Cambio("d6.noches", 6, "Noches eternas", false, "&7La noche no se puede saltar.", "&7Acostarte igual resetea los phantoms."));
         add(new Cambio("d6.phantoms", 6, "Phantoms sin sol", false, "&7Los Phantoms no se queman", "&7con la luz del sol."));
-        add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca", "&7un creeper eléctrico con 1 de vida."));
+        add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca un", "&7creeper eléctrico. No rompe bloques."));
         add(new Cambio("d8.pigman", 8, "Pigman siempre enojados", false, "&7Los Pigman atacan apenas", "&7te ven, sin que les pegues."));
+        add(new Cambio("d9.zombies", 9, "Zombies armados", false, "&72 a 4 partes de armadura (50% Prot IV)", "&7y casi siempre espada."));
         add(new Cambio("d12.nuclear_muerte", 12, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 

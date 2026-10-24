@@ -122,7 +122,7 @@ final class Goblins implements Listener {
         z.put("mundo", c.getWorld().getName());
         z.put("x", c.getX());
         z.put("z", c.getZ());
-        z.put("hasta", ahora + seg("cooldown_seg", 1800) * 1000L);
+        z.put("hasta", ahora + seg("cooldown_seg", 1200) * 1000L);
         nuevas.add(z);
         st.set("zonas", nuevas);
         st.save();
