@@ -368,15 +368,12 @@ public final class Misiones {
 
     /** Simbolo del tab, igual que el tabulador.sk viejo. */
     public String simboloTab(Player p) {
-        String pref = "";
-        if (activa(OP) != null && reclamada(OP, p)) pref = "&b✔ ";
-        if (activa(DIA) != null) {
-            if (reclamada(DIA, p)) { if (pref.isEmpty()) pref = "&a✔ "; }
-            else pref = "&c✖ ";
-        } else {
-            pref = "&7- ";
-        }
-        return pref;
+        // diaria sin reclamar: ✖ rojo | opcional reclamada: ✔ azul (haya o no diaria) | diaria reclamada: ✔ verde | nada: - gris
+        boolean opRecl = activa(OP) != null && reclamada(OP, p);
+        if (activa(DIA) != null && !reclamada(DIA, p)) return "&c✖ ";
+        if (opRecl) return "&b✔ ";
+        if (activa(DIA) != null) return "&a✔ ";
+        return "&7- ";
     }
 
     private static final String[] PUNTOS = {"", ".", "..", "..."};
