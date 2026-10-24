@@ -20,7 +20,8 @@ goblins:
   probabilidad: 0.03          # chance de que un trade con un aldeano la empiece (0.03 = 3%). Los de Shopkeepers no cuentan.
   solo_aldeano_goblin: false  # true = solo tradear con el "Aldeano Goblin" puede empezarla
   aldeano_goblin: "Aldeano Goblin"   # pegarle a un aldeano con este nombre la empieza seguro
-  cooldown_seg: 1800          # espera entre invasiones
+  cooldown_seg: 1800          # cuando termina una invasion, su zona queda en espera este tiempo
+  zona: 50                    # radio de esa zona: ahi no empieza otra. Fuera de la zona si (puede haber varias a la vez)
   dia_minimo: 0               # antes de este dia de TOD4 no empieza sola (tradeo/pegarle). 0 = cualquier dia. El comando iniciar funciona igual
   radio: 96                   # los jugadores a esta distancia participan (ven la barra)
   espera_inicio_seg: 15       # la barra se llena antes de la primera oleada
