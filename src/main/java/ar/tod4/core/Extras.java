@@ -211,6 +211,22 @@ public final class Extras implements Listener {
             Style.raw(s, " " + en.getKey() + " &8(" + en.getValue().size() + ")&7: &f" + String.join("&7, &f", en.getValue()));
     }
 
+    // ================================================================= aldeanos que ya tradearon no pierden el trabajo
+
+    /** En Minecraft, un aldeano que ya tradeo nunca cambia de profesion. Si algo lo intenta (raid, plugin, datapack...),
+     *  se cancela y se anota en la consola para saber que fue. Los que nunca tradearon siguen como siempre. */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void trabajo(org.bukkit.event.entity.VillagerCareerChangeEvent e) {
+        org.bukkit.entity.Villager v = e.getEntity();
+        if (v.getVillagerExperience() <= 0 && v.getVillagerLevel() <= 1) return;
+        if (v.getProfession() == e.getProfession()) return;
+        e.setCancelled(true);
+        org.bukkit.Location l = v.getLocation();
+        pl.getLogger().warning("Aldeano " + v.getProfession().getKey().getKey() + " nivel " + v.getVillagerLevel()
+                + " iba a cambiar de trabajo a " + e.getProfession().getKey().getKey() + " (" + e.getReason() + ") en "
+                + l.getWorld().getName() + " " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ() + ": cancelado.");
+    }
+
     // ================================================================= backrooms sin perlas
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
