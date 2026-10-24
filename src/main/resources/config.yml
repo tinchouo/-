@@ -76,24 +76,27 @@ cambios:
   pacificos_tnt_cada_seg: 10    # dia 8: cada animal pone una TNT como mucho cada tanto
   pacificos_tnt_mecha: 40       # dia 8: la TNT explota a los 40 ticks (2 s), como siempre 80
   ballestero_chance: 0.15       # dia 10: chance de que un esqueleto salga como Ballestero
-  ballesteros:                  # dia 10: de cada ballestero, cual sale (peso), vida y cada cuanto dispara
-    rojo:                       # flechas con Poder V
-      peso: 60
-      vida: 40
+  ballesteros:                  # dia 10: los tres esqueletos ballesteros
+    proteccion: 6               # Proteccion de las 4 piezas de cuero (las de los tres)
+    rojo:                       # ballesta con Poder V; de cerca te corre y te pega con la ballesta
+      peso: 60                  # cual sale mas seguido (60/25/15)
+      vida: 40                  # 40 = 20 corazones
       cada_seg: 1.5
       velocidad: 3.15
       dano_base: 5.0            # flecha comun 2 + Poder V (3). El juego lo multiplica por la velocidad
+      cuerpo_a_cuerpo: 5        # a esta distancia deja de disparar y te pega
+      filo: 20                  # Filo de su ballesta (para el golpe)
     amarillo:                   # cohetes de fuegos artificiales: explotan al tocar algo (dano en area)
       peso: 25
-      vida: 40
+      vida: 60                  # 30 corazones
       cada_seg: 2.5
       velocidad: 1.6
       estrellas: 3              # mas estrellas = mas dano (cada una suma)
-    negro:                      # tira TNT en arco
+    negro:                      # arco: cada flecha sale como una TNT prendida
       peso: 15
-      vida: 50
-      cada_seg: 3.5
-      mecha_extra_ticks: 10     # la TNT explota esto despues de caer
+      vida: 80                  # 40 corazones
+      fuerza: 0.9               # la TNT sale con esta parte de la velocidad de la flecha
+      mecha_extra_ticks: 10     # la TNT explota esto despues de llegar
   pigman_radio: 16              # dia 8: los Pigman a esta distancia (y que te ven) te atacan
   nuclear_muerte_chance: 0.01   # dia 12: chance de que al morir aparezca un Creeper Nuclear
   infinidad_ballesta_mesa: 0.15 # dia 2: chance de que la mesa vanilla ponga Infinidad a la ballesta (no va con Reparacion)

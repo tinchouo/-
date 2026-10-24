@@ -83,7 +83,7 @@ public final class Cambios {
         add(new Cambio("d8.pigman", 8, "Pigman siempre enojados", false, "&7Los Pigman atacan apenas", "&7te ven, sin que les pegues."));
         add(new Cambio("d8.pacificos", 8, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
         add(new Cambio("d9.zombies", 9, "Zombies armados", false, "&72 a 4 partes de armadura (50% Prot IV)", "&7y siempre espada (Filo 1 a 5)."));
-        add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos, con ballesta:", "&7rojo (flechas), amarillo (cohetes), negro (TNT)."));
+        add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos: rojo (ballesta),", "&7amarillo (cohetes), negro (arco con TNT)."));
         add(new Cambio("d12.nuclear_muerte", 12, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 

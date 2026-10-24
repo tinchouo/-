@@ -93,7 +93,7 @@ final class AvisosCambios {
             "Los *animales* se volvieron agresivos. Te persiguen, te atacan y, si se acercan lo suficiente, te dejan una *TNT*."},
         {"cambio_ballesteros", "d10.ballesteros", "10", "d",
             "Aparecieron los *esqueletos ballesteros*, con mucha más vida y una *ballesta*.",
-            "Los *rojos* disparan flechas con *Poder V*, los *amarillos* lanzan *fuegos artificiales* que explotan y los *negros* tiran *TNT*."},
+            "Los *rojos* disparan flechas con *Poder V* y de cerca te golpean, los *amarillos* lanzan *fuegos artificiales* que explotan y los *negros* disparan *TNT* con su arco."},
         {"cambio_zombies", "d9.zombies", "9", "d",
             "Los *zombies* ahora aparecen con *armadura* de hierro o diamante, muchas veces con *Protección IV*.",
             "Además, siempre llevan una *espada*, que puede tener hasta *Filo V*."},

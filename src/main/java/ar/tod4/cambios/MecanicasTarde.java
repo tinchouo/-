@@ -224,30 +224,64 @@ final class MecanicasTarde implements Listener {
     void armarBallestero(org.bukkit.entity.Skeleton s, String tipo) {
         s.addScoreboardTag(BALLESTERO);
         s.addScoreboardTag("bal_" + tipo);
+        s.setCanPickupItems(false);   // si no, levantan armadura del piso (por eso salian de oro)
         String nombre = switch (tipo) { case "amarillo" -> "&eEsqueleto Pirotécnico"; case "negro" -> "&8Esqueleto Dinamitero"; default -> "&cEsqueleto Ballestero"; };
         s.customName(ar.tod4.util.Txt.c(conf(tipo, "nombre", nombre)));
         s.setCustomNameVisible(false);
         org.bukkit.attribute.AttributeInstance v = s.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
-        double vida = conf(tipo, "vida", tipo.equals("negro") ? 50 : 40);
+        double vida = conf(tipo, "vida", switch (tipo) { case "amarillo" -> 60.0; case "negro" -> 80.0; default -> 40.0; });
         if (v != null) { v.setBaseValue(vida); s.setHealth(vida); }
         EntityEquipment eq = s.getEquipment();
         if (eq == null) return;
-        ItemStack ball = new ItemStack(Material.CROSSBOW);
-        Enchantment po = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("power")), qc = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("quick_charge"));
-        if (po != null) ball.addUnsafeEnchantment(po, 5);
-        if (qc != null) ball.addUnsafeEnchantment(qc, 3);
-        eq.setItemInMainHand(ball);
+        if (tipo.equals("negro")) {
+            // arco: usa la animacion real del esqueleto; cada flecha que suelta se cambia por una TNT
+            eq.setItemInMainHand(new ItemStack(Material.BOW));
+        } else {
+            ItemStack ball = new ItemStack(Material.CROSSBOW);
+            Enchantment qc = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("quick_charge"));
+            if (qc != null) ball.addUnsafeEnchantment(qc, 3);
+            if (tipo.equals("rojo")) {
+                Enchantment po = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("power")), filo = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("sharpness"));
+                if (po != null) ball.addUnsafeEnchantment(po, 5);
+                if (filo != null) ball.addUnsafeEnchantment(filo, (int) conf("rojo", "filo", 20));   // de cerca te pega con la ballesta
+            }
+            eq.setItemInMainHand(cargada(ball, tipo, true));
+        }
         eq.setItemInMainHandDropChance(0f);
+        ponerArmadura(s, tipo);
+        if (!tipo.equals("negro")) sinCuerpoACuerpo(s);
+    }
+
+    private void ponerArmadura(org.bukkit.entity.Skeleton s, String tipo) {
+        EntityEquipment eq = s.getEquipment();
+        if (eq == null) return;
         int hex = switch (tipo) { case "amarillo" -> 0xFED83D; case "negro" -> 0x1D1D21; default -> 0xB02E26; };
         org.bukkit.Color col = org.bukkit.Color.fromRGB(hex);
+        Enchantment pro = Registry.ENCHANTMENT.get(NamespacedKey.minecraft("protection"));
+        int nivel = (int) pl.getConfig().getDouble("cambios.ballesteros.proteccion", 6);
         Material[] cuero = {Material.LEATHER_HELMET, Material.LEATHER_CHESTPLATE, Material.LEATHER_LEGGINGS, Material.LEATHER_BOOTS};
         for (int i = 0; i < 4; i++) {
             ItemStack it = new ItemStack(cuero[i]);
             if (it.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta lm) { lm.setColor(col); it.setItemMeta(lm); }
+            if (pro != null && nivel > 0) it.addUnsafeEnchantment(pro, nivel);
             eq.setItem(ARMADURA[i], it);
             eq.setDropChance(ARMADURA[i], 0f);
         }
-        sinCuerpoACuerpo(s);
+    }
+
+    /** La ballesta con la flecha (rojo) o el cohete (amarillo) puesto, o vacia mientras recarga. */
+    private static ItemStack cargada(ItemStack ball, String tipo, boolean lista) {
+        if (ball.getItemMeta() instanceof org.bukkit.inventory.meta.CrossbowMeta cm) {
+            cm.setChargedProjectiles(lista ? java.util.List.of(new ItemStack(tipo.equals("amarillo") ? Material.FIREWORK_ROCKET : Material.ARROW)) : java.util.List.of());
+            ball.setItemMeta(cm);
+        }
+        return ball;
+    }
+
+    private void verBallesta(org.bukkit.entity.Skeleton s, String tipo, boolean lista) {
+        EntityEquipment eq = s.getEquipment();
+        if (eq == null || eq.getItemInMainHand().getType() != Material.CROSSBOW) return;
+        eq.setItemInMainHand(cargada(eq.getItemInMainHand().clone(), tipo, lista));
     }
 
     /** Con ballesta, el esqueleto de Minecraft corre a pegarte: se le saca eso y dispara el plugin. */
@@ -261,31 +295,73 @@ final class MecanicasTarde implements Listener {
     }
 
     private int tickB;
+    private final java.util.Map<java.util.UUID, Long> golpeHasta = new java.util.HashMap<>();
 
     private void ballesteros() {
         tickB++;
+        long ahora = System.currentTimeMillis();
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.getGameMode() != GameMode.SURVIVAL && p.getGameMode() != GameMode.ADVENTURE) continue;
             for (Entity en : p.getNearbyEntities(32, 16, 32)) {
                 if (!(en instanceof org.bukkit.entity.Skeleton s) || !s.getScoreboardTags().contains(BALLESTERO) || s.isDead()) continue;
-                if (tickB % 8 == 0) sinCuerpoACuerpo(s);   // si el chunk se recargo, el juego le vuelve a poner el cuerpo a cuerpo
-                if (!(s.getTarget() instanceof Player t) || t != p || !s.hasLineOfSight(p)) continue;
                 String tipo = tipoDe(s);
-                double d = s.getLocation().distance(p.getLocation());
-                if (d > (tipo.equals("negro") ? 20 : 28)) continue;
-                double def = switch (tipo) { case "amarillo" -> 2.5; case "negro" -> 3.5; default -> 1.5; };
-                int cada = Math.max(1, (int) Math.round(conf(tipo, "cada_seg", def) * 4));   // la tarea corre cada 5 ticks
-                int r = recarga.getOrDefault(s.getUniqueId(), 0) + 1;
-                if (r < cada) { recarga.put(s.getUniqueId(), r); continue; }
-                recarga.put(s.getUniqueId(), 0);
-                switch (tipo) {
-                    case "amarillo" -> cohete(s, p);
-                    case "negro" -> tnt(s, p);
-                    default -> flecha(s, p);
+                if (tickB % 8 == 0) {
+                    // si alguien le cambio la armadura (o la levanto del piso), vuelve la suya
+                    EntityEquipment eq = s.getEquipment();
+                    if (eq != null && eq.getHelmet().getType() != Material.LEATHER_HELMET) ponerArmadura(s, tipo);
+                    s.setCanPickupItems(false);
+                    if (!tipo.equals("negro")) sinCuerpoACuerpo(s);   // si el chunk se recargo, el juego le vuelve a poner el cuerpo a cuerpo
                 }
+                if (tipo.equals("negro")) continue;   // el negro dispara solo, con el arco (ver arcoNegro)
+                if (!(s.getTarget() instanceof Player t) || t != p || !s.hasLineOfSight(p)) continue;
+                double d = s.getLocation().distance(p.getLocation());
+                // rojo: de cerca te corre y te pega con la ballesta
+                if (tipo.equals("rojo") && d <= conf("rojo", "cuerpo_a_cuerpo", 5.0)) {
+                    s.getPathfinder().moveTo(p, 1.2);
+                    if (d <= 2.2 && ahora >= golpeHasta.getOrDefault(s.getUniqueId(), 0L)) {
+                        golpeHasta.put(s.getUniqueId(), ahora + 1000);
+                        s.swingMainHand();
+                        s.attack(p);
+                    }
+                    continue;
+                }
+                if (d > 28) continue;
+                double def = tipo.equals("amarillo") ? 2.5 : 1.5;
+                int cada = Math.max(2, (int) Math.round(conf(tipo, "cada_seg", def) * 4));   // la tarea corre cada 5 ticks
+                int r = recarga.getOrDefault(s.getUniqueId(), cada) + 1;   // el primero sale enseguida
+                if (r < cada) {
+                    recarga.put(s.getUniqueId(), r);
+                    if (r == cada - 1) {   // termino de recargar: se ve lista y suena
+                        verBallesta(s, tipo, true);
+                        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_LOADING_END, 0.8f, 1f);
+                    }
+                    continue;
+                }
+                recarga.put(s.getUniqueId(), 0);
+                s.swingMainHand();
+                if (tipo.equals("amarillo")) cohete(s, p); else flecha(s, p);
+                verBallesta(s, tipo, false);   // queda vacia mientras recarga
+                s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_LOADING_START, 0.6f, 1f);
             }
         }
         if (recarga.size() > 300) recarga.keySet().removeIf(u -> Bukkit.getEntity(u) == null);
+        if (golpeHasta.size() > 300) golpeHasta.values().removeIf(v -> v < ahora);
+    }
+
+    /** Negro: cada flecha que suelta con el arco sale como una TNT prendida, con la misma direccion. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void arcoNegro(org.bukkit.event.entity.EntityShootBowEvent e) {
+        if (!(e.getEntity() instanceof org.bukkit.entity.Skeleton s) || !s.getScoreboardTags().contains("bal_negro")) return;
+        org.bukkit.util.Vector v = e.getProjectile().getVelocity().multiply(conf("negro", "fuerza", 0.9));
+        double dist = s.getTarget() != null ? s.getTarget().getLocation().distance(s.getLocation()) : 12;
+        int mecha = (int) Math.round(dist / Math.max(0.3, v.length()) + conf("negro", "mecha_extra_ticks", 10));
+        org.bukkit.entity.TNTPrimed tnt = s.getWorld().spawn(e.getProjectile().getLocation(), org.bukkit.entity.TNTPrimed.class, t -> {
+            t.setFuseTicks(Math.max(10, Math.min(80, mecha)));
+            t.setSource(s);
+            t.setVelocity(v);
+        });
+        e.setProjectile(tnt);
+        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_TNT_PRIMED, 1f, 1f);
     }
 
     private org.bukkit.util.Vector apuntar(org.bukkit.entity.Skeleton s, Player p) {
@@ -331,23 +407,6 @@ final class MecanicasTarde implements Listener {
         s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1f, 1f);
     }
 
-    /** Negro: tira una TNT prendida en arco, que cae cerca tuyo. */
-    private void tnt(org.bukkit.entity.Skeleton s, Player p) {
-        Location o = s.getEyeLocation();
-        org.bukkit.util.Vector d = p.getLocation().toVector().subtract(o.toVector());
-        double horiz = Math.sqrt(d.getX() * d.getX() + d.getZ() * d.getZ());
-        double T = Math.max(12, Math.min(40, horiz * 1.6));      // ticks de vuelo
-        double g = 0.04;
-        org.bukkit.util.Vector v = new org.bukkit.util.Vector(d.getX() / T, (d.getY() + 0.5 * g * T * T) / T, d.getZ() / T).multiply(1.06);   // un poco mas por el roce
-        int mecha = (int) Math.round(T + conf("negro", "mecha_extra_ticks", 10));
-        s.getWorld().spawn(o, org.bukkit.entity.TNTPrimed.class, t -> {
-            t.setFuseTicks(mecha);
-            t.setSource(s);
-            t.setVelocity(v);
-        });
-        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_SHOOT, 1f, 0.6f);
-        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_TNT_PRIMED, 1f, 1f);
-    }
 
     // ------------------------------------------------------------------ pigman enojados
 
