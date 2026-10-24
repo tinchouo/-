@@ -221,7 +221,7 @@ final class MecanicasTarde implements Listener {
     private void sinCuerpoACuerpo(org.bukkit.entity.Skeleton s) {
         Bukkit.getScheduler().runTask(pl, () -> {
             try {
-                for (com.destroystokyo.paper.entity.ai.Goal<org.bukkit.entity.Mob> g : new java.util.ArrayList<>(Bukkit.getMobGoals().getAllGoals(s)))
+                for (com.destroystokyo.paper.entity.ai.Goal<org.bukkit.entity.Skeleton> g : new java.util.ArrayList<>(Bukkit.getMobGoals().getAllGoals(s)))
                     if (g.getKey().getNamespacedKey().getKey().toLowerCase().contains("melee")) Bukkit.getMobGoals().removeGoal(s, g);
             } catch (Throwable ignored) { }
         });
