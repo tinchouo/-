@@ -63,6 +63,8 @@ calamar:
   tinta_seg: 3
 
 flash:
+  # cuanto tarda en explotar cuando te alcanza (en ticks; 2 = al instante, un creeper comun 30)
+  mecha_ticks: 2
   # velocidad respecto de un creeper comun (2 = el doble)
   velocidad: 2.0
   # encandila a los que estan a esta distancia y lo ven cuando explota

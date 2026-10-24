@@ -156,6 +156,7 @@ public final class Creepers implements Listener {
                 c.addScoreboardTag("creeper_flash");
                 AttributeInstance v = c.getAttribute(Attribute.MOVEMENT_SPEED);
                 if (v != null) v.setBaseValue(0.25 * cfg.getDouble("flash.velocidad", 2.0));   // creeper normal: 0.25
+                c.setMaxFuseTicks(cfg.getInt("flash.mecha_ticks", 2));                        // explota al instante
             }
             case "nuclear" -> { escala(c, cfg.getDouble("nuclear.tamano", 1.5)); c.setMaxFuseTicks(32000); c.setExplosionRadius(0); nuclearBase(c); }
             default -> { }
@@ -195,6 +196,7 @@ public final class Creepers implements Listener {
                 if (tags.contains("creeper_mini")) mini(c);
                 else if (tags.contains("creeper_random")) random(c, tags);
                 else if (tags.contains("creeper_nuclear")) nuclear(c);
+                else if (tags.contains("creeper_flash") && c.getMaxFuseTicks() != cfg.getInt("flash.mecha_ticks", 2)) c.setMaxFuseTicks(cfg.getInt("flash.mecha_ticks", 2));
                 // los modelos de Better Model no muestran el fuego: llamitas cuando se esta quemando
                 if (tick % 4 == 0 && c.getFireTicks() > 0 && (tags.contains("creeper_mini") || tags.contains("creeper_random")
                         || tags.contains("creeper_nuclear") || tags.contains("creeper_calamar") || tags.contains("lobotomia"))) {
