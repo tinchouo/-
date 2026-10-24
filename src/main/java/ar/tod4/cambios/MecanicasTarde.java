@@ -262,7 +262,12 @@ final class MecanicasTarde implements Listener {
         Material[] cuero = {Material.LEATHER_HELMET, Material.LEATHER_CHESTPLATE, Material.LEATHER_LEGGINGS, Material.LEATHER_BOOTS};
         for (int i = 0; i < 4; i++) {
             ItemStack it = new ItemStack(cuero[i]);
-            if (it.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta lm) { lm.setColor(col); it.setItemMeta(lm); }
+            if (it.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta lm) {
+                lm.setColor(col);
+                // con datos propios: el datapack sin_items no la cambia por oro (solo toca el cuero "pelado")
+                lm.getPersistentDataContainer().set(new NamespacedKey(pl, "ballestero"), org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+                it.setItemMeta(lm);
+            }
             if (pro != null && nivel > 0) it.addUnsafeEnchantment(pro, nivel);
             eq.setItem(ARMADURA[i], it);
             eq.setDropChance(ARMADURA[i], 0f);
@@ -306,7 +311,7 @@ final class MecanicasTarde implements Listener {
                 if (!(en instanceof org.bukkit.entity.Skeleton s) || !s.getScoreboardTags().contains(BALLESTERO) || s.isDead()) continue;
                 String tipo = tipoDe(s);
                 if (tickB % 8 == 0) {
-                    // si alguien le cambio la armadura (o la levanto del piso), vuelve la suya
+                    // si algo le cambio la armadura (o la levanto del piso), vuelve la suya
                     EntityEquipment eq = s.getEquipment();
                     if (eq != null && eq.getHelmet().getType() != Material.LEATHER_HELMET) ponerArmadura(s, tipo);
                     s.setCanPickupItems(false);
