@@ -276,9 +276,9 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "donde": extras.cmdDonde(s); return true;
             case "holo": extras.cmdHolo(s, a); return true;
             case "ballestero": {
-                if (p == null) return true;
+                if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
-                if (!cambios.ballestero(p.getLocation(), t)) Style.err(s, "Uso: &e/tod4 ballestero <rojo|amarillo|negro>");
+                if (!cambios.ballestero(pj.getLocation(), t)) Style.err(s, "Uso: &e/tod4 ballestero <rojo|amarillo|negro>");
                 return true;
             }
             case "recargar":
