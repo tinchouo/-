@@ -65,6 +65,8 @@ calamar:
 flash:
   # velocidad respecto de un creeper comun (2 = el doble)
   velocidad: 2.0
+  # encandila a los que estan a esta distancia y lo ven cuando explota
+  radio: 8
   # la pantalla blanca dura esto (se va apagando)
   ceguera_seg: 4
   # mientras tanto casi no se escucha el juego, solo el zumbido

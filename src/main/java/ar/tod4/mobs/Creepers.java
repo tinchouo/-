@@ -195,11 +195,6 @@ public final class Creepers implements Listener {
                 if (tags.contains("creeper_mini")) mini(c);
                 else if (tags.contains("creeper_random")) random(c, tags);
                 else if (tags.contains("creeper_nuclear")) nuclear(c);
-                else if (tags.contains("creeper_flash") && tick % 4 == 0) {
-                    // sin modelo propio: chispas blancas alrededor para reconocerlo
-                    w.spawnParticle(Particle.ELECTRIC_SPARK, c.getLocation().add(0, 1, 0), 4, 0.3, 0.5, 0.3, 0.02);
-                    if (tick % 16 == 0) w.spawnParticle(Particle.END_ROD, c.getLocation().add(0, 1.2, 0), 1, 0.2, 0.3, 0.2, 0.01);
-                }
                 // los modelos de Better Model no muestran el fuego: llamitas cuando se esta quemando
                 if (tick % 4 == 0 && c.getFireTicks() > 0 && (tags.contains("creeper_mini") || tags.contains("creeper_random")
                         || tags.contains("creeper_nuclear") || tags.contains("creeper_calamar") || tags.contains("lobotomia"))) {
@@ -290,17 +285,25 @@ public final class Creepers implements Listener {
         if (e.getCause() != EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) return;
         Set<String> tags = c.getScoreboardTags();
         if (tags.contains("creeper_calamar")) Bukkit.getScheduler().runTask(pl, () -> tinta(p));
-        if (tags.contains("creeper_flash")) Bukkit.getScheduler().runTask(pl, () -> flash(p));
         if (tags.contains("creeper_random")) {
             int i = rnd.nextInt(EFECTOS.length);
             Bukkit.getScheduler().runTask(pl, () -> p.addPotionEffect(new PotionEffect(EFECTOS[i], DUR_AMP[i][0] * 20, DUR_AMP[i][1])));
         }
     }
 
-    /** Flash: no rompe bloques (el dano es el de un creeper comun). */
+    /** Flash: no rompe bloques (el dano es el de un creeper comun) y encandila a todos los que estan cerca y lo ven,
+     *  aunque la explosion no los lastime (como una granada de verdad). */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void explotaFlash(EntityExplodeEvent e) {
-        if (e.getEntity() instanceof Creeper c && c.getScoreboardTags().contains("creeper_flash")) e.blockList().clear();
+        if (!(e.getEntity() instanceof Creeper c) || !c.getScoreboardTags().contains("creeper_flash")) return;
+        e.blockList().clear();
+        double r = cfg.getDouble("flash.radio", 8);
+        for (Player p : c.getWorld().getPlayers()) {
+            if (p.getGameMode() == GameMode.SPECTATOR || p.isDead()) continue;
+            if (p.getLocation().distanceSquared(c.getLocation()) > r * r) continue;
+            if (!p.hasLineOfSight(c)) continue;
+            Bukkit.getScheduler().runTask(pl, () -> flash(p));
+        }
     }
 
     /** Random: no rompe bloques (mismo dano que un creeper) y la nube que deja es de dano instantaneo, no de sus rasgos. */
