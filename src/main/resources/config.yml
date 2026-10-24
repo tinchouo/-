@@ -64,10 +64,24 @@ cambios:
   zombies_partes_max: 4
   zombies_diamante: 0.5         # dia 9: chance de que cada parte sea de diamante (si no, hierro)
   zombies_prote4: 0.5           # dia 9: chance de que toda su armadura tenga Proteccion IV
-  zombies_espada: 0.9           # dia 9: chance de llevar espada (mitad hierro, mitad diamante)
+  zombies_espada: 1.0           # dia 9: chance de llevar espada (mitad hierro, mitad diamante)
   zombies_espada_encantada: 0.5 # dia 9: chance de que la espada tenga Filo
-  zombies_filo_max: 3           # dia 9: Filo entre 1 y este nivel
+  zombies_filo_max: 5           # dia 9: Filo entre 1 y este nivel (todos igual de probables)
   zombies_drop: 0.0             # dia 9: chance de que suelten cada pieza al morir (0 = nunca)
+  creeper_muerte_vida: 1.0      # dia 7: vida del creeper electrico que sale al morir (1 = medio corazon)
+  pacificos_vision: 16          # dia 8: los animales a esta distancia que te ven te persiguen
+  pacificos_velocidad: 1.3
+  pacificos_dano: 2.0           # dia 8: dano de cada golpe (2 = 1 corazon), uno por segundo
+  pacificos_tnt_distancia: 3    # dia 8: a esta distancia te ponen una TNT
+  pacificos_tnt_cada_seg: 10    # dia 8: cada animal pone una TNT como mucho cada tanto
+  pacificos_tnt_mecha: 40       # dia 8: la TNT explota a los 40 ticks (2 s), como siempre 80
+  ballestero_chance: 0.15       # dia 10: chance de que un esqueleto salga como Ballestero
+  ballestero_vida: 40           # dia 10: vida (40 = 20 corazones)
+  ballestero_cada_seg: 1.5      # dia 10: dispara cada tanto
+  ballestero_velocidad: 3.15    # dia 10: velocidad de la flecha (la de una ballesta)
+  ballestero_dano_base: 5.0     # dia 10: flecha comun 2 + Poder V (3). El juego lo multiplica por la velocidad
+  ballestero_drop_ballesta: 0.0 # dia 10: chance de soltar su ballesta (Poder V, Carga rapida III)
+  ballestero_nombre: "&cEsqueleto Ballestero"
   pigman_radio: 16              # dia 8: los Pigman a esta distancia (y que te ven) te atacan
   nuclear_muerte_chance: 0.01   # dia 12: chance de que al morir aparezca un Creeper Nuclear
   infinidad_ballesta_mesa: 0.15 # dia 2: chance de que la mesa vanilla ponga Infinidad a la ballesta (no va con Reparacion)
