@@ -186,6 +186,7 @@ final class Goblins implements Listener {
                 for (Player p : participantes()) {
                     p.playSound(p.getLocation(), "ui.toast.challenge_complete", SoundCategory.MASTER, 1f, 1f);
                     for (String cmd : cfg().getStringList("goblins.recompensas"))
+                        if (!cmd.toLowerCase().contains("hero_of_the_village"))   // sin Heroe de la aldea, aunque el config viejo lo tenga
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", p.getName()));
                 }
             } else {

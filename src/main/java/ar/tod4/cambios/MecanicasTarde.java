@@ -159,7 +159,7 @@ final class MecanicasTarde implements Listener {
                 m.getPathfinder().moveTo(p, c.getDouble("cambios.pacificos_velocidad", 1.3));
                 if (d <= 1.8 && ahora >= pegaHasta.getOrDefault(m.getUniqueId(), 0L)) {
                     pegaHasta.put(m.getUniqueId(), ahora + 1000);
-                    p.damage(c.getDouble("cambios.pacificos_dano", 2.0), m);
+                    golpeFijo(p, m, c.getDouble("cambios.pacificos_dano", 1.0));
                 }
                 if (d <= tntDist && ahora >= tntHasta.getOrDefault(m.getUniqueId(), 0L)) {
                     tntHasta.put(m.getUniqueId(), ahora + (long) (c.getDouble("cambios.pacificos_tnt_cada_seg", 10) * 1000));
@@ -173,6 +173,17 @@ final class MecanicasTarde implements Listener {
         }
         if (tntHasta.size() > 500) tntHasta.values().removeIf(v -> v < ahora);
         if (pegaHasta.size() > 500) pegaHasta.values().removeIf(v -> v < ahora);
+    }
+
+    /** Siempre saca exactamente eso (medio corazon), sin que la armadura lo baje. Si no le alcanza la vida, lo mata (el totem salva). */
+    private void golpeFijo(Player p, org.bukkit.entity.LivingEntity quien, double dano) {
+        double h = p.getHealth();
+        if (h - dano > 0.0001) {
+            p.damage(0.0001, quien);              // el golpe (sonido, empujon y quien fue)
+            if (!p.isDead()) p.setHealth(Math.max(0.0001, Math.min(p.getHealth(), h) - dano));
+        } else {
+            p.damage(1000, quien);
+        }
     }
 
     // ------------------------------------------------------------------ esqueletos ballesteros (dia 10)
