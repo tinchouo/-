@@ -275,6 +275,12 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "muertes": extras.cmdMuertes(s, a); return true;
             case "donde": extras.cmdDonde(s); return true;
             case "holo": extras.cmdHolo(s, a); return true;
+            case "ballestero": {
+                if (p == null) return true;
+                String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
+                if (!cambios.ballestero(p.getLocation(), t)) Style.err(s, "Uso: &e/tod4 ballestero <rojo|amarillo|negro>");
+                return true;
+            }
             case "recargar":
                 reloadConfig();
                 mesa.recargar();
@@ -302,7 +308,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "ballestero", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

@@ -83,7 +83,7 @@ public final class Cambios {
         add(new Cambio("d8.pigman", 8, "Pigman siempre enojados", false, "&7Los Pigman atacan apenas", "&7te ven, sin que les pegues."));
         add(new Cambio("d8.pacificos", 8, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
         add(new Cambio("d9.zombies", 9, "Zombies armados", false, "&72 a 4 partes de armadura (50% Prot IV)", "&7y siempre espada (Filo 1 a 5)."));
-        add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos: cuero rojo,", "&7ballesta con Poder V, 20 corazones."));
+        add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos, con ballesta:", "&7rojo (flechas), amarillo (cohetes), negro (TNT)."));
         add(new Cambio("d12.nuclear_muerte", 12, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
@@ -91,10 +91,20 @@ public final class Cambios {
         new MecanicasExtra(pl, this);
         new PoderBallesta(pl, this);
         new Sueno(pl, this);
-        new MecanicasTarde(pl, this);
+        tarde = new MecanicasTarde(pl, this);
         AvisosCambios.sembrar(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)
         for (Cambio c : todos.values()) if (c.alCambiar != null && on(c.id)) c.alCambiar.accept(true);
+    }
+
+    private MecanicasTarde tarde;
+
+    /** /tod4 ballestero <rojo|amarillo|negro>: hace aparecer uno para probar. */
+    public boolean ballestero(org.bukkit.Location l, String tipo) {
+        if (tarde == null || !MecanicasTarde.TIPOS_BAL.contains(tipo)) return false;
+        org.bukkit.entity.Skeleton s = l.getWorld().spawn(l, org.bukkit.entity.Skeleton.class);
+        tarde.armarBallestero(s, tipo);
+        return true;
     }
 
     private void add(Cambio c) { todos.put(c.id, c); }

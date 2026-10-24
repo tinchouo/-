@@ -33,7 +33,7 @@ import ar.tod4.TOD4;
  *  - d8.pigman: los Pigman (zombis piglin y brutos piglin) estan siempre enojados con los jugadores cercanos.
  *  - d8.pacificos: los animales te persiguen, te pegan y, si estan cerca, te ponen una TNT.
  *  - d9.zombies: los zombies comunes salen con armadura (2 a 4 partes, hierro o diamante, 50% Proteccion IV) y siempre con espada.
- *  - d10.ballesteros: algunos esqueletos salen como Esqueleto Ballestero (cuero rojo, ballesta, mas vida) y disparan con Poder V.
+ *  - d10.ballesteros: algunos esqueletos salen con ballesta y cuero de color: rojo (flechas Poder V), amarillo (cohetes) o negro (TNT).
  *  - d12.nuclear_muerte: al morir, 1% de que aparezca un Creeper Nuclear (vida completa) donde moriste. No rompe bloques.
  * No cuentan las muertes del gulag, de los cuyes ni de los OP.
  */
@@ -175,28 +175,49 @@ final class MecanicasTarde implements Listener {
         if (pegaHasta.size() > 500) pegaHasta.values().removeIf(v -> v < ahora);
     }
 
-    // ------------------------------------------------------------------ esqueleto ballestero (dia 10)
+    // ------------------------------------------------------------------ esqueletos ballesteros (dia 10)
+    //  rojo: flechas con Poder V | amarillo: cohetes de fuegos artificiales (dano en area) | negro: TNT
 
     static final String BALLESTERO = "esqueleto_ballestero";
+    static final java.util.List<String> TIPOS_BAL = java.util.List.of("rojo", "amarillo", "negro");
     private final java.util.Map<java.util.UUID, Integer> recarga = new java.util.HashMap<>();
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void esqueleto(CreatureSpawnEvent e) {
         if (e.getEntityType() != EntityType.SKELETON || !cb.on("d10.ballesteros")) return;
         if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
-        if (ThreadLocalRandom.current().nextDouble() >= pl.getConfig().getDouble("cambios.ballestero_chance", 0.15)) return;
-        org.bukkit.entity.Skeleton s = (org.bukkit.entity.Skeleton) e.getEntity();
-        armarBallestero(s);
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        if (r.nextDouble() >= pl.getConfig().getDouble("cambios.ballestero_chance", 0.15)) return;
+        // cual de los tres, segun su peso
+        double tot = 0;
+        for (String t : TIPOS_BAL) tot += Math.max(0, peso(t));
+        double x = r.nextDouble() * tot;
+        String tipo = "rojo";
+        for (String t : TIPOS_BAL) { x -= Math.max(0, peso(t)); if (x < 0) { tipo = t; break; } }
+        armarBallestero((org.bukkit.entity.Skeleton) e.getEntity(), tipo);
     }
 
-    /** Tambien lo usa /tod4:creeper ballestero? No: se prueba con /tod4 ballestero (ver TOD4). */
-    void armarBallestero(org.bukkit.entity.Skeleton s) {
-        org.bukkit.configuration.file.FileConfiguration c = pl.getConfig();
+    private double peso(String t) {
+        return pl.getConfig().getDouble("cambios.ballesteros." + t + ".peso", t.equals("rojo") ? 60 : t.equals("amarillo") ? 25 : 15);
+    }
+
+    private String conf(String t, String k, String def) { return pl.getConfig().getString("cambios.ballesteros." + t + "." + k, def); }
+    private double conf(String t, String k, double def) { return pl.getConfig().getDouble("cambios.ballesteros." + t + "." + k, def); }
+
+    private static String tipoDe(org.bukkit.entity.Skeleton s) {
+        for (String t : TIPOS_BAL) if (s.getScoreboardTags().contains("bal_" + t)) return t;
+        return "rojo";
+    }
+
+    /** Arma un ballestero de ese tipo (tambien lo usa /tod4 ballestero para probar). */
+    void armarBallestero(org.bukkit.entity.Skeleton s, String tipo) {
         s.addScoreboardTag(BALLESTERO);
-        s.customName(ar.tod4.util.Txt.c(c.getString("cambios.ballestero_nombre", "&cEsqueleto Ballestero")));
+        s.addScoreboardTag("bal_" + tipo);
+        String nombre = switch (tipo) { case "amarillo" -> "&eEsqueleto Pirotécnico"; case "negro" -> "&8Esqueleto Dinamitero"; default -> "&cEsqueleto Ballestero"; };
+        s.customName(ar.tod4.util.Txt.c(conf(tipo, "nombre", nombre)));
         s.setCustomNameVisible(false);
         org.bukkit.attribute.AttributeInstance v = s.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
-        double vida = c.getDouble("cambios.ballestero_vida", 40);
+        double vida = conf(tipo, "vida", tipo.equals("negro") ? 50 : 40);
         if (v != null) { v.setBaseValue(vida); s.setHealth(vida); }
         EntityEquipment eq = s.getEquipment();
         if (eq == null) return;
@@ -205,12 +226,13 @@ final class MecanicasTarde implements Listener {
         if (po != null) ball.addUnsafeEnchantment(po, 5);
         if (qc != null) ball.addUnsafeEnchantment(qc, 3);
         eq.setItemInMainHand(ball);
-        eq.setItemInMainHandDropChance((float) c.getDouble("cambios.ballestero_drop_ballesta", 0.0));
-        org.bukkit.Color rojo = org.bukkit.Color.fromRGB(0xB02E26);
+        eq.setItemInMainHandDropChance(0f);
+        int hex = switch (tipo) { case "amarillo" -> 0xFED83D; case "negro" -> 0x1D1D21; default -> 0xB02E26; };
+        org.bukkit.Color col = org.bukkit.Color.fromRGB(hex);
         Material[] cuero = {Material.LEATHER_HELMET, Material.LEATHER_CHESTPLATE, Material.LEATHER_LEGGINGS, Material.LEATHER_BOOTS};
         for (int i = 0; i < 4; i++) {
             ItemStack it = new ItemStack(cuero[i]);
-            if (it.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta lm) { lm.setColor(rojo); it.setItemMeta(lm); }
+            if (it.getItemMeta() instanceof org.bukkit.inventory.meta.LeatherArmorMeta lm) { lm.setColor(col); it.setItemMeta(lm); }
             eq.setItem(ARMADURA[i], it);
             eq.setDropChance(ARMADURA[i], 0f);
         }
@@ -231,36 +253,89 @@ final class MecanicasTarde implements Listener {
 
     private void ballesteros() {
         tickB++;
-        org.bukkit.configuration.file.FileConfiguration c = pl.getConfig();
-        int cada = Math.max(1, (int) Math.round(c.getDouble("cambios.ballestero_cada_seg", 1.5) * 4));   // la tarea corre cada 5 ticks
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.getGameMode() != GameMode.SURVIVAL && p.getGameMode() != GameMode.ADVENTURE) continue;
             for (Entity en : p.getNearbyEntities(32, 16, 32)) {
                 if (!(en instanceof org.bukkit.entity.Skeleton s) || !s.getScoreboardTags().contains(BALLESTERO) || s.isDead()) continue;
                 if (tickB % 8 == 0) sinCuerpoACuerpo(s);   // si el chunk se recargo, el juego le vuelve a poner el cuerpo a cuerpo
                 if (!(s.getTarget() instanceof Player t) || t != p || !s.hasLineOfSight(p)) continue;
+                String tipo = tipoDe(s);
                 double d = s.getLocation().distance(p.getLocation());
-                if (d > 28) continue;
+                if (d > (tipo.equals("negro") ? 20 : 28)) continue;
+                double def = switch (tipo) { case "amarillo" -> 2.5; case "negro" -> 3.5; default -> 1.5; };
+                int cada = Math.max(1, (int) Math.round(conf(tipo, "cada_seg", def) * 4));   // la tarea corre cada 5 ticks
                 int r = recarga.getOrDefault(s.getUniqueId(), 0) + 1;
                 if (r < cada) { recarga.put(s.getUniqueId(), r); continue; }
                 recarga.put(s.getUniqueId(), 0);
-                disparar(s, p, c);
+                switch (tipo) {
+                    case "amarillo" -> cohete(s, p);
+                    case "negro" -> tnt(s, p);
+                    default -> flecha(s, p);
+                }
             }
         }
         if (recarga.size() > 300) recarga.keySet().removeIf(u -> Bukkit.getEntity(u) == null);
     }
 
-    private void disparar(org.bukkit.entity.Skeleton s, Player p, org.bukkit.configuration.file.FileConfiguration c) {
-        Location ojo = s.getEyeLocation();
-        org.bukkit.util.Vector a = p.getLocation().add(0, p.getHeight() * 0.6, 0).toVector().subtract(ojo.toVector());
-        double dist = a.length();
-        a.setY(a.getY() + dist * 0.06);   // un poco mas alto por la caida de la flecha
-        double vel = c.getDouble("cambios.ballestero_velocidad", 3.15);
-        org.bukkit.entity.Arrow f = s.launchProjectile(org.bukkit.entity.Arrow.class, a.normalize().multiply(vel));
-        f.setDamage(c.getDouble("cambios.ballestero_dano_base", 5.0));   // flecha comun 2 + Poder V (3)
+    private org.bukkit.util.Vector apuntar(org.bukkit.entity.Skeleton s, Player p) {
+        return p.getLocation().add(0, p.getHeight() * 0.6, 0).toVector().subtract(s.getEyeLocation().toVector());
+    }
+
+    /** Rojo: flecha con Poder V. */
+    private void flecha(org.bukkit.entity.Skeleton s, Player p) {
+        org.bukkit.util.Vector a = apuntar(s, p);
+        a.setY(a.getY() + a.length() * 0.06);   // un poco mas alto por la caida de la flecha
+        org.bukkit.entity.Arrow f = s.launchProjectile(org.bukkit.entity.Arrow.class, a.normalize().multiply(conf("rojo", "velocidad", 3.15)));
+        f.setDamage(conf("rojo", "dano_base", 5.0));   // flecha comun 2 + Poder V (3)
         f.setPickupStatus(org.bukkit.entity.AbstractArrow.PickupStatus.DISALLOWED);
         f.setShotFromCrossbow(true);
         s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_SHOOT, 1f, 1f);
+    }
+
+    /** Amarillo: cohete de fuegos artificiales en linea recta; explota al tocar algo (dano en area, mas estrellas = mas dano). */
+    private void cohete(org.bukkit.entity.Skeleton s, Player p) {
+        org.bukkit.util.Vector a = apuntar(s, p).normalize().multiply(conf("amarillo", "velocidad", 1.6));
+        int estrellas = (int) Math.max(1, conf("amarillo", "estrellas", 3));
+        Location o = s.getEyeLocation().add(a.clone().normalize().multiply(0.6));
+        s.getWorld().spawn(o, org.bukkit.entity.Firework.class, fw -> {
+            org.bukkit.inventory.meta.FireworkMeta m = fw.getFireworkMeta();
+            m.clearEffects();
+            org.bukkit.FireworkEffect.Type[] formas = {org.bukkit.FireworkEffect.Type.BALL_LARGE, org.bukkit.FireworkEffect.Type.BURST, org.bukkit.FireworkEffect.Type.STAR};
+            org.bukkit.Color[][] colores = {
+                {org.bukkit.Color.YELLOW, org.bukkit.Color.ORANGE},
+                {org.bukkit.Color.fromRGB(0xFF3B1F), org.bukkit.Color.YELLOW},
+                {org.bukkit.Color.WHITE, org.bukkit.Color.fromRGB(0xFFD54A)}};
+            for (int i = 0; i < estrellas; i++) {
+                m.addEffect(org.bukkit.FireworkEffect.builder().with(formas[i % formas.length]).withColor(colores[i % colores.length])
+                        .withFade(org.bukkit.Color.RED).flicker(true).trail(true).build());
+            }
+            m.setPower(1);
+            fw.setFireworkMeta(m);
+            fw.setShotAtAngle(true);
+            fw.setShooter(s);
+            fw.setVelocity(a);
+            fw.setTicksToDetonate((int) Math.min(60, apuntar(s, p).length() / a.length() + 6));
+        });
+        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_SHOOT, 1f, 0.8f);
+        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1f, 1f);
+    }
+
+    /** Negro: tira una TNT prendida en arco, que cae cerca tuyo. */
+    private void tnt(org.bukkit.entity.Skeleton s, Player p) {
+        Location o = s.getEyeLocation();
+        org.bukkit.util.Vector d = p.getLocation().toVector().subtract(o.toVector());
+        double horiz = Math.sqrt(d.getX() * d.getX() + d.getZ() * d.getZ());
+        double T = Math.max(12, Math.min(40, horiz * 1.6));      // ticks de vuelo
+        double g = 0.04;
+        org.bukkit.util.Vector v = new org.bukkit.util.Vector(d.getX() / T, (d.getY() + 0.5 * g * T * T) / T, d.getZ() / T).multiply(1.06);   // un poco mas por el roce
+        int mecha = (int) Math.round(T + conf("negro", "mecha_extra_ticks", 10));
+        s.getWorld().spawn(o, org.bukkit.entity.TNTPrimed.class, t -> {
+            t.setFuseTicks(mecha);
+            t.setSource(s);
+            t.setVelocity(v);
+        });
+        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_SHOOT, 1f, 0.6f);
+        s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_TNT_PRIMED, 1f, 1f);
     }
 
     // ------------------------------------------------------------------ pigman enojados
