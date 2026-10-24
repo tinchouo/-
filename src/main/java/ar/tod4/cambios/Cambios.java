@@ -73,17 +73,22 @@ public final class Cambios {
         mob(new Cambio("d5.creeper_mini", 5, "Mini Creeper", false, "&7Chiquitos, en grupo. Te ven a 10", "&7bloques y explotan a los 5 s."));
         mob(new Cambio("d5.creeper_calamar", 5, "Creeper Calamar", false, "&7Si te alcanza la explosión,", "&7te mancha la pantalla de tinta."));
         mob(new Cambio("d5.creeper_void", 5, "Void Creeper", false, "&7El creeper de las backrooms."));
+        mob(new Cambio("d5.creeper_flash", 5, "Flash Creeper", false, "&7El doble de rápido, no rompe bloques.", "&7Si te alcanza, te encandila y aturde."));
         mob(new Cambio("d5.creeper_nuclear", 5, "Creeper Nuclear", false, "&7Se planta y explota a los 10 s.", "&7Mortal a 30 bloques, daño hasta 50."));
         // ---- Dia 6
         add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
         add(new Cambio("d6.noches", 6, "Noches eternas", false, "&7La noche no se puede saltar.", "&7Acostarte igual resetea los phantoms."));
         add(new Cambio("d6.phantoms", 6, "Phantoms sin sol", false, "&7Los Phantoms no se queman", "&7con la luz del sol."));
+        add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca", "&7un creeper eléctrico con 1 de vida."));
+        add(new Cambio("d8.pigman", 8, "Pigman siempre enojados", false, "&7Los Pigman atacan apenas", "&7te ven, sin que les pegues."));
+        add(new Cambio("d12.nuclear_muerte", 12, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
         new Mecanicas(pl, this);
         new MecanicasExtra(pl, this);
         new PoderBallesta(pl, this);
         new Sueno(pl, this);
+        new MecanicasTarde(pl, this);
         AvisosCambios.sembrar(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)
         for (Cambio c : todos.values()) if (c.alCambiar != null && on(c.id)) c.alCambiar.accept(true);

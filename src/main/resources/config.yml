@@ -59,6 +59,10 @@ cambios:
   warden_radio: 50          # dia 1: radio en bloques para contar ese maximo
   poder_ballesta_mesa: 0.4  # dia 2: chance de que la mesa vanilla (o un boton que no decide la mesa mejorada) ponga Poder a la ballesta
   poder_ballesta_mobs: 0.1  # dia 2: chance de que un pillager o piglin con ballesta nazca con Poder (nivel 1-4)
+  creeper_muerte_chance: 0.10   # dia 7: chance de que al morir aparezca un creeper electrico
+  creeper_muerte_vida: 1.0      # dia 7: su vida (1 = medio corazon)
+  pigman_radio: 16              # dia 8: los Pigman a esta distancia (y que te ven) te atacan
+  nuclear_muerte_chance: 0.01   # dia 12: chance de que al morir aparezca un Creeper Nuclear
   infinidad_ballesta_mesa: 0.15 # dia 2: chance de que la mesa vanilla ponga Infinidad a la ballesta (no va con Reparacion)
   silverfish_chance: 0.033  # dia 2: chance por bloque picado debajo de Y 0 (0.033 = 1 de cada 30)
   silverfish_y_max: 0

@@ -66,9 +66,9 @@ import net.kyori.adventure.title.Title;
 public final class Creepers implements Listener {
 
     /** El orden importa: el mas raro primero (a lo sumo sale un extra por creeper). */
-    private static final String[] TIPOS = {"nuclear", "void", "calamar", "mini", "random"};
+    private static final String[] TIPOS = {"nuclear", "void", "calamar", "flash", "mini", "random"};
     private static final Map<String, String> TAG = Map.of("random", "creeper_random", "mini", "creeper_mini", "calamar", "creeper_calamar",
-            "void", "lobotomia", "nuclear", "creeper_nuclear");
+            "void", "lobotomia", "nuclear", "creeper_nuclear", "flash", "creeper_flash");
     private static final String[] RASGOS = {"velocidad", "salto", "invisible", "duro", "mecha", "teleport"};
 
     private final TOD4 pl;
@@ -141,7 +141,9 @@ public final class Creepers implements Listener {
     public org.bukkit.NamespacedKey vidaFija() { return new org.bukkit.NamespacedKey(pl, "vida_fija"); }
 
     public Entity aparecer(String tipo, Location l) {
-        Entity en = Ext.mythicSpawn(cfg.getString("mythic." + tipo, ""), l);
+        Entity en = Ext.mythicSpawn(cfg.getString("mythic." + tipo, tipo.equals("flash") ? "FlashCreeper" : ""), l);
+        // el Flash funciona aunque no exista en MythicMobs (creeper comun con lo suyo)
+        if (en == null && tipo.equals("flash")) en = l.getWorld().spawn(l, Creeper.class);   // sale como CUSTOM: no dispara otro sorteo
         if (en != null) preparar(en, tipo);
         return en;
     }
@@ -150,6 +152,11 @@ public final class Creepers implements Listener {
         if (!(en instanceof Creeper c)) return;
         switch (tipo) {
             case "mini" -> escala(c, cfg.getDouble("mini.tamano", 0.5));
+            case "flash" -> {
+                c.addScoreboardTag("creeper_flash");
+                AttributeInstance v = c.getAttribute(Attribute.MOVEMENT_SPEED);
+                if (v != null) v.setBaseValue(0.25 * cfg.getDouble("flash.velocidad", 2.0));   // creeper normal: 0.25
+            }
             case "nuclear" -> { escala(c, cfg.getDouble("nuclear.tamano", 1.5)); c.setMaxFuseTicks(32000); c.setExplosionRadius(0); nuclearBase(c); }
             default -> { }
         }
@@ -278,10 +285,17 @@ public final class Creepers implements Listener {
         if (e.getCause() != EntityDamageEvent.DamageCause.ENTITY_EXPLOSION) return;
         Set<String> tags = c.getScoreboardTags();
         if (tags.contains("creeper_calamar")) Bukkit.getScheduler().runTask(pl, () -> tinta(p));
+        if (tags.contains("creeper_flash")) Bukkit.getScheduler().runTask(pl, () -> flash(p));
         if (tags.contains("creeper_random")) {
             int i = rnd.nextInt(EFECTOS.length);
             Bukkit.getScheduler().runTask(pl, () -> p.addPotionEffect(new PotionEffect(EFECTOS[i], DUR_AMP[i][0] * 20, DUR_AMP[i][1])));
         }
+    }
+
+    /** Flash: no rompe bloques (el dano es el de un creeper comun). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void explotaFlash(EntityExplodeEvent e) {
+        if (e.getEntity() instanceof Creeper c && c.getScoreboardTags().contains("creeper_flash")) e.blockList().clear();
     }
 
     /** Random: no rompe bloques (mismo dano que un creeper) y la nube que deja es de dano instantaneo, no de sus rasgos. */
@@ -342,6 +356,36 @@ public final class Creepers implements Listener {
         long stay = (long) (seg * 1000 * 0.2), fade = (long) (seg * 1000 * 0.8);
         p.showTitle(Title.title(g, Component.empty(), Title.Times.times(Duration.ZERO, Duration.ofMillis(stay), Duration.ofMillis(fade))));
         p.playSound(p, Sound.ENTITY_SQUID_SQUIRT, SoundCategory.HOSTILE, 1f, 0.8f);
+    }
+
+    // ----------------------------------------------------------------- flash
+
+    /** Categorias que se callan mientras estas aturdido (el zumbido va por VOICE, que no se toca). */
+    private static final SoundCategory[] CALLAR = {SoundCategory.MASTER, SoundCategory.MUSIC, SoundCategory.RECORDS, SoundCategory.WEATHER,
+            SoundCategory.BLOCKS, SoundCategory.HOSTILE, SoundCategory.NEUTRAL, SoundCategory.PLAYERS, SoundCategory.AMBIENT};
+    private final Map<UUID, Integer> aturdidos = new HashMap<>();
+
+    /** Flashbang: la pantalla en blanco que se va apagando, zumbido en los oidos y casi nada de sonido del juego. */
+    private void flash(Player p) {
+        Component g = Component.text("\ue201").font(Key.key("tod4", "flash")).color(NamedTextColor.WHITE);
+        double seg = cfg.getDouble("flash.ceguera_seg", 4);
+        long stay = (long) (seg * 1000 * 0.35), fade = (long) (seg * 1000 * 0.65);
+        p.showTitle(Title.title(g, Component.empty(), Title.Times.times(Duration.ZERO, Duration.ofMillis(stay), Duration.ofMillis(fade))));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, (int) (seg * 20), 0, false, false));
+        int sorda = (int) (cfg.getDouble("flash.sordera_seg", 3) * 20);
+        boolean yaEstaba = aturdidos.containsKey(p.getUniqueId());
+        aturdidos.put(p.getUniqueId(), sorda);
+        p.playSound(p, cfg.getString("flash.zumbido", "tod4:flash.zumbido"), SoundCategory.VOICE, 1f, 1f);
+        if (yaEstaba) return;
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Integer t = aturdidos.get(p.getUniqueId());
+                if (t == null || t <= 0 || !p.isOnline()) { aturdidos.remove(p.getUniqueId()); cancel(); return; }
+                aturdidos.put(p.getUniqueId(), t - 1);
+                for (SoundCategory sc : CALLAR) p.stopSound(sc);
+            }
+        }.runTaskTimer(pl, 1L, 1L);
     }
 
     // ----------------------------------------------------------------- nuclear
@@ -564,5 +608,5 @@ public final class Creepers implements Listener {
         }.runTaskTimer(pl, 1L, 2L);
     }
 
-    public List<String> tipos() { return List.of("random", "mini", "calamar", "void", "nuclear"); }
+    public List<String> tipos() { return List.of("random", "mini", "calamar", "void", "nuclear", "flash"); }
 }

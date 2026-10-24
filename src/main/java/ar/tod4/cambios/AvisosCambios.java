@@ -85,6 +85,12 @@ final class AvisosCambios {
             "Ya no se puede *saltar la noche* durmiendo."},
         {"cambio_phantoms", "d6.phantoms", "6", "d",
             "Los *Phantoms* ya no se queman con la *luz del sol*."},
+        {"cambio_creeper_muerte", "d7.creeper_muerte", "7", "d",
+            "Al morir, hay un *10%* de probabilidad de que aparezca un *creeper eléctrico* en el lugar de tu muerte."},
+        {"cambio_pigman", "d8.pigman", "8", "d",
+            "Los *Pigman* ahora están *siempre enojados*. Atacan apenas te ven."},
+        {"cambio_nuclear_muerte", "d12.nuclear_muerte", "12", "d",
+            "Al morir, hay un *1%* de probabilidad de que aparezca un *Creeper Nuclear* en el lugar de tu muerte."},
         {"cambio_bedrock", "d6.bedrock", "6", "d",
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
     };

@@ -1,7 +1,7 @@
 # =====================================================================
 #  CREEPERS DEL DIA 5   (se prenden en /tod4:cambios -> Dia 5 -> Mobs)
 #  Despues de cambiar algo: /tod4 recargar
-#  Para probar uno: /tod4:creeper <random|mini|calamar|void|nuclear>
+#  Para probar uno: /tod4:creeper <random|mini|calamar|void|nuclear|flash>
 # =====================================================================
 
 # Cada vez que aparece un creeper normal, con esta chance (%) aparece ADEMAS uno de estos cerca
@@ -10,6 +10,7 @@ chances:
   nuclear: 3
   void: 8
   calamar: 12
+  flash: 14
   mini: 14
   random: 16
 
@@ -23,6 +24,8 @@ mythic:
   calamar: CreeperCalamar
   void: VoidCreeper
   nuclear: CreeperNuclear
+  # si no existe en MythicMobs, sale un creeper comun con lo del Flash
+  flash: FlashCreeper
 
 mini:
   grupo_min: 3
@@ -58,3 +61,12 @@ nuclear:
 calamar:
   # cuanto dura la tinta en la pantalla (se va desvaneciendo)
   tinta_seg: 3
+
+flash:
+  # velocidad respecto de un creeper comun (2 = el doble)
+  velocidad: 2.0
+  # la pantalla blanca dura esto (se va apagando)
+  ceguera_seg: 4
+  # mientras tanto casi no se escucha el juego, solo el zumbido
+  sordera_seg: 3
+  zumbido: "tod4:flash.zumbido"
