@@ -122,7 +122,7 @@ public final class Creepers implements Listener {
     private void extra(Location l) {
         for (String t : TIPOS) {
             if (!on(t)) continue;
-            if (rnd.nextDouble() * 100 >= cfg.getDouble("chances." + t, 0)) continue;
+            if (rnd.nextDouble() * 100 >= cfg.getDouble("chances." + t, t.equals("flash") ? 14 : 0)) continue;   // el Flash es nuevo: si tu creepers.yml no lo tiene, 14%
             int n = 1;
             if (t.equals("mini")) {
                 int a = cfg.getInt("mini.grupo_min", 3), b = cfg.getInt("mini.grupo_max", 5);
@@ -375,7 +375,7 @@ public final class Creepers implements Listener {
         int sorda = (int) (cfg.getDouble("flash.sordera_seg", 3) * 20);
         boolean yaEstaba = aturdidos.containsKey(p.getUniqueId());
         aturdidos.put(p.getUniqueId(), sorda);
-        p.playSound(p, cfg.getString("flash.zumbido", "tod4:flash.zumbido"), SoundCategory.VOICE, 1f, 1f);
+        p.playSound(p, cfg.getString("flash.zumbido", "tod4flash:zumbido"), SoundCategory.VOICE, 1f, 1f);
         if (yaEstaba) return;
         new BukkitRunnable() {
             @Override

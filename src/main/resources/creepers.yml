@@ -69,4 +69,4 @@ flash:
   ceguera_seg: 4
   # mientras tanto casi no se escucha el juego, solo el zumbido
   sordera_seg: 3
-  zumbido: "tod4:flash.zumbido"
+  zumbido: "tod4flash:zumbido"
