@@ -19,6 +19,9 @@ jobs:
           URL=$(echo "$J" | jq -r 'max_by(.id) | .downloads."server:default".url')
           curl -sL -o paper.jar "$URL"
           cp ../mejoras/target/TOD4Mejoras.jar plugins/
+          U=$(curl -s https://api.github.com/repos/dmulloy2/ProtocolLib/releases | jq -r '[.[] | select(.prerelease==false)][0].assets[] | select(.name=="ProtocolLib.jar") | .browser_download_url')
+          echo "::notice::ProtocolLib $U"
+          curl -sL -o plugins/ProtocolLib.jar "$U"
           echo "eula=true" > eula.txt
           printf "online-mode=false\nspawn-protection=0\n" > server.properties
       - name: Arrancar
