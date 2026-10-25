@@ -117,6 +117,13 @@ public final class Avisos implements Listener {
 
     public boolean existe(String id) { return st.y().isConfigurationSection("mensajes." + id); }
 
+    /** Los datos de un mensaje (titulo, paleta, lineas...). */
+    public ConfigurationSection seccion(String id) { return msg(id); }
+
+    private void aDiscord(String id) {
+        if (pl.discord() != null) pl.discord().publicarAviso(msg(id));
+    }
+
     private List<String> ids(String seccion) {
         ConfigurationSection s = st.y().getConfigurationSection(seccion);
         return s == null ? new ArrayList<>() : new ArrayList<>(s.getKeys(false));
@@ -223,6 +230,7 @@ public final class Avisos implements Listener {
         Paleta pal = Paleta.of(m.getInt("paleta", 6));
         if (!m.getBoolean("ruleta", true)) {
             for (Player p : Bukkit.getOnlinePlayers()) mostrar(id, p);
+            aDiscord(id);
             return;
         }
         if (ruletaGlobal) {
@@ -233,6 +241,7 @@ public final class Avisos implements Listener {
         ruleta(Bukkit.getOnlinePlayers(), pal, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) mostrar(id, p);
             ruletaGlobal = false;
+            aDiscord(id);
         });
     }
 

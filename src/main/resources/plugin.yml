@@ -4,7 +4,7 @@ main: ar.tod4.TOD4
 api-version: '1.21'
 author: TrucOfDeath
 description: TrucOfDeath 4 - misiones, momentos truco, cambios, avisos, revivir, sidebar.
-softdepend: [PlaceholderAPI, Skript, Oraxen, MythicMobs, LibsDisguises]
+softdepend: [PlaceholderAPI, Skript, Oraxen, MythicMobs, LibsDisguises, DiscordSRV]
 permissions:
   tod4.admin:
     default: op

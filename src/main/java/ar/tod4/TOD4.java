@@ -50,6 +50,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.mobs.Creepers creepers;
     private ar.tod4.clones.Clones clones;
     private ar.tod4.core.Extras extras;
+    private ar.tod4.discord.Discord discord;
 
     @Override
     public void onEnable() {
@@ -74,6 +75,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         new ar.tod4.core.Chat(this);
         clones = new ar.tod4.clones.Clones(this);
         extras = new ar.tod4.core.Extras(this);
+        discord = new ar.tod4.discord.Discord(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -141,6 +143,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     }
 
     public ar.tod4.core.Extras extras() { return extras; }
+    public ar.tod4.discord.Discord discord() { return discord; }
 
     public int dia() { return core.y().getInt("dia", 1); }
 
@@ -275,6 +278,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "muertes": extras.cmdMuertes(s, a); return true;
             case "donde": extras.cmdDonde(s); return true;
             case "holo": extras.cmdHolo(s, a); return true;
+            case "discord": discord.cmd(s, a); return true;
             case "ballestero": {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
@@ -308,7 +312,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "ballestero", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "ballestero", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

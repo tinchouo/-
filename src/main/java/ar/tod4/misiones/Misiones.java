@@ -142,12 +142,14 @@ public final class Misiones {
             st.set("activa." + clase, null);
             pl.avisos().ruletaGlobal(Paleta.VERDE, () -> {
                 empezar(clase, id);
+                if (pl.discord() != null) pl.discord().publicarMision(this, clase, id);
                 caja("&a&l¡NUEVA MISIÓN DIARIA!", "&fCompleta la misión para recibir la", "&frecompensa del día.", "&a");
                 sonarTodos(pl.getConfig().getString("misiones.sonido_activar_dia", "block.end_portal.spawn"));
                 for (Player p : Bukkit.getOnlinePlayers()) verificar(p);
             });
         } else {
             empezar(clase, id);
+            if (pl.discord() != null) pl.discord().publicarMision(this, clase, id);
             caja("&b&l¡NUEVA MISIÓN OPCIONAL!", "&fCompleta la misión para recibir", "&frecompensas extra.", "&b");
             sonarTodos(pl.getConfig().getString("misiones.sonido_activar_op", "block.note_block.chime"));
             for (Player p : Bukkit.getOnlinePlayers()) verificar(p);

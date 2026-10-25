@@ -243,3 +243,16 @@ mobs:
   mundo_backrooms: backrooms
   howler_etiqueta: howler     # la etiqueta que le pone su archivo de MythicMobs (addtag)
   howler_velocidad: 1.0       # multiplica su velocidad de movimiento mientras persigue
+
+# Anuncios en Discord (con el bot de DiscordSRV). Si tu config.yml no tiene esta parte, se usan estos mismos valores.
+discord:
+  activado: true
+  everyone: true                 # @everyone abajo de cambios, avisos, dungeons y misiones (las muertes nunca)
+  muertes: true                  # cada muerte que cuenta (no OP, ni cuyes, ni gulag) al canal de muertes
+  pie: "-# TrucOfDeath 4"
+  canales:
+    cambios: "1553108084304388216"    # mensajes naranjas (cambio de dificultad, nuevo mob...)
+    avisos: "1563954729883668621"     # mensajes celestes
+    dungeons: "1563924288665427989"   # mensajes azules (nueva dungeon)
+    misiones: "1553108308863225937"   # misiones diarias y opcionales nuevas
+    muertes: "1554183344529342504"
