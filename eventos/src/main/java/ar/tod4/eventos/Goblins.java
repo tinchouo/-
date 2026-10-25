@@ -40,6 +40,14 @@ import org.bukkit.event.world.EntitiesLoadEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEntityEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.block.BlockDispenseEvent;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Directional;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.Sound;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -513,6 +521,75 @@ final class Goblins implements Listener {
         boolean jugador = d instanceof Player || (d instanceof Projectile pr && pr.getShooter() instanceof Player);
         if (!jugador || antesDeTiempo() || zonaOcupada(v.getLocation())) return;
         empezar(v.getLocation());
+    }
+
+    // ================================================================= huevo del Aldeano Goblin (item de Oraxen)
+
+    private static final NamespacedKey K_ORAXEN = new NamespacedKey("oraxen", "id");
+
+    /** El huevo de Oraxen de goblins.huevo_oraxen (por su id de Oraxen o por su modelo). */
+    private boolean esHuevo(ItemStack it) {
+        String id = cfg().getString("goblins.huevo_oraxen", "huevo_aldeano_goblin");
+        if (it == null || it.getType().isAir() || id == null || id.isBlank() || !it.hasItemMeta()) return false;
+        var meta = it.getItemMeta();
+        if (id.equals(meta.getPersistentDataContainer().get(K_ORAXEN, PersistentDataType.STRING))) return true;
+        NamespacedKey modelo = meta.hasItemModel() ? meta.getItemModel() : null;
+        return modelo != null && modelo.getKey().equals(id);
+    }
+
+    private String mobAldeano() {
+        String mm = cfg().getString("goblins.aldeano_goblin_mm", "AldeanoGoblin");
+        return mm == null || mm.isBlank() ? "AldeanoGoblin" : mm;
+    }
+
+    /** Usar el huevo en un bloque: aparece el Aldeano Goblin de MythicMobs (no un aldeano comun). */
+    @EventHandler(priority = EventPriority.LOW)
+    public void usaHuevo(PlayerInteractEvent e) {
+        if (!esHuevo(e.getItem())) return;
+        // nada de lo de Minecraft (ni aldeano comun, ni cambiar un spawner)
+        e.setUseItemInHand(org.bukkit.event.Event.Result.DENY);
+        e.setUseInteractedBlock(org.bukkit.event.Event.Result.DENY);
+        if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null || e.getHand() == null) return;
+        Block b = e.getClickedBlock();
+        Block donde = b.isPassable() && !b.isLiquid() ? b : b.getRelative(e.getBlockFace());
+        Entity en = spawn(mobAldeano(), donde.getLocation().add(0.5, 0, 0.5));
+        if (en == null) { e.getPlayer().sendActionBar(TOD4Eventos.c("&cNo se pudo crear el Aldeano Goblin (mirá la consola).")); return; }
+        if (e.getPlayer().getGameMode() != GameMode.CREATIVE) {
+            ItemStack it = e.getItem();
+            it.setAmount(it.getAmount() - 1);
+            e.getPlayer().getInventory().setItem(e.getHand(), it.getAmount() <= 0 ? null : it);
+        }
+        e.getPlayer().swingHand(e.getHand());
+    }
+
+    /** Con el huevo en la mano, clic a un aldeano no hace un bebe. */
+    @EventHandler(priority = EventPriority.LOW)
+    public void huevoEnMob(PlayerInteractEntityEvent e) {
+        ItemStack it = e.getPlayer().getInventory().getItem(e.getHand() == null ? EquipmentSlot.HAND : e.getHand());
+        if (esHuevo(it)) e.setCancelled(true);
+    }
+
+    /** Desde un dispensador tambien sale el Aldeano Goblin. */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void dispensa(BlockDispenseEvent e) {
+        if (!esHuevo(e.getItem())) return;
+        e.setCancelled(true);
+        BlockFace f = e.getBlock().getBlockData() instanceof Directional d ? d.getFacing() : BlockFace.UP;
+        Block donde = e.getBlock().getRelative(f);
+        if (spawn(mobAldeano(), donde.getLocation().add(0.5, 0, 0.5)) == null) return;
+        // se gasta uno del dispensador (un tick despues, cuando el inventario ya esta como corresponde)
+        Bukkit.getScheduler().runTask(pl, () -> {
+            if (!(e.getBlock().getState() instanceof org.bukkit.block.Container c)) return;
+            var inv = c.getInventory();
+            for (int k = 0; k < inv.getSize(); k++) {
+                ItemStack i = inv.getItem(k);
+                if (!esHuevo(i)) continue;
+                i.setAmount(i.getAmount() - 1);
+                inv.setItem(k, i.getAmount() <= 0 ? null : i);
+                break;
+            }
+        });
+        e.getBlock().getWorld().playSound(e.getBlock().getLocation(), Sound.BLOCK_DISPENSER_DISPENSE, SoundCategory.BLOCKS, 1f, 1f);
     }
 
     // ---- durante la invasion, los que estan en ella no pueden tradear
