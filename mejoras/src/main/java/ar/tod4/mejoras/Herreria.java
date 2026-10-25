@@ -82,13 +82,13 @@ final class Herreria implements Listener {
     public void saca(InventoryClickEvent e) {
         if (!(e.getView().getTopInventory() instanceof SmithingInventory inv)) return;
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        Mejora m = pl.mejoraDe(inv.getInputTemplate());
-        if (m == null) return;
         if (e.getRawSlot() != 3) {
-            // cualquier cambio en los huecos: se recalcula al tick siguiente
-            Bukkit.getScheduler().runTask(pl, () -> { if (p.getOpenInventory().getTopInventory() == inv) inv.setResult(resultado(inv)); });
+            // cualquier cambio en los huecos (en cualquier orden): se recalcula al tick siguiente
+            recalcular(p, inv);
             return;
         }
+        Mejora m = pl.mejoraDe(inv.getInputTemplate());
+        if (m == null) return;
         e.setCancelled(true);
         ItemStack res = resultado(inv);
         if (res == null) { inv.setResult(null); return; }
@@ -115,7 +115,19 @@ final class Herreria implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void arrastra(InventoryDragEvent e) {
-        if (e.getView().getTopInventory() instanceof SmithingInventory && e.getRawSlots().contains(3)) e.setCancelled(true);
+        if (!(e.getView().getTopInventory() instanceof SmithingInventory inv)) return;
+        if (e.getRawSlots().contains(3)) { e.setCancelled(true); return; }
+        if (e.getWhoClicked() instanceof Player p) recalcular(p, inv);
+    }
+
+    /** Un tick despues (cuando los items ya estan en su lugar): si hay una mejora, su resultado; si no, lo de Minecraft. */
+    private void recalcular(Player p, SmithingInventory inv) {
+        Bukkit.getScheduler().runTask(pl, () -> {
+            if (p.getOpenInventory().getTopInventory() != inv) return;
+            ItemStack tpl = inv.getInputTemplate();
+            if (pl.mejoraDe(tpl) != null) inv.setResult(resultado(inv));
+            else if (pl.cfg.getBoolean("bloquear_ornamentos_originales", true) && esOrnamento(tpl)) inv.setResult(null);
+        });
     }
 
     /** Crafteo apagado desde /mejoras: la mesa de crafteo no da nada. */
