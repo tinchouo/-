@@ -20,12 +20,13 @@ jobs:
           curl -sL -o paper.jar "$URL"
           cp ../mejoras/target/TOD4Mejoras.jar plugins/
           echo "eula=true" > eula.txt
-          printf "online-mode=false\nlevel-type=minecraft\\:flat\nspawn-protection=0\n" > server.properties
+          printf "online-mode=false\nspawn-protection=0\n" > server.properties
       - name: Arrancar
         run: |
           cd srv
           (sleep 90; echo "mejoras"; sleep 2; echo "mejoras recargar"; sleep 2; echo "minecraft:recipe give @a *"; sleep 2; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
-          grep -iE "TOD4Mejoras|mejora|Exception|Error" log.txt | grep -v "Downloading\|Loading library" | head -60 | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
+          M=$(grep -iE -A6 "Exception|TOD4Mejoras|mejora" log.txt | grep -v "Downloading\|Loading library" | head -120 | tr '\n' '#')
+          echo "::warning::${M//%/%25}"
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
           if grep -qiE "Exception|WARN\]: \[TOD4Mejoras\]" log.txt; then echo "::error::Hay errores o avisos"; exit 1; fi
           echo "::notice::Arranco sin errores"
