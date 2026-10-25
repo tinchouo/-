@@ -40,7 +40,9 @@ goblins:
     - "GoblinGuerrero:3, GoblinLancero:3, GoblinBombardero:2, GoblinChaman:1"
     - "GoblinGuerrero:4, GoblinLancero:3, GoblinBombardero:3, GoblinChaman:2, GoblinGrandote:1"
     - "GoblinGuerrero:4, GoblinLancero:4, GoblinBombardero:3, GoblinChaman:2, GoblinGrandote:2, GoblinRey:1"
-  # comandos de consola para cada jugador al ganar (%player%)
+  # premio del plugin al ganar: apagado (los premios son los drops de MythicMobs). true = se ejecutan los comandos de abajo
+  dar_recompensas: false
+  # comandos de consola para cada jugador al ganar (%player%), solo si dar_recompensas: true
   recompensas:
     - "give %player% minecraft:emerald 24"
     - "give %player% minecraft:totem_of_undying 1"

@@ -183,9 +183,11 @@ final class Goblins implements Listener {
             barra.name(titulo(victoria ? "Victoria" : "Derrota"));
             barra.progress(victoria ? 1f : 0f);
             if (victoria) {
+                // sin recompensas del plugin (las pone MythicMobs con los drops de los goblins), salvo que se prendan a proposito
+                boolean dar = cfg().getBoolean("goblins.dar_recompensas", false);
                 for (Player p : participantes()) {
                     p.playSound(p.getLocation(), "ui.toast.challenge_complete", SoundCategory.MASTER, 1f, 1f);
-                    for (String cmd : cfg().getStringList("goblins.recompensas"))
+                    if (dar) for (String cmd : cfg().getStringList("goblins.recompensas"))
                         if (!cmd.toLowerCase().contains("hero_of_the_village"))   // sin Heroe de la aldea, aunque el config viejo lo tenga
                         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), cmd.replace("%player%", p.getName()));
                 }
