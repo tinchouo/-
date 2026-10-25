@@ -1,0 +1,130 @@
+# =====================================================================
+#  TOD4 MEJORAS
+#  Plantillas especiales que se ponen en una pieza de armadura en la mesa de herreria:
+#  mejora a la izquierda, pieza en el medio, la derecha vacia.
+#  - Cada pieza lleva UNA mejora (si le pones otra, reemplaza la anterior).
+#  - Los efectos NO se suman: dos piezas con la misma mejora = una sola.
+#  - Si una pocion o un faro te da mas, manda eso mientras dure; despues vuelve el de la mejora.
+#  - Crafteo de todas: plantilla de mejora de netherite en el medio y 8 del ingrediente alrededor.
+#  Despues de cambiar algo: /mejoras recargar   (prender/apagar crafteos y efectos: /mejoras)
+# =====================================================================
+
+# Las piezas que aceptan mejoras (nombres de Minecraft). Si mas adelante hay otra armadura, se agrega aca.
+piezas:
+  - NETHERITE_HELMET
+  - NETHERITE_CHESTPLATE
+  - NETHERITE_LEGGINGS
+  - NETHERITE_BOOTS
+
+# Los ornamentos de Minecraft (los de los cofres) no se pueden usar en la mesa de herreria.
+bloquear_ornamentos_originales: true
+
+# El Sanador cura solo a los del mismo equipo (de TOD4). false = a cualquiera que este cerca.
+sanador_solo_equipo: true
+
+# Cada efecto es una linea "tipo valores":
+#   pocion <efecto> <nivel>          ej: pocion haste 1
+#   inmune <efecto>                  no te lo pueden poner (ej: inmune slowness)
+#   atributo <atributo> <cantidad>   ej: atributo max_health 4   (4 = 2 corazones)
+#   explosiones <porcentaje>         ese % menos de dano de explosiones
+#   planear <segundos>               en el aire, volver a tocar espacio: caida lenta esos segundos (una vez por salto)
+#   sonar <radio>                    cada 5 s ves brillar a los mobs hostiles en ese radio (solo vos, a traves de paredes)
+#   sanador <radio>                  Regeneracion I a tus companeros en ese radio (a vos no)
+# Los nombres de efectos y atributos son los de Minecraft (los de /effect y /attribute, sin "minecraft:").
+mejoras:
+  fuego:
+    nombre: "Mejora de Fuego"
+    color: "#E2733A"
+    adorno: copper
+    ingrediente: BLAZE_POWDER
+    descripcion: ["Resistencia al fuego"]
+    efectos:
+      resistencia_fuego: "pocion fire_resistance 1"
+  agua:
+    nombre: "Mejora de Agua"
+    color: "#3FA9F5"
+    adorno: lapis
+    ingrediente: PRISMARINE_SHARD
+    descripcion: ["Gracia del delfín", "Respiración acuática"]
+    efectos:
+      delfin: "pocion dolphins_grace 1"
+      respiracion: "pocion water_breathing 1"
+  minero:
+    nombre: "Mejora de Minero"
+    color: "#B07BE8"
+    adorno: amethyst
+    ingrediente: AMETHYST_SHARD
+    descripcion: ["Prisa minera I", "Inmune a Fatiga minera"]
+    efectos:
+      prisa: "pocion haste 1"
+      sin_fatiga: "inmune mining_fatigue"
+  viento:
+    nombre: "Mejora de Viento"
+    color: "#BFE6EE"
+    adorno: quartz
+    ingrediente: WIND_CHARGE
+    descripcion: ["Velocidad I", "Inmune a Lentitud"]
+    efectos:
+      velocidad: "pocion speed 1"
+      sin_lentitud: "inmune slowness"
+  noche:
+    nombre: "Mejora de Noche"
+    color: "#5B6CF0"
+    adorno: lapis
+    ingrediente: GLOW_INK_SAC
+    descripcion: ["Visión nocturna", "Inmune a Ceguera y Oscuridad", "Ves brillar a los mobs hostiles cerca"]
+    efectos:
+      vision: "pocion night_vision 1"
+      sin_ceguera: "inmune blindness"
+      sin_oscuridad: "inmune darkness"
+      sonar: "sonar 20"
+  pluma:
+    nombre: "Mejora de Pluma"
+    color: "#EDEDED"
+    adorno: quartz
+    ingrediente: PHANTOM_MEMBRANE
+    descripcion: ["En el aire, tocá espacio de nuevo:", "3 segundos de caída lenta"]
+    efectos:
+      planear: "planear 3"
+  firmeza:
+    nombre: "Mejora de Firmeza"
+    color: "#A9AFB5"
+    adorno: iron
+    ingrediente: IRON_BLOCK
+    descripcion: ["Menos empuje de los golpes", "20% menos daño de explosiones"]
+    efectos:
+      empuje: "atributo knockback_resistance 0.3"
+      explosiones: "explosiones 20"
+  vida:
+    nombre: "Mejora de Vida"
+    color: "#FF5A6E"
+    adorno: redstone
+    ingrediente: GHAST_TEAR
+    descripcion: ["+2 corazones"]
+    efectos:
+      corazones: "atributo max_health 4"
+  coraza:
+    nombre: "Mejora de Coraza"
+    color: "#8C7A6B"
+    adorno: netherite
+    ingrediente: NETHERITE_SCRAP
+    descripcion: ["Resistencia I"]
+    efectos:
+      resistencia: "pocion resistance 1"
+  alcance:
+    nombre: "Mejora de Alcance"
+    color: "#3FD18A"
+    adorno: emerald
+    ingrediente: ENDER_EYE
+    descripcion: ["+1 bloque de alcance", "(minar, pegar y usar cosas)"]
+    efectos:
+      bloques: "atributo block_interaction_range 1"
+      entidades: "atributo entity_interaction_range 1"
+  sanador:
+    nombre: "Mejora de Sanador"
+    color: "#7CE85A"
+    adorno: emerald
+    ingrediente: GLISTERING_MELON_SLICE
+    descripcion: ["Regeneración I a tus compañeros", "a 3 bloques (a vos no)"]
+    efectos:
+      curar: "sanador 3"

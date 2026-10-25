@@ -1,0 +1,13 @@
+name: TOD4Mejoras
+version: 1.0.0
+main: ar.tod4.mejoras.TOD4Mejoras
+api-version: '1.21'
+author: TrucOfDeath
+description: TrucOfDeath 4 - mejoras de armadura (plantillas especiales en la mesa de herreria).
+softdepend: [TOD4, ProtocolLib]
+permissions:
+  tod4mejoras.admin:
+    default: op
+commands:
+  mejoras:
+    description: Menu de mejoras de armadura (admins)

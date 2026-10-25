@@ -21,7 +21,16 @@ jobs:
             grep -E "\[ERROR\]" build2.log | head -60 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
             exit 1
           }
+      - name: Compilar TOD4Mejoras
+        run: |
+          set -o pipefail
+          mvn -B -f mejoras/pom.xml package 2>&1 | tee build3.log || {
+            grep -E "\[ERROR\]" build3.log | head -60 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with: { name: TOD4, path: target/TOD4.jar }
       - uses: actions/upload-artifact@v4
         with: { name: TOD4Eventos, path: eventos/target/TOD4Eventos.jar }
+      - uses: actions/upload-artifact@v4
+        with: { name: TOD4Mejoras, path: mejoras/target/TOD4Mejoras.jar }
