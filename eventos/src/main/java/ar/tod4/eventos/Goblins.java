@@ -392,9 +392,9 @@ final class Goblins implements Listener {
     private Entity spawn(String tipo, Location l) {
         Entity e = null;
         try {
-            if (HELPER == null && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
+            if (SPAWN == null && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
                 Class<?> c = Class.forName("io.lumine.mythic.bukkit.BukkitAPIHelper");
-                HELPER = c.getConstructor().newInstance();
+                if (HELPER == null) HELPER = c.getConstructor().newInstance();
                 SPAWN = c.getMethod("spawnMythicMob", String.class, Location.class);
             }
             if (SPAWN != null) e = (Entity) SPAWN.invoke(HELPER, tipo, l);
@@ -465,9 +465,38 @@ final class Goblins implements Listener {
         return e.hasMetadata("shopkeeper") || e.getScoreboardTags().contains("shopkeeper");
     }
 
+    /**
+     * El aldeano de la invasion: el mob de MythicMobs de goblins.aldeano_goblin_mm (solo ese, un aldeano comun
+     * renombrado no cuenta). Si eso esta vacio o no hay MythicMobs, se mira el nombre (goblins.aldeano_goblin).
+     */
     private boolean esAldeanoGoblin(Entity e) {
+        String mm = cfg().getString("goblins.aldeano_goblin_mm", "AldeanoGoblin");
+        if (mm != null && !mm.isBlank() && Bukkit.getPluginManager().getPlugin("MythicMobs") != null) {
+            String tipo = tipoMythic(e);
+            if (tipo != null || TIPO != null) return mm.equalsIgnoreCase(tipo);
+        }
         String n = e.customName() == null ? "" : PlainTextComponentSerializer.plainText().serialize(e.customName());
         return n.contains(cfg().getString("goblins.aldeano_goblin", "Aldeano Goblin"));
+    }
+
+    private static Method ES_MM, INSTANCIA, TIPO;
+
+    /** Id de MythicMobs del mob (ej "AldeanoGoblin"), o null si no es de MythicMobs. */
+    private static String tipoMythic(Entity e) {
+        try {
+            if (TIPO == null) {
+                Class<?> c = Class.forName("io.lumine.mythic.bukkit.BukkitAPIHelper");
+                if (HELPER == null) HELPER = c.getConstructor().newInstance();
+                ES_MM = c.getMethod("isMythicMob", Entity.class);
+                INSTANCIA = c.getMethod("getMythicMobInstance", Entity.class);
+                TIPO = Class.forName("io.lumine.mythic.core.mobs.ActiveMob").getMethod("getMobType");
+            }
+            if (!(Boolean) ES_MM.invoke(HELPER, e)) return null;
+            Object am = INSTANCIA.invoke(HELPER, e);
+            return am == null ? null : String.valueOf(TIPO.invoke(am));
+        } catch (Throwable ex) {
+            return null;
+        }
     }
 
     @EventHandler(ignoreCancelled = true)
