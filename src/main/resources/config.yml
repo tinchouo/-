@@ -247,8 +247,9 @@ mobs:
 # Anuncios en Discord (con el bot de DiscordSRV). Si tu config.yml no tiene esta parte, se usan estos mismos valores.
 discord:
   activado: true
-  everyone: true                 # @everyone abajo de cambios, avisos, dungeons y misiones (las muertes nunca)
-  muertes: true                  # cada muerte que cuenta (no OP, ni cuyes, ni gulag) al canal de muertes
+  everyone: true                 # @everyone abajo de cambios, avisos, dungeons y misiones
+  muertes: true                  # cada muerte que cuenta (no OP, ni cuyes, ni gulag) al canal de muertes, igual que en el chat
+  muertes_everyone: true         # @everyone abajo de cada muerte
   pie: "-# TrucOfDeath 4"
   canales:
     cambios: "1553108084304388216"    # mensajes naranjas (cambio de dificultad, nuevo mob...)

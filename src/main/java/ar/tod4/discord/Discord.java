@@ -238,7 +238,7 @@ public final class Discord implements Listener {
 
     // ================================================================= muertes
 
-    /** Las mismas que cuenta /tod4 muertes: no los OP, ni los cuyes, ni el gulag. Sin @everyone. */
+    /** El mismo mensaje de muerte del chat. Las mismas que cuenta /tod4 muertes: no los OP, ni los cuyes, ni el gulag. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void muere(PlayerDeathEvent e) {
         if (!activo() || !pl.getConfig().getBoolean("discord.muertes", true)) return;
@@ -246,7 +246,9 @@ public final class Discord implements Listener {
         if (ar.tod4.hook.Gulag.muereEnGulag(p.getUniqueId()) || p.isOp() || ar.tod4.hook.Cuyes.activo(p)) return;
         String msg = e.deathMessage() == null ? p.getName() + " murió" : plano(e.deathMessage()).trim();
         if (msg.startsWith("☠")) msg = msg.substring(1).trim();
-        publicar("muertes", "### ☠ " + esc(msg) + "\n-# Día " + pl.dia() + " · " + pie().replaceFirst("^-#\\s*", ""), false);
+        boolean ev = pl.getConfig().getBoolean("discord.muertes_everyone", true);
+        publicar("muertes", "### ☠ " + esc(msg) + "\n-# Día " + pl.dia() + " · " + pie().replaceFirst("^-#\\s*", "")
+                + (ev ? "\n@everyone" : ""), ev);
     }
 
     // ================================================================= texto plano en espanol
