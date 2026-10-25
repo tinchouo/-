@@ -238,15 +238,23 @@ public final class Discord implements Listener {
 
     // ================================================================= muertes
 
-    /** El mismo mensaje de muerte del chat. Las mismas que cuenta /tod4 muertes: no los OP, ni los cuyes, ni el gulag. */
+    /** El mismo mensaje de muerte del chat. No salen los OP ni los cuyes; el gulag sale con su mensaje. */
     @EventHandler(priority = EventPriority.MONITOR)
     public void muere(PlayerDeathEvent e) {
         if (!activo() || !pl.getConfig().getBoolean("discord.muertes", true)) return;
         Player p = e.getEntity();
-        if (ar.tod4.hook.Gulag.muereEnGulag(p.getUniqueId()) || p.isOp() || ar.tod4.hook.Cuyes.activo(p)) return;
+        if (p.isOp() || ar.tod4.hook.Cuyes.activo(p)) return;
+        boolean ev = pl.getConfig().getBoolean("discord.muertes_everyone", true);
+        if (ar.tod4.hook.Gulag.muereEnGulag(p.getUniqueId())) {
+            // en el gulag se muere para siempre: mensaje propio
+            String g = pl.getConfig().getString("discord.gulag_mensaje",
+                    "## ⛓ {jugador} cayó en el Gulag\nNo hay segunda oportunidad: queda **eliminado para siempre**.");
+            publicar("muertes", g.replace("\\n", "\n").replace("{jugador}", esc(p.getName())).replace("{dia}", String.valueOf(pl.dia()))
+                    + "\n-# Día " + pl.dia() + " · " + pie().replaceFirst("^-#\\s*", "") + (ev ? "\n@everyone" : ""), ev);
+            return;
+        }
         String msg = e.deathMessage() == null ? p.getName() + " murió" : plano(e.deathMessage()).trim();
         if (msg.startsWith("☠")) msg = msg.substring(1).trim();
-        boolean ev = pl.getConfig().getBoolean("discord.muertes_everyone", true);
         publicar("muertes", "### ☠ " + esc(msg) + "\n-# Día " + pl.dia() + " · " + pie().replaceFirst("^-#\\s*", "")
                 + (ev ? "\n@everyone" : ""), ev);
     }

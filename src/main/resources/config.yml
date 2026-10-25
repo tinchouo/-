@@ -248,8 +248,10 @@ mobs:
 discord:
   activado: true
   everyone: true                 # @everyone abajo de cambios, avisos, dungeons y misiones
-  muertes: true                  # cada muerte que cuenta (no OP, ni cuyes, ni gulag) al canal de muertes, igual que en el chat
+  muertes: true                  # cada muerte al canal de muertes, igual que en el chat (no los OP ni los cuyes)
   muertes_everyone: true         # @everyone abajo de cada muerte
+  # morir en el gulag es para siempre: este mensaje en vez del normal ({jugador}, {dia}; \n = otro renglon)
+  gulag_mensaje: "## ⛓ {jugador} cayó en el Gulag\nNo hay segunda oportunidad: queda **eliminado para siempre**."
   pie: "-# TrucOfDeath 4"
   canales:
     cambios: "1553108084304388216"    # mensajes naranjas (cambio de dificultad, nuevo mob...)
