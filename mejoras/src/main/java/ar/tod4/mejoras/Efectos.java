@@ -53,17 +53,23 @@ final class Efectos implements Listener {
         final Map<PotionEffectType, Integer> pociones = new HashMap<>();
         final Set<PotionEffectType> inmune = new HashSet<>();
         final Map<NamespacedKey, Object[]> atributos = new HashMap<>();   // clave -> {Attribute, valor}
-        double explosiones, planear, sonar, sanador;
+        double explosiones, planear, planearGrav = 100, sonar, sanador;
     }
 
     private final Map<UUID, Estado> estados = new HashMap<>();
     private final Map<UUID, Set<PotionEffectType>> dadas = new HashMap<>();
     private final Map<UUID, Boolean> salto = new HashMap<>();
     private final Set<UUID> planeado = new HashSet<>();
+    private final Map<UUID, Integer> flotando = new HashMap<>();            // ticks que le quedan flotando
+    private final Map<UUID, org.bukkit.util.Vector> paso = new HashMap<>();   // lo que se movio el ultimo tick
+    private final NamespacedKey kFlota;
+    private final Attribute gravedad = Registry.ATTRIBUTE.get(NamespacedKey.minecraft("gravity"));
     private Brillo brillo;
 
     Efectos(TOD4Mejoras pl) {
         this.pl = pl;
+        this.kFlota = new NamespacedKey(pl, "planear");
+        Bukkit.getScheduler().runTaskTimer(pl, this::flotar, 1L, 1L);
         if (Bukkit.getPluginManager().getPlugin("ProtocolLib") != null) {
             try { brillo = new Brillo(pl); } catch (Throwable t) { pl.getLogger().warning("Sin sonar: ProtocolLib no respondio (" + t + ")."); }
         } else pl.getLogger().warning("Sin ProtocolLib: la Mejora de Noche no va a mostrar los mobs.");
@@ -71,7 +77,8 @@ final class Efectos implements Listener {
     }
 
     void apagar() {
-        for (Player p : Bukkit.getOnlinePlayers()) { estados.remove(p.getUniqueId()); aplicar(p, new Estado()); }
+        for (Player p : Bukkit.getOnlinePlayers()) { estados.remove(p.getUniqueId()); aplicar(p, new Estado()); sinFlotar(p); }
+        flotando.clear();
     }
 
     // ================================================================= que tiene puesto
@@ -90,7 +97,7 @@ final class Efectos implements Listener {
                     case INMUNE -> e.inmune.add(ef.pocion);
                     case ATRIBUTO -> e.atributos.put(new NamespacedKey(pl, "m_" + m.id + "_" + ef.id), new Object[]{ef.atributo, ef.valor});
                     case EXPLOSIONES -> e.explosiones = Math.max(e.explosiones, ef.valor);
-                    case PLANEAR -> e.planear = Math.max(e.planear, ef.valor);
+                    case PLANEAR -> { e.planear = Math.max(e.planear, ef.valor); e.planearGrav = Math.min(e.planearGrav, ef.valor2); }
                     case SONAR -> e.sonar = Math.max(e.sonar, ef.valor);
                     case SANADOR -> e.sanador = Math.max(e.sanador, ef.valor);
                 }
@@ -106,6 +113,7 @@ final class Efectos implements Listener {
             estados.put(p.getUniqueId(), e);
             aplicar(p, e);
             if (p.isOnGround() || p.isInWater() || p.isFlying()) planeado.remove(p.getUniqueId());
+            if (!flotando.containsKey(p.getUniqueId())) sinFlotar(p);   // por si quedo de antes (se cayo el server, etc.)
             if (e.sonar > 0 && tick % 10 == 0 && brillo != null) sonar(p, e.sonar);          // cada 5 s
             if (e.sanador > 0 && tick % 2 == 0) sanar(p, e.sanador);                            // cada 1 s
         }
@@ -181,15 +189,63 @@ final class Efectos implements Listener {
         if (st == null || st.planear <= 0) return;
         if (p.isOnGround() || p.isFlying() || p.isGliding() || p.isInWater() || p.isClimbing() || p.isInsideVehicle()) return;
         if (p.getGameMode() == GameMode.SPECTATOR || !planeado.add(p.getUniqueId())) return;   // una vez por salto
-        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, (int) (st.planear * 20), 0, false, false, true));
+        int ticks = (int) (st.planear * 20);
+        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, ticks, 0, false, false, true));
+        // se frena en el aire (conserva lo que venia moviendose de costado) y casi sin gravedad
+        org.bukkit.util.Vector v = paso.getOrDefault(p.getUniqueId(), new org.bukkit.util.Vector());
+        p.setVelocity(new org.bukkit.util.Vector(v.getX(), 0, v.getZ()));
+        if (gravedad != null) {
+            AttributeInstance ai = p.getAttribute(gravedad);
+            if (ai != null) {
+                ai.removeModifier(kFlota);
+                ai.addModifier(new AttributeModifier(kFlota, -(1 - Math.max(0, st.planearGrav) / 100.0),
+                        AttributeModifier.Operation.MULTIPLY_SCALAR_1, EquipmentSlotGroup.ANY));
+            }
+        }
+        flotando.put(p.getUniqueId(), ticks);
         p.setFallDistance(0f);
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PHANTOM_FLAP, SoundCategory.PLAYERS, 0.6f, 1.4f);
+    }
+
+    /** Cada tick: cuenta lo que le queda flotando a cada uno; al tocar el piso o el agua, se corta. */
+    private void flotar() {
+        if (flotando.isEmpty()) return;
+        var it = flotando.entrySet().iterator();
+        while (it.hasNext()) {
+            var en = it.next();
+            Player p = Bukkit.getPlayer(en.getKey());
+            int quedan = en.getValue() - 1;
+            boolean corta = p == null || quedan <= 0 || p.isDead() || p.isOnGround() || p.isInWater() || p.isFlying()
+                    || p.isGliding() || p.isClimbing() || p.isInsideVehicle();
+            if (corta) {
+                it.remove();
+                if (p != null) {
+                    sinFlotar(p);
+                    PotionEffect sf = p.getPotionEffect(PotionEffectType.SLOW_FALLING);   // solo la de la pluma, no una pocion
+                    if (sf != null && !sf.hasParticles() && !sf.isAmbient() && !sf.isInfinite() && sf.getDuration() <= 20 * 60) p.removePotionEffect(PotionEffectType.SLOW_FALLING);
+                }
+            } else en.setValue(quedan);
+        }
+    }
+
+    private void sinFlotar(Player p) {
+        if (gravedad == null) return;
+        AttributeInstance ai = p.getAttribute(gravedad);
+        if (ai != null && ai.getModifier(kFlota) != null) ai.removeModifier(kFlota);
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void mueve(org.bukkit.event.player.PlayerMoveEvent e) {
+        Estado st = estados.get(e.getPlayer().getUniqueId());
+        if (st == null || st.planear <= 0) return;
+        paso.put(e.getPlayer().getUniqueId(), e.getTo().toVector().subtract(e.getFrom().toVector()));
     }
 
     @EventHandler
     public void sale(PlayerQuitEvent e) {
         UUID u = e.getPlayer().getUniqueId();
-        estados.remove(u); dadas.remove(u); salto.remove(u); planeado.remove(u);
+        estados.remove(u); dadas.remove(u); salto.remove(u); planeado.remove(u); paso.remove(u);
+        if (flotando.remove(u) != null) sinFlotar(e.getPlayer());
     }
 
     // ================================================================= sonar (Noche)

@@ -27,7 +27,8 @@ sanador_solo_equipo: true
 #   inmune <efecto>                  no te lo pueden poner (ej: inmune slowness)
 #   atributo <atributo> <cantidad>   ej: atributo max_health 4   (4 = 2 corazones)
 #   explosiones <porcentaje>         ese % menos de dano de explosiones
-#   planear <segundos>               en el aire, volver a tocar espacio: caida lenta esos segundos (una vez por salto)
+#   planear <segundos> [gravedad%]   en el aire, volver a tocar saltar: se frena y flota esos segundos con ese % de la
+#                                    gravedad normal (2 = baja unos 2 bloques en 3 s). Una vez por salto.
 #   sonar <radio>                    cada 5 s ves brillar a los mobs hostiles en ese radio (solo vos, a traves de paredes)
 #   sanador <radio>                  Regeneracion I a tus companeros en ese radio (a vos no)
 # Los nombres de efectos y atributos son los de Minecraft (los de /effect y /attribute, sin "minecraft:").
@@ -85,7 +86,7 @@ mejoras:
     ingrediente: PHANTOM_MEMBRANE
     descripcion: ["En el aire, tocá el botón de saltar de nuevo:", "3 segundos de caída lenta"]
     efectos:
-      planear: "planear 3"
+      planear: "planear 3 2"
   firmeza:
     nombre: "Mejora de Firmeza"
     color: "#A9AFB5"

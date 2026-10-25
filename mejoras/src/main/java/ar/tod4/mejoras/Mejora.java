@@ -28,6 +28,7 @@ final class Mejora {
         int nivel = 1;            // POCION
         Attribute atributo;       // ATRIBUTO
         double valor;             // ATRIBUTO / EXPLOSIONES (%) / PLANEAR (s) / SONAR (radio) / SANADOR (radio)
+        double valor2 = 2;        // PLANEAR: % de la gravedad normal mientras flota
 
         Efecto(String id, String texto, Tipo tipo) { this.id = id; this.texto = texto; this.tipo = tipo; }
     }
@@ -83,7 +84,12 @@ final class Mejora {
                     return e;
                 }
                 case "explosiones": { Efecto e = new Efecto(id, linea, Tipo.EXPLOSIONES); e.valor = Double.parseDouble(p[1]); return e; }
-                case "planear": { Efecto e = new Efecto(id, linea, Tipo.PLANEAR); e.valor = Double.parseDouble(p[1]); return e; }
+                case "planear": {
+                    Efecto e = new Efecto(id, linea, Tipo.PLANEAR);
+                    e.valor = Double.parseDouble(p[1]);
+                    if (p.length > 2) e.valor2 = Double.parseDouble(p[2]);
+                    return e;
+                }
                 case "sonar": { Efecto e = new Efecto(id, linea, Tipo.SONAR); e.valor = Double.parseDouble(p[1]); return e; }
                 case "sanador": { Efecto e = new Efecto(id, linea, Tipo.SANADOR); e.valor = Double.parseDouble(p[1]); return e; }
                 default:
