@@ -282,11 +282,24 @@ public final class Sidebar implements Listener {
      * Vida en el tab, en corazones y con color: "10❤" (verde > 60%, amarillo 30-60%, rojo < 30%), "+2❤" dorado si tiene absorcion.
      * Muerto o en espectador: "0" en rojo oscuro. Los OP en espectador (los admins mirando): nada.
      */
+    /**
+     * Lo ultimo que se le mando a cada scoreboard (vida del tab y nametags). Comparar contra lo que devuelve el
+     * scoreboard no sirve: el texto vuelve convertido y nunca da igual, asi que se reenviaba todo cada vez
+     * (jugadores x jugadores paquetes por segundo). Se compara contra el texto que pusimos nosotros.
+     */
+    private final Map<Scoreboard, Map<String, String>> enviado = new java.util.WeakHashMap<>();
+
+    private boolean cambio(Scoreboard sb, String clave, String valor) {
+        Map<String, String> m = enviado.computeIfAbsent(sb, k -> new HashMap<>());
+        return !valor.equals(m.put(clave, valor));
+    }
+
     private void vida(Scoreboard sb) {
         Objective v = sb.getObjective("tod4_vida");
         if (v == null) return;
         for (Player t : Bukkit.getOnlinePlayers()) {
             Score s = v.getScore(t.getName());
+            if (!s.isScoreSet()) enviado.computeIfAbsent(sb, k -> new HashMap<>()).remove("v:" + t.getName());
             String txt;
             if (t.getGameMode() == org.bukkit.GameMode.SPECTATOR && t.isOp()) txt = "";
             else if (t.isDead() || t.getGameMode() == org.bukkit.GameMode.SPECTATOR || t.getHealth() <= 0) txt = "&40";
@@ -298,9 +311,9 @@ public final class Sidebar implements Listener {
                 if (t.getAbsorptionAmount() > 0) txt += " &6+" + corazones(t.getAbsorptionAmount()) + "&l❤";
             }
             int orden = (int) Math.ceil(t.isDead() ? 0 : t.getHealth());
+            if (!cambio(sb, "v:" + t.getName(), orden + "|" + txt)) continue;
             if (!s.isScoreSet() || s.getScore() != orden) s.setScore(orden);
-            NumberFormat nf = txt.isEmpty() ? NumberFormat.blank() : NumberFormat.fixed(Txt.c(txt));
-            if (!nf.equals(s.numberFormat())) s.numberFormat(nf);
+            s.numberFormat(txt.isEmpty() ? NumberFormat.blank() : NumberFormat.fixed(Txt.c(txt)));
         }
     }
 
@@ -323,16 +336,20 @@ public final class Sidebar implements Listener {
             String nombre = (NT + orden + "_" + t.getName().toLowerCase());
             usados.add(nombre);
             Team tm = sb.getTeam(nombre);
-            if (tm == null) tm = sb.registerNewTeam(nombre);
-            net.kyori.adventure.text.Component pre = Txt.c(simbolos(t) + eq[0]);
-            if (!pre.equals(tm.prefix())) tm.prefix(pre);
+            if (tm == null) {
+                tm = sb.registerNewTeam(nombre);
+                enviado.computeIfAbsent(sb, k -> new HashMap<>()).remove("p:" + nombre);
+                enviado.get(sb).remove("c:" + nombre);
+            }
+            String preTxt = simbolos(t) + eq[0];
+            if (cambio(sb, "p:" + nombre, preTxt)) tm.prefix(Txt.c(preTxt));
             net.kyori.adventure.text.format.NamedTextColor col = pl.equipos() == null ? null : pl.equipos().color(t.getUniqueId());
             if (col == null) col = net.kyori.adventure.text.format.NamedTextColor.WHITE;
             // gulag: el brillo del que tiene la llave es amarillo mientras es inmune y blanco despues
             String llave = ar.tod4.hook.Gulag.llave(t.getUniqueId());
             if ("inmune".equals(llave)) col = net.kyori.adventure.text.format.NamedTextColor.YELLOW;
             else if ("si".equals(llave)) col = net.kyori.adventure.text.format.NamedTextColor.WHITE;
-            if (!tm.hasColor() || !col.equals(tm.color())) tm.color(col);
+            if (cambio(sb, "c:" + nombre, col.toString())) tm.color(col);
             if (!tm.hasEntry(t.getName())) tm.addEntry(t.getName());
         }
         for (Team tm : new HashSet<>(sb.getTeams()))
@@ -354,13 +371,14 @@ public final class Sidebar implements Listener {
             Team d = dest.getTeam(t.getName());
             if (d == null) d = dest.registerNewTeam(t.getName());
             try {
-                d.displayName(t.displayName());
-                d.prefix(t.prefix());
-                d.suffix(t.suffix());
-                if (t.hasColor() && t.color() instanceof net.kyori.adventure.text.format.NamedTextColor nc) d.color(nc);
-                d.setAllowFriendlyFire(t.allowFriendlyFire());
-                d.setCanSeeFriendlyInvisibles(t.canSeeFriendlyInvisibles());
-                for (Team.Option op : Team.Option.values()) d.setOption(op, t.getOption(op));
+                // cada cosa se cambia solo si es distinta (cada cambio le manda un paquete al jugador)
+                if (!t.displayName().equals(d.displayName())) d.displayName(t.displayName());
+                if (!t.prefix().equals(d.prefix())) d.prefix(t.prefix());
+                if (!t.suffix().equals(d.suffix())) d.suffix(t.suffix());
+                if (t.hasColor() && t.color() instanceof net.kyori.adventure.text.format.NamedTextColor nc && !(d.hasColor() && nc.equals(d.color()))) d.color(nc);
+                if (d.allowFriendlyFire() != t.allowFriendlyFire()) d.setAllowFriendlyFire(t.allowFriendlyFire());
+                if (d.canSeeFriendlyInvisibles() != t.canSeeFriendlyInvisibles()) d.setCanSeeFriendlyInvisibles(t.canSeeFriendlyInvisibles());
+                for (Team.Option op : Team.Option.values()) if (d.getOption(op) != t.getOption(op)) d.setOption(op, t.getOption(op));
                 Set<String> ent = t.getEntries();
                 // los jugadores conectados van en su team propio (nametags): no se copian aca
                 for (String e : ent) if (!conectados.contains(e) && !d.hasEntry(e)) d.addEntry(e);
