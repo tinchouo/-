@@ -94,7 +94,6 @@ public final class Corazon implements Listener {
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.8f, 0.8f);
         p.playSound(p.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 0.8f, 1.6f);
         p.getWorld().spawnParticle(Particle.HEART, p.getLocation().add(0, 1.8, 0), 8, 0.4, 0.3, 0.4, 0);
-        p.sendActionBar(Txt.c("&c&l+1 ❤ &7permanente"));
     }
 
     /** Al morir se pierden. */
