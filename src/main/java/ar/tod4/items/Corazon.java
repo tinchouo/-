@@ -125,6 +125,5 @@ public final class Corazon implements Listener {
         if (dest == null) { Style.err(s, "Uso: &e/tod4 corazon [jugador] [cantidad]"); return; }
         for (ItemStack sobra : dest.getInventory().addItem(item(cant)).values()) dest.getWorld().dropItem(dest.getLocation(), sobra);
         Style.ok(s, "Le di " + cant + " Corazón Rojo a " + dest.getName() + ".");
-        if (a.length > 0 && a[0].equalsIgnoreCase("ver") && dest != null) Style.info(s, dest.getName() + " tiene " + extra(dest) + " corazones extra.");
     }
 }
