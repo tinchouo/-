@@ -52,6 +52,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.core.Extras extras;
     private ar.tod4.discord.Discord discord;
     private ar.tod4.subasta.Subasta subasta;
+    private ar.tod4.items.Corazon corazon;
 
     @Override
     public void onEnable() {
@@ -78,6 +79,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         extras = new ar.tod4.core.Extras(this);
         discord = new ar.tod4.discord.Discord(this);
         subasta = new ar.tod4.subasta.Subasta(this);
+        corazon = new ar.tod4.items.Corazon(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -283,6 +285,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "holo": extras.cmdHolo(s, a); return true;
             case "discord": discord.cmd(s, a); return true;
             case "subasta": subasta.cmd(s, a); return true;
+            case "corazon": corazon.cmd(s, a); return true;
             case "ballestero": {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
@@ -322,7 +325,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "ballestero", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

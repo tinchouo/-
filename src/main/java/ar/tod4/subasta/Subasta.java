@@ -318,10 +318,13 @@ public final class Subasta implements Listener {
                             .append(Component.text(it.getAmount() > 1 ? " x" + it.getAmount() : "", NamedTextColor.WHITE));
                 }
                 Bukkit.broadcast(Component.empty());
-                Bukkit.broadcast(Txt.c("&b&l¡EMPIEZA LA SUBASTA!").append(que));
-                if (minimo > 0) Bukkit.broadcast(Txt.c("&bPuja mínima: ").append(monto(minimo).color(NamedTextColor.WHITE)));
+                Bukkit.broadcast(Txt.c(BARRA));
+                Bukkit.broadcast(Txt.c("&b&l   ¡INICIO DE LA SUBASTA!"));
+                if (!que.equals(Component.empty())) Bukkit.broadcast(Component.text("  ").append(que));
+                if (minimo > 0) Bukkit.broadcast(Txt.c("&b   Puja mínima: ").append(monto(minimo).color(NamedTextColor.AQUA)));
+                Bukkit.broadcast(Txt.c(BARRA));
                 Bukkit.broadcast(Component.empty());
-                for (Player o : Bukkit.getOnlinePlayers()) o.playSound(o.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.MASTER, 1f, 1f);
+                sonidoInicio();
                 for (UUID u : pujadores) { Player p = Bukkit.getPlayer(u); if (p != null) darItem(p); }
             }
             case "reiniciar" -> {
@@ -334,7 +337,12 @@ public final class Subasta implements Listener {
                 if (!activa) { Style.err(s, "No hay ninguna subasta."); return; }
                 if (ganador == null) {
                     terminar();
-                    Bukkit.broadcast(Txt.c("&b&lSUBASTA &7» &bTerminó sin pujas."));
+                    Bukkit.broadcast(Component.empty());
+                    Bukkit.broadcast(Txt.c(BARRA));
+                    Bukkit.broadcast(Txt.c("&b&l   ¡FIN DE LA SUBASTA!"));
+                    Bukkit.broadcast(Txt.c("&b   Nadie pujó."));
+                    Bukkit.broadcast(Txt.c(BARRA));
+                    Bukkit.broadcast(Component.empty());
                     return;
                 }
                 Player g = Bukkit.getPlayer(ganador);
@@ -346,15 +354,19 @@ public final class Subasta implements Listener {
                 int precio = mayor;
                 terminar();
                 Bukkit.broadcast(Component.empty());
-                Bukkit.broadcast(Txt.c("&b&l¡VENDIDO! &b" + g.getName() + " gana la subasta con ").append(monto(precio).color(NamedTextColor.AQUA)).append(Component.text(".", NamedTextColor.AQUA)));
+                Bukkit.broadcast(Txt.c(BARRA));
+                Bukkit.broadcast(Txt.c("&b&l   ¡FIN DE LA SUBASTA!"));
+                Bukkit.broadcast(Txt.c("&b   Ganador: &b&l" + g.getName()));
+                Bukkit.broadcast(Txt.c("&b   Puja: ").append(monto(precio).color(NamedTextColor.AQUA)));
+                Bukkit.broadcast(Txt.c(BARRA));
                 Bukkit.broadcast(Component.empty());
-                for (Player o : Bukkit.getOnlinePlayers()) o.playSound(o.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.MASTER, 1f, 1f);
+                sonidoFin();
                 Style.ok(s, "Ya le cobré a " + g.getName() + ". El ítem dáselo vos.");
             }
             case "cancelar" -> {
                 if (!activa) { Style.err(s, "No hay ninguna subasta."); return; }
                 terminar();
-                Bukkit.broadcast(Txt.c("&b&lSUBASTA &7» &bSe canceló. No se cobró nada."));
+                Bukkit.broadcast(Txt.c("&b&lSUBASTA &7» &bSe canceló."));
             }
             case "estado" -> {
                 if (!activa) { Style.info(s, "No hay ninguna subasta."); return; }
@@ -369,6 +381,33 @@ public final class Subasta implements Listener {
                 Style.info(s, "&e/tod4 subasta cancelar &7| &e/tod4 subasta estado");
             }
         }
+    }
+
+    private static final String BARRA = "&3&m                                                ";
+
+    /** Inicio: campana doble (como el martillo del rematador llamando). */
+    private void sonidoInicio() {
+        for (Player o : Bukkit.getOnlinePlayers()) {
+            o.playSound(o.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.MASTER, 1f, 1f);
+            o.playSound(o.getLocation(), Sound.BLOCK_BELL_RESONATE, SoundCategory.MASTER, 0.6f, 1f);
+        }
+        Bukkit.getScheduler().runTaskLater(pl, () -> {
+            for (Player o : Bukkit.getOnlinePlayers()) o.playSound(o.getLocation(), Sound.BLOCK_BELL_USE, SoundCategory.MASTER, 1f, 1.25f);
+        }, 6L);
+    }
+
+    /** Fin: martillazo (golpe de la maza) y despues fuegos artificiales. */
+    private void sonidoFin() {
+        for (Player o : Bukkit.getOnlinePlayers()) o.playSound(o.getLocation(), Sound.ITEM_MACE_SMASH_GROUND_HEAVY, SoundCategory.MASTER, 1f, 0.9f);
+        Bukkit.getScheduler().runTaskLater(pl, () -> {
+            for (Player o : Bukkit.getOnlinePlayers()) {
+                o.playSound(o.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_LARGE_BLAST, SoundCategory.MASTER, 1f, 1f);
+                o.playSound(o.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.MASTER, 0.8f, 1.2f);
+            }
+        }, 8L);
+        Bukkit.getScheduler().runTaskLater(pl, () -> {
+            for (Player o : Bukkit.getOnlinePlayers()) o.playSound(o.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_TWINKLE, SoundCategory.MASTER, 1f, 1f);
+        }, 18L);
     }
 
     private void terminar() {
