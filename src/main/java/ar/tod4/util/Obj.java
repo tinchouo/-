@@ -97,6 +97,8 @@ public final class Obj {
             else if (e instanceof org.bukkit.entity.Villager x) v = x.getProfession();
             else if (e instanceof org.bukkit.entity.ZombieVillager x) v = x.getVillagerProfession();
             else if (e instanceof org.bukkit.entity.TropicalFish x) v = x.getPattern();
+            // creeper cargado (el del cambio "Creeper Electronico"); uno comun no tiene variante
+            else if (e instanceof org.bukkit.entity.Creeper x) return x.isPowered() ? "ELECTRICO" : null;
             if (v == null) return null;
             if (v instanceof org.bukkit.Keyed k) return k.getKey().getKey().toUpperCase();
             if (v instanceof Enum<?> en) return en.name();
@@ -227,6 +229,7 @@ public final class Obj {
             }
             if (obj.equals("tag:minecraft:beds")) return Component.text("Cualquier cama");
             if (obj.startsWith("tag:")) return Component.text(GRUPOS.getOrDefault(obj.substring(4), bonito(obj.substring(4))));
+            if (obj.equalsIgnoreCase("ent:CREEPER:ELECTRICO")) return Component.text("Creeper Electrónico");
             if (obj.startsWith("ent:")) {
                 String[] pt = obj.substring(4).split(":", 2);
                 Component c = Component.translatable(EntityType.valueOf(pt[0]).translationKey());
