@@ -80,6 +80,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         discord = new ar.tod4.discord.Discord(this);
         subasta = new ar.tod4.subasta.Subasta(this);
         corazon = new ar.tod4.items.Corazon(this);
+        new ar.tod4.items.SoloOraxen(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
