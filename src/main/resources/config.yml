@@ -259,3 +259,14 @@ discord:
     dungeons: "1563924288665427989"   # mensajes azules (nueva dungeon)
     misiones: "1553108308863225937"   # misiones diarias y opcionales nuevas
     muertes: "1554183344529342504"
+
+# Subasta (/tod4 subasta, /pujar). Todo se cuenta en amarillas. Si tu config.yml no tiene esta parte, se usan estos valores.
+subasta:
+  monedas:            # id de Oraxen -> cuanto vale en amarillas
+    moneda: 1
+    moneda_roja: 10
+    moneda_morada: 100
+  iconos:             # caracter de cada moneda en la fuente tod4:monedas del pack (TOD4_extras.zip)
+    moneda: ""
+    moneda_roja: ""
+    moneda_morada: ""

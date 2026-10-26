@@ -58,6 +58,8 @@ commands:
     description: Equipos (admins)
   eq:
     description: Chat y opciones de tu equipo
+  pujar:
+    description: Pujar en la subasta (cantidad en monedas amarillas)
   creeper:
     description: Hace aparecer un creeper especial (prueba)
   clones:

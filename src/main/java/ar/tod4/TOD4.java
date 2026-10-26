@@ -51,6 +51,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.clones.Clones clones;
     private ar.tod4.core.Extras extras;
     private ar.tod4.discord.Discord discord;
+    private ar.tod4.subasta.Subasta subasta;
 
     @Override
     public void onEnable() {
@@ -76,6 +77,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         clones = new ar.tod4.clones.Clones(this);
         extras = new ar.tod4.core.Extras(this);
         discord = new ar.tod4.discord.Discord(this);
+        subasta = new ar.tod4.subasta.Subasta(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
         new Sidebar(this);
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
@@ -172,6 +174,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             if (s instanceof Player p) equipos.comandoEq(p, a);
             return true;
         }
+        if (c.equals("pujar")) { subasta.cmdPujar(s, a); return true; }
         if (!s.hasPermission("tod4.admin")) { Style.err(s, "No tienes permiso."); return true; }
         Player p = s instanceof Player pp ? pp : null;
         if (c.startsWith("aether_")) return aether.comando(s, c, a);
@@ -279,6 +282,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "donde": extras.cmdDonde(s); return true;
             case "holo": extras.cmdHolo(s, a); return true;
             case "discord": discord.cmd(s, a); return true;
+            case "subasta": subasta.cmd(s, a); return true;
             case "ballestero": {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
@@ -310,9 +314,15 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             out.removeIf(x -> !x.toLowerCase().startsWith(pre0));
             return out;
         }
+        if (c.equals("tod4") && a.length >= 2 && a[0].equalsIgnoreCase("subasta") && s.hasPermission("tod4.admin")) {
+            out.addAll(subasta.tab(a));
+            String pre1 = a[a.length - 1].toLowerCase();
+            out.removeIf(x -> !x.toLowerCase().startsWith(pre1));
+            return out;
+        }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "ballestero", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "ballestero", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
