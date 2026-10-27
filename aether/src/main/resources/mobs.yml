@@ -17,7 +17,7 @@ distancia_activa: 100
 # cuando matan a los de un lugar, tardan esto en volver
 reaparece_seg: 180
 # tope de mobs del Aether en todo el mundo
-maximo_total: 120
+maximo_total: 200
 
 # nombre interno en MythicMobs de cada uno
 mobs:
