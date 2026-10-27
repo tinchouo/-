@@ -17,7 +17,7 @@ distancia_activa: 100
 # cuando matan a los de un lugar, tardan esto en volver
 reaparece_seg: 180
 # tope de mobs del Aether en todo el mundo
-maximo_total: 200
+maximo_total: 300
 
 # nombre interno en MythicMobs de cada uno
 mobs:
@@ -29,6 +29,7 @@ mobs:
   thor: Thor
   sumo: SUMO_ANGELICAL
   bomba: BombaVoladora
+  yeti: YetiDorado
 
 # estos aparecen unos bloques en el aire (no caminan)
 voladores: [fantasma, bomba, phantom]
@@ -36,25 +37,30 @@ voladores: [fantasma, bomba, phantom]
 # Cuantos de cada uno por lugar:  "2-3"  |  "1"  |  "1 50%"  (la mitad de esos lugares tiene uno)
 # El sorteo es una vez por lugar: un lugar que tiene Breeze, lo tiene siempre.
 lugares:
-  isla_grande:  {guardia: "3-5", fantasma: "1 30%"}
-  isla_mediana: {guardia: "2-3"}
+  isla_grande:  {guardia: "4-6", fantasma: "1 60%"}
+  isla_mediana: {guardia: "3-4", fantasma: "1 30%"}
   # islas grandes con ruinas
-  ruina_grande: {guardia: "3-5", fantasma: "1 50%", serafin: "1 50%"}
+  ruina_grande: {guardia: "4-6", fantasma: "1-2 70%", serafin: "1 60%"}
   # islas de las ramas (las de pinos) y las ruinitas del final de una rama
-  rama_grande:  {guardia: "3-4", fantasma: "1 30%"}
-  rama:         {guardia: "2-3", fantasma: "1 30%"}
-  ruinita:      {guardia: "2", fantasma: "1 50%"}
+  rama_grande:  {guardia: "4-5", fantasma: "1 60%"}
+  rama:         {guardia: "3-4", fantasma: "1 50%"}
+  ruinita:      {guardia: "3", fantasma: "1 70%"}
   # islitas de relleno
   islita:       {breeze: "1 6%"}
-  aldea:        {guardia: "3-5", serafin: "2-3", bomba: "3-5"}
-  # isla del medio del molino (afuera del molino) y las islitas de alrededor que tienen ruinas
-  molino:       {serafin: "3-4", thor: "1", guardia: "3-4"}
-  molino_ruina: {serafin: "1-2", guardia: "1"}
-  coliseo:      {sumo: "1"}
+  # aldea: lo de siempre + un serafin y una bombita por cada puente (una aldea tiene unos 15 a 18 puentes)
+  aldea:        {guardia: "4-6", serafin: "17-21", bomba: "18-23"}
+  # isla del medio del molino (afuera del molino, ahi tambien el Sumo) y las islitas de alrededor que tienen ruinas
+  molino:       {serafin: "4-5", thor: "1", guardia: "4-5", sumo: "1"}
+  molino_ruina: {serafin: "1-2", guardia: "2"}
+  # el Yeti Dorado, en el medio de la arena
+  coliseo:      {yeti: "1"}
   hongo:        {}
 
 # estos lugares tienen su mob en el medio (la arena del coliseo), aunque haya jugadores cerca
 en_el_centro: [coliseo]
+
+# true = el cambio de lugar del Breeze Old lo hace el plugin. false = lo hace breeze_old.sk (NUNCA los dos: se anulan)
+breeze_cambiazo_plugin: false
 
 # Phantom Angelical: en el cielo, en todo el Aether menos las islas de hongo
 phantoms:

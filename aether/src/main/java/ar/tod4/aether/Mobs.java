@@ -231,6 +231,7 @@ final class Mobs implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void cambiazo(EntityDamageByEntityEvent e) {
+        if (!y.getBoolean("breeze_cambiazo_plugin", false)) return;      // lo hace breeze_old.sk (no los dos: se cancelarian)
         if (!(e.getEntity() instanceof Player v)) return;
         Entity d = e.getDamager();
         Breeze b = d instanceof Breeze bb ? bb : d instanceof Projectile pr && pr.getShooter() instanceof Breeze bb ? bb : null;
