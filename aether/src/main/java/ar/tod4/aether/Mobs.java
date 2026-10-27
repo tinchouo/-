@@ -344,8 +344,8 @@ final class Mobs implements Listener {
                 List<Entity> hechos = new ArrayList<>();
                 int k = 0;
                 for (String mob : ms.getKeys(false)) {
-                    double a = (k++) * Math.PI * 2 / Math.max(1, ms.getKeys(false).size());
-                    Location at = p.getLocation().clone().add(Math.cos(a) * 6, 1, Math.sin(a) * 6);
+                    double ang = (k++) * Math.PI * 2 / Math.max(1, ms.getKeys(false).size());
+                    Location at = p.getLocation().clone().add(Math.cos(ang) * 6, 1, Math.sin(ang) * 6);
                     Entity en = aparecer(mob, at, "aeth_prueba");
                     if (en == null) Style.err(s, mob + " (&f" + mm(mob) + "&c): MythicMobs no lo hizo aparecer: el nombre no existe en MythicMobs.");
                     else hechos.add(en);
