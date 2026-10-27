@@ -48,7 +48,8 @@ import ar.tod4.aether.util.Txt;
  *  - En el Aether el aire se acaba: la barra de burbujas de Minecraft baja en ~5 minutos; sin aire, nauseas, lentitud y dano.
  *    Al salir del Aether se recupera.
  *  - Casco de Oxigeno (casco de hierro por dentro, se puede encantar, nunca se rompe): mientras tiene oxigeno respiras
- *    (tambien bajo el agua) y no salen las burbujas. La barra de durabilidad es el oxigeno (30 min). Solo se gasta en el Aether.
+ *    y no salen las burbujas. Bajo el agua sirve en cualquier lado (aunque el cambio este apagado).
+ *    La barra de durabilidad es el oxigeno (30 min). Se gasta en el Aether y bajo el agua.
  *    Se recarga con un bloque de amatista (en la mesa o en el 2x2, sin orden) y conserva los encantamientos.
  *  - El bloque de amatista se craftea con 9 fragmentos (no con 4).
  */
@@ -96,6 +97,16 @@ final class Aire implements Listener {
         boolean on = activo();
         for (Player p : Bukkit.getOnlinePlayers()) {
             UUID u = p.getUniqueId();
+            // bajo el agua el casco te deja respirar en cualquier lado (y aunque el cambio este apagado); gasta oxigeno
+            if ((!on || !ae.enAether(p)) && p.isUnderWater() && p.getGameMode() != GameMode.SPECTATOR && !p.isDead()) {
+                ItemStack h = p.getInventory().getHelmet();
+                if (esCasco(h) && oxigeno(h) > 0) {
+                    p.addPotionEffect(new PotionEffect(PotionEffectType.WATER_BREATHING, 40, 0, true, false, false));
+                    if (p.getRemainingAir() < p.getMaximumAir()) p.setRemainingAir(p.getMaximumAir());
+                    if (tick % 20 == 0 && p.getGameMode() != GameMode.CREATIVE) gastar(p, h);
+                    continue;
+                }
+            }
             if (!on || !ae.enAether(p) || p.getGameMode() == GameMode.CREATIVE || p.getGameMode() == GameMode.SPECTATOR || p.isDead()) {
                 // fuera del Aether el aire vuelve de una
                 if (aire.remove(u) != null && p.getRemainingAir() < p.getMaximumAir() && !p.isInWater()) p.setRemainingAir(p.getMaximumAir());
@@ -106,6 +117,7 @@ final class Aire implements Listener {
             boolean conCasco = esCasco(casco) && oxigeno(casco) > 0;
             if (conCasco) {
                 aire.put(u, max);
+                if (p.isUnderWater()) p.addPotionEffect(new PotionEffect(PotionEffectType.WATER_BREATHING, 40, 0, true, false, false));
                 if (p.getRemainingAir() < p.getMaximumAir()) p.setRemainingAir(p.getMaximumAir());
                 if (tick % 20 == 0) gastar(p, casco);
                 continue;

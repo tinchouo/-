@@ -29,7 +29,7 @@ sanador_solo_equipo: true
 #   explosiones <porcentaje>         ese % menos de dano de explosiones
 #   planear <segundos> [gravedad%]   en el aire, volver a tocar saltar: se frena y flota esos segundos con ese % de la
 #                                    gravedad normal (2 = baja unos 2 bloques en 3 s). Una vez por salto.
-#   sonar <radio>                    cada 5 s ves brillar a los mobs hostiles en ese radio (solo vos, a traves de paredes)
+#   sonar <radio>                    ves brillar todo el tiempo a los mobs hostiles en ese radio (solo vos, a traves de paredes)
 #   sanador <radio>                  Regeneracion I a tus companeros en ese radio (a vos no)
 # Los nombres de efectos y atributos son los de Minecraft (los de /effect y /attribute, sin "minecraft:").
 mejoras:

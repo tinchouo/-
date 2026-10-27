@@ -77,7 +77,7 @@ final class Efectos implements Listener {
     }
 
     void apagar() {
-        for (Player p : Bukkit.getOnlinePlayers()) { estados.remove(p.getUniqueId()); aplicar(p, new Estado()); sinFlotar(p); }
+        for (Player p : Bukkit.getOnlinePlayers()) { estados.remove(p.getUniqueId()); aplicar(p, new Estado()); sinFlotar(p); if (brillo != null) brillo.limpiar(p); }
         flotando.clear();
     }
 
@@ -114,7 +114,7 @@ final class Efectos implements Listener {
             aplicar(p, e);
             if (p.isOnGround() || p.isInWater() || p.isFlying()) planeado.remove(p.getUniqueId());
             if (!flotando.containsKey(p.getUniqueId())) sinFlotar(p);   // por si quedo de antes (se cayo el server, etc.)
-            if (e.sonar > 0 && tick % 10 == 0 && brillo != null) sonar(p, e.sonar);          // cada 5 s
+            if (brillo != null) { if (e.sonar > 0) sonar(p, e.sonar); else brillo.limpiar(p); }   // cada medio segundo: brillan siempre
             if (e.sanador > 0 && tick % 2 == 0) sanar(p, e.sanador);                            // cada 1 s
         }
     }
@@ -244,20 +244,28 @@ final class Efectos implements Listener {
     @EventHandler
     public void sale(PlayerQuitEvent e) {
         UUID u = e.getPlayer().getUniqueId();
-        estados.remove(u); dadas.remove(u); salto.remove(u); planeado.remove(u); paso.remove(u);
+        estados.remove(u); dadas.remove(u); salto.remove(u); planeado.remove(u); paso.remove(u); sonido.remove(u);
+        if (brillo != null) brillo.salio(e.getPlayer());
         if (flotando.remove(u) != null) sinFlotar(e.getPlayer());
     }
 
     // ================================================================= sonar (Noche)
+
+    private final Map<UUID, Long> sonido = new HashMap<>();
 
     private void sonar(Player p, double r) {
         List<Entity> mobs = new ArrayList<>();
         for (Entity en : p.getNearbyEntities(r, r, r)) {
             if (en instanceof Enemy && en instanceof LivingEntity le && !le.isDead() && le.getLocation().distanceSquared(p.getLocation()) <= r * r) mobs.add(en);
         }
-        if (mobs.isEmpty()) return;
-        for (Entity en : mobs) brillo.mostrar(p, en, 40);   // 2 segundos
-        p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 0.35f, 1.6f);
+        // brillan todo el tiempo mientras estan cerca; el sonidito solo cuando aparece uno nuevo (a lo sumo cada 3 s)
+        int nuevos = brillo.actualizar(p, mobs);
+        long ahora = System.currentTimeMillis();
+        Long ult = sonido.get(p.getUniqueId());
+        if (nuevos > 0 && (ult == null || ahora - ult > 3000)) {
+            sonido.put(p.getUniqueId(), ahora);
+            p.playSound(p.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_RESONATE, SoundCategory.PLAYERS, 0.35f, 1.6f);
+        }
     }
 
     // ================================================================= sanador
