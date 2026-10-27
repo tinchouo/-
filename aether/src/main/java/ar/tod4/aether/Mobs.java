@@ -81,7 +81,8 @@ final class Mobs implements Listener {
     private void cada() {
         tick++;
         if (!y.getBoolean("activado", true)) return;
-        if (tick % Math.max(1, y.getInt("cada_seg", 5)) != 0) return;
+        if (tick % 2 != 0) return;
+        boolean lugaresAhora = tick % Math.max(2, y.getInt("cada_seg", 6)) == 0;
         World w = ae.mundo();
         if (w == null) return;
         List<Player> ps = new ArrayList<>();
@@ -91,7 +92,7 @@ final class Mobs implements Listener {
         // cuantos hay vivos de cada lugar y de cada tipo
         Map<String, Integer> vivos = new HashMap<>();
         int total = 0;
-        List<LivingEntity> phantoms = new ArrayList<>();
+        List<LivingEntity> phantoms = new ArrayList<>(), amb = new ArrayList<>();
         double lejos = y.getDouble("borrar_lejos", 160);
         for (LivingEntity le : w.getLivingEntities()) {
             if (!le.getScoreboardTags().contains(TAG)) continue;
@@ -102,9 +103,14 @@ final class Mobs implements Listener {
             total++;
             for (String t : le.getScoreboardTags()) if (t.startsWith("aeth_l")) vivos.merge(t, 1, Integer::sum);
             if (le.getScoreboardTags().contains("aeth_phantom")) phantoms.add(le);
+            if (le.getScoreboardTags().contains("aeth_amb")) amb.add(le);
         }
         int maxTotal = y.getInt("maximo_total", 120);
         if (total >= maxTotal) return;
+        double dmin0 = y.getDouble("distancia_min", 24);
+        total += ambiente(w, ps, amb, dmin0, maxTotal - total);
+        phantoms(w, ps, phantoms, dmin0);
+        if (!lugaresAhora || total >= maxTotal) return;
 
         double dmin = y.getDouble("distancia_min", 24), dmax = y.getDouble("distancia_activa", 80);
         long espera = y.getLong("reaparece_seg", 300) * 1000L, ahora = System.currentTimeMillis();
@@ -134,7 +140,57 @@ final class Mobs implements Listener {
                 if (puso > 0 && hay + puso >= quiere) lleno.put(key, ahora);
             }
         }
-        phantoms(w, ps, phantoms, dmin);
+    }
+
+    // ================================================================= ambiente: como los mobs normales, en todo el Aether segun el bioma
+
+    /**
+     * Alrededor de cada jugador (entre distancia_min y ambiente.distancia_max), en el piso de cualquier isla:
+     * se fija el bioma (land, village, windmill, coliseum...) y elige un mob de los de ese bioma por peso.
+     * En las estructuras sale con menos chance (ahi estan sus propios mobs). Tope por jugador.
+     */
+    private int ambiente(World w, List<Player> ps, List<LivingEntity> amb, double dmin, int libres) {
+        int cap = y.getInt("ambiente.max_por_jugador", 10), intentos = y.getInt("ambiente.intentos", 2), puso = 0;
+        double dmax = Math.max(dmin + 8, y.getDouble("ambiente.distancia_max", 56)), radio = y.getDouble("ambiente.radio_conteo", 64);
+        if (cap <= 0) return 0;
+        for (Player p : ps) {
+            int n = 0;
+            for (LivingEntity le : amb) if (le.getLocation().distanceSquared(p.getLocation()) < radio * radio) n++;
+            for (int i = 0; i < intentos && n < cap && puso < libres; i++) {
+                double a = rnd.nextDouble() * Math.PI * 2, d = dmin + rnd.nextDouble() * (dmax - dmin);
+                int x = (int) Math.floor(p.getLocation().getX() + Math.cos(a) * d), z = (int) Math.floor(p.getLocation().getZ() + Math.sin(a) * d);
+                if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
+                int top = w.getHighestBlockYAt(x, z, HeightMap.MOTION_BLOCKING_NO_LEAVES);
+                if (top <= w.getMinHeight() || Math.abs(top - p.getLocation().getY()) > 48) continue;
+                Block b = w.getBlockAt(x, top, z);
+                if (!b.getType().isSolid() || b.isLiquid()) continue;
+                if (!b.getRelative(0, 1, 0).isPassable() || !b.getRelative(0, 2, 0).isPassable() || b.getRelative(0, 1, 0).isLiquid()) continue;
+                Location at = new Location(w, x + 0.5, top + 1, z + 0.5, rnd.nextFloat() * 360f, 0f);
+                boolean ok = true;
+                for (Player q : ps) if (q.getLocation().distanceSquared(at) < dmin * dmin) { ok = false; break; }
+                if (!ok) continue;
+                String bio = Ext.bioma(at);
+                if (bio.equals("aether") || bio.isEmpty()) bio = "land";
+                ConfigurationSection t = y.getConfigurationSection("ambiente.biomas." + bio);
+                if (t == null || rnd.nextDouble() * 100 >= t.getDouble("chance", 100)) continue;
+                String mob = sortear(t.getConfigurationSection("mobs"));
+                if (mob == null) continue;
+                if (y.getStringList("voladores").contains(mob)) at.add(0, 3, 0);
+                Entity en = aparecer(mob, at, "aeth_amb");
+                if (en instanceof LivingEntity le) { amb.add(le); n++; puso++; }
+            }
+        }
+        return puso;
+    }
+
+    private String sortear(ConfigurationSection pesos) {
+        if (pesos == null) return null;
+        double tot = 0;
+        for (String k : pesos.getKeys(false)) tot += Math.max(0, pesos.getDouble(k));
+        if (tot <= 0) return null;
+        double r = rnd.nextDouble() * tot;
+        for (String k : pesos.getKeys(false)) { r -= Math.max(0, pesos.getDouble(k)); if (r < 0) return k; }
+        return null;
     }
 
     /**
@@ -187,14 +243,14 @@ final class Mobs implements Listener {
             if (!b.getRelative(0, 1, 0).isPassable() || !b.getRelative(0, 2, 0).isPassable()) continue;
             Location at = new Location(w, x + 0.5, top + 1 + (vuela ? 3 : 0), z + 0.5, rnd.nextFloat() * 360f, 0f);
             // lejos de todos (distancia_min) pero cerca de alguno (para que lo vea y no aparezca en la otra punta)
-            double dmax = y.getDouble("distancia_max_spawn", 72);
+            double dmax = y.getDouble("distancia_max_spawn", 0);
             boolean ok = true, cerca = false;
             for (Player p : ps) {
                 double d2 = p.getLocation().distanceSquared(at);
                 if (d2 < dmin * dmin) { ok = false; break; }
                 if (d2 < dmax * dmax) cerca = true;
             }
-            if (ok && (cerca || ps.isEmpty())) return at;
+            if (ok && (dmax <= 0 || cerca || ps.isEmpty())) return at;
         }
         return null;
     }
@@ -203,7 +259,11 @@ final class Mobs implements Listener {
         String id = mm(mob);
         Entity en = Ext.mythicSpawn(id, at);
         if (en == null) {
-            if (faltan.add(id)) pl.getLogger().warning("[Mobs] No pude hacer aparecer " + id + " (¿existe en MythicMobs? nombre en mobs.yml)");
+            if (faltan.add(id)) {
+                pl.getLogger().warning("[Mobs] No pude hacer aparecer " + id + " (¿existe en MythicMobs? nombre en mobs.yml)");
+                for (Player op : Bukkit.getOnlinePlayers()) if (op.hasPermission("tod4.admin"))
+                    Style.err(op, "&7[Aether] MythicMobs no hace aparecer &f" + id + "&7: revisá el nombre en mobs.yml (" + mob + ").");
+            }
             return null;
         }
         en.addScoreboardTag(TAG);
@@ -275,31 +335,25 @@ final class Mobs implements Listener {
                 Style.ok(s, "Mobs del Aether " + (m.equals("on") ? "&aprendidos" : "&capagados") + "&a.");
             }
             case "probar" -> {
-                // hace aparecer uno de cada mob del lugar mas cercano (sin distancia minima) y a los 2 segundos dice si siguen vivos
+                // hace aparecer uno de cada mob de mobs.yml al lado tuyo y a los 2 segundos dice cuales siguen vivos
                 if (!(s instanceof Player p) || !ae.enAether(p)) { Style.err(s, "Usalo parado en el Aether."); return; }
-                Lugar mejor = null;
-                double bd = Double.MAX_VALUE;
-                for (Lugar l : ae.lugares()) {
-                    double d = Math.hypot(p.getLocation().getX() - l.x, p.getLocation().getZ() - l.z);
-                    if (d < bd) { bd = d; mejor = l; }
-                }
                 Style.info(s, "Dificultad de este mundo: &f" + p.getWorld().getDifficulty() + (p.getWorld().getDifficulty() == org.bukkit.Difficulty.PEACEFUL ? " &c(en pacífico los mobs hostiles se borran solos)" : ""));
-                if (mejor == null) { Style.err(s, "No hay lugares registrados."); return; }
-                ConfigurationSection sec = y.getConfigurationSection("lugares." + mejor.tipo);
-                Style.info(s, "Lugar: &f" + mejor.tipo + " #" + mejor.id + " &7a " + (int) bd + " bloques");
-                if (sec == null) { Style.err(s, "Ese tipo no tiene mobs en mobs.yml."); return; }
+                Style.info(s, "Bioma acá: &f" + Ext.bioma(p.getLocation()));
+                ConfigurationSection ms = y.getConfigurationSection("mobs");
+                if (ms == null) { Style.err(s, "mobs.yml no tiene la lista de mobs."); return; }
                 List<Entity> hechos = new ArrayList<>();
-                for (String mob : sec.getKeys(false)) {
-                    Location at = lugar(w0(), mejor, mob, List.of(), 0);
-                    if (at == null) { Style.err(s, mob + ": no encontré piso en ese lugar."); continue; }
+                int k = 0;
+                for (String mob : ms.getKeys(false)) {
+                    double a = (k++) * Math.PI * 2 / Math.max(1, ms.getKeys(false).size());
+                    Location at = p.getLocation().clone().add(Math.cos(a) * 6, 1, Math.sin(a) * 6);
                     Entity en = aparecer(mob, at, "aeth_prueba");
-                    if (en == null) Style.err(s, mob + " (&f" + mm(mob) + "&c): MythicMobs no lo hizo aparecer (¿el nombre está bien?).");
+                    if (en == null) Style.err(s, mob + " (&f" + mm(mob) + "&c): MythicMobs no lo hizo aparecer: el nombre no existe en MythicMobs.");
                     else hechos.add(en);
                 }
                 Bukkit.getScheduler().runTaskLater(pl, () -> {
                     for (Entity en : hechos) {
                         String id = Ext.mythic(en);
-                        if (en.isValid()) Style.ok(s, (id == null ? en.getType().name() : id) + " &aestá vivo en &f" + en.getLocation().getBlockX() + " " + en.getLocation().getBlockY() + " " + en.getLocation().getBlockZ());
+                        if (en.isValid()) Style.ok(s, (id == null ? en.getType().name() : id) + " &aanda.");
                         else Style.err(s, (id == null ? en.getType().name() : id) + " desapareció enseguida (¿pacífico, WorldGuard o un plugin que borra mobs?).");
                     }
                 }, 40L);

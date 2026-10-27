@@ -4,16 +4,14 @@
 #  Aparecen como mobs normales: cada lugar tiene los suyos, salen cuando alguien se acerca
 #  (nunca al lado: a mas de distancia_min de todos) y si los matan vuelven a los reaparece_seg.
 #  Si te vas y volves, estan. Las islas de hongo no tienen nada.
-#  Prender / apagar en el juego: /tod4:aether_mobs on|off   |  Probar el lugar mas cercano: /tod4:aether_mobs probar
+#  Prender / apagar en el juego: /tod4:aether_mobs on|off   |  Probar todos los mobs: /tod4:aether_mobs probar
 # =====================================================================
 
 activado: true
-# cada cuantos segundos se revisa
-cada_seg: 5
+# cada cuantos segundos se revisan los lugares (el ambiente, cada 2)
+cada_seg: 6
 # nunca aparecen a menos de esto de un jugador...
 distancia_min: 20
-# ...pero si a menos de esto de alguno (para que se vean)
-distancia_max_spawn: 72
 # un mob del Aether sin ningun jugador a esta distancia se borra (y vuelve a aparecer cuando alguien se acerca)
 borrar_lejos: 160
 # un lugar se llena cuando hay un jugador a menos de esto de su borde
@@ -38,27 +36,40 @@ mobs:
 # estos aparecen unos bloques en el aire (no caminan)
 voladores: [fantasma, bomba, phantom]
 
-# Cuantos de cada uno por lugar:  "2-3"  |  "1"  |  "1 50%"  (la mitad de esos lugares tiene uno)
-# El sorteo es una vez por lugar: un lugar que tiene Breeze, lo tiene siempre.
+# ---------------------------------------------------------------------
+#  AMBIENTE: como los mobs normales. Alrededor de cada jugador, en el piso de cualquier isla,
+#  segun el bioma. En las estructuras (aldea, molino, coliseo) salen menos: ahi estan sus propios mobs.
+# ---------------------------------------------------------------------
+ambiente:
+  # cuantos de estos puede haber alrededor de cada jugador (a menos de radio_conteo)
+  max_por_jugador: 10
+  radio_conteo: 64
+  # intentos por jugador cada 2 segundos
+  intentos: 2
+  # aparecen entre distancia_min y esto de un jugador
+  distancia_max: 56
+  biomas:
+    # chance: % de que salga algo en cada intento.  mobs: peso de cada uno (mas peso = sale mas seguido)
+    land:            {chance: 100, mobs: {guardia: 70, fantasma: 15, breeze: 10}}
+    village:         {chance: 35,  mobs: {guardia: 70, fantasma: 15, breeze: 10}}
+    windmill:        {chance: 35,  mobs: {guardia: 70, fantasma: 15, breeze: 10}}
+    coliseum:        {chance: 35,  mobs: {guardia: 70, fantasma: 15, breeze: 10}}
+    mushroom_island: {chance: 0,   mobs: {}}
+
+# ---------------------------------------------------------------------
+#  LUGARES: los mobs propios de cada estructura (aparecen repartidos por todo el lugar cuando alguien se acerca)
+#  Cuantos:  "2-3"  |  "1"  |  "1 50%"  (la mitad de esos lugares tiene uno). El sorteo es una vez por lugar.
+# ---------------------------------------------------------------------
 lugares:
-  isla_grande:  {guardia: "4-6", fantasma: "1 60%"}
-  isla_mediana: {guardia: "3-4", fantasma: "1 30%"}
   # islas grandes con ruinas
-  ruina_grande: {guardia: "4-6", fantasma: "1-2 70%", serafin: "1 60%"}
-  # islas de las ramas (las de pinos) y las ruinitas del final de una rama
-  rama_grande:  {guardia: "4-5", fantasma: "1 60%"}
-  rama:         {guardia: "3-4", fantasma: "1 50%"}
-  ruinita:      {guardia: "3", fantasma: "1 70%"}
-  # islitas de relleno
-  islita:       {breeze: "1 6%"}
-  # aldea: lo de siempre + un serafin y una bombita por cada puente (una aldea tiene unos 15 a 18 puentes)
-  aldea:        {guardia: "4-6", serafin: "17-21", bomba: "18-23"}
+  ruina_grande: {serafin: "1 60%"}
+  # aldea: un serafin y una bombita por cada puente (una aldea tiene unos 15 a 18 puentes), repartidos por toda la aldea
+  aldea:        {serafin: "17-21", bomba: "18-23"}
   # isla del medio del molino (afuera del molino, ahi tambien el Sumo) y las islitas de alrededor que tienen ruinas
-  molino:       {serafin: "4-5", thor: "1", guardia: "4-5", sumo: "1"}
-  molino_ruina: {serafin: "1-2", guardia: "2"}
+  molino:       {serafin: "4-5", thor: "1", sumo: "1"}
+  molino_ruina: {serafin: "1-2"}
   # el Yeti Dorado, en el medio de la arena
   coliseo:      {yeti: "1"}
-  hongo:        {}
 
 # estos lugares tienen su mob en el medio (la arena del coliseo), aunque haya jugadores cerca
 en_el_centro: [coliseo]
