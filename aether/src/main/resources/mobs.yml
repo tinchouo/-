@@ -11,11 +11,11 @@ activado: true
 # cada cuantos segundos se revisa
 cada_seg: 5
 # nunca aparecen a menos de esto de un jugador
-distancia_min: 24
+distancia_min: 20
 # un lugar se llena cuando hay un jugador a menos de esto de su borde
-distancia_activa: 80
+distancia_activa: 100
 # cuando matan a los de un lugar, tardan esto en volver
-reaparece_seg: 300
+reaparece_seg: 180
 # tope de mobs del Aether en todo el mundo
 maximo_total: 120
 
@@ -36,25 +36,31 @@ voladores: [fantasma, bomba, phantom]
 # Cuantos de cada uno por lugar:  "2-3"  |  "1"  |  "1 50%"  (la mitad de esos lugares tiene uno)
 # El sorteo es una vez por lugar: un lugar que tiene Breeze, lo tiene siempre.
 lugares:
-  isla_grande:  {guardia: "2-3", fantasma: "1 20%"}
+  isla_grande:  {guardia: "3-5", fantasma: "1 30%"}
   isla_mediana: {guardia: "2-3"}
   # islas grandes con ruinas
-  ruina_grande: {guardia: "2-3", fantasma: "1 50%", serafin: "1 50%"}
+  ruina_grande: {guardia: "3-5", fantasma: "1 50%", serafin: "1 50%"}
   # islas de las ramas (las de pinos) y las ruinitas del final de una rama
-  rama_grande:  {guardia: "2-3", fantasma: "1 30%"}
+  rama_grande:  {guardia: "3-4", fantasma: "1 30%"}
   rama:         {guardia: "2-3", fantasma: "1 30%"}
-  ruinita:      {guardia: "1-2", fantasma: "1 50%"}
+  ruinita:      {guardia: "2", fantasma: "1 50%"}
   # islitas de relleno
-  islita:       {breeze: "1 5%"}
-  aldea:        {guardia: "2-3", serafin: "2", bomba: "3-4"}
+  islita:       {breeze: "1 6%"}
+  aldea:        {guardia: "3-5", serafin: "2-3", bomba: "3-5"}
   # isla del medio del molino (afuera del molino) y las islitas de alrededor que tienen ruinas
-  molino:       {serafin: "2-3", thor: "1", guardia: "2"}
-  molino_ruina: {serafin: "1"}
+  molino:       {serafin: "3-4", thor: "1", guardia: "3-4"}
+  molino_ruina: {serafin: "1-2", guardia: "1"}
   coliseo:      {sumo: "1"}
   hongo:        {}
 
+# estos lugares tienen su mob en el medio (la arena del coliseo), aunque haya jugadores cerca
+en_el_centro: [coliseo]
+
 # Phantom Angelical: en el cielo, en todo el Aether menos las islas de hongo
 phantoms:
-  max_por_jugador: 2
+  max_por_jugador: 3
   # chance (%) en cada revision de que aparezca uno cerca de cada jugador (si tiene menos del maximo)
-  chance: 15
+  chance: 40
+  # true = tambien sobre las islas de hongo
+  en_hongo: false
+# (los mobs del Aether no se queman con el sol: el plugin lo evita)

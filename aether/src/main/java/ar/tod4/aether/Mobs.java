@@ -118,8 +118,9 @@ final class Mobs implements Listener {
                 Long t = lleno.get(key);
                 if (t != null && ahora - t < espera) continue;
                 int puso = 0;
+                boolean centro = y.getStringList("en_el_centro").contains(l.tipo);
                 for (int i = hay; i < quiere && total < maxTotal; i++) {
-                    Location at = lugar(w, l, mob, ps, dmin);
+                    Location at = centro ? centro(w, l) : lugar(w, l, mob, ps, dmin);
                     if (at == null) continue;
                     if (aparecer(mob, at, tag) != null) { puso++; total++; }
                 }
@@ -146,6 +147,22 @@ final class Mobs implements Listener {
         }
         if (r.nextDouble() * 100 >= chance) return 0;
         return min + r.nextInt(Math.max(1, max - min + 1));
+    }
+
+    /** En el medio del lugar (el coliseo): el piso de la arena, a unos bloques del centro (en el centro esta el cofre). */
+    private Location centro(World w, Lugar l) {
+        if (!w.isChunkLoaded(l.x >> 4, l.z >> 4)) return null;
+        for (int i = 0; i < 8; i++) {
+            double a = rnd.nextDouble() * Math.PI * 2;
+            int x = (int) Math.floor(l.x + Math.cos(a) * 6), z = (int) Math.floor(l.z + Math.sin(a) * 6);
+            // de arriba hacia abajo: el primer piso con dos bloques libres encima (la arena, no las gradas)
+            for (int yy = l.y + 4; yy >= l.y - 30; yy--) {
+                Block b = w.getBlockAt(x, yy, z);
+                if (b.getType().isSolid() && b.getRelative(0, 1, 0).isPassable() && b.getRelative(0, 2, 0).isPassable() && !b.getRelative(0, 1, 0).isLiquid())
+                    return new Location(w, x + 0.5, yy + 1, z + 0.5, rnd.nextFloat() * 360f, 0f);
+            }
+        }
+        return null;
     }
 
     /** Un lugar en el piso del lugar, lejos de todos los jugadores (como un mob que aparece solo). */
@@ -190,17 +207,24 @@ final class Mobs implements Listener {
         if (max <= 0 || chance <= 0) return;
         for (Player p : ps) {
             if (p.getGameMode() == GameMode.CREATIVE) continue;
-            if (Ext.bioma(p.getLocation()).equals("mushroom_island")) continue;
+            if (!y.getBoolean("phantoms.en_hongo", false) && Ext.bioma(p.getLocation()).equals("mushroom_island")) continue;
             int n = 0;
             for (LivingEntity le : hay) if (le.getLocation().distanceSquared(p.getLocation()) < 64 * 64) n++;
             if (n >= max || rnd.nextDouble() * 100 >= chance) continue;
             double a = rnd.nextDouble() * Math.PI * 2, d = dmin + 4 + rnd.nextDouble() * 16;
             Location at = p.getLocation().clone().add(Math.cos(a) * d, 12 + rnd.nextInt(10), Math.sin(a) * d);
             if (at.getY() >= w.getMaxHeight() - 2 || !at.getBlock().isPassable()) continue;
-            if (Ext.bioma(at).equals("mushroom_island")) continue;
+            if (!y.getBoolean("phantoms.en_hongo", false) && Ext.bioma(at).equals("mushroom_island")) continue;
             Entity en = aparecer("phantom", at, "aeth_phantom");
             if (en instanceof LivingEntity le) hay.add(le);
         }
+    }
+
+    /** En el Aether siempre es de dia: los mobs del Aether (los Phantom, zombies...) no se queman con el sol. */
+    @EventHandler(ignoreCancelled = true)
+    public void sol(org.bukkit.event.entity.EntityCombustEvent e) {
+        if (e.getClass() != org.bukkit.event.entity.EntityCombustEvent.class) return;    // solo el sol (no lava ni fuego)
+        if (e.getEntity().getScoreboardTags().contains(TAG)) e.setCancelled(true);
     }
 
     // ================================================================= Breeze Old: cambia de lugar con el que golpea

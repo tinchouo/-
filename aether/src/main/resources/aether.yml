@@ -98,6 +98,6 @@ estructuras:
 
 # islitas de relleno: cerca de los puentes, mas lejos y sueltas en el vacio a otras alturas (y alrededor de las estructuras)
 decoracion:
-  chance_cerca: 70
-  chance_lejos: 45
-  chance_vacio: 35
+  chance_cerca: 90
+  chance_lejos: 70
+  chance_vacio: 60
