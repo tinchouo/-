@@ -1,0 +1,31 @@
+# =====================================================================
+#  MESA DE CRAFTEO 6x6        despues de cambiar algo: /tod4:aether_recargar
+#  La mesa: /tod4:aether_mesa dar [jugador]  (se pone como una mesa de crafteo; clic derecho abre la grilla)
+# =====================================================================
+
+mesa:
+  nombre: "&dMesa de crafteo 6x6"
+  titulo: "&8Mesa de crafteo 6x6"
+  lore:
+    - "&7Una mesa más grande, para crafteos especiales."
+  # modelo del pack para el item (vacio = la mesa de crafteo normal)
+  modelo: ""
+
+# Cada receta: la forma (6 renglones de 6; "." = vacio) y que item es cada letra.
+#   item: minecraft:id (normal, no de Oraxen) u oraxen:id
+#   resultado: oraxen:id o minecraft:id  (o el de tu mano: /tod4:aether_mesa resultado <receta>)
+recetas:
+  espada_amatista:
+    forma:
+      - "....BB"
+      - "...BBB"
+      - "B.BBB."
+      - ".LBB.."
+      - ".VL..."
+      - "B..B.."
+    ingredientes:
+      B: minecraft:amethyst_block
+      L: minecraft:resin_bricks
+      V: minecraft:breeze_rod
+    resultado: oraxen:rosarioxsespada
+    cantidad: 1

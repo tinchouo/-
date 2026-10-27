@@ -29,12 +29,13 @@ import ar.tod4.aether.util.Style;
 public final class TOD4Aether extends JavaPlugin {
 
     static final String[] COMANDOS = {"aether_pocion", "aether_init", "aether_reset", "aether_tp", "aether_locate", "aether_goto", "aether_fill",
-            "aether_test", "aether_force", "aether_music", "aether_caida", "aether_loot", "aether_mobs", "aether_casco", "aether_aire", "aether_recargar"};
+            "aether_test", "aether_force", "aether_music", "aether_caida", "aether_loot", "aether_mobs", "aether_casco", "aether_aire", "aether_mesa", "aether_recargar"};
 
     private Aether aether;
     private Loot loot;
     private Mobs mobs;
     private Aire aire;
+    private Mesa6 mesa;
     private YamlConfiguration datos;
     private File datosF;
 
@@ -47,6 +48,7 @@ public final class TOD4Aether extends JavaPlugin {
         loot = new Loot(this);
         mobs = new Mobs(this, aether);
         aire = new Aire(this, aether);
+        mesa = new Mesa6(this);
         for (String c : COMANDOS) Bukkit.getCommandMap().register("tod4", new Cmd(c));
         // como en TOD4: solo existen con el prefijo (/tod4:aether_...)
         Bukkit.getScheduler().runTask(this, () -> {
@@ -130,11 +132,13 @@ public final class TOD4Aether extends JavaPlugin {
                 case "aether_loot" -> loot.comando(s, a);
                 case "aether_mobs" -> mobs.comando(s, a);
                 case "aether_casco", "aether_aire" -> aire.comando(s, c, a);
+                case "aether_mesa" -> mesa.comando(s, a);
                 case "aether_recargar" -> {
                     aether.recargar();
                     loot.recargar();
                     mobs.recargar();
                     aire.recargar();
+                    mesa.recargar();
                     Style.ok(s, "Aether recargado (aether.yml, loot.yml, mobs.yml y aire.yml).");
                 }
                 default -> aether.comando(s, c, a);
@@ -160,6 +164,7 @@ public final class TOD4Aether extends JavaPlugin {
                     case "aether_loot" -> out.addAll(List.of("guardar", "probar", "ver"));
                     case "aether_mobs" -> out.addAll(List.of("on", "off", "estado", "lugares", "probar"));
                     case "aether_aire" -> out.addAll(List.of("estado", "vaciar", "llenar"));
+                    case "aether_mesa" -> out.addAll(List.of("dar", "abrir", "resultado"));
                     default -> { }
                 }
             } else if (a.length == 2 && c.equals("aether_loot") && !a[0].equalsIgnoreCase("guardar")) {
