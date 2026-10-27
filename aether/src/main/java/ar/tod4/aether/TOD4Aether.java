@@ -158,7 +158,7 @@ public final class TOD4Aether extends JavaPlugin {
                     case "aether_music" -> out.add("stop");
                     case "aether_caida" -> out.addAll(List.of("poner", "ver", "borrar"));
                     case "aether_loot" -> out.addAll(List.of("guardar", "probar", "ver"));
-                    case "aether_mobs" -> out.addAll(List.of("on", "off", "estado", "lugares"));
+                    case "aether_mobs" -> out.addAll(List.of("on", "off", "estado", "lugares", "probar"));
                     case "aether_aire" -> out.addAll(List.of("estado", "vaciar", "llenar"));
                     default -> { }
                 }

@@ -4,14 +4,18 @@
 #  Aparecen como mobs normales: cada lugar tiene los suyos, salen cuando alguien se acerca
 #  (nunca al lado: a mas de distancia_min de todos) y si los matan vuelven a los reaparece_seg.
 #  Si te vas y volves, estan. Las islas de hongo no tienen nada.
-#  Prender / apagar en el juego: /tod4:aether_mobs on|off
+#  Prender / apagar en el juego: /tod4:aether_mobs on|off   |  Probar el lugar mas cercano: /tod4:aether_mobs probar
 # =====================================================================
 
 activado: true
 # cada cuantos segundos se revisa
 cada_seg: 5
-# nunca aparecen a menos de esto de un jugador
+# nunca aparecen a menos de esto de un jugador...
 distancia_min: 20
+# ...pero si a menos de esto de alguno (para que se vean)
+distancia_max_spawn: 72
+# un mob del Aether sin ningun jugador a esta distancia se borra (y vuelve a aparecer cuando alguien se acerca)
+borrar_lejos: 160
 # un lugar se llena cuando hay un jugador a menos de esto de su borde
 distancia_activa: 100
 # cuando matan a los de un lugar, tardan esto en volver
