@@ -42,7 +42,9 @@ Plugin de TrucOfDeath 4. Se compila solo: pestaña **Actions** → última ejecu
 
 ## Aether
 
-Antes estaba en `aether.sk`; ahora lo hace el plugin (saca `aether.sk` de `plugins/Skript/scripts/`).
-Siguen haciendo falta los datapacks `aether_v7` (piezas y loot) y `aether_dimension` (dimension y biomas).
-Opciones en `plugins/TOD4/aether.yml`. Comandos: `/tod4:aether_init`, `_tp`, `_pocion`, `_locate`, `_goto`,
-`_fill`, `_test`, `_force`, `_music`, `_reset`.
+Ahora es un plugin aparte: **TOD4Aether** (`aether/`, sale `TOD4Aether.jar`). La primera vez copia el mapa
+(`aether_estado.json.gz`) y `aether.yml` de `plugins/TOD4` a `plugins/TOD4Aether`.
+Siguen haciendo falta los datapacks `aether_v7` (piezas) y `aether_dimension` (dimension y biomas).
+Opciones: `aether.yml` (mapa), `loot.yml` (cofres por tier), `mobs.yml` (mobs de MythicMobs por lugar), `aire.yml` (dia 7).
+Comandos (todos `/tod4:aether_...`): `init`, `tp`, `pocion`, `locate`, `goto`, `fill`, `test`, `force`, `music`, `reset`,
+`caida` (punto donde caes al volver), `loot` (guardar item de la mano / probar un tier), `mobs`, `casco`, `aire`, `recargar`.
