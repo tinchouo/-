@@ -1,0 +1,34 @@
+# =====================================================================
+#  BREEZE OLD  -  Skript (Paper 1.21.4)   (antes blaze_cambiazo.sk)
+#  Solo el mob de MythicMobs BreezeOld (tag "breeze_old"), no los breezes normales.
+#  Cuando su carga de viento te pega, intercambian posiciones:
+#  vos quedas donde estaba el breeze y el breeze donde estabas vos.
+#  Va en plugins/Skript/scripts/  ->  /sk reload breeze_old
+#  (si tambien seguis usando el Blaze Cambiazo, deja blaze_cambiazo.sk como esta)
+# =====================================================================
+
+options:
+    # ticks de espera para que no se repita el cambio en cadena (20 = 1 segundo)
+    espera: 20
+
+on damage of player:
+    attacker is a breeze
+    scoreboard tags of attacker contains "breeze_old"
+    {breezeold.cd::%uuid of victim%} is not set
+    set {_b} to attacker
+    set {_pj} to location of victim
+    set {_pb} to location of {_b}
+    # cada uno conserva hacia donde estaba mirando
+    set yaw of {_pb} to yaw of victim
+    set pitch of {_pb} to pitch of victim
+    set yaw of {_pj} to yaw of {_b}
+    set pitch of {_pj} to pitch of {_b}
+    set {breezeold.cd::%uuid of victim%} to true
+    teleport victim to {_pb}
+    teleport {_b} to {_pj}
+    play sound "entity.enderman.teleport" with volume 1 at victim
+    wait {@espera} ticks
+    delete {breezeold.cd::%uuid of victim%}
+
+on quit:
+    delete {breezeold.cd::%uuid of player%}
