@@ -2,7 +2,7 @@ package ar.tod4.aether;
 
 import org.bukkit.configuration.file.YamlConfiguration;
 
-/** Opciones de plugins/TOD4/aether.yml (si falta alguna, se usa el valor de aca). */
+/** Opciones de plugins/TOD4Aether/aether.yml (si falta alguna, se usa el valor de aca). */
 final class Conf {
 
     String mundo, mundoPrincipal;

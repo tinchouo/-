@@ -1,0 +1,10 @@
+name: TOD4Aether
+version: 1.0.0
+main: ar.tod4.aether.TOD4Aether
+api-version: '1.21'
+author: TrucOfDeath
+description: TrucOfDeath 4 - el Aether (mapa de islas, loot, mobs, aire y Casco de Oxigeno).
+softdepend: [TOD4, MythicMobs, Oraxen]
+permissions:
+  tod4.admin:
+    default: op

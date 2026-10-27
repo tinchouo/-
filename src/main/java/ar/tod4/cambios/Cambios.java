@@ -77,8 +77,9 @@ public final class Cambios {
         mob(new Cambio("d5.creeper_nuclear", 5, "Creeper Nuclear", false, "&7Se planta y explota a los 10 s.", "&7Mortal a 30 bloques, daño hasta 50."));
         // ---- Dia 6
         add(new Cambio("d6.caida", 6, "Caída: solo Caída de Pluma", false, "&7Protección ya no baja el daño", "&7por caída. Solo Caída de Pluma."));
-        add(new Cambio("d6.noches", 6, "Noches eternas", false, "&7La noche no se puede saltar.", "&7Acostarte igual resetea los phantoms."));
+        add(new Cambio("d6.noches", 6, "Noches el triple", false, "&7La noche dura el triple.", "&7Dormir la sigue salteando."));
         add(new Cambio("d6.phantoms", 6, "Phantoms sin sol", false, "&7Los Phantoms no se queman", "&7con la luz del sol."));
+        add(new Cambio("d7.aire", 7, "Aire del Aether", false, "&7En el Aether te quedas sin aire.", "&7Hace falta el Casco de Oxígeno."));
         add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca un creeper", "&7eléctrico con 1 de vida. No rompe bloques."));
         add(new Cambio("d8.pigman", 8, "Pigman siempre enojados", false, "&7Los Pigman atacan apenas", "&7te ven, sin que les pegues."));
         add(new Cambio("d8.pacificos", 8, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
@@ -90,7 +91,7 @@ public final class Cambios {
         new Mecanicas(pl, this);
         new MecanicasExtra(pl, this);
         new PoderBallesta(pl, this);
-        new Sueno(pl, this);
+        sueno = new Sueno(pl, this);
         tarde = new MecanicasTarde(pl, this);
         AvisosCambios.sembrar(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)
@@ -98,6 +99,10 @@ public final class Cambios {
     }
 
     private MecanicasTarde tarde;
+    private Sueno sueno;
+
+    /** Al apagar: el ciclo del dia vuelve a la normalidad (noches el triple). */
+    public void apagar() { if (sueno != null) sueno.apagar(); }
 
     /** /tod4 ballestero <rojo|amarillo|negro>: hace aparecer uno para probar. */
     public boolean ballestero(org.bukkit.Location l, String tipo) {

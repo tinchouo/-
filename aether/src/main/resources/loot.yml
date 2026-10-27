@@ -1,0 +1,59 @@
+# =====================================================================
+#  LOOT DE LOS COFRES DEL AETHER        despues de cambiar algo: /tod4:aether_recargar
+#
+#  tier1 = ruinitas al final de las ramas            (tabla aether:chests/tier0_small)
+#  tier2 = casas de las aldeas y de las islas        (aether:chests/tier1_grid)
+#  tier3 = ruinas, islas de hongo, coliseo (4 cofres en X), islitas del molino   (aether:chests/ruin)
+#  tier4 = arriba del molino (2) y el centro del coliseo                       (aether:chests/mega)
+#  En las islas de hongo no hay tier4: si quedo algun cofre mega ahi, da tier3.
+#
+#  Cada renglon:  "<item> <cantidad> [chance%]"
+#    item:      minecraft:diamond  |  oraxen:moneda  |  un nombre de "items" (abajo)  |  uno guardado con la mano
+#    cantidad:  5   |   2-5   |   0:25,1:50,2:25   (cantidad:peso -> 0 el 25%, 1 el 50%, 2 el 25%)
+#    chance:    si no sale siempre, por ejemplo 20%
+#  Probar sin abrir cofres:  /tod4:aether_loot probar tier3
+# =====================================================================
+
+activado: true
+
+# Nombres cortos. Si el chip (o la sopa) es otro item: ponetelo en la mano y
+#   /tod4:aether_loot guardar chip       (lo guardado le gana a lo de aca)
+items:
+  chip: minecraft:angler_pottery_sherd
+  sopa: minecraft:snort_pottery_sherd
+
+tier1:
+  - "chip 1-5"
+  - "minecraft:apple 1-3"
+  - "minecraft:arrow 4-12 60%"
+  - "minecraft:string 2-6 50%"
+  - "minecraft:coal 3-8 50%"
+
+tier2:
+  - "chip 5-10"
+  - "sopa 1-3"
+  - "minecraft:experience_bottle 3-6"
+  - "minecraft:saddle 1 20%"
+  - "minecraft:amethyst_shard 2-5"
+  - "minecraft:iron_ingot 5-12"
+
+tier3:
+  - "minecraft:experience_bottle 16-32"
+  - "minecraft:diamond 4-6"
+  - "oraxen:moneda 4-6"
+  - "minecraft:gold_ingot 10-32"
+  - "minecraft:golden_apple 5-16"
+  - "minecraft:resin_brick 6-10"
+  - "minecraft:gunpowder 12-20"
+
+tier4:
+  - "minecraft:experience_bottle 64-100"
+  - "minecraft:netherite_ingot 0:25,1:50,2:25"
+  - "minecraft:emerald_block 5-16"
+  - "minecraft:netherite_scrap 1-3"
+  - "minecraft:emerald 20-48"
+  - "minecraft:diamond_block 0:25,1:50,2:25"
+  - "minecraft:enchanted_golden_apple 1 50%"
+  - "oraxen:moneda_roja 3-5"
+  - "oraxen:totem_cuy 1-5"
+  - "oraxen:totem_golem 1 75%"

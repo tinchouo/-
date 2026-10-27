@@ -296,13 +296,22 @@ public final class Revivir implements Listener {
 
     private void menuAlmas(Player p, String modo) {
         p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 1.2f);
-        Menu m = new Menu(6, "&8Altar");
-        for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.GRAY_STAINED_GLASS_PANE));
+        menuAlmas(p, modo, 0);
+    }
+
+    /** 45 cabezas por pagina; con mas muertos aparecen las flechas para pasar de pagina. */
+    private void menuAlmas(Player p, String modo, int pag) {
         List<String> muertos = st.y().getStringList("muertos");
+        int paginas = Math.max(1, (muertos.size() + 44) / 45);
+        int pg = Math.max(0, Math.min(pag, paginas - 1));
+        Menu m = new Menu(6, paginas > 1 ? "&8Altar &7(" + (pg + 1) + "/" + paginas + ")" : "&8Altar");
+        for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.GRAY_STAINED_GLASS_PANE));
         boolean prem = modo.equals("premium");
         if (muertos.isEmpty()) m.set(22, Items.of(Material.SOUL_LANTERN, "&7No hay jugadores a revivir"));
+        if (pg > 0) m.set(45, Items.of(Material.ARROW, "&ePágina anterior", "&7Página " + pg + " de " + paginas), e -> { Style.click(p); menuAlmas(p, modo, pg - 1); });
+        if (pg < paginas - 1) m.set(53, Items.of(Material.ARROW, "&ePágina siguiente", "&7Página " + (pg + 2) + " de " + paginas), e -> { Style.click(p); menuAlmas(p, modo, pg + 1); });
         int slot = 0;
-        for (String n : muertos) {
+        for (String n : muertos.subList(Math.min(muertos.size(), pg * 45), Math.min(muertos.size(), pg * 45 + 45))) {
             if (slot >= 45) break;
             String motivo = st.y().getString("motivo." + n, "causas desconocidas");
             ItemStack cab = cabeza(n);
@@ -315,14 +324,14 @@ public final class Revivir implements Listener {
                 if (!st.y().getStringList("muertos").contains(n)) { p.closeInventory(); Style.err(p, "Ese jugador ya no está en el limbo."); return; }
                 if (!modo(p.getInventory().getItemInMainHand()).equals(modo)) { p.closeInventory(); Style.err(p, "Ya no tienes el ítem requerido en la mano."); return; }
                 if (!prem && !tieneAlma(p.getName())) { p.closeInventory(); Style.err(p, "Ya has sacrificado tu alma."); return; }
-                confirmar(p, n, modo);
+                confirmar(p, n, modo, pg);
             });
         }
         m.set(49, Items.of(Material.BARRIER, "&cCerrar Altar"), e -> p.closeInventory());
         m.open(p);
     }
 
-    private void confirmar(Player p, String n, String modo) {
+    private void confirmar(Player p, String n, String modo, int pg) {
         Style.click(p);
         Menu m = new Menu(3, "&8Confirmar Resurrección");
         m.set(11, Items.of(Material.NETHER_STAR, "&a&lSÍ, CONFIRMAR RITUAL", "", "&7Invocará a &e" + n + "&7 de vuelta al mundo."), e -> {
@@ -340,7 +349,7 @@ public final class Revivir implements Listener {
                 p.playSound(p.getLocation(), Sound.ENTITY_WITHER_SPAWN, 0.5f, 0.5f);
             }, 310L);
         });
-        m.set(15, Items.of(Material.BARRIER, "&c&lNO, CANCELAR", "", "&7El ritual se cancelará."), e -> menuAlmas(p, modo));
+        m.set(15, Items.of(Material.BARRIER, "&c&lNO, CANCELAR", "", "&7El ritual se cancelará."), e -> menuAlmas(p, modo, pg));
         m.fill(Material.BLACK_STAINED_GLASS_PANE).open(p);
     }
 

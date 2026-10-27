@@ -6,7 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Todo lo que el Aether tiene que recordar (se guarda en plugins/TOD4/aether_estado.json.gz). */
+/** Todo lo que el Aether tiene que recordar (se guarda en plugins/TOD4Aether/aether_estado.json.gz). */
 final class Estado {
 
     String mundo;
@@ -36,6 +36,9 @@ final class Estado {
     int expansiones;
     /** Piezas por pegar. */
     List<Trabajo> cola = new ArrayList<>();
+    /** Lugares donde aparecen los mobs del Aether (una isla, una aldea, el molino...). */
+    List<Lugar> lugares = new ArrayList<>();
+    int nextLugar;
 
     static final class Puerto {
         int id, x, z, y, h, dx, dz;
@@ -75,6 +78,15 @@ final class Estado {
         int x, y, z;
         Puente() { }
         Puente(String n, int x, int y, int z) { this.n = n; this.x = x; this.y = y; this.z = z; }
+    }
+
+    /** Un lugar con mobs: tipo (isla_grande, aldea, molino...), centro (y = altura de la cubierta) y radio. */
+    static final class Lugar {
+        int id;
+        String tipo;
+        int x, y, z, r;
+        Lugar() { }
+        Lugar(int id, String tipo, int x, int y, int z, int r) { this.id = id; this.tipo = tipo; this.x = x; this.y = y; this.z = z; this.r = r; }
     }
 
     /** tipo: P = pieza, E = borrar una caja, R = fin del borrado. */

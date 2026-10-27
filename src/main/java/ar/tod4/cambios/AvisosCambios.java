@@ -20,6 +20,8 @@ final class AvisosCambios {
     private static final String PODER_1 = "Los encantamientos *Poder* e *Infinidad* ahora también se pueden usar en la *ballesta*.";
     private static final String PODER_2 = "*Poder* aumenta su daño e *Infinidad* hace que no gaste *flechas comunes*. Algunos mobs con ballesta pueden tener Poder.";
     /** El texto que tenia antes (sin Infinidad): si nadie lo edito, se cambia por el nuevo. */
+    private static final String NOCHES_VIEJO = "Ya no se puede *saltar la noche* durmiendo.";
+    private static final String NOCHES = "Las *noches* ahora duran *el triple*.";
     private static final String[] PODER_VIEJO = {"El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
             "Algunos mobs con ballesta pueden tenerlo."};
 
@@ -81,10 +83,12 @@ final class AvisosCambios {
             "Una *nueva dungeon* repleta de *cofres* espera en su interior."},
         {"cambio_caida", "d6.caida", "6", "d",
             "La *protección de la armadura* ya no reduce el daño por *caída*."},
-        {"cambio_noches", "d6.noches", "6", "d",
-            "Ya no se puede *saltar la noche* durmiendo."},
+        {"cambio_noches", "d6.noches", "6", "d", NOCHES},
         {"cambio_phantoms", "d6.phantoms", "6", "d",
             "Los *Phantoms* ya no se queman con la *luz del sol*."},
+        {"cambio_aire", "d7.aire", "7", "d",
+            "En el *Aether* el aire ahora se acaba: a los *5 minutos* empiezas a *asfixiarte*.",
+            "Para respirar ahí necesitas el *Casco de Oxígeno*. Cada carga dura *30 minutos* y se recarga con un *bloque de amatista*."},
         {"cambio_creeper_muerte", "d7.creeper_muerte", "7", "d",
             "Al morir, hay un *10%* de probabilidad de que aparezca un *creeper eléctrico* en el lugar de tu muerte."},
         {"cambio_pigman", "d8.pigman", "8", "d",
@@ -130,6 +134,7 @@ final class AvisosCambios {
         if (nuevo) pl.getLogger().info("Mensajes de los cambios cargados (nombres cambio_* y aviso_*).");
         pl.avisos().cambiarDia("cambio_warden", 4, 1);   // el Warden vuelve al dia 1
         pl.avisos().cambiarDia("aviso_mesa", 4, 1);      // la mesa de encantamientos pasa al dia 1
+        pl.avisos().cambiarTexto("cambio_noches", armar(new String[]{NOCHES_VIEJO}, 0, max), armar(new String[]{NOCHES}, 0, max));   // ahora duran el triple
         pl.avisos().cambiarTexto("cambio_poder", armar(PODER_VIEJO, 0, max), armar(new String[]{PODER_1, PODER_2}, 0, max));   // + Infinidad
     }
 

@@ -56,13 +56,11 @@ import org.bukkit.util.Vector;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
-import ar.tod4.TOD4;
 import ar.tod4.aether.Estado.Puente;
 import ar.tod4.aether.Estado.Trabajo;
 import ar.tod4.aether.Piezas.Pieza;
-import ar.tod4.util.Style;
-import ar.tod4.util.Txt;
-import net.kyori.adventure.title.Title;
+import ar.tod4.aether.util.Style;
+import ar.tod4.aether.util.Txt;
 
 /**
  * El Aether (antes aether.sk): mapa de islas que se va armando a medida que los jugadores exploran,
@@ -73,7 +71,7 @@ public final class Aether implements Listener {
 
     private static final String[] ESPECIALES = {"village", "windmill", "coliseum", "mushroom_island"};
 
-    private final TOD4 pl;
+    private final TOD4Aether pl;
     private final File archivo;
     private final Gson gson = new GsonBuilder().create();
     private final Random rnd = new Random();
@@ -93,12 +91,13 @@ public final class Aether implements Listener {
     private int tick;
     private int fillRestantes;
 
-    public Aether(TOD4 pl) {
+    public Aether(TOD4Aether pl) {
         this.pl = pl;
         this.archivo = new File(pl.getDataFolder(), "aether_estado.json.gz");
         Pocion.init(pl);
         recargar();
         e = cargar();
+        lugaresViejos();
         nuevoPlan();
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::cadaTick, 40L, 1L);
@@ -323,6 +322,12 @@ public final class Aether implements Listener {
             try { mena(w, j, p); } catch (Exception ex) { pl.getLogger().warning("[Aether] Mena: " + ex); }
             try { libros(w, j, p); } catch (Exception ex) { pl.getLogger().warning("[Aether] Atriles: " + ex); }
         }
+        if (p != null) {
+            try { lugares(j, p); } catch (Exception ex) { pl.getLogger().warning("[Aether] Lugares: " + ex); }
+            if (j.n.startsWith("mushroom_island")) {
+                try { sinMegaEnHongo(w, j); } catch (Exception ex) { pl.getLogger().warning("[Aether] Cofres del hongo: " + ex); }
+            }
+        }
         if (k.animales && p != null) {
             int cx = Math.floorDiv(j.x0 + j.x1, 2), cz = Math.floorDiv(j.z0 + j.z1, 2);
             try {
@@ -338,6 +343,82 @@ public final class Aether implements Listener {
         }, 40L);
         e.hechos.add(new int[]{j.x0, j.y0 + ylo, j.z0, j.x1, j.y0 + yhi, j.z1});
         listo(j);
+    }
+
+    // ================================================================= lugares con mobs
+
+    /** Que lugar es cada pieza (para los mobs). null = ninguno (spawn, puentes). */
+    static String tipoLugar(String n) {
+        if (n.startsWith("village")) return "aldea";
+        if (n.equals("windmill")) return "molino";
+        if (n.equals("coliseum")) return "coliseo";
+        if (n.startsWith("mushroom_island")) return "hongo";
+        if (n.equals("large_ruin")) return "ruina_grande";
+        if (n.startsWith("bm_r")) return "ruinita";
+        if (n.startsWith("bl_")) return "rama_grande";
+        if (n.startsWith("bm_")) return "rama";
+        if (n.startsWith("large")) return "isla_grande";
+        if (n.startsWith("medium")) return "isla_mediana";
+        if (n.startsWith("small") || n.startsWith("tiny")) return "islita";
+        return null;
+    }
+
+    /** Islitas del anillo del molino que tienen ruinas (con cofre): en la plantilla, a 77 bloques en diagonal. */
+    private static final int[][] MOLINO_RUINAS = {{-1, -1}, {1, -1}, {1, 1}};
+
+    private void lugares(Trabajo j, Pieza p) {
+        String t = tipoLugar(j.n);
+        if (t == null) return;
+        int[] c = tf(j, p.c(), p.c());
+        int y = j.y0 + Piezas.DECK;
+        if (t.equals("molino")) {
+            // la isla del medio esta 12 bloques mas alta; las islitas con ruinas, cada una con lo suyo
+            e.lugares.add(new Estado.Lugar(e.nextLugar++, "molino", c[0], y + 12, c[1], 38));
+            for (int[] q : MOLINO_RUINAS) {
+                int[] r = tf(j, p.c() + q[0] * 77, p.c() + q[1] * 77);
+                e.lugares.add(new Estado.Lugar(e.nextLugar++, "molino_ruina", r[0], y, r[1], 20));
+            }
+            return;
+        }
+        e.lugares.add(new Estado.Lugar(e.nextLugar++, t, c[0], y, c[1], Math.max(3, p.rax())));
+    }
+
+    /** Para un Aether que ya estaba generado: arma los lugares con lo que se sabe (estructuras por nombre, el resto por tamano). */
+    private void lugaresViejos() {
+        if (!e.lugares.isEmpty() || e.hechos.isEmpty()) return;
+        for (int[] b : e.hechos) {
+            int w = b[3] - b[0] + 1, d = b[5] - b[2] + 1;
+            if (Math.abs(w - d) > 2) continue;            // puente
+            int cx = Math.floorDiv(b[0] + b[3], 2), cz = Math.floorDiv(b[2] + b[5], 2);
+            String t = null;
+            for (Map.Entry<String, List<int[]>> en : e.loc.entrySet())
+                for (int[] q : en.getValue())
+                    if (q[0] >= b[0] && q[0] <= b[3] && q[2] >= b[2] && q[2] <= b[5]) t = tipoLugar(en.getKey().equals("mushroom_island") ? "mushroom_island_1" : en.getKey());
+            if (t == null) t = w >= 120 ? "isla_grande" : w >= 40 ? "isla_mediana" : "islita";
+            if (cx * cx + cz * cz < 70 * 70) continue;    // la isla del spawn
+            // la altura de la cubierta no se sabe: se busca el piso cuando aparece cada mob
+            int r = t.equals("isla_grande") ? 50 : t.equals("isla_mediana") ? 15 : t.equals("islita") ? 5 : 75;
+            e.lugares.add(new Estado.Lugar(e.nextLugar++, t, cx, b[4], cz, r));
+        }
+        if (!e.lugares.isEmpty()) pl.getLogger().info("[Aether] Lugares para los mobs armados desde el mapa que ya existia: " + e.lugares.size());
+    }
+
+    public List<Estado.Lugar> lugares() { return e.lugares; }
+
+    /** En las islas de hongo no va el cofre mega: queda como uno de ruina (tier 3). */
+    private void sinMegaEnHongo(World w, Trabajo j) {
+        for (int cx = j.x0 >> 4; cx <= j.x1 >> 4; cx++)
+            for (int cz = j.z0 >> 4; cz <= j.z1 >> 4; cz++) {
+                if (!w.isChunkLoaded(cx, cz)) continue;
+                for (org.bukkit.block.BlockState bs : w.getChunkAt(cx, cz).getTileEntities()) {
+                    if (!(bs instanceof org.bukkit.loot.Lootable lt) || lt.getLootTable() == null) continue;
+                    if (!lt.getLootTable().getKey().getKey().equals("chests/mega")) continue;
+                    org.bukkit.loot.LootTable ruina = Bukkit.getLootTable(new NamespacedKey("aether", "chests/ruin"));
+                    if (ruina == null) continue;
+                    lt.setLootTable(ruina);
+                    bs.update(true, false);
+                }
+            }
     }
 
     // ================================================================= mena de Truco (Oraxen) y libros
@@ -485,8 +566,6 @@ public final class Aether implements Listener {
             p.setFallDistance(0);
             p.setVelocity(new Vector());
             p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 100, 0, false, false, true));
-            p.showTitle(Title.title(Txt.c("&b&lAether"), Txt.c("&7Bienvenido a las islas del cielo"),
-                    Title.Times.times(java.time.Duration.ofMillis(500), java.time.Duration.ofSeconds(3), java.time.Duration.ofSeconds(1))));
         }
     }
 
@@ -510,8 +589,12 @@ public final class Aether implements Listener {
         p.removePotionEffect(PotionEffectType.LEVITATION);
         p.removePotionEffect(PotionEffectType.SLOW_FALLING);
         World ow = principal();
-        Location s = ow.getSpawnLocation();
-        p.teleport(new Location(ow, s.getBlockX() + 0.5, k.volverCieloY, s.getBlockZ() + 0.5, p.getLocation().getYaw(), p.getLocation().getPitch()));
+        // el punto de caida que se puso con /tod4:aether_caida (la pileta); si no hay, sobre el spawn del Overworld
+        Location s = pl.caida(ow);
+        double x = s == null ? ow.getSpawnLocation().getBlockX() + 0.5 : s.getX();
+        double z = s == null ? ow.getSpawnLocation().getBlockZ() + 0.5 : s.getZ();
+        double y = s == null ? k.volverCieloY : s.getY();
+        p.teleport(new Location(ow, x, y, z, s == null ? p.getLocation().getYaw() : s.getYaw(), p.getLocation().getPitch()));
         p.setFallDistance(0);
         p.setVelocity(new Vector());
         p.sendActionBar(Txt.c("&dCaíste del Aether..."));
@@ -537,6 +620,20 @@ public final class Aether implements Listener {
         if (!Pocion.es(ev.getItem()) || !enAether(ev.getPlayer())) return;
         condenados.add(ev.getPlayer().getUniqueId());
         ev.getPlayer().sendActionBar(Txt.c("&cEl Aether rechaza la poción..."));
+    }
+
+    /** Las pociones que ya existian (con el texto viejo) se actualizan al entrar. */
+    @EventHandler
+    public void entra(org.bukkit.event.player.PlayerJoinEvent ev) {
+        org.bukkit.inventory.PlayerInventory inv = ev.getPlayer().getInventory();
+        for (int i = 0; i < inv.getSize(); i++) {
+            ItemStack it = inv.getItem(i);
+            if (Pocion.es(it) && !Pocion.alDia(it)) {
+                ItemStack n = Pocion.crear(k.pocionNivel, k.pocionSeg);
+                n.setAmount(it.getAmount());
+                inv.setItem(i, n);
+            }
+        }
     }
 
     @EventHandler

@@ -113,6 +113,12 @@ sueno:
   porcentaje: 25
   minimo: 5
 
+# Cambio del dia 6 (d6.noches): la noche del Overworld dura "factor" veces mas (hora del juego: 13000 = anochece, 23000 = amanece)
+noches:
+  factor: 3
+  desde: 13000
+  hasta: 23000
+
 avisos:
   sonido_custom_1: "tod4:custom_1"
   sonido_custom_2: "tod4:custom_2"

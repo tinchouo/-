@@ -1,0 +1,60 @@
+# =====================================================================
+#  MOBS DEL AETHER (MythicMobs)          despues de cambiar algo: /tod4:aether_recargar
+#
+#  Aparecen como mobs normales: cada lugar tiene los suyos, salen cuando alguien se acerca
+#  (nunca al lado: a mas de distancia_min de todos) y si los matan vuelven a los reaparece_seg.
+#  Si te vas y volves, estan. Las islas de hongo no tienen nada.
+#  Prender / apagar en el juego: /tod4:aether_mobs on|off
+# =====================================================================
+
+activado: true
+# cada cuantos segundos se revisa
+cada_seg: 5
+# nunca aparecen a menos de esto de un jugador
+distancia_min: 24
+# un lugar se llena cuando hay un jugador a menos de esto de su borde
+distancia_activa: 80
+# cuando matan a los de un lugar, tardan esto en volver
+reaparece_seg: 300
+# tope de mobs del Aether en todo el mundo
+maximo_total: 120
+
+# nombre interno en MythicMobs de cada uno
+mobs:
+  guardia: GUARDIA_ANGELICAL
+  serafin: AngelSerafin
+  fantasma: AllayLadron
+  phantom: SecuestradorAereo
+  breeze: BreezeOld
+  thor: Thor
+  sumo: SUMO_ANGELICAL
+  bomba: BombaVoladora
+
+# estos aparecen unos bloques en el aire (no caminan)
+voladores: [fantasma, bomba, phantom]
+
+# Cuantos de cada uno por lugar:  "2-3"  |  "1"  |  "1 50%"  (la mitad de esos lugares tiene uno)
+# El sorteo es una vez por lugar: un lugar que tiene Breeze, lo tiene siempre.
+lugares:
+  isla_grande:  {guardia: "2-3", fantasma: "1 20%"}
+  isla_mediana: {guardia: "2-3"}
+  # islas grandes con ruinas
+  ruina_grande: {guardia: "2-3", fantasma: "1 50%", serafin: "1 50%"}
+  # islas de las ramas (las de pinos) y las ruinitas del final de una rama
+  rama_grande:  {guardia: "2-3", fantasma: "1 30%"}
+  rama:         {guardia: "2-3", fantasma: "1 30%"}
+  ruinita:      {guardia: "1-2", fantasma: "1 50%"}
+  # islitas de relleno
+  islita:       {breeze: "1 5%"}
+  aldea:        {guardia: "2-3", serafin: "2", bomba: "3-4"}
+  # isla del medio del molino (afuera del molino) y las islitas de alrededor que tienen ruinas
+  molino:       {serafin: "2-3", thor: "1", guardia: "2"}
+  molino_ruina: {serafin: "1"}
+  coliseo:      {sumo: "1"}
+  hongo:        {}
+
+# Phantom Angelical: en el cielo, en todo el Aether menos las islas de hongo
+phantoms:
+  max_por_jugador: 2
+  # chance (%) en cada revision de que aparezca uno cerca de cada jugador (si tiene menos del maximo)
+  chance: 15

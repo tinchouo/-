@@ -28,8 +28,17 @@ jobs:
             grep -E "\[ERROR\]" build3.log | head -60 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
             exit 1
           }
+      - name: Compilar TOD4Aether
+        run: |
+          set -o pipefail
+          mvn -B -f aether/pom.xml package 2>&1 | tee build4.log || {
+            grep -E "\[ERROR\]" build4.log | head -60 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with: { name: TOD4, path: target/TOD4.jar }
+      - uses: actions/upload-artifact@v4
+        with: { name: TOD4Aether, path: aether/target/TOD4Aether.jar }
       - uses: actions/upload-artifact@v4
         with: { name: TOD4Eventos, path: eventos/target/TOD4Eventos.jar }
       - uses: actions/upload-artifact@v4

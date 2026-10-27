@@ -34,26 +34,6 @@ commands:
     description: Palo de Retorno
   video:
     description: Reproduce un video a pantalla completa a un jugador
-  aether_pocion:
-    description: Da la Pocion del Aether
-  aether_init:
-    description: Inicia el mapa del Aether
-  aether_reset:
-    description: Borra o reinicia el Aether
-  aether_tp:
-    description: Te lleva al spawn del Aether
-  aether_locate:
-    description: Lista las estructuras del Aether
-  aether_goto:
-    description: Te lleva a una estructura del Aether
-  aether_fill:
-    description: Genera partes del Aether sin caminar
-  aether_test:
-    description: Revisa los puentes del Aether
-  aether_force:
-    description: La proxima estructura del Aether sera la elegida
-  aether_music:
-    description: Prueba la musica del Aether
   equipo:
     description: Equipos (admins)
   eq:

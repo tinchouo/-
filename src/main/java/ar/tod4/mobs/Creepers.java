@@ -105,31 +105,45 @@ public final class Creepers implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void aparece(CreatureSpawnEvent e) {
         if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        boolean ow = overworld(e.getLocation().getWorld());
         // tambien pueden aparecer junto a otros bichos hostiles (zombies, esqueletos, arañas...)
+        // fuera del Overworld (Nether, End) solo puede salir el Void Creeper
         if (!(e.getEntity() instanceof Creeper) && e.getEntity() instanceof org.bukkit.entity.Monster
                 && rnd.nextDouble() * 100 < cfg.getDouble("chance_con_otros", 4)) {
             Location lo = e.getEntity().getLocation();
-            Bukkit.getScheduler().runTask(pl, () -> extra(lo));
+            Bukkit.getScheduler().runTask(pl, () -> extra(lo, ow));
             return;
         }
         if (!(e.getEntity() instanceof Creeper c)) return;
         if (on("electronico")) c.setPowered(true);
         Location l = c.getLocation();
-        Bukkit.getScheduler().runTask(pl, () -> extra(l));
+        Bukkit.getScheduler().runTask(pl, () -> extra(l, ow));
     }
 
-    /** Con cierta chance aparece un creeper especial cerca (ademas del normal). */
-    private void extra(Location l) {
+    /** El Overworld de verdad (no el Aether ni las backrooms, que tambien son mundos "normales"). */
+    private boolean overworld(World w) {
+        if (w.getEnvironment() != World.Environment.NORMAL) return false;
+        String n = w.getName().toLowerCase();
+        for (String x : cfg.getStringList("mundos_excluidos")) if (n.contains(x.toLowerCase())) return false;
+        return !n.contains("aether") && !n.contains("backroom");
+    }
+
+    /**
+     * Con cierta chance aparece un creeper especial cerca (ademas del normal), con las mismas reglas que un creeper:
+     * suelo firme, sin luz de bloques y oscuro. Los especiales solo salen en el Overworld; el Void Creeper en cualquier dimension.
+     */
+    private void extra(Location l, boolean ow) {
         for (String t : TIPOS) {
             if (!on(t)) continue;
             if (rnd.nextDouble() * 100 >= cfg.getDouble("chances." + t, t.equals("flash") ? 14 : 0)) continue;   // el Flash es nuevo: si tu creepers.yml no lo tiene, 14%
+            if (!ow && !t.equals("void")) return;
             int n = 1;
             if (t.equals("mini")) {
                 int a = cfg.getInt("mini.grupo_min", 3), b = cfg.getInt("mini.grupo_max", 5);
                 n = a + rnd.nextInt(Math.max(1, b - a + 1));
             }
             for (int i = 0; i < n; i++) {
-                Location s = lugar(l, 2, 5);
+                Location s = lugar(l, 2, 5, ow);
                 if (s != null) aparecer(t, s);
             }
             return;
@@ -159,8 +173,18 @@ public final class Creepers implements Listener {
                 c.setMaxFuseTicks(cfg.getInt("flash.mecha_ticks", 2));                        // explota al instante
             }
             case "nuclear" -> { escala(c, cfg.getDouble("nuclear.tamano", 1.5)); c.setMaxFuseTicks(32000); c.setExplosionRadius(0); nuclearBase(c); }
+            case "void" -> voidBase(c);
             default -> { }
         }
+    }
+
+    /** Void Creeper: mecha mas corta (0,75 s; uno comun 1,5 s) y un poco mas rapido (x1,2). */
+    private void voidBase(Creeper c) {
+        int mecha = cfg.getInt("void.mecha_ticks", 15);
+        if (c.getMaxFuseTicks() != mecha) c.setMaxFuseTicks(mecha);
+        AttributeInstance v = c.getAttribute(Attribute.MOVEMENT_SPEED);
+        double vel = 0.25 * cfg.getDouble("void.velocidad", 1.2);
+        if (v != null && Math.abs(v.getBaseValue() - vel) > 0.0001) v.setBaseValue(vel);
     }
 
     private static void escala(LivingEntity le, double v) {
@@ -168,7 +192,10 @@ public final class Creepers implements Listener {
         if (a != null && Math.abs(a.getBaseValue() - v) > 0.001) a.setBaseValue(v);
     }
 
-    private Location lugar(Location c, int dmin, int dmax) {
+    private Location lugar(Location c, int dmin, int dmax) { return lugar(c, dmin, dmax, false); }
+
+    /** Lugar libre cerca; con oscuro=true ademas como un creeper de verdad: sin luz de bloques y con poca luz (0 a 7, como vanilla). */
+    private Location lugar(Location c, int dmin, int dmax, boolean oscuro) {
         World w = c.getWorld();
         for (int i = 0; i < 16; i++) {
             double a = rnd.nextDouble() * Math.PI * 2, d = dmin + rnd.nextDouble() * (dmax - dmin);
@@ -176,8 +203,10 @@ public final class Creepers implements Listener {
             for (int dy = 2; dy >= -3; dy--) {
                 int y = c.getBlockY() + dy;
                 Block b = w.getBlockAt(x, y, z);
-                if (b.isPassable() && !b.isLiquid() && b.getRelative(0, 1, 0).isPassable() && b.getRelative(0, -1, 0).getType().isSolid())
+                if (b.isPassable() && !b.isLiquid() && b.getRelative(0, 1, 0).isPassable() && b.getRelative(0, -1, 0).getType().isSolid()) {
+                    if (oscuro && (b.getLightFromBlocks() > 0 || b.getLightLevel() > rnd.nextInt(8))) continue;
                     return new Location(w, x + 0.5, y, z + 0.5);
+                }
             }
         }
         return null;
@@ -197,6 +226,7 @@ public final class Creepers implements Listener {
                 else if (tags.contains("creeper_random")) random(c, tags);
                 else if (tags.contains("creeper_nuclear")) nuclear(c);
                 else if (tags.contains("creeper_flash") && c.getMaxFuseTicks() != cfg.getInt("flash.mecha_ticks", 2)) c.setMaxFuseTicks(cfg.getInt("flash.mecha_ticks", 2));
+                else if (tags.contains("lobotomia") && !c.isIgnited()) voidBase(c);
                 // los modelos de Better Model no muestran el fuego: llamitas cuando se esta quemando
                 if (tick % 4 == 0 && c.getFireTicks() > 0 && (tags.contains("creeper_mini") || tags.contains("creeper_random")
                         || tags.contains("creeper_nuclear") || tags.contains("creeper_calamar") || tags.contains("lobotomia"))) {

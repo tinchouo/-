@@ -5,7 +5,8 @@
 # =====================================================================
 
 # Cada vez que aparece un creeper normal, con esta chance (%) aparece ADEMAS uno de estos cerca
-# (a lo sumo uno por creeper; el Mini viene en grupo)
+# (a lo sumo uno por creeper; el Mini viene en grupo). Aparecen con las reglas de un creeper (suelo firme, oscuro)
+# y solo en el Overworld; el Void Creeper tambien en el Nether y el End (con los bichos hostiles de ahi).
 chances:
   nuclear: 3
   void: 8
@@ -57,6 +58,12 @@ nuclear:
   # radio del crater (bloques que rompe)
   radio_bloques: 15
   veneno_seg: 10
+
+void:
+  # cuanto tarda en explotar (en ticks; 15 = 0,75 s, un creeper comun 30)
+  mecha_ticks: 15
+  # velocidad respecto de un creeper comun (1.2 = 20% mas rapido)
+  velocidad: 1.2
 
 calamar:
   # cuanto dura la tinta en la pantalla (se va desvaneciendo)

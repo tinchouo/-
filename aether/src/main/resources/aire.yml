@@ -1,0 +1,27 @@
+# =====================================================================
+#  AIRE DEL AETHER + CASCO DE OXIGENO        despues de cambiar algo: /tod4:aether_recargar
+#  Se prende con el cambio del dia 7 "Aire del Aether" (d7.aire en /tod4:cambios).
+#  Probar: /tod4:aether_casco  y  /tod4:aether_aire vaciar|llenar
+# =====================================================================
+
+# nombre del cambio en /tod4:cambios
+cambio: d7.aire
+# true = siempre prendido (aunque el cambio este apagado o no este TOD4)
+siempre: false
+
+# cuanto dura la barra de burbujas en el Aether sin casco (segundos)
+aire_seg: 300
+# sin aire: dano cada tantos segundos (2 = un corazon), nauseas y lentitud
+dano: 2.0
+dano_cada_seg: 1
+lentitud_nivel: 2
+
+casco:
+  nombre: "&bCasco de Oxígeno"
+  # minutos de oxigeno por carga (se gasta solo en el Aether)
+  oxigeno_min: 30
+  # modelo del pack (domo de vidrio con los tubos)
+  modelo: "tod4:casco_oxigeno"
+  # renglones extra debajo de "Oxígeno: X%"
+  lore:
+    - "&8Se recarga con un bloque de amatista."

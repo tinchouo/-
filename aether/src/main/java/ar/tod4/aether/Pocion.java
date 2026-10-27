@@ -28,7 +28,8 @@ final class Pocion {
 
     private Pocion() { }
 
-    static void init(Plugin pl) { KEY = new NamespacedKey(pl, "aether_pocion"); }
+    /** La marca es tod4:aether_pocion (la misma de cuando estaba en TOD4: las pociones que ya existen siguen andando). */
+    static void init(Plugin pl) { KEY = new NamespacedKey("tod4", "aether_pocion"); }
 
     static ItemStack crear(int nivel, int segundos) {
         ItemStack it = new ItemStack(Material.POTION);
@@ -40,8 +41,8 @@ final class Pocion {
         List<Component> lore = new ArrayList<>();
         lore.add(linea("Levitación " + romano(nivel) + " (" + tiempo(segundos) + ")", NamedTextColor.BLUE));
         lore.add(Component.empty());
-        lore.add(linea("Esta poción te lleva al reino del Aether.", NamedTextColor.GRAY));
-        lore.add(linea("No se recomienda tomarla dentro del Aether.", NamedTextColor.DARK_GRAY));
+        lore.add(linea("Bébela para ascender al reino de los cielos.", NamedTextColor.GRAY));
+        lore.add(linea("Nunca la bebas sin los pies sobre la tierra.", NamedTextColor.RED));
         m.lore(lore);
         m.getPersistentDataContainer().set(KEY, PersistentDataType.BYTE, (byte) 1);
         it.setItemMeta(m);
@@ -51,6 +52,14 @@ final class Pocion {
     static boolean es(ItemStack it) {
         if (it == null || it.getType() != Material.POTION || !it.hasItemMeta()) return false;
         return it.getItemMeta().getPersistentDataContainer().has(KEY, PersistentDataType.BYTE);
+    }
+
+    /** Tiene el texto nuevo. */
+    static boolean alDia(ItemStack it) {
+        List<Component> l = it.getItemMeta().lore();
+        if (l == null) return false;
+        for (Component c : l) if (net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(c).startsWith("Nunca la bebas")) return true;
+        return false;
     }
 
     private static Component linea(String s, NamedTextColor c) {

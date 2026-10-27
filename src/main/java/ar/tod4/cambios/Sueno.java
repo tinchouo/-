@@ -6,7 +6,6 @@ import java.util.List;
 import org.bukkit.Bukkit;
 import org.bukkit.GameMode;
 import org.bukkit.GameRule;
-import org.bukkit.Statistic;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -22,7 +21,8 @@ import ar.tod4.util.Txt;
  *  - Para pasar la noche tiene que dormir un cuarto de los jugadores, pero minimo 5 (si hay menos de 5, todos).
  *  - Cuentan los del Overworld y los del Aether (donde se puede dormir). Si se pasa la noche, se hace de dia en los dos.
  *  - Mensaje como el de vanilla: "Durmiendo 3/5".
- *  - Cambio del dia 6 (d6.noches): la noche no se puede saltar; acostarse igual resetea el contador de phantoms.
+ *  - Cambio del dia 6 (d6.noches): la noche del Overworld dura el triple (noches.factor). Dormir la sigue salteando.
+ *    Mientras es de noche el plugin apaga el ciclo del dia y avanza la hora 1 tick cada 3; de dia lo vuelve a prender.
  */
 final class Sueno implements Listener {
 
@@ -34,6 +34,49 @@ final class Sueno implements Listener {
         this.cb = cb;
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::tick, 20L, 20L);
+        Bukkit.getScheduler().runTaskTimer(pl, this::noche, 1L, 1L);
+    }
+
+    // ================================================================= noches el triple (d6.noches)
+
+    private double resto;
+
+    /** Pausado por nosotros (se guarda en datos: si el server se apaga de noche, al volver se arregla solo). */
+    private boolean pausado() { return pl.datos().y().getBoolean("noches.pausado", false); }
+
+    private void pausar(World w, boolean si) {
+        w.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, !si);
+        pl.datos().set("noches.pausado", si);
+    }
+
+    private void noche() {
+        World w = mundos().get(0);
+        long t = Math.floorMod(w.getTime(), 24000L);
+        long desde = pl.getConfig().getLong("noches.desde", 13000), hasta = pl.getConfig().getLong("noches.hasta", 23000);
+        boolean deNoche = t >= desde && t < hasta;
+        if (!cb.on("d6.noches") || !deNoche) {
+            if (pausado()) pausar(w, false);
+            resto = 0;
+            return;
+        }
+        if (!pausado()) {
+            // si alguien apago el ciclo a mano (por ejemplo para un evento), no lo tocamos
+            if (!Boolean.TRUE.equals(w.getGameRuleValue(GameRule.DO_DAYLIGHT_CYCLE))) return;
+            pausar(w, true);
+        }
+        double f = Math.max(1, pl.getConfig().getDouble("noches.factor", 3));
+        resto += 1 / f;
+        if (resto >= 1) {
+            long n = (long) resto;
+            resto -= n;
+            w.setFullTime(w.getFullTime() + n);
+        }
+    }
+
+    /** Al apagar el plugin el ciclo vuelve a la normalidad. */
+    void apagar() {
+        World w = mundos().get(0);
+        if (pausado()) pausar(w, false);
     }
 
     private boolean activo() { return pl.getConfig().getBoolean("sueno.activo", true); }
@@ -56,11 +99,11 @@ final class Sueno implements Listener {
 
     private void tick() {
         List<World> ws = mundos();
-        // el juego no salta la noche solo: lo decide el plugin (o nadie, con el cambio del dia 6)
-        int regla = activo() || cb.on("d6.noches") ? 101 : 100;
+        // el juego no salta la noche solo: lo decide el plugin
+        int regla = activo() ? 101 : 100;
         for (World w : ws) if (!Integer.valueOf(regla).equals(w.getGameRuleValue(GameRule.PLAYERS_SLEEPING_PERCENTAGE)))
             w.setGameRule(GameRule.PLAYERS_SLEEPING_PERCENTAGE, regla);
-        if (!activo() || cb.on("d6.noches")) return;
+        if (!activo()) return;
 
         List<Player> cuentan = new ArrayList<>();
         int durmiendo = 0, profundo = 0;
@@ -86,8 +129,7 @@ final class Sueno implements Listener {
     // ================================================================= al acostarse
 
     /**
-     * Normal: como vanilla, el que duerme resetea su contador de phantoms; enseguida ve "Durmiendo X/Y".
-     * Dia 6 (d6.noches): la noche no pasa, pero acostarte igual resetea tu contador y te avisa en verde.
+     * Como vanilla, el que duerme resetea su contador de phantoms; enseguida ve "Durmiendo X/Y".
      */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void acuesta(PlayerBedEnterEvent e) {
@@ -96,12 +138,7 @@ final class Sueno implements Listener {
         // un tick despues, asi tapa el mensaje del juego ("no se puede dormir esta noche")
         Bukkit.getScheduler().runTaskLater(pl, () -> {
             if (!p.isOnline()) return;
-            if (cb.on("d6.noches")) {
-                p.setStatistic(Statistic.TIME_SINCE_REST, 0);
-                p.sendActionBar(Txt.c("&aSe reseteó tu contador de phantoms"));
-            } else if (activo()) {
-                tick();
-            }
+            if (activo()) tick();
         }, 1L);
     }
 }

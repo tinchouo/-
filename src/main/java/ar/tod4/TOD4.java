@@ -45,7 +45,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private MomentosMenu momentosMenu;
     private Palo palo;
     private ar.tod4.video.Video video;
-    private ar.tod4.aether.Aether aether;
     private ar.tod4.equipos.Equipos equipos;
     private ar.tod4.mobs.Creepers creepers;
     private ar.tod4.clones.Clones clones;
@@ -72,7 +71,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         video = new ar.tod4.video.Video(this);
         new ar.tod4.mobs.Mobs(this);
         creepers = new ar.tod4.mobs.Creepers(this);
-        aether = new ar.tod4.aether.Aether(this);
         equipos = new ar.tod4.equipos.Equipos(this);
         new ar.tod4.core.Chat(this);
         clones = new ar.tod4.clones.Clones(this);
@@ -96,8 +94,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     }
 
     private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video",
-            "aether_pocion", "aether_init", "aether_reset", "aether_tp", "aether_locate", "aether_goto", "aether_fill",
-            "aether_test", "aether_force", "aether_music", "equipo", "creeper", "clones");
+            "equipo", "creeper", "clones");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
     private void soloConPrefijo() {
@@ -137,8 +134,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 w.setGameRule(org.bukkit.GameRule.PLAYERS_SLEEPING_PERCENTAGE, 100);
         if (misionesMenu != null) misionesMenu.cerrarTodo();
         if (video != null) video.terminarTodos();
-        if (aether != null) aether.apagar();
         if (creepers != null) creepers.apagar();
+        if (cambios != null) cambios.apagar();
         if (momentos != null) momentos.apagar();
         if (clones != null) clones.apagar();
         for (Store s : new Store[]{core, avisos == null ? null : avisos.store(), revivir == null ? null : revivir.store(),
@@ -180,7 +177,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (c.equals("pujar")) { subasta.cmdPujar(s, a); return true; }
         if (!s.hasPermission("tod4.admin")) { Style.err(s, "No tienes permiso."); return true; }
         Player p = s instanceof Player pp ? pp : null;
-        if (c.startsWith("aether_")) return aether.comando(s, c, a);
         if (c.equals("equipo")) { equipos.comandoAdmin(s, a); return true; }
         if (c.equals("clones")) { clones.comando(s, a); return true; }
         if (c.equals("creeper")) {
@@ -265,9 +261,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&e/tod4:revivir <jugador> &8- &7revivir a alguien sin ritual");
             Style.raw(s, "&e/tod4:palo &8- &7Palo de Retorno");
             Style.raw(s, "&e/tod4:video <jugador> <video> &8- &7video a pantalla completa");
-            Style.raw(s, "&e/tod4:aether_pocion [jugador] [cantidad] &8- &7Poción del Aether");
             Style.raw(s, "&e/tod4:equipo &8- &7equipos (menú, crear, agregar, líder...)  &8| &e/eq &7para los jugadores");
-            Style.raw(s, "&e/tod4:aether_init &8- &7inicia el mapa del Aether &8(/tod4:aether_ + tab para el resto)");
+            Style.raw(s, "&7El Aether ahora es el plugin &fTOD4Aether&7: &e/tod4:aether_ &7+ tab");
             Style.raw(s, "&8&m----------------------------------------");
             return true;
         }
@@ -296,7 +291,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "recargar":
                 reloadConfig();
                 mesa.recargar();
-                aether.recargar();
                 creepers.recargar();
                 Style.ok(s, "Config recargada.");
                 return true;
@@ -331,13 +325,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
                 case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); break;
-                case "aether_pocion": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
-                case "aether_locate": case "aether_goto": case "aether_force":
-                    out.addAll(aether.nombres());
-                    if (c.equals("aether_goto")) out.add("spawn");
-                    break;
-                case "aether_reset": out.addAll(List.of("clear", "forget", "status")); break;
-                case "aether_music": out.add("stop"); break;
                 case "creeper": out.addAll(creepers.tipos()); break;
                 case "completar":
                     out.add("todos");
