@@ -1,7 +1,7 @@
 # =====================================================================
 #  BREEZE OLD  -  Skript (Paper 1.21.4)   (antes blaze_cambiazo.sk)
 #  Solo el mob de MythicMobs BreezeOld (tag "breeze_old"), no los breezes normales.
-#  Cuando su carga de viento te pega, intercambian posiciones:
+#  Cuando su carga de viento te pega te saca un corazon e intercambian posiciones:
 #  vos quedas donde estaba el breeze y el breeze donde estabas vos.
 #  Va en plugins/Skript/scripts/  ->  /sk reload breeze_old
 #  (si tambien seguis usando el Blaze Cambiazo, deja blaze_cambiazo.sk como esta)
@@ -14,6 +14,8 @@ options:
 on damage of player:
     attacker is a breeze
     scoreboard tags of attacker contains "breeze_old"
+    # cada tiro saca un corazon (la carga de viento sola casi no hace dano)
+    set damage to 1
     {breezeold.cd::%uuid of victim%} is not set
     set {_b} to attacker
     set {_pj} to location of victim
