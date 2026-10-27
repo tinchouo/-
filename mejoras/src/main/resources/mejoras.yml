@@ -84,9 +84,9 @@ mejoras:
     color: "#EDEDED"
     adorno: quartz
     ingrediente: PHANTOM_MEMBRANE
-    descripcion: ["En el aire, tocá el botón de saltar de nuevo:", "3 segundos flotando"]
+    descripcion: ["En el aire, tocá el botón de saltar de nuevo:", "2 segundos planeando"]
     efectos:
-      planear: "planear 3 2"
+      planear: "planear 2 10"
   firmeza:
     nombre: "Mejora de Firmeza"
     color: "#A9AFB5"

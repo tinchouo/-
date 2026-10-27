@@ -37,7 +37,8 @@ final class Pocion {
         m.setColor(Color.fromRGB(0xA6E4FF));
         m.addCustomEffect(new PotionEffect(PotionEffectType.LEVITATION, segundos * 20, nivel - 1, false, true, true), true);
         m.addItemFlags(ItemFlag.HIDE_ADDITIONAL_TOOLTIP);
-        m.itemName(Component.text("Poción del Aether"));
+        // en las pociones el juego ignora item_name y escribe "Poción no fabricable": va como nombre propio, en celeste
+        m.displayName(Component.text("Poción del Aether", NamedTextColor.AQUA).decoration(TextDecoration.ITALIC, false));
         List<Component> lore = new ArrayList<>();
         lore.add(linea("Levitación " + romano(nivel) + " (" + tiempo(segundos) + ")", NamedTextColor.BLUE));
         lore.add(Component.empty());
@@ -56,6 +57,7 @@ final class Pocion {
 
     /** Tiene el texto nuevo. */
     static boolean alDia(ItemStack it) {
+        if (!it.getItemMeta().hasDisplayName()) return false;
         List<Component> l = it.getItemMeta().lore();
         if (l == null) return false;
         for (Component c : l) if (net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(c).startsWith("Nunca la bebas")) return true;
