@@ -35,3 +35,6 @@ jobs:
           ls -la plugins/TOD4Aether | tr '\n' '#' | xargs -0 -I{} echo "::notice::{}"
           if grep -qiE "Exception|Unknown command" log.txt; then echo "::error::Hay errores"; exit 1; fi
           echo "::notice::Arranco sin errores"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: log-aether, path: srv/log.txt }
