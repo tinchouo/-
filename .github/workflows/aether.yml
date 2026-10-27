@@ -3,6 +3,8 @@ on:
   push:
     paths: ['aether/**', 'src/**', '.github/workflows/aether.yml']
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   probar:
     runs-on: ubuntu-latest
@@ -35,6 +37,11 @@ jobs:
           ls -la plugins/TOD4Aether | tr '\n' '#' | xargs -0 -I{} echo "::notice::{}"
           if grep -qiE "Exception|Unknown command" log.txt; then echo "::error::Hay errores"; exit 1; fi
           echo "::notice::Arranco sin errores"
-      - uses: actions/upload-artifact@v4
+      - name: Guardar el log en la rama ci-logs
         if: always()
-        with: { name: log-aether, path: srv/log.txt }
+        run: |
+          mkdir /tmp/l && cp srv/log.txt /tmp/l/aether_log.txt || true
+          cd /tmp/l && git init -q && git checkout -q -b ci-logs
+          git config user.name ci && git config user.email ci@local
+          git add . && git commit -q -m "log $GITHUB_SHA"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-logs
