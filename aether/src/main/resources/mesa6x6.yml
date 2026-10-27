@@ -1,6 +1,7 @@
 # =====================================================================
 #  MESA DE CRAFTEO 6x6        despues de cambiar algo: /tod4:aether_recargar
-#  La mesa: /tod4:aether_mesa dar [jugador]  (se pone como una mesa de crafteo; clic derecho abre la grilla)
+#  La mesa se craftea: 4 mesas de crafteo en las esquinas, 4 lingotes de hierro y un bloque de hierro en el centro.
+#  Tambien: /tod4:aether_mesa dar [jugador]. Clic derecho abre la grilla.
 # =====================================================================
 
 mesa:
@@ -8,7 +9,11 @@ mesa:
   titulo: "&8Mesa de crafteo 6x6"
   lore:
     - "&7Una mesa más grande, para crafteos especiales."
-  # modelo del pack para el item (vacio = la mesa de crafteo normal)
+  # el bloque de Oraxen con la textura (Oraxen/items/mesa_6x6.yml). Si no esta, es una mesa de crafteo marcada.
+  oraxen_id: mesa_6x6
+  # false = no se puede craftear (solo con /tod4:aether_mesa dar)
+  crafteo: true
+  # (solo para la mesa marcada sin Oraxen) modelo del pack para el item
   modelo: ""
 
 # Cada receta: la forma (6 renglones de 6; "." = vacio) y que item es cada letra.

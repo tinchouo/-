@@ -69,6 +69,7 @@ final class Mesa6 implements Listener {
         fd = new File(pl.getDataFolder(), "mesas6x6.yml");
         datos = YamlConfiguration.loadConfiguration(fd);
         Bukkit.getPluginManager().registerEvents(this, pl);
+        receta();
     }
 
     void recargar() {
@@ -79,7 +80,13 @@ final class Mesa6 implements Listener {
 
     // ================================================================= la mesa (bloque)
 
+    /** La mesa: la de Oraxen (con su textura) si esta; si no, una mesa de crafteo marcada. */
     ItemStack item() {
+        String ox = y.getString("mesa.oraxen_id", "mesa_6x6");
+        if (!ox.isEmpty()) {
+            ItemStack o = Ext.oraxenItem(ox);
+            if (o != null) return o;
+        }
         ItemStack it = new ItemStack(Material.CRAFTING_TABLE);
         ItemMeta m = it.getItemMeta();
         m.itemName(Txt.c(y.getString("mesa.nombre", "&dMesa de crafteo 6x6")));
@@ -98,6 +105,8 @@ final class Mesa6 implements Listener {
     private static String clave(Location l) { return l.getWorld().getName() + "," + l.getBlockX() + "," + l.getBlockY() + "," + l.getBlockZ(); }
 
     private boolean esMesa(Block b) {
+        String ox = y.getString("mesa.oraxen_id", "mesa_6x6");
+        if (b.getType() == Material.NOTE_BLOCK && !ox.isEmpty() && ox.equals(Ext.oraxenBlock(b))) return true;
         if (b.getType() != Material.CRAFTING_TABLE) return false;
         return datos.getStringList("mesas").contains(clave(b.getLocation()));
     }
@@ -115,7 +124,7 @@ final class Mesa6 implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void rompe(BlockBreakEvent e) {
-        if (!esMesa(e.getBlock())) return;
+        if (e.getBlock().getType() != Material.CRAFTING_TABLE || !esMesa(e.getBlock())) return;    // la de Oraxen la maneja Oraxen
         marcar(e.getBlock(), false);
         e.setDropItems(false);
         if (e.getPlayer().getGameMode() != org.bukkit.GameMode.CREATIVE)
@@ -140,6 +149,28 @@ final class Mesa6 implements Listener {
         if (!esMesa(e.getClickedBlock()) || e.getPlayer().isSneaking() && e.getItem() != null) return;
         e.setCancelled(true);
         abrir(e.getPlayer());
+    }
+
+    // ================================================================= crafteo de la mesa (4 mesas + hierro)
+
+    private final NamespacedKey rMesa = new NamespacedKey("tod4aether", "mesa_6x6");
+
+    void receta() {
+        Bukkit.removeRecipe(rMesa);
+        org.bukkit.inventory.ShapedRecipe r = new org.bukkit.inventory.ShapedRecipe(rMesa, new ItemStack(Material.CRAFTING_TABLE));
+        r.shape("MLM", "LBL", "MLM");
+        r.setIngredient('M', Material.CRAFTING_TABLE);
+        r.setIngredient('L', Material.IRON_INGOT);
+        r.setIngredient('B', Material.IRON_BLOCK);
+        Bukkit.addRecipe(r);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH)
+    public void craftea(org.bukkit.event.inventory.PrepareItemCraftEvent e) {
+        if (!(e.getRecipe() instanceof org.bukkit.Keyed k) || !k.getKey().equals(rMesa)) return;
+        // las 4 mesas tienen que ser comunes (no otra mesa 6x6)
+        for (ItemStack it : e.getInventory().getMatrix()) if (esItemMesa(it)) { e.getInventory().setResult(null); return; }
+        e.getInventory().setResult(y.getBoolean("mesa.crafteo", true) ? item() : null);
     }
 
     // ================================================================= la grilla
