@@ -318,6 +318,10 @@ every second:
 
 function gulagEnZona(p: player):
     if gamemode of {_p} is not spectator:
+        # algo le cambio el modo (Multiverse, otro plugin): vuelve a espectador, al medio de la zona
+        if {gulag::espgm::%uuid of {_p}%} is set:
+            teleport {_p} to {gulag::esp::centro}
+            set gamemode of {_p} to spectator
         stop
     set {_l} to location of {_p}
     if "%world of {_l}%" is {gulag::esp::mundo}:
@@ -452,9 +456,9 @@ function gulagEscapar(p: player, i: number):
     set {_u} to uuid of {_p}
     gulagSacarLlave({_p})
     set {gulag::salvado::%{_u}%} to true
-    set gamemode of {_p} to spectator
     if {gulag::esp::centro} is set:
         teleport {_p} to {gulag::esp::centro}
+    set gamemode of {_p} to spectator
     send title "&a&l¡SOBREVIVISTE!" with subtitle "&7Escapaste del Gulag" to {_p} for 3 seconds
     play sound "ui.toast.challenge_complete" with volume 1 with pitch 1 to {_p}
     broadcast "&a✔ &f%name of {_p}% &asobrevivió al Gulag."
@@ -560,20 +564,28 @@ function gulagAlSpawn(p: player):
     set {_r} to {gulag::spawnradio} ? 1
     add (random number between -1 * {_r} and {_r}) to x-coordinate of {_l}
     add (random number between -1 * {_r} and {_r}) to z-coordinate of {_l}
-    set gamemode of {_p} to adventure
     teleport {_p} to {_l}
+    set gamemode of {_p} to adventure
     heal {_p}
     set {_p}'s food level to 20
     set {gulag::preparado::%{_u}%} to true
+    wait 5 ticks
+    if {_p} is online:
+        set gamemode of {_p} to adventure
 
 function gulagAEspectador(p: player):
     set {_u} to uuid of {_p}
     if {gulag::espgm::%{_u}%} is not set:
         set {gulag::esploc::%{_u}%} to location of {_p}
         set {gulag::espgm::%{_u}%} to "%gamemode of {_p}%"
-    set gamemode of {_p} to spectator
+    # primero se lo lleva y despues el modo: al cambiar de mundo, Multiverse le pone el modo de ese mundo
+    # (por eso caian: quedaban en supervivencia en la zona de espectadores)
     if {gulag::esp::centro} is set:
         teleport {_p} to {gulag::esp::centro}
+    set gamemode of {_p} to spectator
+    wait 5 ticks
+    if {_p} is online:
+        set gamemode of {_p} to spectator
 
 function gulagDevolver(p: player):
     set {_u} to uuid of {_p}
