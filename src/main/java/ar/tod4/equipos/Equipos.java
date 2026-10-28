@@ -42,7 +42,8 @@ import net.kyori.adventure.text.format.TextDecoration;
  * Equipos:
  *  - Los admins los crean (/tod4:equipo crear <tag> <color> <nombre completo>) y eligen al lider. Menu: /tod4:equipo
  *  - Tab y arriba de la cabeza: "[GOC] [L] Rusbik" en el color del equipo (lo arma la Sidebar con prefijo()).
- *  - /eq: chat de equipo (alterna) o /eq <mensaje>. El lider invita (se acepta desde el chat), pasa el liderazgo y expulsa.
+ *  - /eq: chat de equipo (alterna) o /eq <mensaje>. El lider invita (se acepta desde el chat) y pasa el liderazgo.
+ *    Nadie sale ni es expulsado de un equipo: solo un admin lo saca (/tod4:equipo quitar).
  *  - No toca nada de PvP.
  */
 public final class Equipos implements Listener {
@@ -186,9 +187,6 @@ public final class Equipos implements Listener {
         if (n > 0) s += " &7- &4+" + Math.round(n * porCaido()) + "% ☠";
         return s;
     }
-
-    /** true = nadie puede salir ni ser expulsado de su equipo (solo un admin con /tod4:equipo quitar). */
-    private boolean bloqueado() { return pl.getConfig().getBoolean("equipos.sin_salir", true); }
 
     /** % de dano de mas por cada companero muerto (d8.equipo). */
     public double porCaido() { return pl.getConfig().getDouble("cambios.equipo_caido_porcentaje", 5); }
@@ -364,21 +362,6 @@ public final class Equipos implements Listener {
                 p.sendMessage(Component.text("Le pasaste el liderazgo a " + nombreDe(u) + ".", e.color));
                 hacerLider(e, u);
             }
-            case "expulsar" -> {
-                // nadie se va de un equipo (si no, se iban para no cargar con el dano de los companeros muertos); solo un admin
-                if (bloqueado()) { rojo(p, "Ya no se puede expulsar a nadie del equipo."); return; }
-                if (!p.getUniqueId().equals(e.lider)) { rojo(p, "Solo el líder del equipo puede hacer eso."); return; }
-                UUID u = a.length > 1 ? miembro(e, a[1]) : null;
-                if (u == null || u.equals(p.getUniqueId())) { rojo(p, "Ese jugador no es de tu equipo."); return; }
-                quitar(e, u, true);
-                Player t = Bukkit.getPlayer(u);
-                if (t != null) t.sendMessage(Component.text("El líder te expulsó del equipo.", e.color));
-            }
-            case "salir" -> {
-                if (bloqueado()) { rojo(p, "Ya no se puede salir del equipo."); return; }
-                quitar(e, p.getUniqueId(), true);
-                p.sendMessage(Component.text("Ya no formas parte del equipo ", NamedTextColor.WHITE).append(tagC(e)).append(Component.text(".", NamedTextColor.WHITE)));
-            }
             case "miembros" -> {
                 p.sendMessage(tagNombre(e));
                 for (UUID u : e.miembros) {
@@ -393,13 +376,9 @@ public final class Equipos implements Listener {
     private void ayuda(Player p) {
         p.sendMessage(Component.text("/eq", NamedTextColor.YELLOW).append(Component.text(" - cambia entre el chat de equipo y el normal", NamedTextColor.WHITE)));
         p.sendMessage(Component.text("/eq <mensaje>", NamedTextColor.YELLOW).append(Component.text(" - manda un mensaje a tu equipo", NamedTextColor.WHITE)));
-        if (bloqueado()) {
-            p.sendMessage(Component.text("/eq miembros", NamedTextColor.YELLOW).append(Component.text(" - tu equipo", NamedTextColor.WHITE)));
-            p.sendMessage(Component.text("/eq invitar | lider <jugador>", NamedTextColor.YELLOW).append(Component.text(" - solo el líder", NamedTextColor.WHITE)));
-            return;
-        }
-        p.sendMessage(Component.text("/eq miembros | salir", NamedTextColor.YELLOW).append(Component.text(" - tu equipo / irte", NamedTextColor.WHITE)));
-        p.sendMessage(Component.text("/eq invitar | lider | expulsar <jugador>", NamedTextColor.YELLOW).append(Component.text(" - solo el líder", NamedTextColor.WHITE)));
+        // ya no existen /eq salir ni /eq expulsar: de un equipo solo saca un admin (/tod4:equipo quitar)
+        p.sendMessage(Component.text("/eq miembros", NamedTextColor.YELLOW).append(Component.text(" - tu equipo", NamedTextColor.WHITE)));
+        p.sendMessage(Component.text("/eq invitar | lider <jugador>", NamedTextColor.YELLOW).append(Component.text(" - solo el líder", NamedTextColor.WHITE)));
     }
 
     private UUID miembro(Equipo e, String nombre) {
@@ -453,11 +432,11 @@ public final class Equipos implements Listener {
 
     public List<String> tabEq(Player p, String[] a) {
         List<String> out = new ArrayList<>();
-        if (a.length == 1) out.addAll(bloqueado() ? List.of("invitar", "lider", "miembros", "ayuda") : List.of("invitar", "lider", "expulsar", "miembros", "salir", "ayuda"));
+        if (a.length == 1) out.addAll(List.of("invitar", "lider", "miembros", "ayuda"));
         else if (a.length == 2) {
             Equipo e = de.get(p.getUniqueId());
             if (a[0].equalsIgnoreCase("invitar")) for (Player o : Bukkit.getOnlinePlayers()) { if (!de.containsKey(o.getUniqueId())) out.add(o.getName()); }
-            else if (e != null && (a[0].equalsIgnoreCase("lider") || a[0].equalsIgnoreCase("expulsar")))
+            else if (e != null && (a[0].equalsIgnoreCase("lider")))
                 for (UUID u : e.miembros) if (!u.equals(p.getUniqueId())) out.add(nombreDe(u));
         }
         return out;

@@ -92,6 +92,11 @@ public final class Revivir implements Listener {
     /** Los que murieron en el Gulag: no tienen cabeza en el altar, solo se reviven con /tod4:revivir. */
     static final String GULAG = "muertos_gulag";
 
+    /** /tod4:altar bloquear: nadie puede revivir en el altar (los admins con /tod4:revivir si). */
+    public boolean bloqueado() { return st.y().getBoolean("bloqueado", false); }
+
+    private static final String MSG_BLOQUEADO = "No puedes revivir jugadores ahora mismo. Inténtalo después del Gulag.";
+
     // ================================================================= almas
 
     public boolean tieneAlma(String n) { return st.y().getBoolean("almas." + n, true); }
@@ -290,6 +295,7 @@ public final class Revivir implements Listener {
         // altar
         if (esAltar(b.getLocation(), 0.5)) {
             e.setCancelled(true);
+            if (bloqueado()) { Style.err(p, MSG_BLOQUEADO); return; }
             String modo = modo(p.getInventory().getItemInMainHand());
             if (modo.equals("ninguno")) { Style.err(p, "Debes tener en la mano el ítem de resurrección."); return; }
             if (modo.equals("normal") && !tieneAlma(p.getName())) { Style.err(p, "No tienes alma para revivir."); return; }
@@ -339,6 +345,7 @@ public final class Revivir implements Listener {
         Menu m = new Menu(3, "&8Confirmar Resurrección");
         m.set(11, Items.of(Material.NETHER_STAR, "&a&lSÍ, CONFIRMAR RITUAL", "", "&7Invocará a &e" + n + "&7 de vuelta al mundo."), e -> {
             boolean prem = modo.equals("premium");
+            if (bloqueado()) { p.closeInventory(); Style.err(p, MSG_BLOQUEADO); return; }
             if (!st.y().getStringList("muertos").contains(n) || !modo(p.getInventory().getItemInMainHand()).equals(modo)) { p.closeInventory(); return; }
             if (!prem && !tieneAlma(p.getName())) { p.closeInventory(); return; }
             ItemStack mano = p.getInventory().getItemInMainHand();
@@ -424,6 +431,12 @@ public final class Revivir implements Listener {
                 if (!gl.contains(g)) gl.add(g);
                 st.set(GULAG, gl);
                 Style.ok(p, "&e" + g + " &aquedó como muerto en el Gulag: ya no sale su cabeza para revivir.");
+                break;
+            case "bloquear":
+            case "desbloquear":
+                st.set("bloqueado", a[0].equalsIgnoreCase("bloquear"));
+                if (bloqueado()) Style.ok(p, "Revivir &cbloqueado&a: en el altar dice \"" + MSG_BLOQUEADO + "\".");
+                else Style.ok(p, "Revivir &adesbloqueado&a: el altar vuelve a funcionar.");
                 break;
             case "limpiar":
                 st.set("muertos", new ArrayList<String>());

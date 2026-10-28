@@ -627,6 +627,11 @@ final class MecanicasNuevas implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void totem(EntityResurrectEvent e) {
         if (!cb.on("d14.totem") || !(e.getEntity() instanceof Player p)) return;
+        // los totems de /tod4:totems no dan ceguera
+        ItemStack usado = null;
+        EquipmentSlot mano = e.getHand();
+        if (mano != null) usado = p.getInventory().getItem(mano);
+        if (Totems.libre(pl, usado)) return;
         int t = (int) (c().getDouble("cambios.totem_ceguera_seg", 2) * 20);
         // un tick despues: el totem borra los efectos al salvarte
         Bukkit.getScheduler().runTask(pl, () -> {

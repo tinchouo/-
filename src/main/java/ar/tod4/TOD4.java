@@ -94,7 +94,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     }
 
     private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video",
-            "equipo", "creeper", "clones");
+            "equipo", "creeper", "clones", "totems");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
     private void soloConPrefijo() {
@@ -204,6 +204,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 return true;
             case "avisos": if (p != null) avisos.abrirPanel(p); return true;
             case "altar": if (p != null) revivir.cmdAltar(p, a); return true;
+            case "totems": if (p != null) ar.tod4.cambios.Totems.abrir(this, p); return true;
             case "alma": revivir.cmdAlma(s, a); return true;
             case "revivir": revivir.cmdRevivir(s, a); return true;
             case "panel": if (p != null) misionesMenu.panel(p); return true;
@@ -263,7 +264,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&e/tod4:momentostruco &8- &7Momentos Truco");
             Style.raw(s, "&e/tod4:cambios [día] &8- &7cambios de dificultad");
             Style.raw(s, "&e/tod4:avisos &8- &7mensajes, bienvenidas y ruleta");
-            Style.raw(s, "&e/tod4:altar [agregar|quitar|limpiar] &8- &7altar de revivir");
+            Style.raw(s, "&e/tod4:altar [agregar|quitar|gulag|bloquear|desbloquear|limpiar] &8- &7altar de revivir");
+            Style.raw(s, "&e/tod4:totems &8- &7tótems que no dan ceguera (día 14)");
             Style.raw(s, "&e/tod4:alma <give|remove> <jugador> &8- &7dar o quitar un alma");
             Style.raw(s, "&e/tod4:revivir <jugador> &8- &7revivir a alguien sin ritual");
             Style.raw(s, "&e/tod4:palo &8- &7Palo de Retorno");
@@ -337,7 +339,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             switch (c) {
                 case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
-                case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "limpiar")); break;
+                case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
                 case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); out.addAll(revivir.store().y().getStringList("muertos_gulag")); break;
                 case "creeper": out.addAll(creepers.tipos()); break;

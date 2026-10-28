@@ -176,8 +176,6 @@ tab:
 
 equipos:
   simbolo_lider: "[L]"
-  # true = nadie puede salir ni ser expulsado de su equipo (un admin si: /tod4:equipo quitar)
-  sin_salir: true
 
 chat:
   # cuando un jugador escribe: "Nombre: mensaje" (el nombre y los dos puntos en este color, el mensaje en blanco)

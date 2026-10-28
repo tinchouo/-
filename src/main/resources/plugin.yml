@@ -26,6 +26,8 @@ commands:
     description: Mensajes, bienvenidas y ruleta
   altar:
     description: Configuracion del altar de revivir
+  totems:
+    description: Totems que no dan ceguera (dia 14)
   alma:
     description: Dar o quitar un alma
   revivir:
