@@ -89,6 +89,9 @@ public final class Revivir implements Listener {
 
     public Store store() { return st; }
 
+    /** Los que murieron en el Gulag: no tienen cabeza en el altar, solo se reviven con /tod4:revivir. */
+    static final String GULAG = "muertos_gulag";
+
     // ================================================================= almas
 
     public boolean tieneAlma(String n) { return st.y().getBoolean("almas." + n, true); }
@@ -358,6 +361,8 @@ public final class Revivir implements Listener {
         List<String> muertos = st.y().getStringList("muertos");
         muertos.remove(n);
         st.set("muertos", muertos);
+        List<String> gul = st.y().getStringList(GULAG);
+        if (gul.remove(n)) st.set(GULAG, gul);
         st.set("motivo." + n, null);
         st.set("dia." + n, null);
         Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "pardon " + n);
@@ -381,8 +386,10 @@ public final class Revivir implements Listener {
     public void cmdRevivir(org.bukkit.command.CommandSender s, String[] a) {
         if (a.length < 1) { Style.info(s, "Uso: &e/tod4:revivir <jugador>"); return; }
         String n = a[0];
+        // tambien los que murieron en el Gulag (esos solo se reviven con este comando)
         for (String m : st.y().getStringList("muertos")) if (m.equalsIgnoreCase(n)) n = m;
-        if (!st.y().getStringList("muertos").contains(n)) { Style.err(s, "El jugador &e" + n + " &cno está muerto."); return; }
+        for (String m : st.y().getStringList(GULAG)) if (m.equalsIgnoreCase(n)) n = m;
+        if (!st.y().getStringList("muertos").contains(n) && !st.y().getStringList(GULAG).contains(n)) { Style.err(s, "El jugador &e" + n + " &cno está muerto."); return; }
         revivir(s.getName(), n);
     }
 
@@ -404,6 +411,19 @@ public final class Revivir implements Listener {
                 muertos.remove(a[1]);
                 st.set("muertos", muertos);
                 Style.ok(p, "Quitaste a &e" + a[1] + " &ade la lista.");
+                break;
+            case "gulag":
+                // pasa a alguien de la lista de caidos a la del Gulag (sin cabeza en el altar; solo con /tod4:revivir)
+                if (a.length < 2) { Style.info(p, "Uso: &e/tod4:altar gulag <jugador>"); return; }
+                String g = null;
+                for (String m : muertos) if (m.equalsIgnoreCase(a[1])) g = m;
+                if (g == null) { Style.err(p, a[1] + " no está en la lista de caídos."); return; }
+                muertos.remove(g);
+                st.set("muertos", muertos);
+                List<String> gl = st.y().getStringList(GULAG);
+                if (!gl.contains(g)) gl.add(g);
+                st.set(GULAG, gl);
+                Style.ok(p, "&e" + g + " &aquedó como muerto en el Gulag: ya no sale su cabeza para revivir.");
                 break;
             case "limpiar":
                 st.set("muertos", new ArrayList<String>());
@@ -506,10 +526,12 @@ public final class Revivir implements Listener {
                 net.kyori.adventure.text.format.NamedTextColor.RED)));
         net.kyori.adventure.text.Component barraMsg = colorear(vanilla, net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN,
                 net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
-        List<String> muertos = st.y().getStringList("muertos");
+        // los que mueren en el Gulag no se pueden revivir en el altar (no sale su cabeza); solo un admin con /tod4:revivir
+        boolean gulag = ar.tod4.hook.Gulag.muereEnGulag(v.getUniqueId());
+        List<String> muertos = st.y().getStringList(gulag ? GULAG : "muertos");
         if (!muertos.contains(n)) {
             muertos.add(n);
-            st.set("muertos", muertos);
+            st.set(gulag ? GULAG : "muertos", muertos);
             st.set("dia." + n, pl.dia());
         }
         cinematicaPendiente.put(v.getUniqueId(), true);
@@ -532,7 +554,7 @@ public final class Revivir implements Listener {
         Bukkit.getScheduler().runTaskLater(pl, () -> p.setGameMode(GameMode.SPECTATOR), 1L);
         Bukkit.getScheduler().runTaskLater(pl, () -> {
             if (st.y().getBoolean("modo_prueba", false) || !p.isOnline()) return;
-            if (!st.y().getStringList("muertos").contains(p.getName())) return;
+            if (!st.y().getStringList("muertos").contains(p.getName()) && !st.y().getStringList(GULAG).contains(p.getName())) return;
             if (p.isOp()) return;   // los admins no se banean al morir
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), "ban " + p.getName() + " Has muerto y has sido baneado automáticamente.");
             if (p.isOnline()) p.kick(Txt.c("&c&l¡HAS MUERTO!\n\n&7Has sido baneado automáticamente."));

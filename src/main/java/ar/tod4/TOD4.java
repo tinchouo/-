@@ -330,9 +330,9 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             switch (c) {
                 case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
-                case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
+                case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
-                case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); break;
+                case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); out.addAll(revivir.store().y().getStringList("muertos_gulag")); break;
                 case "creeper": out.addAll(creepers.tipos()); break;
                 case "completar":
                     out.add("todos");
