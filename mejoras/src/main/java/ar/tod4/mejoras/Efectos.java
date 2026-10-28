@@ -188,6 +188,12 @@ final class Efectos implements Listener {
         Estado st = estados.get(p.getUniqueId());
         if (st == null || st.planear <= 0) return;
         if (p.isOnGround() || p.isFlying() || p.isGliding() || p.isInWater() || p.isClimbing() || p.isInsideVehicle()) return;
+        // solo bajando o en lo mas alto del salto, despues de un ratito en el aire y lejos del piso:
+        // si no, al saltar apenas tocabas el piso se prendia con el salto normal y subias 4 o 5 bloques
+        if (aire.getOrDefault(p.getUniqueId(), 0) < AIRE_MIN) return;
+        org.bukkit.util.Vector ult = paso.get(p.getUniqueId());
+        if (ult != null && ult.getY() > SUBIENDO_MAX) return;
+        if (pisoCerca(p)) return;
         if (p.getGameMode() == GameMode.SPECTATOR || !planeado.add(p.getUniqueId())) return;   // una vez por salto
         int ticks = (int) (st.planear * 20);
         p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, ticks, 0, false, false, true));
@@ -207,16 +213,45 @@ final class Efectos implements Listener {
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PHANTOM_FLAP, SoundCategory.PLAYERS, 0.6f, 1.4f);
     }
 
+    /** Ticks en el aire que hacen falta para planear (un cuarto de segundo). */
+    private static final int AIRE_MIN = 5;
+    /** Si sube mas que esto por tick, esta en la subida del salto (no planea; y si estaba planeando, se corta). */
+    private static final double SUBIENDO_MAX = 0.05;
+    private final Map<UUID, Integer> aire = new HashMap<>();
+
+    /** Hay piso solido a menos de 1,5 bloques debajo de los pies (en cualquier esquina). */
+    private static boolean pisoCerca(Player p) {
+        org.bukkit.util.BoundingBox bb = p.getBoundingBox();
+        org.bukkit.World w = p.getWorld();
+        double[] xs = {bb.getMinX() + 0.01, bb.getMaxX() - 0.01}, zs = {bb.getMinZ() + 0.01, bb.getMaxZ() - 0.01};
+        for (double dy = 0.01; dy <= 1.5; dy += 0.5)
+            for (double x : xs) for (double z : zs) {
+                org.bukkit.block.Block b = w.getBlockAt((int) Math.floor(x), (int) Math.floor(bb.getMinY() - dy), (int) Math.floor(z));
+                if (!b.isPassable()) return true;
+            }
+        return false;
+    }
+
     /** Cada tick: cuenta lo que le queda flotando a cada uno; al tocar el piso o el agua, se corta. */
     private void flotar() {
+        // cuanto lleva cada uno en el aire (solo los que tienen la pluma)
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            Estado st = estados.get(p.getUniqueId());
+            if (st == null || st.planear <= 0) { aire.remove(p.getUniqueId()); continue; }
+            if (p.isOnGround() || p.isInWater() || p.isFlying() || p.isClimbing() || p.isInsideVehicle()) aire.put(p.getUniqueId(), 0);
+            else aire.merge(p.getUniqueId(), 1, Integer::sum);
+        }
         if (flotando.isEmpty()) return;
         var it = flotando.entrySet().iterator();
         while (it.hasNext()) {
             var en = it.next();
             Player p = Bukkit.getPlayer(en.getKey());
             int quedan = en.getValue() - 1;
+            // freno de seguridad: si mientras planea esta subiendo (salto, carga de viento...), se corta y vuelve la gravedad normal
+            org.bukkit.util.Vector ult = p == null ? null : paso.get(p.getUniqueId());
+            boolean sube = ult != null && ult.getY() > SUBIENDO_MAX * 2;
             boolean corta = p == null || quedan <= 0 || p.isDead() || p.isOnGround() || p.isInWater() || p.isFlying()
-                    || p.isGliding() || p.isClimbing() || p.isInsideVehicle();
+                    || p.isGliding() || p.isClimbing() || p.isInsideVehicle() || sube;
             if (corta) {
                 it.remove();
                 if (p != null) {
@@ -244,7 +279,7 @@ final class Efectos implements Listener {
     @EventHandler
     public void sale(PlayerQuitEvent e) {
         UUID u = e.getPlayer().getUniqueId();
-        estados.remove(u); dadas.remove(u); salto.remove(u); planeado.remove(u); paso.remove(u); sonido.remove(u);
+        estados.remove(u); dadas.remove(u); salto.remove(u); planeado.remove(u); paso.remove(u); sonido.remove(u); aire.remove(u);
         if (brillo != null) brillo.salio(e.getPlayer());
         if (flotando.remove(u) != null) sinFlotar(e.getPlayer());
     }
