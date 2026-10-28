@@ -33,6 +33,11 @@ final class Sueno implements Listener {
         this.pl = pl;
         this.cb = cb;
         Bukkit.getPluginManager().registerEvents(this, pl);
+        // la noche es desde que se puede dormir (12542) hasta que se hace de dia (23460); antes decia 13000 a 23000
+        boolean cambio = false;
+        if (pl.getConfig().getLong("noches.desde", 12542) == 13000) { pl.getConfig().set("noches.desde", 12542); cambio = true; }
+        if (pl.getConfig().getLong("noches.hasta", 23460) == 23000) { pl.getConfig().set("noches.hasta", 23460); cambio = true; }
+        if (cambio) pl.saveConfig();
         Bukkit.getScheduler().runTaskTimer(pl, this::tick, 20L, 20L);
         Bukkit.getScheduler().runTaskTimer(pl, this::noche, 1L, 1L);
     }
@@ -52,8 +57,7 @@ final class Sueno implements Listener {
     private void noche() {
         World w = mundos().get(0);
         long t = Math.floorMod(w.getTime(), 24000L);
-        long desde = pl.getConfig().getLong("noches.desde", 13000), hasta = pl.getConfig().getLong("noches.hasta", 23000);
-        boolean deNoche = t >= desde && t < hasta;
+        boolean deNoche = deNoche(pl, t);
         if (!cb.on("d6.noches") || !deNoche) {
             if (pausado()) pausar(w, false);
             resto = 0;
@@ -71,6 +75,12 @@ final class Sueno implements Listener {
             resto -= n;
             w.setFullTime(w.getFullTime() + n);
         }
+    }
+
+    /** Si esa hora del juego es de noche (desde que se puede dormir hasta que amanece). */
+    static boolean deNoche(TOD4 pl, long t) {
+        t = Math.floorMod(t, 24000L);
+        return t >= pl.getConfig().getLong("noches.desde", 12542) && t < pl.getConfig().getLong("noches.hasta", 23460);
     }
 
     /** Al apagar el plugin el ciclo vuelve a la normalidad. */

@@ -161,7 +161,7 @@ public final class Aether implements Listener {
         return false;
     }
 
-    private Location spawn() {
+    Location spawn() {
         World w = mundo();
         if (w == null || e.spawn == null) return null;
         return new Location(w, e.spawn[0], e.spawn[1], e.spawn[2]);

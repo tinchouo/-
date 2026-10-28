@@ -44,6 +44,7 @@ import ar.tod4.aether.util.Style;
 final class Mobs implements Listener {
 
     private static final String TAG = "aeth_mob";
+    private static final int VERSION = 2;
 
     private final TOD4Aether pl;
     private final Aether ae;
@@ -67,6 +68,16 @@ final class Mobs implements Listener {
         File f = new File(pl.getDataFolder(), "mobs.yml");
         if (!f.exists()) pl.saveResource("mobs.yml", false);
         y = YamlConfiguration.loadConfiguration(f);
+        if (y.getInt("version", 1) < VERSION) {
+            // mobs.yml viejo: se guarda como mobs_viejo.yml y se pone el nuevo (cambiaron los mobs de cada bioma)
+            File viejo = new File(pl.getDataFolder(), "mobs_viejo.yml");
+            if (viejo.exists()) viejo.delete();
+            if (f.renameTo(viejo)) {
+                pl.saveResource("mobs.yml", true);
+                pl.getLogger().info("[Mobs] mobs.yml actualizado (el anterior quedo en mobs_viejo.yml)");
+                y = YamlConfiguration.loadConfiguration(f);
+            }
+        }
         faltan.clear();
     }
 
@@ -75,6 +86,16 @@ final class Mobs implements Listener {
     private World w0() { return ae.mundo(); }
 
     private String mm(String k) { return y.getString("mobs." + k, k); }
+
+    /** Cerca de la isla del spawn del Aether no aparece nada (zona_spawn bloques, sin contar la altura). */
+    private boolean enSpawn(Location at) {
+        double r = y.getDouble("zona_spawn", 100);
+        if (r <= 0) return false;
+        Location sp = ae.spawn();
+        if (sp == null || sp.getWorld() != at.getWorld()) return false;
+        double dx = at.getX() - sp.getX(), dz = at.getZ() - sp.getZ();
+        return dx * dx + dz * dz < r * r;
+    }
 
     // ================================================================= cada segundo
 
@@ -132,9 +153,13 @@ final class Mobs implements Listener {
                 if (t != null && ahora - t < espera) continue;
                 int puso = 0;
                 boolean centro = y.getStringList("en_el_centro").contains(l.tipo);
-                for (int i = hay; i < quiere && total < maxTotal; i++) {
-                    Location at = centro ? centro(w, l) : lugar(w, l, mob, ps, dmin);
-                    if (at == null) continue;
+                // de a poco: en algunos lugares (la aldea) salen unos pocos por vez y cerca de un jugador, no todos de golpe
+                int porVez = y.getInt("de_a_poco." + l.tipo, 0);
+                double cercaDe = porVez > 0 ? y.getDouble("de_a_poco.distancia", 56) : 0;
+                int hasta = porVez > 0 ? Math.min(quiere, hay + porVez) : quiere;
+                for (int i = hay; i < hasta && total < maxTotal; i++) {
+                    Location at = centro ? centro(w, l, mob) : lugar(w, l, mob, ps, dmin, cercaDe);
+                    if (at == null || enSpawn(at)) continue;
                     if (aparecer(mob, at, tag) != null) { puso++; total++; }
                 }
                 if (puso > 0 && hay + puso >= quiere) lleno.put(key, ahora);
@@ -169,6 +194,7 @@ final class Mobs implements Listener {
                 boolean ok = true;
                 for (Player q : ps) if (q.getLocation().distanceSquared(at) < dmin * dmin) { ok = false; break; }
                 if (!ok) continue;
+                if (enSpawn(at)) continue;
                 String bio = Ext.bioma(at);
                 if (bio.equals("aether") || bio.isEmpty()) bio = "land";
                 ConfigurationSection t = y.getConfigurationSection("ambiente.biomas." + bio);
@@ -213,7 +239,8 @@ final class Mobs implements Listener {
     }
 
     /** En el medio del lugar (el coliseo): el piso de la arena, a unos bloques del centro (en el centro esta el cofre). */
-    private Location centro(World w, Lugar l) {
+    private Location centro(World w, Lugar l, String mob) {
+        int sube = y.getStringList("voladores").contains(mob) ? 3 : 0;
         if (!w.isChunkLoaded(l.x >> 4, l.z >> 4)) return null;
         for (int i = 0; i < 8; i++) {
             double a = rnd.nextDouble() * Math.PI * 2;
@@ -222,14 +249,14 @@ final class Mobs implements Listener {
             for (int yy = l.y + 4; yy >= l.y - 30; yy--) {
                 Block b = w.getBlockAt(x, yy, z);
                 if (b.getType().isSolid() && b.getRelative(0, 1, 0).isPassable() && b.getRelative(0, 2, 0).isPassable() && !b.getRelative(0, 1, 0).isLiquid())
-                    return new Location(w, x + 0.5, yy + 1, z + 0.5, rnd.nextFloat() * 360f, 0f);
+                    return new Location(w, x + 0.5, yy + 1 + sube, z + 0.5, rnd.nextFloat() * 360f, 0f);
             }
         }
         return null;
     }
 
     /** Un lugar en el piso del lugar, lejos de todos los jugadores (como un mob que aparece solo). */
-    private Location lugar(World w, Lugar l, String mob, List<Player> ps, double dmin) {
+    private Location lugar(World w, Lugar l, String mob, List<Player> ps, double dmin, double cercaDe) {
         boolean vuela = y.getStringList("voladores").contains(mob);
         double rr = Math.max(2, l.r * 0.75);
         for (int i = 0; i < 24; i++) {
@@ -243,7 +270,7 @@ final class Mobs implements Listener {
             if (!b.getRelative(0, 1, 0).isPassable() || !b.getRelative(0, 2, 0).isPassable()) continue;
             Location at = new Location(w, x + 0.5, top + 1 + (vuela ? 3 : 0), z + 0.5, rnd.nextFloat() * 360f, 0f);
             // lejos de todos (distancia_min) pero cerca de alguno (para que lo vea y no aparezca en la otra punta)
-            double dmax = y.getDouble("distancia_max_spawn", 0);
+            double dmax = cercaDe > 0 ? cercaDe : y.getDouble("distancia_max_spawn", 0);
             boolean ok = true, cerca = false;
             for (Player p : ps) {
                 double d2 = p.getLocation().distanceSquared(at);
@@ -275,22 +302,53 @@ final class Mobs implements Listener {
 
     // ================================================================= Phantom Angelical: en el cielo, en todo el Aether menos el hongo
 
+    /**
+     * Phantom Angelical: en el cielo cerca de cada jugador, segun el bioma donde esta el jugador
+     * (phantoms.biomas: chance por revision; los biomas que no estan, nada). En el molino salen mas lejos y repartidos.
+     */
     private void phantoms(World w, List<Player> ps, List<LivingEntity> hay, double dmin) {
         int max = y.getInt("phantoms.max_por_jugador", 2);
-        double chance = y.getDouble("phantoms.chance", 15);
-        if (max <= 0 || chance <= 0) return;
+        if (max <= 0) return;
         for (Player p : ps) {
-            if (!y.getBoolean("phantoms.en_hongo", false) && Ext.bioma(p.getLocation()).equals("mushroom_island")) continue;
+            String bio = Ext.bioma(p.getLocation());
+            if (bio.equals("aether") || bio.isEmpty()) bio = "land";
+            double chance = y.getDouble("phantoms.biomas." + bio, 0);
+            if (chance <= 0 || enSpawn(p.getLocation())) continue;
             int n = 0;
             for (LivingEntity le : hay) if (le.getLocation().distanceSquared(p.getLocation()) < 64 * 64) n++;
             if (n >= max || rnd.nextDouble() * 100 >= chance) continue;
-            double a = rnd.nextDouble() * Math.PI * 2, d = dmin + 4 + rnd.nextDouble() * 16;
+            boolean repartido = y.getStringList("phantoms.repartidos").contains(bio);
+            double a = rnd.nextDouble() * Math.PI * 2, d = repartido ? dmin + 15 + rnd.nextDouble() * 35 : dmin + 4 + rnd.nextDouble() * 16;
             Location at = p.getLocation().clone().add(Math.cos(a) * d, 12 + rnd.nextInt(10), Math.sin(a) * d);
-            if (at.getY() >= w.getMaxHeight() - 2 || !at.getBlock().isPassable()) continue;
-            if (!y.getBoolean("phantoms.en_hongo", false) && Ext.bioma(at).equals("mushroom_island")) continue;
+            if (at.getY() >= w.getMaxHeight() - 2 || !at.getBlock().isPassable() || enSpawn(at)) continue;
+            String bioAt = Ext.bioma(at);
+            if (bioAt.equals("aether") || bioAt.isEmpty()) bioAt = "land";
+            if (y.getDouble("phantoms.biomas." + bioAt, 0) <= 0) continue;
             Entity en = aparecer("phantom", at, "aeth_phantom");
             if (en instanceof LivingEntity le) hay.add(le);
         }
+    }
+
+    // ================================================================= los mobs del Aether no se pegan entre ellos
+
+    private static boolean delAether(Entity en) {
+        if (en == null) return false;
+        if (en instanceof Projectile pr && pr.getShooter() instanceof Entity sh) en = sh;
+        return en.getScoreboardTags().contains(TAG);
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void entreEllos(EntityDamageByEntityEvent e) {
+        if (!y.getBoolean("no_se_pegan", true)) return;
+        if (e.getEntity() instanceof Player) return;
+        if (delAether(e.getEntity()) && delAether(e.getDamager())) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void entreEllos(org.bukkit.event.entity.EntityTargetLivingEntityEvent e) {
+        if (!y.getBoolean("no_se_pegan", true)) return;
+        if (e.getTarget() == null || e.getTarget() instanceof Player) return;
+        if (delAether(e.getEntity()) && delAether(e.getTarget())) e.setCancelled(true);
     }
 
     /** En el Aether siempre es de dia: los mobs del Aether (los Phantom, zombies...) no se queman con el sol. */

@@ -288,6 +288,14 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 if (!cambios.ballestero(pj.getLocation(), t)) Style.err(s, "Uso: &e/tod4 ballestero <rojo|amarillo|negro>");
                 return true;
             }
+            case "minero": {
+                if (s instanceof Player pj) cambios.minero(pj.getLocation());
+                return true;
+            }
+            case "esqueleto": {
+                if (s instanceof Player pj) cambios.esqueleto(pj.getLocation());
+                return true;
+            }
             case "recargar":
                 reloadConfig();
                 mesa.recargar();
@@ -320,7 +328,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

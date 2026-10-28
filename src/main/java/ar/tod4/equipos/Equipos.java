@@ -180,7 +180,30 @@ public final class Equipos implements Listener {
     public String sidebar(UUID u) {
         Equipo e = de.get(u);
         if (e == null) return null;
-        return codigo(e.color) + e.tag + (u.equals(e.lider) ? " " + simboloLider() : "");
+        String s = codigo(e.color) + e.tag;
+        // d8.equipo: cuanto dano de mas recibe por los companeros muertos (sin el simbolo de lider)
+        int n = pl.cambios() != null && pl.cambios().on("d8.equipo") ? caidos(u) : 0;
+        if (n > 0) s += " &7- &4+" + Math.round(n * porCaido()) + "% ☠";
+        return s;
+    }
+
+    /** % de dano de mas por cada companero muerto (d8.equipo). */
+    public double porCaido() { return pl.getConfig().getDouble("cambios.equipo_caido_porcentaje", 5); }
+
+    /** Cuantos companeros de equipo de u (sin contarlo) estan muertos en el limbo, sin revivir. */
+    public int caidos(UUID u) {
+        Equipo e = de.get(u);
+        if (e == null || pl.revivir() == null) return 0;
+        List<String> muertos = pl.revivir().store().y().getStringList("muertos");
+        if (muertos.isEmpty()) return 0;
+        int n = 0;
+        for (UUID m : e.miembros) {
+            if (m.equals(u)) continue;
+            String nom = nombreDe(m);
+            if (nom == null) continue;
+            for (String x : muertos) if (x.equalsIgnoreCase(nom)) { n++; break; }
+        }
+        return n;
     }
 
     /** Para ordenar el tab: los del mismo equipo quedan juntos. */

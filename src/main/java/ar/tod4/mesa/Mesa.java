@@ -392,7 +392,8 @@ public final class Mesa implements Listener {
             int cost = big ? lvl(i + 1) : vCost3;
             if (indestructible(cat, tiers[i], e.getEnchanter(), i)) {
                 Enchantment u = ench("unbreaking");
-                if (u != null) offers[i] = new EnchantmentOffer(u, maxLevel(u), cost);
+                // la pista de la mesa: "Irrompibilidad X" (un nivel que no existe) avisa que sale el Libro Indestructible
+                if (u != null) offers[i] = new EnchantmentOffer(u, Math.max(1, (int) num("libros.indestructible_pista_nivel", 10)), cost);
                 continue;
             }
             Map<Enchantment, Integer> res = roll(cat, tiers[i], item, rngFor(e.getEnchanter(), item, i));

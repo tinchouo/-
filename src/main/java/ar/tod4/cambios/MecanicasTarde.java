@@ -7,7 +7,6 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Creeper;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.PigZombie;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -30,11 +29,12 @@ import ar.tod4.TOD4;
 /**
  * Cambios de los dias 7 en adelante.
  *  - d7.creeper_muerte: al morir, 10% de que aparezca un creeper electrico con 1 de vida donde moriste. No rompe bloques.
- *  - d8.pigman: los Pigman (zombis piglin y brutos piglin) estan siempre enojados con los jugadores cercanos.
  *  - d8.pacificos: los animales te persiguen, te pegan y, si estan cerca, te ponen una TNT.
  *  - d9.zombies: los zombies comunes salen con armadura (2 a 4 partes, hierro o diamante, 50% Proteccion IV) y siempre con espada.
- *  - d10.ballesteros: algunos esqueletos salen con ballesta y cuero de color: rojo (flechas Poder V), amarillo (cohetes) o negro (TNT).
- *  - d12.nuclear_muerte: al morir, 1% de que aparezca un Creeper Nuclear (vida completa) donde moriste. No rompe bloques.
+ *  - d10.ballesteros: algunos esqueletos salen con cuero de color: rojo (esqueleto con ballesta, flechas Poder V),
+ *    amarillo (esqueleto de hielo con cohetes) o negro (esqueleto wither con arco de TNT). Se mueven y solo le tiran a su objetivo.
+ *  - d11.nuclear_muerte: al morir, 1% de que aparezca un Creeper Nuclear (vida completa) donde moriste. No rompe bloques.
+ *    Puede salir junto con el electrico.
  * No cuentan las muertes del gulag, de los cuyes ni de los OP.
  */
 final class MecanicasTarde implements Listener {
@@ -45,7 +45,6 @@ final class MecanicasTarde implements Listener {
         this.pl = pl;
         this.cb = cb;
         Bukkit.getPluginManager().registerEvents(this, pl);
-        Bukkit.getScheduler().runTaskTimer(pl, this::pigman, 40L, 40L);
         Bukkit.getScheduler().runTaskTimer(pl, this::pacificos, 20L, 10L);
         Bukkit.getScheduler().runTaskTimer(pl, this::ballesteros, 20L, 5L);
     }
@@ -58,17 +57,16 @@ final class MecanicasTarde implements Listener {
         if (p.isOp() || ar.tod4.hook.Cuyes.activo(p) || ar.tod4.hook.Gulag.muereEnGulag(p.getUniqueId())) return;
         Location l = p.getLocation().clone();
         ThreadLocalRandom r = ThreadLocalRandom.current();
-        boolean nuclear = cb.on("d12.nuclear_muerte") && r.nextDouble() < pl.getConfig().getDouble("cambios.nuclear_muerte_chance", 0.01);
-        boolean electrico = !nuclear && cb.on("d7.creeper_muerte") && r.nextDouble() < pl.getConfig().getDouble("cambios.creeper_muerte_chance", 0.10);
+        boolean nuclear = cb.on("d11.nuclear_muerte") && r.nextDouble() < pl.getConfig().getDouble("cambios.nuclear_muerte_chance", 0.01);
+        boolean electrico = cb.on("d7.creeper_muerte") && r.nextDouble() < pl.getConfig().getDouble("cambios.creeper_muerte_chance", 0.10);
         if (!nuclear && !electrico) return;
         // un instante despues, cuando ya esta la tumba
         Bukkit.getScheduler().runTaskLater(pl, () -> {
             if (nuclear) {
                 Entity n = pl.creepers() == null ? null : pl.creepers().aparecer("nuclear", l);
                 if (n != null) n.addScoreboardTag(TUMBA);
-                return;
             }
-            l.getWorld().spawn(l, Creeper.class, c -> {
+            if (electrico) l.getWorld().spawn(l, Creeper.class, c -> {
                 c.setPowered(true);
                 c.setHealth(Math.min(c.getHealth(), pl.getConfig().getDouble("cambios.creeper_muerte_vida", 1.0)));
                 c.addScoreboardTag(TUMBA);
@@ -205,7 +203,24 @@ final class MecanicasTarde implements Listener {
         double x = r.nextDouble() * tot;
         String tipo = "rojo";
         for (String t : TIPOS_BAL) { x -= Math.max(0, peso(t)); if (x < 0) { tipo = t; break; } }
-        armarBallestero((org.bukkit.entity.Skeleton) e.getEntity(), tipo);
+        Location l = e.getLocation();
+        // el negro es un esqueleto wither (mas alto): si no entra, sale rojo
+        if (tipo.equals("negro") && !l.getBlock().getRelative(0, 2, 0).isPassable()) tipo = "rojo";
+        if (tipo.equals("rojo")) { armarBallestero((org.bukkit.entity.AbstractSkeleton) e.getEntity(), tipo); return; }
+        // amarillo (esqueleto de hielo) y negro (esqueleto wither): en vez del esqueleto comun
+        e.setCancelled(true);
+        String t = tipo;
+        Bukkit.getScheduler().runTask(pl, () -> { if (l.isChunkLoaded()) crearBallestero(l, t); });
+    }
+
+    /** Crea un ballestero de ese tipo (tambien lo usa /tod4 ballestero para probar). */
+    org.bukkit.entity.AbstractSkeleton crearBallestero(Location l, String tipo) {
+        Class<? extends org.bukkit.entity.AbstractSkeleton> k = switch (tipo) {
+            case "amarillo" -> org.bukkit.entity.Stray.class;
+            case "negro" -> org.bukkit.entity.WitherSkeleton.class;
+            default -> org.bukkit.entity.Skeleton.class;
+        };
+        return l.getWorld().spawn(l, k, s -> armarBallestero(s, tipo));
     }
 
     private double peso(String t) {
@@ -215,13 +230,13 @@ final class MecanicasTarde implements Listener {
     private String conf(String t, String k, String def) { return pl.getConfig().getString("cambios.ballesteros." + t + "." + k, def); }
     private double conf(String t, String k, double def) { return pl.getConfig().getDouble("cambios.ballesteros." + t + "." + k, def); }
 
-    private static String tipoDe(org.bukkit.entity.Skeleton s) {
+    private static String tipoDe(org.bukkit.entity.AbstractSkeleton s) {
         for (String t : TIPOS_BAL) if (s.getScoreboardTags().contains("bal_" + t)) return t;
         return "rojo";
     }
 
     /** Arma un ballestero de ese tipo (tambien lo usa /tod4 ballestero para probar). */
-    void armarBallestero(org.bukkit.entity.Skeleton s, String tipo) {
+    void armarBallestero(org.bukkit.entity.AbstractSkeleton s, String tipo) {
         s.addScoreboardTag(BALLESTERO);
         s.addScoreboardTag("bal_" + tipo);
         s.setCanPickupItems(false);   // si no, levantan armadura del piso (por eso salian de oro)
@@ -252,7 +267,7 @@ final class MecanicasTarde implements Listener {
         if (!tipo.equals("negro")) sinCuerpoACuerpo(s);
     }
 
-    private void ponerArmadura(org.bukkit.entity.Skeleton s, String tipo) {
+    private void ponerArmadura(org.bukkit.entity.AbstractSkeleton s, String tipo) {
         EntityEquipment eq = s.getEquipment();
         if (eq == null) return;
         int hex = switch (tipo) { case "amarillo" -> 0xFED83D; case "negro" -> 0x1D1D21; default -> 0xB02E26; };
@@ -283,17 +298,17 @@ final class MecanicasTarde implements Listener {
         return ball;
     }
 
-    private void verBallesta(org.bukkit.entity.Skeleton s, String tipo, boolean lista) {
+    private void verBallesta(org.bukkit.entity.AbstractSkeleton s, String tipo, boolean lista) {
         EntityEquipment eq = s.getEquipment();
         if (eq == null || eq.getItemInMainHand().getType() != Material.CROSSBOW) return;
         eq.setItemInMainHand(cargada(eq.getItemInMainHand().clone(), tipo, lista));
     }
 
     /** Con ballesta, el esqueleto de Minecraft corre a pegarte: se le saca eso y dispara el plugin. */
-    private void sinCuerpoACuerpo(org.bukkit.entity.Skeleton s) {
+    private void sinCuerpoACuerpo(org.bukkit.entity.AbstractSkeleton s) {
         Bukkit.getScheduler().runTask(pl, () -> {
             try {
-                for (com.destroystokyo.paper.entity.ai.Goal<org.bukkit.entity.Skeleton> g : new java.util.ArrayList<>(Bukkit.getMobGoals().getAllGoals(s)))
+                for (com.destroystokyo.paper.entity.ai.Goal<org.bukkit.entity.AbstractSkeleton> g : new java.util.ArrayList<>(Bukkit.getMobGoals().getAllGoals(s)))
                     if (g.getKey().getNamespacedKey().getKey().toLowerCase().contains("melee")) Bukkit.getMobGoals().removeGoal(s, g);
             } catch (Throwable ignored) { }
         });
@@ -308,7 +323,7 @@ final class MecanicasTarde implements Listener {
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (p.getGameMode() != GameMode.SURVIVAL && p.getGameMode() != GameMode.ADVENTURE) continue;
             for (Entity en : p.getNearbyEntities(32, 16, 32)) {
-                if (!(en instanceof org.bukkit.entity.Skeleton s) || !s.getScoreboardTags().contains(BALLESTERO) || s.isDead()) continue;
+                if (!(en instanceof org.bukkit.entity.AbstractSkeleton s) || !s.getScoreboardTags().contains(BALLESTERO) || s.isDead()) continue;
                 String tipo = tipoDe(s);
                 if (tickB % 8 == 0) {
                     // si algo le cambio la armadura (o la levanto del piso), vuelve la suya
@@ -330,6 +345,7 @@ final class MecanicasTarde implements Listener {
                     }
                     continue;
                 }
+                moverse(s, p, d);
                 if (d > 28) continue;
                 double def = tipo.equals("amarillo") ? 2.5 : 1.5;
                 int cada = Math.max(2, (int) Math.round(conf(tipo, "cada_seg", def) * 4));   // la tarea corre cada 5 ticks
@@ -353,10 +369,38 @@ final class MecanicasTarde implements Listener {
         if (golpeHasta.size() > 300) golpeHasta.values().removeIf(v -> v < ahora);
     }
 
+    private final java.util.Map<java.util.UUID, Integer> lado = new java.util.HashMap<>();
+
+    /**
+     * Los de ballesta no se quedan quietos: se mantienen a distancia (ni muy cerca ni muy lejos)
+     * y se corren de costado, cambiando de lado cada tanto (el negro ya lo hace solo, con el arco).
+     */
+    private void moverse(org.bukkit.entity.AbstractSkeleton s, Player p, double d) {
+        if (tickB % 4 != 0) return;   // cada segundo elige a donde ir
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        int ld = lado.getOrDefault(s.getUniqueId(), r.nextBoolean() ? 1 : -1);
+        if (r.nextDouble() < 0.3) ld = -ld;
+        lado.put(s.getUniqueId(), ld);
+        if (lado.size() > 300) lado.keySet().removeIf(u -> Bukkit.getEntity(u) == null);
+        org.bukkit.util.Vector hacia = p.getLocation().toVector().subtract(s.getLocation().toVector()).setY(0);
+        if (hacia.lengthSquared() < 0.01) return;
+        hacia.normalize();
+        org.bukkit.util.Vector costado = new org.bukkit.util.Vector(-hacia.getZ(), 0, hacia.getX()).multiply(ld * (3 + r.nextDouble() * 3));
+        double quiere = conf(tipoDe(s), "distancia", 11.0);
+        org.bukkit.util.Vector acercar = hacia.clone().multiply(Math.max(-5, Math.min(5, d - quiere)));
+        Location dest = s.getLocation().add(costado).add(acercar);
+        // al piso
+        org.bukkit.block.Block b = dest.getBlock();
+        for (int i = 0; i < 6 && b.isPassable() && b.getY() > b.getWorld().getMinHeight(); i++) b = b.getRelative(0, -1, 0);
+        for (int i = 0; i < 6 && !b.getRelative(0, 1, 0).isPassable(); i++) b = b.getRelative(0, 1, 0);
+        if (b.getRelative(0, 1, 0).isLiquid()) return;
+        s.getPathfinder().moveTo(b.getLocation().add(0.5, 1, 0.5), 1.1);
+    }
+
     /** Negro: cada flecha que suelta con el arco sale como una TNT prendida, con la misma direccion. */
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void arcoNegro(org.bukkit.event.entity.EntityShootBowEvent e) {
-        if (!(e.getEntity() instanceof org.bukkit.entity.Skeleton s) || !s.getScoreboardTags().contains("bal_negro")) return;
+        if (!(e.getEntity() instanceof org.bukkit.entity.AbstractSkeleton s) || !s.getScoreboardTags().contains("bal_negro")) return;
         org.bukkit.util.Vector v = e.getProjectile().getVelocity().multiply(conf("negro", "fuerza", 0.9));
         double dist = s.getTarget() != null ? s.getTarget().getLocation().distance(s.getLocation()) : 12;
         int mecha = (int) Math.round(dist / Math.max(0.3, v.length()) + conf("negro", "mecha_extra_ticks", 10));
@@ -369,12 +413,12 @@ final class MecanicasTarde implements Listener {
         s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_TNT_PRIMED, 1f, 1f);
     }
 
-    private org.bukkit.util.Vector apuntar(org.bukkit.entity.Skeleton s, Player p) {
+    private org.bukkit.util.Vector apuntar(org.bukkit.entity.AbstractSkeleton s, Player p) {
         return p.getLocation().add(0, p.getHeight() * 0.6, 0).toVector().subtract(s.getEyeLocation().toVector());
     }
 
     /** Rojo: flecha con Poder V. */
-    private void flecha(org.bukkit.entity.Skeleton s, Player p) {
+    private void flecha(org.bukkit.entity.AbstractSkeleton s, Player p) {
         org.bukkit.util.Vector a = apuntar(s, p);
         a.setY(a.getY() + a.length() * 0.06);   // un poco mas alto por la caida de la flecha
         org.bukkit.entity.Arrow f = s.launchProjectile(org.bukkit.entity.Arrow.class, a.normalize().multiply(conf("rojo", "velocidad", 3.15)));
@@ -385,7 +429,7 @@ final class MecanicasTarde implements Listener {
     }
 
     /** Amarillo: cohete de fuegos artificiales en linea recta; explota al tocar algo (dano en area, mas estrellas = mas dano). */
-    private void cohete(org.bukkit.entity.Skeleton s, Player p) {
+    private void cohete(org.bukkit.entity.AbstractSkeleton s, Player p) {
         org.bukkit.util.Vector a = apuntar(s, p).normalize().multiply(conf("amarillo", "velocidad", 1.6));
         int estrellas = (int) Math.max(1, conf("amarillo", "estrellas", 3));
         Location o = s.getEyeLocation().add(a.clone().normalize().multiply(0.6));
@@ -410,24 +454,5 @@ final class MecanicasTarde implements Listener {
         });
         s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ITEM_CROSSBOW_SHOOT, 1f, 0.8f);
         s.getWorld().playSound(s.getLocation(), org.bukkit.Sound.ENTITY_FIREWORK_ROCKET_LAUNCH, 1f, 1f);
-    }
-
-
-    // ------------------------------------------------------------------ pigman enojados
-
-    private void pigman() {
-        if (!cb.on("d8.pigman")) return;
-        double r = pl.getConfig().getDouble("cambios.pigman_radio", 16);
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            if (p.getGameMode() != GameMode.SURVIVAL && p.getGameMode() != GameMode.ADVENTURE) continue;
-            if (p.isDead() || ar.tod4.hook.Cuyes.activo(p)) continue;
-            for (Entity en : p.getNearbyEntities(r, r / 2, r)) {
-                if (!(en instanceof PigZombie || en instanceof org.bukkit.entity.PiglinBrute) || !(en instanceof org.bukkit.entity.Mob m) || m.isDead()) continue;
-                if (m.getTarget() instanceof Player t && t.isValid() && !t.isDead() && t.getWorld() == m.getWorld()) continue;
-                if (!m.hasLineOfSight(p)) continue;
-                if (m instanceof PigZombie pz) { pz.setAngry(true); pz.setAnger(Math.max(pz.getAnger(), 400)); }
-                m.setTarget(p);
-            }
-        }
     }
 }

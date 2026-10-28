@@ -97,8 +97,47 @@ cambios:
       vida: 80                  # 40 corazones
       fuerza: 0.9               # la TNT sale con esta parte de la velocidad de la flecha
       mecha_extra_ticks: 10     # la TNT explota esto despues de llegar
-  pigman_radio: 16              # dia 8: los Pigman a esta distancia (y que te ven) te atacan
-  nuclear_muerte_chance: 0.01   # dia 12: chance de que al morir aparezca un Creeper Nuclear
+    # (los de ballesta se mantienen a "distancia: 11" de su objetivo y se corren de costado)
+  nuclear_muerte_chance: 0.01   # dia 11: chance de que al morir aparezca un Creeper Nuclear (aparte del electrico)
+  plantas_factor: 3             # dia 7: las plantas crecen esta cantidad de veces mas lento
+  xp_multiplicador: 2           # dia 7: experiencia de los hostiles que mata un jugador
+  wither:                       # dia 8: el Wither x2
+    vida: 2
+    dano: 2
+    velocidad: 1.5
+    efecto_duracion: 2          # el efecto Wither dura el doble...
+    efecto_niveles: 1           # ...y tiene un nivel mas
+    disparo_extra: 1.0          # chance de que tire otro craneo despues de cada uno (1 = siempre: dispara el doble)
+    explosion_craneo: 2
+    explosion_inicio: 2
+  equipo_caido_porcentaje: 5    # dia 8: % de dano de mas por cada companero de equipo muerto (sin tope)
+  esqueletos:                   # dia 9: esqueletos armados (la armadura usa las chances de zombies_*)
+    poder_min: 1
+    poder_max: 3
+    dano_nivel: 2               # flecha de dano instantaneo II
+    levitacion_nivel: 5
+    levitacion_seg: 3
+    ceguera_seg: 5
+    lentitud_nivel: 3
+    lentitud_seg: 5
+  minero:                       # dia 10: Zombie Minero
+    vida: 50
+    dano: 6                     # 3 corazones por golpe
+    techo_y: 40                 # nunca sale arriba de esta altura
+    referencia_y: -50           # a esta altura sale uno cada...
+    minutos_en_referencia: 5    # ...tantos minutos por jugador (mas abajo, mas seguido)
+    max_por_jugador: 2
+    vision: 40                  # te ve a traves de los bloques a esta distancia
+    tnt_distancia: 4
+    tnt_cada_seg: 8
+    tnt_mecha: 50
+    tnt_fuerza: 2               # la TNT normal x2 (fuerza y radio)
+    cava_cada_seg: 0.75
+    oro_chance: 0.25            # cada parte de armadura de oro, con Proteccion 1 a 4
+  hambre_multiplicador: 2       # dia 11
+  noches_mobs: 2                # dia 12: de noche el tope de mobs hostiles por este numero
+  noches_dano: 1.5              # dia 12: de noche los hostiles pegan esto
+  totem_ceguera_seg: 3          # dia 14
   infinidad_ballesta_mesa: 0.15 # dia 2: chance de que la mesa vanilla ponga Infinidad a la ballesta (no va con Reparacion)
   silverfish_chance: 0.033  # dia 2: chance por bloque picado debajo de Y 0 (0.033 = 1 de cada 30)
   silverfish_y_max: 0
@@ -113,11 +152,12 @@ sueno:
   porcentaje: 25
   minimo: 5
 
-# Cambio del dia 6 (d6.noches): la noche del Overworld dura "factor" veces mas (hora del juego: 13000 = anochece, 23000 = amanece)
+# Cambio del dia 6 (d6.noches): la noche del Overworld dura "factor" veces mas.
+# Hora del juego: 12542 = ya se puede dormir, 23460 = amanece. Esa es "la noche" (tambien para el dia 12, noches peligrosas)
 noches:
   factor: 3
-  desde: 13000
-  hasta: 23000
+  desde: 12542
+  hasta: 23460
 
 avisos:
   sonido_custom_1: "tod4:custom_1"

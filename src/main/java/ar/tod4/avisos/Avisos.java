@@ -53,14 +53,36 @@ public final class Avisos implements Listener {
 
     private static String textoDia(int dia) { return dia > 0 ? "Día " + dia : "General"; }
 
-    /** Ordena por dia (1, 2, 3...) y los generales al final. */
+    /** Ordena: primero los generales y despues por dia (1, 2, 3...). */
     private void ordenar(List<String> l) {
         l.sort((a, b) -> {
-            int da = msg(a).getInt("dia", 0), db = msg(b).getInt("dia", 0);
-            if (da <= 0) da = 999;
-            if (db <= 0) db = 999;
+            int da = Math.max(0, msg(a).getInt("dia", 0)), db = Math.max(0, msg(b).getInt("dia", 0));
             return da != db ? Integer.compare(da, db) : a.compareToIgnoreCase(b);
         });
+    }
+
+    /**
+     * Una sola vez (marca {@code clave}): borra los mensajes de los dias {@code desde} a {@code hasta} y los de la lista.
+     * Los generales (sin dia) no se tocan. Lo borrado queda guardado en "borrados" del avisos.yml por si hace falta.
+     */
+    public void borrarUnaVez(String clave, int desde, int hasta, List<String> tambien) {
+        if (st.y().getBoolean("limpiezas." + clave, false)) return;
+        int n = 0;
+        for (String id : ids("mensajes")) {
+            int dia = msg(id).getInt("dia", 0);
+            if (!(dia >= desde && dia <= hasta) && !tambien.contains(id)) continue;
+            st.y().createSection("borrados." + id, msg(id).getValues(false));
+            st.set("mensajes." + id, null);
+            n++;
+        }
+        st.set("limpiezas." + clave, true);
+        if (n > 0) pl.getLogger().info("Avisos: se borraron " + n + " mensajes de los dias " + desde + " a " + hasta + " (copia en avisos.yml, seccion borrados).");
+    }
+
+    /** Ruleta del mensaje: 0 no tiene, 1 normal, 2 el doble de rapida. */
+    private static int ruletaModo(ConfigurationSection m) {
+        if (!m.getBoolean("ruleta", true)) return 0;
+        return m.getBoolean("ruleta_x2", false) ? 2 : 1;
     }
 
     private static final Material[] DISCOS = {null, Material.MUSIC_DISC_PIGSTEP, Material.MUSIC_DISC_MELLOHI, Material.MUSIC_DISC_13,
@@ -238,11 +260,11 @@ public final class Avisos implements Listener {
             return;
         }
         ruletaGlobal = true;
-        ruleta(Bukkit.getOnlinePlayers(), pal, () -> {
+        ruleta(Bukkit.getOnlinePlayers(), pal, null, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) mostrar(id, p);
             ruletaGlobal = false;
             aDiscord(id);
-        });
+        }, ruletaModo(m) == 2);
     }
 
     /** Ruleta para la mision diaria u otros sistemas (sin mensaje guardado). */
@@ -264,8 +286,14 @@ public final class Avisos implements Listener {
      * Blanco y grises nunca aparecen mientras gira: solo entran en los ultimos cuadros, cuando esta por caer ahi.
      */
     public void ruleta(Collection<? extends Player> quienes, Paleta destino, Runnable alAnimar, Runnable despues) {
+        ruleta(quienes, destino, alAnimar, despues, false);
+    }
+
+    /** {@code rapida}: gira el doble de rapido (la mitad de espera entre cuadro y cuadro). */
+    public void ruleta(Collection<? extends Player> quienes, Paleta destino, Runnable alAnimar, Runnable despues, boolean rapida) {
         List<Player> ps = new ArrayList<>(quienes);
         int[] esperas = {1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 4, 4, 5, 5, 6, 7, 8, 10, 13, 17, 22, 28};
+        if (rapida) for (int i = 0; i < esperas.length; i++) esperas[i] = Math.max(1, (esperas[i] + 1) / 2);
         List<Paleta> vis = new ArrayList<>();
         for (Paleta p : Paleta.values()) if (p.visible) vis.add(p);
         int F = esperas.length;
@@ -317,7 +345,7 @@ public final class Avisos implements Listener {
             frame[0]++;
             Bukkit.getScheduler().runTaskLater(pl, paso[0], esperas[i]);
         };
-        Bukkit.getScheduler().runTaskLater(pl, paso[0], 20L);
+        Bukkit.getScheduler().runTaskLater(pl, paso[0], rapida ? 10L : 20L);
     }
 
     // ================================================================= bienvenida
@@ -428,7 +456,7 @@ public final class Avisos implements Listener {
         int dia = m.getInt("dia", 0);
         String ct = m.getString("titulo", "ninguno");
         ItemStack it = Items.of(iconoDia(dia), "&6&lMensaje: &f" + id, "", "&7• " + textoDia(dia), "&7• Paleta: " + pal.nombre + " &8(" + pal.uso + ")",
-                "&7• Ruleta: " + (m.getBoolean("ruleta", true) ? "&aSí" : "&cNo"), "&7• Título en chat: &f" + ct, "", "&e▶ Click para configurar / enviar");
+                "&7• Ruleta: " + switch (ruletaModo(m)) { case 0 -> "&cNo"; case 2 -> "&6Sí, x2"; default -> "&aSí"; }, "&7• Título en chat: &f" + ct, "", "&e▶ Click para configurar / enviar");
         if (dia > 0) it.setAmount(Math.min(64, dia));
         return it;
     }
@@ -493,17 +521,26 @@ public final class Avisos implements Listener {
                 "&e▶ Click: +1 | Click derecho: -1");
         if (dia > 0) diaIt.setAmount(Math.min(64, dia));
         m.set(20, diaIt, e -> { c.set("dia", Math.floorMod(dia + (e.isRightClick() ? -1 : 1), DIAS.length + 1)); st.touch(); editorMensaje(p, id); });
-        boolean rul = c.getBoolean("ruleta", true);
-        m.set(24, Items.of(rul ? Material.LIME_DYE : Material.RED_DYE, rul ? "&a&l6. Ruleta: SÍ" : "&c&l6. Ruleta: NO", "",
-                rul ? "&7Antes del mensaje gira la ruleta." : "&7Sale directo en el chat.", "", "&e▶ Click para cambiar"),
-                e -> { c.set("ruleta", !rul); st.touch(); editorMensaje(p, id); });
+        // tres estados: desactivada -> activada -> activada x2 (gira el doble de rapido) -> desactivada
+        int rm = ruletaModo(c);
+        m.set(24, Items.of(rm == 0 ? Material.RED_DYE : rm == 1 ? Material.LIME_DYE : Material.ORANGE_DYE,
+                rm == 0 ? "&c&l6. Ruleta: NO" : rm == 1 ? "&a&l6. Ruleta: SÍ" : "&6&l6. Ruleta: SÍ x2", "",
+                rm == 0 ? "&7Sale directo en el chat." : rm == 1 ? "&7Antes del mensaje gira la ruleta." : "&7Gira la ruleta el doble de rápido.",
+                "", "&7Desactivada → Activada → Activada x2", "&e▶ Click para cambiar"),
+                e -> {
+                    int nx = (rm + 1) % 3;
+                    c.set("ruleta", nx != 0);
+                    c.set("ruleta_x2", nx == 2);
+                    st.touch();
+                    editorMensaje(p, id);
+                });
         m.set(27, Items.of(Material.ARROW, "&7◀ Volver a Mis Mensajes"), e -> listaMensajes(p));
         m.set(30, Items.of(Material.SPYGLASS, "&e&l👁 Vista Previa (Solo para ti)", "", "&7Muestra cómo queda sin enviarlo."), e -> {
             if (ruletaLocal.containsKey(p.getUniqueId())) { Style.err(p, "¡Ya hay una vista previa en curso!"); return; }
             p.closeInventory();
             if (!c.getBoolean("ruleta", true)) { mostrar(id, p); return; }
             ruletaLocal.put(p.getUniqueId(), true);
-            ruleta(List.of(p), Paleta.of(c.getInt("paleta", 6)), () -> { mostrar(id, p); ruletaLocal.remove(p.getUniqueId()); });
+            ruleta(List.of(p), Paleta.of(c.getInt("paleta", 6)), null, () -> { mostrar(id, p); ruletaLocal.remove(p.getUniqueId()); }, ruletaModo(c) == 2);
         });
         m.set(32, Items.of(Material.LIME_CONCRETE, "&a&l📢 ¡ENVIAR MENSAJE A TODOS!", "", "&7Dispara este mensaje ahora mismo."), e -> {
             if (ruletaGlobal) { Style.err(p, "¡Ya hay un anuncio global en curso!"); return; }

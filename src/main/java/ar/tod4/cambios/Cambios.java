@@ -81,38 +81,73 @@ public final class Cambios {
         add(new Cambio("d6.phantoms", 6, "Phantoms sin sol", false, "&7Los Phantoms no se queman", "&7con la luz del sol."));
         add(new Cambio("d7.aire", 7, "Aire del Aether", false, "&7En el Aether te quedas sin aire.", "&7Hace falta el Casco de Oxígeno."));
         add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca un creeper", "&7eléctrico con 1 de vida. No rompe bloques."));
-        add(new Cambio("d8.pigman", 8, "Pigman siempre enojados", false, "&7Los Pigman atacan apenas", "&7te ven, sin que les pegues."));
+        add(new Cambio("d7.plantas", 7, "Plantas lentas", false, "&7Todas las plantas y cultivos", "&7crecen 3 veces más lento."));
+        add(new Cambio("d7.xp", 7, "Experiencia x2", false, "&7Los hostiles que mata un jugador dan", "&7el doble de XP (no spawners ni MythicMobs)."));
         add(new Cambio("d8.pacificos", 8, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
+        add(new Cambio("d8.wither", 8, "Wither x2", false, "&7Doble vida y daño, cráneos más fuertes", "&7y seguidos, Wither más fuerte y largo,", "&7más rápido, explosión inicial x2."));
+        add(new Cambio("d8.equipo", 8, "Equipo caído", false, "&7+5% de daño recibido por cada", "&7compañero de equipo en el limbo.", "&7Se ve en la sidebar: RJM - +5% ☠"));
         add(new Cambio("d9.zombies", 9, "Zombies armados", false, "&72 a 4 partes de armadura (50% Prot IV)", "&7y siempre espada (Filo 1 a 5)."));
-        add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos: rojo (ballesta),", "&7amarillo (cohetes), negro (arco con TNT)."));
-        add(new Cambio("d12.nuclear_muerte", 12, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear."));
+        add(new Cambio("d9.hueso", 9, "Sin polvo de hueso", false, "&7El polvo de hueso no", "&7hace crecer nada."));
+        add(new Cambio("d9.esqueletos", 9, "Esqueletos armados", false, "&7Armadura como los zombies, arco Poder 1-3", "&7y flechas de daño II, levitación,", "&7ceguera o lentitud III."));
+        add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos: rojo (ballesta),", "&7de hielo (cohetes), wither (arco con TNT).", "&7Se mueven y solo le tiran a su objetivo."));
+        add(new Cambio("d10.minero", 10, "Zombie Minero", false, "&750 de vida, pico, 3 corazones por golpe.", "&7Te ve a través de los bloques, cava", "&7y de cerca pone TNT x2. Abajo de Y 40."));
+        add(new Cambio("d11.hambre", 11, "Hambre más rápida", false, "&7El hambre baja el doble de rápido."));
+        add(new Cambio("d11.nuclear_muerte", 11, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear (aparte del eléctrico)."));
+        add(new Cambio("d12.noches_peligrosas", 12, "Noches peligrosas", false, "&7De noche: el doble de mobs y los", "&7hostiles hacen 50% más de daño."));
+        add(new Cambio("d14.totem", 14, "Tótem con precio", false, "&7Cuando el tótem te salva,", "&73 segundos de ceguera."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
+
+        renombrar("d12.nuclear_muerte", "d11.nuclear_muerte");   // Nuclear al morir paso al dia 11
+        st.set("activos.d8.pigman", null);                     // el de los Pigman se saco (el Nether cierra el dia 9)
+        st.set("avisos.d8.pigman", null);
 
         new Mecanicas(pl, this);
         new MecanicasExtra(pl, this);
         new PoderBallesta(pl, this);
         sueno = new Sueno(pl, this);
         tarde = new MecanicasTarde(pl, this);
+        nuevas = new MecanicasNuevas(pl, this);
         AvisosCambios.sembrar(pl, this);
         // aplica lo que ya estaba prendido (recetas, mesa)
         for (Cambio c : todos.values()) if (c.alCambiar != null && on(c.id)) c.alCambiar.accept(true);
     }
 
     private MecanicasTarde tarde;
+    private MecanicasNuevas nuevas;
     private Sueno sueno;
 
     /** Al apagar: el ciclo del dia vuelve a la normalidad (noches el triple). */
-    public void apagar() { if (sueno != null) sueno.apagar(); }
+    public void apagar() {
+        if (sueno != null) sueno.apagar();
+        if (nuevas != null) nuevas.apagar();
+    }
+
+    /** /tod4 minero: hace aparecer un Zombie Minero para probar. */
+    public void minero(org.bukkit.Location l) { if (nuevas != null) nuevas.crearMinero(l); }
+
+    /** /tod4 esqueleto: hace aparecer un esqueleto armado (dia 9) para probar. */
+    public void esqueleto(org.bukkit.Location l) {
+        if (nuevas != null) l.getWorld().spawn(l, org.bukkit.entity.Skeleton.class, nuevas::armarEsqueleto);
+    }
 
     /** /tod4 ballestero <rojo|amarillo|negro>: hace aparecer uno para probar. */
     public boolean ballestero(org.bukkit.Location l, String tipo) {
         if (tarde == null || !MecanicasTarde.TIPOS_BAL.contains(tipo)) return false;
-        org.bukkit.entity.Skeleton s = l.getWorld().spawn(l, org.bukkit.entity.Skeleton.class);
-        tarde.armarBallestero(s, tipo);
+        tarde.crearBallestero(l, tipo);
         return true;
     }
 
     private void add(Cambio c) { todos.put(c.id, c); }
+
+    /** Un cambio que cambio de nombre: se lleva si estaba prendido y su aviso vinculado. */
+    private void renombrar(String viejo, String nuevo) {
+        for (String k : new String[]{"activos.", "avisos."}) {
+            Object v = st.y().get(k + viejo);
+            if (v == null) continue;
+            if (st.y().get(k + nuevo) == null) st.set(k + nuevo, v);
+            st.set(k + viejo, null);
+        }
+    }
 
     /** Vincula un aviso a un cambio, solo si todavia no tiene ninguno. */
     boolean vincular(String cambioId, String avisoId) {

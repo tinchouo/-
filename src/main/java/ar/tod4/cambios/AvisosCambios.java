@@ -22,6 +22,10 @@ final class AvisosCambios {
     /** El texto que tenia antes (sin Infinidad): si nadie lo edito, se cambia por el nuevo. */
     private static final String NOCHES_VIEJO = "Ya no se puede *saltar la noche* durmiendo.";
     private static final String NOCHES = "Las *noches* ahora duran *el triple*.";
+    private static final String[] BALLESTEROS_VIEJO = {"Aparecieron los *esqueletos ballesteros*, con mucha más vida y una *ballesta*.",
+            "Los *rojos* disparan flechas con *Poder V* y de cerca te golpean, los *amarillos* lanzan *fuegos artificiales* que explotan y los *negros* disparan *TNT* con su arco."};
+    private static final String[] BALLESTEROS = {"Aparecieron los *esqueletos ballesteros*, con mucha más vida y siempre en movimiento.",
+            "El *rojo* dispara flechas con *Poder V* y de cerca te golpea, el *esqueleto de hielo* lanza *fuegos artificiales* que explotan y el *esqueleto wither* dispara *TNT* con su arco."};
     private static final String[] PODER_VIEJO = {"El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
             "Algunos mobs con ballesta pueden tenerlo."};
 
@@ -91,18 +95,44 @@ final class AvisosCambios {
             "Para respirar ahí necesitas el *Casco de Oxígeno*. Cada carga dura *30 minutos* y se recarga con un *bloque de amatista*."},
         {"cambio_creeper_muerte", "d7.creeper_muerte", "7", "d",
             "Al morir, hay un *10%* de probabilidad de que aparezca un *creeper eléctrico* en el lugar de tu muerte."},
-        {"cambio_pigman", "d8.pigman", "8", "d",
-            "Los *Pigman* ahora están *siempre enojados*. Atacan apenas te ven."},
         {"cambio_pacificos", "d8.pacificos", "8", "d",
             "Los *animales* se volvieron agresivos. Te persiguen, te atacan y, si se acercan lo suficiente, te dejan una *TNT*."},
-        {"cambio_ballesteros", "d10.ballesteros", "10", "d",
-            "Aparecieron los *esqueletos ballesteros*, con mucha más vida y una *ballesta*.",
-            "Los *rojos* disparan flechas con *Poder V* y de cerca te golpean, los *amarillos* lanzan *fuegos artificiales* que explotan y los *negros* disparan *TNT* con su arco."},
+        {"cambio_ballesteros", "d10.ballesteros", "10", "d", BALLESTEROS[0], BALLESTEROS[1]},
         {"cambio_zombies", "d9.zombies", "9", "d",
             "Los *zombies* ahora aparecen con *armadura* de hierro o diamante, muchas veces con *Protección IV*.",
             "Además, siempre llevan una *espada*, que puede tener hasta *Filo V*."},
-        {"cambio_nuclear_muerte", "d12.nuclear_muerte", "12", "d",
+        {"cambio_nuclear_muerte", "d11.nuclear_muerte", "11", "d",
             "Al morir, hay un *1%* de probabilidad de que aparezca un *Creeper Nuclear* en el lugar de tu muerte."},
+        // ---- dias 7 a 14 (nuevos)
+        {"cambio_plantas", "d7.plantas", "7", "d",
+            "Todas las *plantas* y *cultivos* ahora crecen *3 veces más lento*.",
+            "Toca planificar mejor las granjas."},
+        {"aviso_xp", "d7.xp", "7", "a",
+            "Los *mobs hostiles* ahora sueltan *el doble de experiencia* al morir a manos de un jugador.",
+            "No cuenta para los mobs de *spawners*."},
+        {"cambio_wither_x2", "d8.wither", "8", "d",
+            "El *Wither* ahora es *el doble de fuerte*: tiene el doble de vida, pega el doble, dispara más seguido y se mueve más rápido.",
+            "Su efecto de *Wither* es más fuerte y dura más."},
+        {"cambio_equipo", "d8.equipo", "8", "d",
+            "Por cada *compañero de equipo muerto* que no fue revivido, recibes un *5% más de daño*.",
+            "Lo que tienes de más se ve al lado de tu equipo, en la barra de la derecha."},
+        {"cambio_hueso", "d9.hueso", "9", "d",
+            "El *polvo de hueso* dejó de funcionar.",
+            "Ya no hace crecer ningún cultivo, planta ni árbol."},
+        {"cambio_esqueletos", "d9.esqueletos", "9", "d",
+            "Los *esqueletos* ahora aparecen con *armadura* y un *arco con Poder*.",
+            "Sus flechas pueden ser de *daño instantáneo*, *levitación*, *ceguera* o *lentitud*."},
+        {"cambio_minero", "d10.minero", "10", "d",
+            "Apareció el *Zombie Minero*: te ve a través de los bloques y *cava* hasta llegar a ti.",
+            "Cuando está cerca, pone una *TNT* el doble de fuerte. Cuanto más profundo estés, más aparecen."},
+        {"cambio_hambre", "d11.hambre", "11", "d",
+            "El *hambre* ahora baja *el doble de rápido*.",
+            "Lleva siempre comida encima."},
+        {"cambio_noches_peligrosas", "d12.noches_peligrosas", "12", "d",
+            "Las *noches* ahora son peligrosas: aparecen *el doble de mobs*.",
+            "Además, de noche los mobs hostiles hacen *50% más de daño*."},
+        {"cambio_totem", "d14.totem", "14", "d",
+            "Cuando un *tótem de inmortalidad* te salva, quedas *ciego por 3 segundos*."},
         {"cambio_bedrock", "d6.bedrock", "6", "d",
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
     };
@@ -136,6 +166,10 @@ final class AvisosCambios {
         pl.avisos().cambiarDia("aviso_mesa", 4, 1);      // la mesa de encantamientos pasa al dia 1
         pl.avisos().cambiarTexto("cambio_noches", armar(new String[]{NOCHES_VIEJO}, 0, max), armar(new String[]{NOCHES}, 0, max));   // ahora duran el triple
         pl.avisos().cambiarTexto("cambio_poder", armar(PODER_VIEJO, 0, max), armar(new String[]{PODER_1, PODER_2}, 0, max));   // + Infinidad
+        pl.avisos().cambiarTexto("cambio_ballesteros", armar(BALLESTEROS_VIEJO, 0, max), armar(BALLESTEROS, 0, max));   // hielo y wither
+        pl.avisos().cambiarDia("cambio_nuclear_muerte", 12, 11);   // paso al dia 11
+        // una sola vez: se borran los mensajes de los dias 1 a 6 y el de los Pigman (los generales no se tocan; quedan guardados en borrados)
+        pl.avisos().borrarUnaVez("limpieza_dia6", 1, 6, java.util.List.of("cambio_pigman"));
     }
 
     /** Parte un parrafo en renglones que no pasen de {@code max} pixeles; un *resaltado* que cruza el renglon se cierra y se reabre. */

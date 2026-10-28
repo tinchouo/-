@@ -7,6 +7,9 @@
 #  Prender / apagar en el juego: /tod4:aether_mobs on|off   |  Probar todos los mobs: /tod4:aether_mobs probar
 # =====================================================================
 
+# no tocar: cuando el plugin trae un mobs.yml nuevo, guarda el viejo como mobs_viejo.yml y pone el nuevo
+version: 2
+
 activado: true
 # cada cuantos segundos se revisan los lugares (el ambiente, cada 2)
 cada_seg: 6
@@ -20,6 +23,10 @@ distancia_activa: 100
 reaparece_seg: 180
 # tope de mobs del Aether en todo el mundo
 maximo_total: 300
+# alrededor de la isla del spawn del Aether no aparece nada (bloques desde el spawn)
+zona_spawn: 100
+# true = los mobs del Aether no se pegan ni se persiguen entre ellos (el Yeti y el Sumo pegaban a los demas)
+no_se_pegan: true
 
 # nombre interno en MythicMobs de cada uno
 mobs:
@@ -50,10 +57,11 @@ ambiente:
   distancia_max: 56
   biomas:
     # chance: % de que salga algo en cada intento.  mobs: peso de cada uno (mas peso = sale mas seguido)
-    land:            {chance: 100, mobs: {guardia: 70, fantasma: 15, breeze: 10}}
-    village:         {chance: 35,  mobs: {guardia: 70, fantasma: 15, breeze: 10}}
-    windmill:        {chance: 35,  mobs: {guardia: 70, fantasma: 15, breeze: 10}}
-    coliseum:        {chance: 35,  mobs: {guardia: 70, fantasma: 15, breeze: 10}}
+    land:            {chance: 100, mobs: {guardia: 70, fantasma: 5, breeze: 10}}
+    village:         {chance: 35,  mobs: {guardia: 70, fantasma: 5, breeze: 10}}
+    # en el molino, bombitas en vez de fantasmas
+    windmill:        {chance: 35,  mobs: {guardia: 70, bomba: 15, breeze: 10}}
+    coliseum:        {chance: 35,  mobs: {guardia: 70, fantasma: 5, breeze: 10}}
     mushroom_island: {chance: 0,   mobs: {}}
 
 # ---------------------------------------------------------------------
@@ -68,20 +76,30 @@ lugares:
   # isla del medio del molino (afuera del molino, ahi tambien el Sumo) y las islitas de alrededor que tienen ruinas
   molino:       {serafin: "4-5", thor: "1", sumo: "1"}
   molino_ruina: {serafin: "1-2"}
-  # el Yeti Dorado, en el medio de la arena
-  coliseo:      {yeti: "1"}
+  # el Yeti Dorado y unas bombitas, en el medio de la arena
+  coliseo:      {yeti: "1", bomba: "3-4"}
 
 # estos lugares tienen su mob en el medio (la arena del coliseo), aunque haya jugadores cerca
 en_el_centro: [coliseo]
 
+# de a poco: en estos lugares no salen todos de golpe; cada cada_seg salen hasta tantos de cada mob,
+# cerca de un jugador (a menos de distancia, y nunca a menos de distancia_min). El total es el mismo.
+de_a_poco:
+  distancia: 56
+  aldea: 2
+
 # true = el cambio de lugar del Breeze Old lo hace el plugin. false = lo hace breeze_old.sk (NUNCA los dos: se anulan)
 breeze_cambiazo_plugin: false
 
-# Phantom Angelical: en el cielo, en todo el Aether menos las islas de hongo
+# Phantom Angelical: en el cielo, cerca de los jugadores, segun el bioma donde esta el jugador
 phantoms:
   max_por_jugador: 3
-  # chance (%) en cada revision de que aparezca uno cerca de cada jugador (si tiene menos del maximo)
-  chance: 40
-  # true = tambien sobre las islas de hongo
-  en_hongo: false
+  # chance (%) en cada revision (cada 2 segundos) de que aparezca uno cerca de cada jugador. Bioma que no esta = nunca
+  # (en las aldeas y en las islas de hongo no salen)
+  biomas:
+    land: 20
+    coliseum: 20
+    windmill: 8
+  # en estos biomas salen mas lejos del jugador y repartidos (no todos encima del molino)
+  repartidos: [windmill]
 # (los mobs del Aether no se queman con el sol: el plugin lo evita)
