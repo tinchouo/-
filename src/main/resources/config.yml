@@ -100,7 +100,7 @@ cambios:
     # (los de ballesta se mantienen a "distancia: 11" de su objetivo y se corren de costado)
   nuclear_muerte_chance: 0.01   # dia 11: chance de que al morir aparezca un Creeper Nuclear (aparte del electrico)
   plantas_factor: 3             # dia 7: las plantas crecen esta cantidad de veces mas lento
-  xp_multiplicador: 2           # dia 7: experiencia de los hostiles que mata un jugador
+  xp_multiplicador: 2           # dia 7: experiencia de los hostiles que mata un jugador (y de MythicMobs) y de los minerales del Overworld
   wither:                       # dia 8: el Wither x2
     vida: 2
     dano: 2
@@ -135,9 +135,8 @@ cambios:
     cava_cada_seg: 0.75
     oro_chance: 0.25            # cada parte de armadura de oro, con Proteccion 1 a 4
   hambre_multiplicador: 2       # dia 11
-  noches_mobs: 2                # dia 12: de noche el tope de mobs hostiles por este numero
-  noches_dano: 1.5              # dia 12: de noche los hostiles pegan esto
-  totem_ceguera_seg: 3          # dia 14
+  noches_dano: 2                # dia 12: de noche, en el Overworld, los hostiles pegan esto
+  totem_ceguera_seg: 2          # dia 14
   infinidad_ballesta_mesa: 0.15 # dia 2: chance de que la mesa vanilla ponga Infinidad a la ballesta (no va con Reparacion)
   silverfish_chance: 0.033  # dia 2: chance por bloque picado debajo de Y 0 (0.033 = 1 de cada 30)
   silverfish_y_max: 0

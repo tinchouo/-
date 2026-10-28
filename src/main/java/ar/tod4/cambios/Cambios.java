@@ -82,7 +82,7 @@ public final class Cambios {
         add(new Cambio("d7.aire", 7, "Aire del Aether", false, "&7En el Aether te quedas sin aire.", "&7Hace falta el Casco de Oxígeno."));
         add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca un creeper", "&7eléctrico con 1 de vida. No rompe bloques."));
         add(new Cambio("d7.plantas", 7, "Plantas lentas", false, "&7Todas las plantas y cultivos", "&7crecen 3 veces más lento."));
-        add(new Cambio("d7.xp", 7, "Experiencia x2", false, "&7Los hostiles que mata un jugador dan", "&7el doble de XP (no spawners ni MythicMobs)."));
+        add(new Cambio("d7.xp", 7, "Experiencia x2", false, "&7Los hostiles que mata un jugador (y los de", "&7MythicMobs) y los minerales del Overworld", "&7dan el doble de XP. No spawners ni cuarzo."));
         add(new Cambio("d8.pacificos", 8, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
         add(new Cambio("d8.wither", 8, "Wither x2", false, "&7Doble vida y daño, cráneos más fuertes", "&7y seguidos, Wither más fuerte y largo,", "&7más rápido, explosión inicial x2."));
         add(new Cambio("d8.equipo", 8, "Equipo caído", false, "&7+5% de daño recibido por cada", "&7compañero de equipo en el limbo.", "&7Se ve en la sidebar: RJM - +5% ☠"));
@@ -93,8 +93,8 @@ public final class Cambios {
         add(new Cambio("d10.minero", 10, "Zombie Minero", false, "&750 de vida, pico, 3 corazones por golpe.", "&7Te ve a través de los bloques, cava", "&7y de cerca pone TNT x2. Abajo de Y 40."));
         add(new Cambio("d11.hambre", 11, "Hambre más rápida", false, "&7El hambre baja el doble de rápido."));
         add(new Cambio("d11.nuclear_muerte", 11, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear (aparte del eléctrico)."));
-        add(new Cambio("d12.noches_peligrosas", 12, "Noches peligrosas", false, "&7De noche: el doble de mobs y los", "&7hostiles hacen 50% más de daño."));
-        add(new Cambio("d14.totem", 14, "Tótem con precio", false, "&7Cuando el tótem te salva,", "&73 segundos de ceguera."));
+        add(new Cambio("d12.noches_peligrosas", 12, "Noches peligrosas", false, "&7De noche, en el Overworld, los", "&7mobs hostiles hacen el doble de daño."));
+        add(new Cambio("d14.totem", 14, "Tótem con precio", false, "&7Cuando el tótem te salva,", "&72 segundos de ceguera."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
         renombrar("d12.nuclear_muerte", "d11.nuclear_muerte");   // Nuclear al morir paso al dia 11

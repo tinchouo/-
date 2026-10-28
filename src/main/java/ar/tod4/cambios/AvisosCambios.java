@@ -26,6 +26,16 @@ final class AvisosCambios {
             "Los *rojos* disparan flechas con *Poder V* y de cerca te golpean, los *amarillos* lanzan *fuegos artificiales* que explotan y los *negros* disparan *TNT* con su arco."};
     private static final String[] BALLESTEROS = {"Aparecieron los *esqueletos ballesteros*, con mucha más vida y siempre en movimiento.",
             "El *rojo* dispara flechas con *Poder V* y de cerca te golpea, el *esqueleto de hielo* lanza *fuegos artificiales* que explotan y el *esqueleto wither* dispara *TNT* con su arco."};
+    private static final String[] XP_VIEJO = {"Los *mobs hostiles* ahora sueltan *el doble de experiencia* al morir a manos de un jugador.",
+            "No cuenta para los mobs de *spawners*."};
+    private static final String[] XP = {"Los *mobs hostiles* y los *minerales* ahora dan *el doble de experiencia*.",
+            "Cuentan los mobs que mata un jugador (no los de *spawners*) y los minerales del Overworld (el *cuarzo* no)."};
+    private static final String[] NOCHES_P_VIEJO = {"Las *noches* ahora son peligrosas: aparecen *el doble de mobs*.",
+            "Además, de noche los mobs hostiles hacen *50% más de daño*."};
+    private static final String[] NOCHES_P = {"Las *noches* ahora son peligrosas.",
+            "En el Overworld, de noche, los mobs hostiles hacen *el doble de daño*."};
+    private static final String TOTEM_VIEJO = "Cuando un *tótem de inmortalidad* te salva, quedas *ciego por 3 segundos*.";
+    private static final String TOTEM = "Cuando un *tótem de inmortalidad* te salva, quedas *ciego por 2 segundos*.";
     private static final String[] PODER_VIEJO = {"El encantamiento *Poder* ahora también se puede usar en la *ballesta* y aumenta su daño.",
             "Algunos mobs con ballesta pueden tenerlo."};
 
@@ -107,9 +117,7 @@ final class AvisosCambios {
         {"cambio_plantas", "d7.plantas", "7", "d",
             "Todas las *plantas* y *cultivos* ahora crecen *3 veces más lento*.",
             "Toca planificar mejor las granjas."},
-        {"aviso_xp", "d7.xp", "7", "a",
-            "Los *mobs hostiles* ahora sueltan *el doble de experiencia* al morir a manos de un jugador.",
-            "No cuenta para los mobs de *spawners*."},
+        {"aviso_xp", "d7.xp", "7", "a", XP[0], XP[1]},
         {"cambio_wither_x2", "d8.wither", "8", "d",
             "El *Wither* ahora es *el doble de fuerte*: tiene el doble de vida, pega el doble, dispara más seguido y se mueve más rápido.",
             "Su efecto de *Wither* es más fuerte y dura más."},
@@ -128,11 +136,9 @@ final class AvisosCambios {
         {"cambio_hambre", "d11.hambre", "11", "d",
             "El *hambre* ahora baja *el doble de rápido*.",
             "Lleva siempre comida encima."},
-        {"cambio_noches_peligrosas", "d12.noches_peligrosas", "12", "d",
-            "Las *noches* ahora son peligrosas: aparecen *el doble de mobs*.",
-            "Además, de noche los mobs hostiles hacen *50% más de daño*."},
+        {"cambio_noches_peligrosas", "d12.noches_peligrosas", "12", "d", NOCHES_P[0], NOCHES_P[1]},
         {"cambio_totem", "d14.totem", "14", "d",
-            "Cuando un *tótem de inmortalidad* te salva, quedas *ciego por 3 segundos*."},
+            TOTEM},
         {"cambio_bedrock", "d6.bedrock", "6", "d",
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
     };
@@ -167,7 +173,10 @@ final class AvisosCambios {
         pl.avisos().cambiarTexto("cambio_noches", armar(new String[]{NOCHES_VIEJO}, 0, max), armar(new String[]{NOCHES}, 0, max));   // ahora duran el triple
         pl.avisos().cambiarTexto("cambio_poder", armar(PODER_VIEJO, 0, max), armar(new String[]{PODER_1, PODER_2}, 0, max));   // + Infinidad
         pl.avisos().cambiarTexto("cambio_ballesteros", armar(BALLESTEROS_VIEJO, 0, max), armar(BALLESTEROS, 0, max));   // hielo y wither
-        pl.avisos().cambiarDia("cambio_nuclear_muerte", 12, 11);   // paso al dia 11
+        pl.avisos().cambiarDia("cambio_nuclear_muerte", 12, 11);
+        pl.avisos().cambiarTexto("aviso_xp", armar(XP_VIEJO, 0, max), armar(XP, 0, max));   // + minerales y MythicMobs
+        pl.avisos().cambiarTexto("cambio_noches_peligrosas", armar(NOCHES_P_VIEJO, 0, max), armar(NOCHES_P, 0, max));   // doble dano, sin mas mobs
+        pl.avisos().cambiarTexto("cambio_totem", armar(new String[]{TOTEM_VIEJO}, 0, max), armar(new String[]{TOTEM}, 0, max));   // 2 segundos   // paso al dia 11
         // una sola vez: se borran los mensajes de los dias 1 a 6 y el de los Pigman (los generales no se tocan; quedan guardados en borrados)
         pl.avisos().borrarUnaVez("limpieza_dia6", 1, 6, java.util.List.of("cambio_pigman"));
     }

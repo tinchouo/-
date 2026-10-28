@@ -70,7 +70,8 @@ import ar.tod4.TOD4;
 /**
  * Cambios nuevos de los dias 7 a 14 (los numeros y chances se pueden cambiar en config.yml, seccion cambios.*):
  *  - d7.plantas:  todas las plantas y cultivos crecen 3 veces mas lento (el polvo de hueso no cambia).
- *  - d7.xp:       los mobs hostiles que mata un jugador sueltan el doble de experiencia (no los de spawner ni los de MythicMobs).
+ *  - d7.xp:       los mobs hostiles que mata un jugador (tambien los de MythicMobs) sueltan el doble de experiencia (no los de spawner),
+ *                 y los minerales del Overworld dan el doble al picarlos (el cuarzo y el oro del Nether no).
  *  - d8.wither:   el Wither x2: doble vida y dano, craneos mas fuertes y mas seguidos, efecto Wither mas fuerte y largo,
  *                 mas rapido y la explosion del principio el doble de grande.
  *  - d8.equipo:   +5% de dano recibido por cada companero de equipo muerto (en el limbo, sin revivir). Sin tope.
@@ -78,7 +79,7 @@ import ar.tod4.TOD4;
  *  - d9.esqueletos: los esqueletos salen con armadura (como los zombies), arco con Poder 1 a 3 y flechas especiales.
  *  - d10.minero:  Zombie Minero (cava hasta vos y pone TNT el doble de fuerte). Sale mas cuanto mas profundo.
  *  - d11.hambre:  el hambre baja el doble de rapido.
- *  - d12.noches_peligrosas: de noche el doble de mobs y los hostiles pegan 50% mas.
+ *  - d12.noches_peligrosas: de noche, en el Overworld, los mobs hostiles pegan el doble.
  *  - d14.totem:   cuando el totem te salva, 3 segundos de ceguera.
  */
 final class MecanicasNuevas implements Listener {
@@ -104,7 +105,6 @@ final class MecanicasNuevas implements Listener {
         mineros();
         if (tick % 20 == 0) mineroAparece();   // cada 10 segundos
         if (tick % 2 == 0) withers();
-        if (tick % 4 == 0) nochesLimite();
     }
 
     // ================================================================= d7.plantas: 3 veces mas lento
@@ -186,12 +186,21 @@ final class MecanicasNuevas implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH)
     public void xp(EntityDeathEvent e) {
-        if (!cb.on("d7.xp") || !(e.getEntity() instanceof Enemy) || e.getEntity() instanceof Player) return;
-        if (e.getEntity().getKiller() == null) return;
+        if (!cb.on("d7.xp") || e.getEntity() instanceof Player || e.getEntity().getKiller() == null) return;
+        // hostiles comunes y los de MythicMobs (dan la experiencia de su mob base: un zombie de MythicMobs, la de un zombie)
+        if (!(e.getEntity() instanceof Enemy) && ar.tod4.hook.Ext.mythic(e.getEntity()) == null) return;
         CreatureSpawnEvent.SpawnReason r = e.getEntity().getEntitySpawnReason();
         if (r == CreatureSpawnEvent.SpawnReason.SPAWNER || r == CreatureSpawnEvent.SpawnReason.TRIAL_SPAWNER) return;
-        if (ar.tod4.hook.Ext.mythic(e.getEntity()) != null) return;   // la experiencia de los de MythicMobs la ponen ellos
         e.setDroppedExp((int) Math.round(e.getDroppedExp() * c().getDouble("cambios.xp_multiplicador", 2)));
+    }
+
+    /** Minerales del Overworld (carbon, redstone, lapis, diamante, esmeralda y sus versiones de pizarra): el doble de experiencia. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void xpMineral(org.bukkit.event.block.BlockBreakEvent e) {
+        if (!cb.on("d7.xp") || e.getExpToDrop() <= 0) return;
+        String n = e.getBlock().getType().name();
+        if (!n.endsWith("_ORE") || n.startsWith("NETHER_")) return;   // el cuarzo y el oro del Nether no cuentan
+        e.setExpToDrop((int) Math.round(e.getExpToDrop() * c().getDouble("cambios.xp_multiplicador", 2)));
     }
 
     // ================================================================= d8.wither: el Wither x2
@@ -596,29 +605,12 @@ final class MecanicasNuevas implements Listener {
 
     // ================================================================= d12.noches_peligrosas
 
-    private final Set<String> limiteDoble = new HashSet<>();
-
+    /** Solo el Overworld (el mundo principal), de noche: desde que se puede dormir hasta que amanece. */
     private boolean nochePeligrosa(World w) {
-        return cb.on("d12.noches_peligrosas") && w.getEnvironment() == World.Environment.NORMAL && Sueno.deNoche(pl, w.getTime());
+        return cb.on("d12.noches_peligrosas") && w.equals(Bukkit.getWorlds().get(0)) && Sueno.deNoche(pl, w.getTime());
     }
 
-    /** De noche el tope de mobs hostiles del mundo es el doble (salen el doble). */
-    private void nochesLimite() {
-        for (World w : Bukkit.getWorlds()) {
-            if (w.getEnvironment() != World.Environment.NORMAL) continue;
-            boolean doble = nochePeligrosa(w);
-            if (doble && limiteDoble.add(w.getName()))
-                w.setSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER,
-                        (int) Math.round(Bukkit.getSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER) * c().getDouble("cambios.noches_mobs", 2)));
-            else if (!doble && limiteDoble.remove(w.getName()))
-                w.setSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER, -1);   // vuelve al del server
-        }
-    }
-
-    void apagar() {
-        for (World w : Bukkit.getWorlds()) if (limiteDoble.contains(w.getName())) w.setSpawnLimit(org.bukkit.entity.SpawnCategory.MONSTER, -1);
-        limiteDoble.clear();
-    }
+    void apagar() { }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void nochePega(EntityDamageByEntityEvent e) {
@@ -627,7 +619,7 @@ final class MecanicasNuevas implements Listener {
         if (d instanceof Projectile pr && pr.getShooter() instanceof Entity sh) d = sh;
         else if (d instanceof TNTPrimed t && t.getSource() != null) d = t.getSource();
         if (!(d instanceof Enemy) || d instanceof Player) return;
-        e.setDamage(e.getDamage() * c().getDouble("cambios.noches_dano", 1.5));
+        e.setDamage(e.getDamage() * c().getDouble("cambios.noches_dano", 2));
     }
 
     // ================================================================= d14.totem: ceguera al salvarte
@@ -635,7 +627,7 @@ final class MecanicasNuevas implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void totem(EntityResurrectEvent e) {
         if (!cb.on("d14.totem") || !(e.getEntity() instanceof Player p)) return;
-        int t = (int) (c().getDouble("cambios.totem_ceguera_seg", 3) * 20);
+        int t = (int) (c().getDouble("cambios.totem_ceguera_seg", 2) * 20);
         // un tick despues: el totem borra los efectos al salvarte
         Bukkit.getScheduler().runTask(pl, () -> {
             if (p.isOnline() && !p.isDead()) p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, t, 0));

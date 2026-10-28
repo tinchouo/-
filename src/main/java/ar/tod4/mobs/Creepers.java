@@ -595,8 +595,9 @@ public final class Creepers implements Listener {
                             if (y < w.getMinHeight() || y >= w.getMaxHeight()) continue;
                             Block b = w.getBlockAt(cx + dx, y, cz + dz);
                             Material t = b.getType();
-                            if (t.isAir() || b.isLiquid() || DURO.contains(t) || b.getState() instanceof Container) continue;
+                            if (t.isAir() || b.isLiquid() || DURO.contains(t)) continue;
                             if (pl.revivir() != null && pl.revivir().protegido(b)) continue;   // tumbas y altar
+                            if (b.getState() instanceof Container ct) { romperCofre(b, ct); continue; }
                             b.setType(Material.AIR, false);
                         }
                     }
@@ -607,6 +608,18 @@ public final class Creepers implements Listener {
                 }
             }
         }.runTaskTimer(pl, 1L, 1L);
+    }
+
+    /** Cofres, barriles, hornos...: se rompen y tiran lo que tienen (como con una explosion comun). Las shulker caen con todo adentro. */
+    private static void romperCofre(Block b, Container ct) {
+        if (!(ct instanceof org.bukkit.block.ShulkerBox)) {
+            org.bukkit.inventory.Inventory inv = ct instanceof org.bukkit.block.Chest ch ? ch.getBlockInventory() : ct.getInventory();
+            Location c = b.getLocation().add(0.5, 0.5, 0.5);
+            for (org.bukkit.inventory.ItemStack it : inv.getContents())
+                if (it != null && !it.getType().isAir()) b.getWorld().dropItemNaturally(c, it.clone());
+            inv.clear();
+        }
+        b.breakNaturally();
     }
 
     private void fuego(Location l, int radio) {
