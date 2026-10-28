@@ -187,6 +187,9 @@ public final class Equipos implements Listener {
         return s;
     }
 
+    /** true = nadie puede salir ni ser expulsado de su equipo (solo un admin con /tod4:equipo quitar). */
+    private boolean bloqueado() { return pl.getConfig().getBoolean("equipos.sin_salir", true); }
+
     /** % de dano de mas por cada companero muerto (d8.equipo). */
     public double porCaido() { return pl.getConfig().getDouble("cambios.equipo_caido_porcentaje", 5); }
 
@@ -194,7 +197,9 @@ public final class Equipos implements Listener {
     public int caidos(UUID u) {
         Equipo e = de.get(u);
         if (e == null || pl.revivir() == null) return 0;
-        List<String> muertos = pl.revivir().store().y().getStringList("muertos");
+        // los del altar y los del Gulag (esos no se pueden revivir: cuentan para siempre)
+        List<String> muertos = new ArrayList<>(pl.revivir().store().y().getStringList("muertos"));
+        muertos.addAll(pl.revivir().store().y().getStringList("muertos_gulag"));
         if (muertos.isEmpty()) return 0;
         int n = 0;
         for (UUID m : e.miembros) {
@@ -360,6 +365,8 @@ public final class Equipos implements Listener {
                 hacerLider(e, u);
             }
             case "expulsar" -> {
+                // nadie se va de un equipo (si no, se iban para no cargar con el dano de los companeros muertos); solo un admin
+                if (bloqueado()) { rojo(p, "Ya no se puede expulsar a nadie del equipo."); return; }
                 if (!p.getUniqueId().equals(e.lider)) { rojo(p, "Solo el líder del equipo puede hacer eso."); return; }
                 UUID u = a.length > 1 ? miembro(e, a[1]) : null;
                 if (u == null || u.equals(p.getUniqueId())) { rojo(p, "Ese jugador no es de tu equipo."); return; }
@@ -368,6 +375,7 @@ public final class Equipos implements Listener {
                 if (t != null) t.sendMessage(Component.text("El líder te expulsó del equipo.", e.color));
             }
             case "salir" -> {
+                if (bloqueado()) { rojo(p, "Ya no se puede salir del equipo."); return; }
                 quitar(e, p.getUniqueId(), true);
                 p.sendMessage(Component.text("Ya no formas parte del equipo ", NamedTextColor.WHITE).append(tagC(e)).append(Component.text(".", NamedTextColor.WHITE)));
             }
@@ -385,6 +393,11 @@ public final class Equipos implements Listener {
     private void ayuda(Player p) {
         p.sendMessage(Component.text("/eq", NamedTextColor.YELLOW).append(Component.text(" - cambia entre el chat de equipo y el normal", NamedTextColor.WHITE)));
         p.sendMessage(Component.text("/eq <mensaje>", NamedTextColor.YELLOW).append(Component.text(" - manda un mensaje a tu equipo", NamedTextColor.WHITE)));
+        if (bloqueado()) {
+            p.sendMessage(Component.text("/eq miembros", NamedTextColor.YELLOW).append(Component.text(" - tu equipo", NamedTextColor.WHITE)));
+            p.sendMessage(Component.text("/eq invitar | lider <jugador>", NamedTextColor.YELLOW).append(Component.text(" - solo el líder", NamedTextColor.WHITE)));
+            return;
+        }
         p.sendMessage(Component.text("/eq miembros | salir", NamedTextColor.YELLOW).append(Component.text(" - tu equipo / irte", NamedTextColor.WHITE)));
         p.sendMessage(Component.text("/eq invitar | lider | expulsar <jugador>", NamedTextColor.YELLOW).append(Component.text(" - solo el líder", NamedTextColor.WHITE)));
     }
@@ -440,7 +453,7 @@ public final class Equipos implements Listener {
 
     public List<String> tabEq(Player p, String[] a) {
         List<String> out = new ArrayList<>();
-        if (a.length == 1) out.addAll(List.of("invitar", "lider", "expulsar", "miembros", "salir", "ayuda"));
+        if (a.length == 1) out.addAll(bloqueado() ? List.of("invitar", "lider", "miembros", "ayuda") : List.of("invitar", "lider", "expulsar", "miembros", "salir", "ayuda"));
         else if (a.length == 2) {
             Equipo e = de.get(p.getUniqueId());
             if (a[0].equalsIgnoreCase("invitar")) for (Player o : Bukkit.getOnlinePlayers()) { if (!de.containsKey(o.getUniqueId())) out.add(o.getName()); }

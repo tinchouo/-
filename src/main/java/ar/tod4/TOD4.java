@@ -111,6 +111,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         for (Player p : Bukkit.getOnlinePlayers()) p.updateCommands();
     }
 
+    public static final String GULAG_DISCORD = "## ⛓ {jugador} ha caído en el Gulag.\nHa caído de manera definitiva y no podrá ser revivido.";
+
     /** Si el config.yml es de una version vieja, se guarda como config_viejo.yml y se pone el nuevo. */
     private void actualizarConfig() {
         saveDefaultConfig();
@@ -123,6 +125,11 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             saveDefaultConfig();
             reloadConfig();
             getLogger().info("config.yml actualizado (el anterior quedo en config_viejo.yml).");
+        }
+        // mensaje del Gulag en Discord: si tiene el de antes, va el nuevo
+        if ("## ⛓ {jugador} ha caído en el Gulag.\nHa muerto de forma permanente.".equals(getConfig().getString("discord.gulag_mensaje"))) {
+            getConfig().set("discord.gulag_mensaje", GULAG_DISCORD);
+            saveConfig();
         }
     }
 

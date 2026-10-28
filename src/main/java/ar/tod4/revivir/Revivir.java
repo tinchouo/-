@@ -833,7 +833,8 @@ public final class Revivir implements Listener {
         w.spawnParticle(Particle.END_ROD, aire, 200, 3, 2, 3, 0.1);
         p.playSound(aire, Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 2f, 0.8f);
         p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 600, 0));
-        p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 640, 4));
+        // 1 minuto y medio de Resistencia V (no le entra dano): entre la descarga del pack y el login, la caida lenta se termina
+        p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, (int) (pl.getConfig().getDouble("revivir.resistencia_seg", 90) * 20), 4));
         p.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING, 500, 0));
         w.strikeLightningEffect(p.getLocation());
         Location c1 = base.clone().add(0.5, 18, 0.5), c2 = base.clone().add(0.5, 54, 0.5);

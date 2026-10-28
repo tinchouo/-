@@ -248,7 +248,7 @@ public final class Discord implements Listener {
         if (ar.tod4.hook.Gulag.muereEnGulag(p.getUniqueId())) {
             // en el gulag se muere para siempre: mensaje propio
             String g = pl.getConfig().getString("discord.gulag_mensaje",
-                    "## ⛓ {jugador} ha caído en el Gulag.\nHa muerto de forma permanente.");
+                    ar.tod4.TOD4.GULAG_DISCORD);
             publicar("muertes", g.replace("\\n", "\n").replace("{jugador}", esc(p.getName())).replace("{dia}", String.valueOf(pl.dia()))
                     + "\n-# Día " + pl.dia() + " · " + pie().replaceFirst("^-#\\s*", "") + (ev ? "\n@everyone" : ""), ev);
             return;

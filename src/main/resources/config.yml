@@ -176,6 +176,8 @@ tab:
 
 equipos:
   simbolo_lider: "[L]"
+  # true = nadie puede salir ni ser expulsado de su equipo (un admin si: /tod4:equipo quitar)
+  sin_salir: true
 
 chat:
   # cuando un jugador escribe: "Nombre: mensaje" (el nombre y los dos puntos en este color, el mensaje en blanco)
@@ -242,6 +244,8 @@ palo:
   mundo_principal: "world"
 
 revivir:
+  # al revivir: segundos de Resistencia V (no le entra dano mientras carga el pack y hace el login)
+  resistencia_seg: 90
   nombre_totem: "Tótem Cuy"
   mensaje_totem: "&6✟ &6&l{jugador} &7ha usado un &6&l{totem}&7."
   sonido_ritual: "tod4:revivir"
@@ -296,7 +300,7 @@ discord:
   muertes: true                  # cada muerte al canal de muertes, igual que en el chat (no los OP ni los cuyes)
   muertes_everyone: true         # @everyone abajo de cada muerte
   # morir en el gulag es para siempre: este mensaje en vez del normal ({jugador}, {dia}; \n = otro renglon)
-  gulag_mensaje: "## ⛓ {jugador} ha caído en el Gulag.\nHa muerto de forma permanente."
+  gulag_mensaje: "## ⛓ {jugador} ha caído en el Gulag.\nHa caído de manera definitiva y no podrá ser revivido."
   pie: "-# TrucOfDeath 4"
   canales:
     cambios: "1553108084304388216"    # mensajes naranjas (cambio de dificultad, nuevo mob...)
