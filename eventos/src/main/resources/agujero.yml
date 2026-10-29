@@ -1,30 +1,36 @@
 # =====================================================================
-#  AGUJERO DEL INFIERNO 2.0        despues de cambiar algo: /tod4:aether_recargar
+#  AGUJERO DEL INFIERNO 2.0        despues de cambiar algo: /tod4eventos:agujero recargar
 #
-#  1) /tod4:agujero crear         crea la cueva (su propio mundo). /tod4:agujero tp para ir.
-#  2) Decorala como quieras. Cuando este lista: /tod4:agujero foto  (cada reconstruccion la deja asi).
-#  3) /tod4:agujero entrada        mirando el bloque que manda a la cueva (pisarlo o tocarlo).
-#     /tod4:agujero salida         parado donde aparecen los que escapan o terminan.
+#  1) /tod4eventos:agujero crear         crea la cueva (su propio mundo). /tod4eventos:agujero tp para ir.
+#  2) Decorala como quieras. Cuando este lista: /tod4eventos:agujero foto  (cada reconstruccion la deja asi).
+#  3) /tod4eventos:agujero entrada        mirando el bloque de afuera que baja a la cueva (pisarlo o tocarlo).
+#     /tod4eventos:agujero bloquesalida   mirando el bloque de la sala de entrada (adentro) que sube afuera.
+#     /tod4eventos:agujero salida         parado donde aparecen los que suben.
+#     /tod4eventos:agujero llegada        (opcional) parado en la sala de entrada, donde aparecen al bajar.
 #  Cofres: salen solos en lugares de la cueva (faciles y dificiles). Para agregar lugares, parado ahi adentro:
-#     /tod4:agujero cofre facil | cofre dificil      (quitar: /tod4:agujero quitarcofre)
+#     /tod4eventos:agujero cofre facil | cofre dificil      (quitar: /tod4eventos:agujero quitarcofre)
 #  Otros: abrir (reconstruye y abre ya), cerrar [min], terminar (corta la corrida), espera <jugador>, estado
 # =====================================================================
 
 mundo: agujero_infierno
 # la forma de la cueva sale de esta semilla (cambiarla despues de crearla cambia solo lo que se genere de nuevo)
-semilla: 666
+semilla: 2026
 # bioma de toda la cueva (sonidos y niebla): dripstone_caves, deep_dark, lush_caves, basalt_deltas...
 bioma: dripstone_caves
 
+# la "linea": salir de la sala de entrada (radio en bloques desde el medio de la sala). Adentro de la sala no pasa nada.
+linea_radio: 8.5
+
 # lo que dura la cancion (segundos): mientras suena se derrumba
 duracion_seg: 150
-# cuando termina: espera estos segundos y despues a los de adentro les saca "dano" cada "dano_cada_medio_seg"
+# cuando termina: espera estos segundos y despues a los que siguen pasando la linea les saca "dano" cada medio segundo
 espera_dano_seg: 3
 # 3 = un corazon y medio, fijo (la armadura no lo baja). Cada medio segundo.
 dano: 3.0
-# despues queda derrumbada esto (minutos) y se reconstruye sola
+# cuando ya no queda nadie pasando la linea aparece una pared en la linea y queda derrumbada esto (minutos);
+# se puede bajar a la sala pero no pasar. Despues se reconstruye sola.
 cerrado_min: 30
-# cada jugador puede entrar una vez cada tanto (minutos). Los admins no tienen espera.
+# cada jugador puede bajar a jugar una vez cada tanto (minutos). Bajar con la cueva derrumbada no cuenta. Los admins no tienen espera.
 espera_jugador_min: 60
 
 # la musica (sonido del pack) y su volumen. La escuchan todos los que estan en el mundo de la cueva.
@@ -68,7 +74,8 @@ mobs:
   cantidad: 16
   tipos:
     "mm:BreezeOld": 3
-    "minecraft:silverfish": 6
-    "minecraft:zombie": 3
+    "mm:BombaVoladora": 3
+    "minecraft:silverfish": 5
+    "minecraft:zombie": 2
     "minecraft:skeleton": 2
-    "minecraft:cave_spider": 2
+    "minecraft:cave_spider": 1

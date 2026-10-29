@@ -1,7 +1,7 @@
 name: Probar TOD4Aether
 on:
   push:
-    paths: ['aether/**', 'src/**', '.github/workflows/aether.yml']
+    paths: ['aether/**', 'eventos/**', 'src/**', '.github/workflows/aether.yml']
   workflow_dispatch:
 permissions:
   contents: write
@@ -16,13 +16,14 @@ jobs:
         run: |
           mvn -B -q package
           mvn -B -q -f aether/pom.xml package
+          mvn -B -q -f eventos/pom.xml package
       - name: Bajar Paper 1.21.4
         run: |
           mkdir -p srv/plugins srv/plugins/TOD4 && cd srv
           J=$(curl -s -H "User-Agent: tod4-ci" https://fill.papermc.io/v3/projects/paper/versions/1.21.4/builds)
           URL=$(echo "$J" | jq -r 'max_by(.id) | .downloads."server:default".url')
           curl -sL -o paper.jar "$URL"
-          cp ../target/TOD4.jar ../aether/target/TOD4Aether.jar plugins/
+          cp ../target/TOD4.jar ../aether/target/TOD4Aether.jar ../eventos/target/TOD4Eventos.jar plugins/
           # un aether.yml viejo en plugins/TOD4: se tiene que copiar solo a plugins/TOD4Aether
           cp ../aether/src/main/resources/aether.yml plugins/TOD4/aether.yml
           echo "eula=true" > eula.txt
@@ -30,7 +31,7 @@ jobs:
       - name: Arrancar
         run: |
           cd srv
-          (sleep 100; for c in "tod4:aether_mesa" "tod4:aether_mobs" "tod4:aether_aire" "tod4:aether_caida" "tod4:aether_loot ver tier4" "tod4:aether_recargar" "tod4 recargar" "tod4:cambios" "time set 13000" "tod4:aether_reset status" "tod4:agujero crear" esperar "tod4:agujero estado" "tod4:agujero reconstruir" esperar esperar "tod4:agujero foto" esperar esperar "tod4:agujero reconstruir" esperar esperar "tod4:agujero estado"; do if [ "$c" = esperar ]; then sleep 10; continue; fi; echo "$c"; sleep 2; done; echo stop) | timeout 400 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
+          (sleep 100; for c in "tod4:aether_mesa" "tod4:aether_mobs" "tod4:aether_aire" "tod4:aether_caida" "tod4:aether_loot ver tier4" "tod4:aether_recargar" "tod4 recargar" "tod4:cambios" "time set 13000" "tod4:aether_reset status" "tod4eventos:agujero crear" esperar "tod4eventos:agujero estado" "tod4eventos:agujero abrir" esperar esperar "tod4eventos:agujero foto" esperar esperar "tod4eventos:agujero abrir" esperar esperar "tod4eventos:agujero estado"; do if [ "$c" = esperar ]; then sleep 10; continue; fi; echo "$c"; sleep 2; done; echo stop) | timeout 400 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
           M=$(grep -iE -A8 "Exception|TOD4|Aether|aether" log.txt | grep -v "Downloading\|Loading library" | head -150 | tr '\n' '#')
           echo "::warning::${M//%/%25}"
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }

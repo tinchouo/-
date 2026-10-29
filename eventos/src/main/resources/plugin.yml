@@ -15,3 +15,5 @@ commands:
     description: Lava que sube por capas dentro de un volcan
   goblins:
     description: Invasion Goblin (raid con mobs de MythicMobs)
+  agujero:
+    description: Agujero del Infierno 2.0

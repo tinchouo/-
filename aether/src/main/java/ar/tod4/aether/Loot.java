@@ -81,12 +81,9 @@ final class Loot implements Listener {
     }
 
     /** Una tirada de un tier (los stacks ya partidos al maximo de cada item). */
-    List<ItemStack> tirar(String tier) { return tirar(y.getStringList(tier), tier); }
-
-    /** Una tirada de una lista de renglones "<item> <cantidad> [chance%]" (tambien la usa el Agujero del Infierno). */
-    List<ItemStack> tirar(List<String> lineas, String tier) {
+    List<ItemStack> tirar(String tier) {
         List<ItemStack> out = new ArrayList<>();
-        for (String linea : lineas) {
+        for (String linea : y.getStringList(tier)) {
             try {
                 ItemStack it = renglon(linea);
                 if (it != null) partir(it, out);

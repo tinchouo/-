@@ -25,6 +25,7 @@ import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
  *    Boss bar para todos con el progreso.
  *  - Lava: sube por capas dentro de un volcan, llenando solo el aire conectado con el interior (se adapta a la forma).
  *  - Invasion Goblin: raid con mobs de MythicMobs (barra azul como las raids de Minecraft).
+ *  - Agujero del Infierno 2.0: una cueva que se derrumba al ritmo de una cancion (ver Agujero).
  * Comandos solo con prefijo: /tod4eventos:ofrenda, /tod4eventos:lava y /tod4eventos:goblins.
  */
 public final class TOD4Eventos extends JavaPlugin {
@@ -34,6 +35,7 @@ public final class TOD4Eventos extends JavaPlugin {
     private Ofrendas ofrendas;
     private Lava lava;
     private Goblins goblins;
+    private Agujero agujero;
 
     @Override
     public void onEnable() {
@@ -42,11 +44,12 @@ public final class TOD4Eventos extends JavaPlugin {
         ofrendas = new Ofrendas(this);
         lava = new Lava(this);
         goblins = new Goblins(this);
-        for (String c : List.of("ofrenda", "lava", "goblins")) if (getCommand(c) != null) getCommand(c).setTabCompleter(this);
+        agujero = new Agujero(this);
+        for (String c : List.of("ofrenda", "lava", "goblins", "agujero")) if (getCommand(c) != null) getCommand(c).setTabCompleter(this);
         // los comandos de admin solo existen con prefijo (/tod4eventos:ofrenda)
         Bukkit.getScheduler().runTask(this, () -> {
             Map<String, Command> known = Bukkit.getCommandMap().getKnownCommands();
-            for (String k : List.of("ofrenda", "lava", "goblins")) {
+            for (String k : List.of("ofrenda", "lava", "goblins", "agujero")) {
                 Command c = known.get(k);
                 if (c instanceof org.bukkit.command.PluginCommand pc && pc.getPlugin() == this) known.remove(k);
             }
@@ -59,6 +62,7 @@ public final class TOD4Eventos extends JavaPlugin {
         if (ofrendas != null) ofrendas.apagar();
         if (lava != null) lava.apagar();
         if (goblins != null) goblins.apagar();
+        if (agujero != null) agujero.apagar();
     }
 
     // ================================================================= utilidades
@@ -147,6 +151,7 @@ public final class TOD4Eventos extends JavaPlugin {
             case "ofrenda" -> ofrendas.comando(s, a);
             case "lava" -> lava.comando(s, a);
             case "goblins" -> goblins.comando(s, a);
+            case "agujero" -> agujero.comando(s, a);
             default -> { return false; }
         }
         return true;
@@ -160,6 +165,7 @@ public final class TOD4Eventos extends JavaPlugin {
             case "ofrenda" -> out.addAll(ofrendas.tab(a));
             case "lava" -> out.addAll(lava.tab(a));
             case "goblins" -> out.addAll(goblins.tab(a));
+            case "agujero" -> out.addAll(agujero.tab(a));
             default -> { }
         }
         String pre = a.length > 0 ? a[a.length - 1].toLowerCase() : "";

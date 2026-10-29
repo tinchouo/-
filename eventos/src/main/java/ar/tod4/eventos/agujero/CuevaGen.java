@@ -1,4 +1,4 @@
-package ar.tod4.aether.agujero;
+package ar.tod4.eventos.agujero;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,7 +78,10 @@ public final class CuevaGen {
     private final List<Punto> puntos = new ArrayList<>();
     /** El camino de basalto del lago (polilinea en x,z) y su altura. */
     private final List<double[]> camino = new ArrayList<>();
-    private Sala lago;
+    private Sala lago, pozo;
+    private double rampa0;
+    /** Piso donde llega el tunel al pozo; de ahi baja la rampa hasta el fondo (12 bloques por vuelta). */
+    private static final double POZO_ARRIBA = 40, POZO_POR_VUELTA = 12;
     private double nivelLava;
     private final Map<Long, int[]> porChunk = new ConcurrentHashMap<>();
     public final Sala entrada;
@@ -87,14 +90,15 @@ public final class CuevaGen {
         this.semilla = semilla;
         Random r = new Random(semilla);
         // ---- salas
-        entrada = sala("entrada", 0, 50, -98, 7, 8, 7);
-        Sala junta = sala("cruce", 0, 44, -50, 11, 9, 10);
-        Sala columnas = sala("columnas", -58, 38, -18, 25, 15, 21);
-        lago = sala("lago", 58, 24, 8, 23, 17, 25);
+        // pisos parecidos entre si: pocas subidas y bajadas
+        entrada = sala("entrada", 0, 44, -98, 7, 8, 7);
+        Sala junta = sala("cruce", 0, 42, -50, 11, 9, 10);
+        Sala columnas = sala("columnas", -58, 40, -18, 25, 15, 21);
+        lago = sala("lago", 58, 33, 8, 23, 17, 25);
         nivelLava = lago.piso + 3;
-        Sala catedral = sala("catedral", 2, 32, 58, 27, 34, 23);
-        Sala pozo = sala("pozo", 70, 14, 78, 8, 30, 8);
-        Sala oeste = sala("galeria", -78, 46, 62, 13, 10, 15);
+        Sala catedral = sala("catedral", 2, 38, 58, 27, 34, 23);
+        pozo = sala("pozo", 70, 10, 78, 8, 30, 8);
+        Sala oeste = sala("galeria", -78, 42, 62, 13, 10, 15);
 
         // ---- tuneles anchos (piso = el de la sala de donde salen y adonde llegan; el lago entra a la altura del camino)
         double lagoPiso = nivelLava + 1;
@@ -104,15 +108,11 @@ public final class CuevaGen {
         tunel(r, columnas.x + 8, columnas.piso, columnas.z + 14, catedral.x - 16, catedral.piso, catedral.z - 10, 5.0, false);
         tunel(r, lago.x - 6, lagoPiso, lago.z + 18, catedral.x + 18, catedral.piso, catedral.z - 4, 4.6, false);
         tunel(r, columnas.x - 6, columnas.piso, columnas.z + 16, oeste.x, oeste.piso, oeste.z - 10, 4.4, false);
-        tunel(r, oeste.x + 10, oeste.piso, oeste.z + 4, catedral.x - 22, catedral.piso + 12, catedral.z + 6, 3.6, false);   // entra alto a la catedral (balcon)
+        tunel(r, oeste.x + 10, oeste.piso, oeste.z + 4, catedral.x - 22, catedral.piso + 4, catedral.z + 6, 3.6, false);   // entra un poco alto a la catedral
         // al pozo se entra por arriba: el tunel llega a la boca y el pozo baja ~28 bloques
-        tunel(r, lago.x + 14, lagoPiso, lago.z + 18, pozo.x - 1, pozo.piso + 30, pozo.z - 8, 3.8, false);
-        // adentro del pozo, escalones en espiral para bajar (un salto mal dado y al fondo)
-        for (int i = 0; i < 9; i++) {
-            double ang = -Math.PI / 2 - i * 0.85;
-            double py = pozo.piso + 27 - i * 3.0;
-            formas.add(new Forma(pozo.x + Math.cos(ang) * 5.2, pozo.z + Math.sin(ang) * 5.2, 1.7, py - 1, py, 3));
-        }
+        // al pozo se llega por arriba y se baja por una rampa en espiral pegada a la pared (el medio es un hueco hasta el fondo)
+        tunel(r, lago.x + 14, lagoPiso, lago.z + 18, pozo.x - 1, POZO_ARRIBA, pozo.z - 8, 3.8, false);
+        rampa0 = Math.atan2(-8, -1);
 
         // ---- pasillos chicos: algunos sin salida (con un nicho al final), otros que unen tuneles
         List<Seg> anchos = new ArrayList<>(segs);
@@ -228,10 +228,10 @@ public final class CuevaGen {
             ang += Math.sin(fase + pasos * 0.045) * amp * Math.min(1, d / 30) + Math.sin(fase * 1.7 + pasos * 0.11) * amp * 0.4 * Math.min(1, d / 20);
             if (d >= 1) { x += Math.cos(ang); z += Math.sin(ang); }
             // sube y baja un poco por el camino (lomas), sin pasarse de lo caminable
-            double loma = chico ? 0 : 3.0 * Math.sin(fase * 0.3 + pasos * 0.05) * Math.min(1, d / 25);
+            double loma = chico ? 0 : 1.2 * Math.sin(fase * 0.3 + pasos * 0.05) * Math.min(1, d / 25);
             double falta = bpiso + loma - piso, quedan = Math.max(1, d);
-            double sube = Math.max(-0.34, Math.min(0.34, falta / quedan * 1.4 + (loma != 0 ? Math.cos(fase * 0.3 + pasos * 0.05) * 0.15 : 0)));
-            if (d < 1) sube = Math.max(-0.34, Math.min(0.34, falta));
+            double sube = Math.max(-0.25, Math.min(0.25, falta / quedan * 1.4 + (loma != 0 ? Math.cos(fase * 0.3 + pasos * 0.05) * 0.15 : 0)));
+            if (d < 1) sube = Math.max(-0.25, Math.min(0.25, falta));
             piso += sube;
             x = Math.max(MIN_X + 8, Math.min(MAX_X - 8, x));
             z = Math.max(MIN_Z + 8, Math.min(MAX_Z - 8, z));
@@ -331,6 +331,22 @@ public final class CuevaGen {
         return false;
     }
 
+    /** La rampa del pozo: una franja pegada a la pared que baja en espiral; el bloque de abajo del piso es solido. */
+    private boolean rampa(int x, int y, int z) {
+        double dx = x + 0.5 - pozo.x, dz = z + 0.5 - pozo.z, rho = Math.hypot(dx, dz);
+        if (rho < 3.6 || rho > 9.5 || y < pozo.piso - 1 || y > POZO_ARRIBA) return false;
+        double phi = Math.atan2(dz, dx) - rampa0;
+        phi = ((phi % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        double vueltas = (POZO_ARRIBA - pozo.piso) / POZO_POR_VUELTA;
+        for (int k = 0; k <= Math.ceil(vueltas); k++) {
+            double f = phi + Math.PI * 2 * k;
+            if (f / (Math.PI * 2) > vueltas) break;
+            double piso = Math.max(pozo.piso, Math.floor(POZO_ARRIBA - f / (Math.PI * 2) * POZO_POR_VUELTA));
+            if (y == piso - 1 || y == piso - 2) return true;
+        }
+        return false;
+    }
+
     private boolean enLago(int x, int z) {
         double dx = (x + 0.5 - lago.x) / lago.rx, dz = (z + 0.5 - lago.z) / lago.rz;
         return dx * dx + dz * dz < 1;
@@ -390,6 +406,7 @@ public final class CuevaGen {
                     out[i] = camino ? (y == nivelLava ? BASALTO_LISO : BASALTO) : LAVA;
                     continue;
                 }
+                if (rampa(x, y, z)) { out[i] = PIZARRA; continue; }
                 if (adorno(x, y, z)) { out[i] = salaDe(x, y, z, "pozo") != null ? PIZARRA : GOTEO; continue; }
                 out[i] = AIRE;
             }
