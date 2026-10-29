@@ -265,7 +265,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&e/tod4:cambios [día] &8- &7cambios de dificultad");
             Style.raw(s, "&e/tod4:avisos &8- &7mensajes, bienvenidas y ruleta");
             Style.raw(s, "&e/tod4:altar [agregar|quitar|gulag|bloquear|desbloquear|limpiar] &8- &7altar de revivir");
-            Style.raw(s, "&e/tod4:totems &8- &7tótems que no dan ceguera (día 14)");
+            Style.raw(s, "&e/tod4:totems &8- &7tótems sin ceguera y tótems que pueden fallar (día 14)");
+            Style.raw(s, "&e/tod4 backrooms &8- &7donde caen los que sueñan con las backrooms (día 13)");
             Style.raw(s, "&e/tod4:alma <give|remove> <jugador> &8- &7dar o quitar un alma");
             Style.raw(s, "&e/tod4:revivir <jugador> &8- &7revivir a alguien sin ritual");
             Style.raw(s, "&e/tod4:palo &8- &7Palo de Retorno");
@@ -295,6 +296,10 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
                 if (!cambios.ballestero(pj.getLocation(), t)) Style.err(s, "Uso: &e/tod4 ballestero <rojo|amarillo|negro>");
+                return true;
+            }
+            case "backrooms": {
+                if (s instanceof Player pj) cambios.backrooms(pj);
                 return true;
             }
             case "minero": {
@@ -337,7 +342,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

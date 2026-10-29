@@ -638,4 +638,81 @@ final class MecanicasNuevas implements Listener {
             if (p.isOnline() && !p.isDead()) p.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, t, 0));
         });
     }
+
+    // ================================================================= d8.herramientas: solo las herramientas TOD
+
+    private static final NamespacedKey ORAXEN_ID = new NamespacedKey("oraxen", "id");
+
+    /** Romper un bloque de pico o de hacha con otra cosa que no sea el TOD Pickaxe o el TOD Axe: medio corazon fijo. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void herramientas(org.bukkit.event.block.BlockBreakEvent e) {
+        if (!cb.on("d8.herramientas")) return;
+        Player p = e.getPlayer();
+        if (!jugando(p) || ar.tod4.hook.Cuyes.activo(p)) return;
+        Material m = e.getBlock().getType();
+        if (m.getHardness() <= 0) return;   // los que se rompen al toque no cuentan
+        if (!org.bukkit.Tag.MINEABLE_PICKAXE.isTagged(m) && !org.bukkit.Tag.MINEABLE_AXE.isTagged(m)) return;
+        ItemStack mano = p.getInventory().getItemInMainHand();
+        String ox = mano.hasItemMeta() ? mano.getItemMeta().getPersistentDataContainer().get(ORAXEN_ID, org.bukkit.persistence.PersistentDataType.STRING) : null;
+        List<String> ok = c().getStringList("cambios.herramientas.permitidas");
+        if (ok.isEmpty()) ok = List.of("todpico", "todaxe");
+        if (ox != null && ok.contains(ox)) return;
+        double dano = c().getDouble("cambios.herramientas.dano", 1.0);
+        double h = p.getHealth();
+        if (h - dano > 0.0001) {
+            p.damage(0.0001);                         // el golpe (sonido y animacion)
+            if (!p.isDead()) p.setHealth(Math.max(0.0001, Math.min(p.getHealth(), h) - dano));
+        } else {
+            ar.tod4.core.Causas.anotar(p.getUniqueId(), net.kyori.adventure.text.Component.text(p.getName() + " picó sin herramientas TOD"));
+            p.damage(1000);
+        }
+    }
+
+    // ================================================================= d13.backrooms: al dormir, a veces despertas en las backrooms
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void suena(org.bukkit.event.player.PlayerBedEnterEvent e) {
+        if (e.getBedEnterResult() != org.bukkit.event.player.PlayerBedEnterEvent.BedEnterResult.OK || !cb.on("d13.backrooms")) return;
+        Player p = e.getPlayer();
+        if (!jugando(p) || ThreadLocalRandom.current().nextDouble() * 100 >= c().getDouble("cambios.backrooms.chance", 5)) return;
+        // un ratito dormido y de golpe... las backrooms
+        Bukkit.getScheduler().runTaskLater(pl, () -> {
+            if (!p.isOnline() || !p.isSleeping()) return;
+            Location dst = backrooms();
+            if (dst == null) { pl.getLogger().warning("Backrooms al dormir: no encuentro el mundo de las backrooms (mobs.mundo_backrooms)."); return; }
+            p.wakeup(false);
+            p.teleport(dst);
+            p.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 100, 0, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 120, 0, false, false));
+            p.playSound(p.getLocation(), Sound.AMBIENT_CAVE, SoundCategory.MASTER, 1f, 0.6f);
+            p.sendActionBar(ar.tod4.util.Txt.c("&7...esto no es tu cama."));
+        }, (long) (c().getDouble("cambios.backrooms.espera_seg", 2.5) * 20));
+    }
+
+    /** A donde caes: el punto puesto con /tod4 backrooms, o el spawn del mundo de las backrooms. */
+    private Location backrooms() {
+        Location l = pl.datos().y().getLocation("backrooms_destino");
+        if (l != null && l.getWorld() != null) return l;
+        World w = Bukkit.getWorld(c().getString("mobs.mundo_backrooms", "backrooms"));
+        return w == null ? null : w.getSpawnLocation().add(0.5, 0, 0.5);
+    }
+
+    /** /tod4 backrooms: donde caen los que suenan con las backrooms (donde estas parado). */
+    void ponerBackrooms(Player p) {
+        pl.datos().set("backrooms_destino", p.getLocation());
+        ar.tod4.util.Style.ok(p, "Los que caigan en las backrooms al dormir aparecen acá.");
+    }
+
+    // ================================================================= d14.totem_falla: algunos totems fallan
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void totemFalla(EntityResurrectEvent e) {
+        if (!cb.on("d14.totem_falla") || !(e.getEntity() instanceof Player p)) return;
+        EquipmentSlot mano = e.getHand();
+        ItemStack usado = mano == null ? null : p.getInventory().getItem(mano);
+        if (!Totems.falla(pl, usado)) return;
+        if (ThreadLocalRandom.current().nextDouble() * 100 >= Totems.chance(pl)) return;
+        e.setCancelled(true);   // no te salva
+        ar.tod4.util.Style.broadcast("&c✖ &fEl tótem de &c" + p.getName() + " &ffalló.");
+    }
 }

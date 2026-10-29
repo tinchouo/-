@@ -83,9 +83,10 @@ public final class Cambios {
         add(new Cambio("d7.creeper_muerte", 7, "Creeper al morir", false, "&7Al morir, 10% de que aparezca un creeper", "&7eléctrico con 1 de vida. No rompe bloques."));
         add(new Cambio("d7.plantas", 7, "Plantas lentas", false, "&7Todas las plantas y cultivos", "&7crecen 3 veces más lento."));
         add(new Cambio("d7.xp", 7, "Experiencia x2", false, "&7Los hostiles que mata un jugador (y los de", "&7MythicMobs) y los minerales del Overworld", "&7dan el doble de XP. No spawners ni cuarzo."));
-        add(new Cambio("d8.pacificos", 8, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
-        add(new Cambio("d8.wither", 8, "Wither x2", false, "&7Doble vida y daño, cráneos más fuertes", "&7y seguidos, Wither más fuerte y largo,", "&7más rápido, explosión inicial x2."));
-        add(new Cambio("d8.equipo", 8, "Equipo caído", false, "&7+5% de daño recibido por cada", "&7compañero de equipo en el limbo.", "&7Se ve en la sidebar: RJM - +5% ☠"));
+        add(new Cambio("d8.herramientas", 8, "Solo herramientas TOD", false, "&7Romper algo de pico o de hacha sin el", "&7TOD Pickaxe o el TOD Axe te saca", "&7medio corazón fijo."));
+        add(new Cambio("d8.pacificos", 9, "Animales con TNT", false, "&7Los animales te persiguen, te pegan", "&7y de cerca te ponen una TNT."));
+        add(new Cambio("d8.wither", 9, "Wither x2", false, "&7Doble vida y daño, cráneos más fuertes", "&7y seguidos, Wither más fuerte y largo,", "&7más rápido, explosión inicial x2."));
+        add(new Cambio("d8.equipo", 10, "Equipo caído", false, "&7+5% de daño recibido por cada", "&7compañero de equipo en el limbo.", "&7Se ve en la sidebar: RJM - +5% ☠"));
         add(new Cambio("d9.zombies", 9, "Zombies armados", false, "&72 a 4 partes de armadura (50% Prot IV)", "&7y siempre espada (Filo 1 a 5)."));
         add(new Cambio("d9.hueso", 9, "Sin polvo de hueso", false, "&7El polvo de hueso no", "&7hace crecer nada."));
         add(new Cambio("d9.esqueletos", 9, "Esqueletos armados", false, "&7Armadura como los zombies, arco Poder 1-3", "&7y flechas de daño II, levitación,", "&7ceguera o lentitud III."));
@@ -94,6 +95,8 @@ public final class Cambios {
         add(new Cambio("d11.hambre", 11, "Hambre más rápida", false, "&7El hambre baja el doble de rápido."));
         add(new Cambio("d11.nuclear_muerte", 11, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear (aparte del eléctrico)."));
         add(new Cambio("d12.noches_peligrosas", 12, "Noches peligrosas", false, "&7De noche, en el Overworld, los", "&7mobs hostiles hacen el doble de daño."));
+        add(new Cambio("d13.backrooms", 13, "Backrooms al dormir", false, "&7Al acostarte a dormir, 5% de", "&7despertar en las backrooms."));
+        add(new Cambio("d14.totem_falla", 14, "Tótems que fallan", false, "&7Los tótems de /tod4:totems (fallan)", "&7tienen 1% de no salvarte."));
         add(new Cambio("d14.totem", 14, "Tótem con precio", false, "&7Cuando el tótem te salva,", "&72 segundos de ceguera."));
         add(new Cambio("d6.bedrock", 6, "Bedrock maldita", false, "&7Tocar la bedrock da Wither III", "&7y gasta la armadura."));
 
@@ -121,6 +124,9 @@ public final class Cambios {
         if (sueno != null) sueno.apagar();
         if (nuevas != null) nuevas.apagar();
     }
+
+    /** /tod4 backrooms: donde caen los que suenan con las backrooms (d13.backrooms). */
+    public void backrooms(org.bukkit.entity.Player p) { if (nuevas != null) nuevas.ponerBackrooms(p); }
 
     /** /tod4 minero: hace aparecer un Zombie Minero para probar. */
     public void minero(org.bukkit.Location l) { if (nuevas != null) nuevas.crearMinero(l); }

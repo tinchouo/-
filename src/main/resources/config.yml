@@ -134,6 +134,12 @@ cambios:
     tnt_fuerza: 2               # la TNT normal x2 (fuerza y radio)
     cava_cada_seg: 0.75
     oro_chance: 0.25            # cada parte de armadura de oro, con Proteccion 1 a 4
+  herramientas:                 # dia 8: romper algo de pico o hacha sin estas (ids de Oraxen) saca medio corazon
+    permitidas: [todpico, todaxe]
+    dano: 1.0
+  backrooms:                    # dia 13: al acostarse, chance (%) de despertar en las backrooms (/tod4 backrooms = donde caen)
+    chance: 5
+    espera_seg: 2.5
   hambre_multiplicador: 2       # dia 11
   noches_dano: 2                # dia 12: de noche, en el Overworld, los hostiles pegan esto
   totem_ceguera_seg: 2          # dia 14

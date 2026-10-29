@@ -105,7 +105,7 @@ final class AvisosCambios {
             "Para respirar ahí necesitas el *Casco de Oxígeno*. Cada carga dura *30 minutos* y se recarga con un *bloque de amatista*."},
         {"cambio_creeper_muerte", "d7.creeper_muerte", "7", "d",
             "Al morir, hay un *10%* de probabilidad de que aparezca un *creeper eléctrico* en el lugar de tu muerte."},
-        {"cambio_pacificos", "d8.pacificos", "8", "d",
+        {"cambio_pacificos", "d8.pacificos", "9", "d",
             "Los *animales* se volvieron agresivos. Te persiguen, te atacan y, si se acercan lo suficiente, te dejan una *TNT*."},
         {"cambio_ballesteros", "d10.ballesteros", "10", "d", BALLESTEROS[0], BALLESTEROS[1]},
         {"cambio_zombies", "d9.zombies", "9", "d",
@@ -118,10 +118,10 @@ final class AvisosCambios {
             "Todas las *plantas* y *cultivos* ahora crecen *3 veces más lento*.",
             "Toca planificar mejor las granjas."},
         {"aviso_xp", "d7.xp", "7", "a", XP[0], XP[1]},
-        {"cambio_wither_x2", "d8.wither", "8", "d",
+        {"cambio_wither_x2", "d8.wither", "9", "d",
             "El *Wither* ahora es *el doble de fuerte*: tiene el doble de vida, pega el doble, dispara más seguido y se mueve más rápido.",
             "Su efecto de *Wither* es más fuerte y dura más."},
-        {"cambio_equipo", "d8.equipo", "8", "d",
+        {"cambio_equipo", "d8.equipo", "10", "d",
             "Por cada *compañero de equipo muerto* que no fue revivido, recibes un *5% más de daño*.",
             "Lo que tienes de más se ve al lado de tu equipo, en la barra de la derecha."},
         {"cambio_hueso", "d9.hueso", "9", "d",
@@ -133,6 +133,13 @@ final class AvisosCambios {
         {"cambio_minero", "d10.minero", "10", "d",
             "Apareció el *Zombie Minero*: te ve a través de los bloques y *cava* hasta llegar a ti.",
             "Cuando está cerca, pone una *TNT* el doble de fuerte. Cuanto más profundo estés, más aparecen."},
+        {"cambio_herramientas", "d8.herramientas", "8", "d",
+            "Por culpa de *Misovia_*, ahora romper cualquier bloque de *pico* o de *hacha* te saca *medio corazón*.",
+            "Solo el *TOD Pickaxe* y el *TOD Axe* te salvan de eso."},
+        {"cambio_backrooms", "d13.backrooms", "13", "d",
+            "Dormir ya no es tan seguro: al acostarte hay un *5%* de probabilidad de despertar en las *backrooms*."},
+        {"cambio_totem_falla", "d14.totem_falla", "14", "d",
+            "Los *tótems* ya no son infalibles: hay un *1%* de probabilidad de que *no te salven*."},
         {"cambio_hambre", "d11.hambre", "11", "d",
             "El *hambre* ahora baja *el doble de rápido*.",
             "Lleva siempre comida encima."},
@@ -174,6 +181,9 @@ final class AvisosCambios {
         pl.avisos().cambiarTexto("cambio_poder", armar(PODER_VIEJO, 0, max), armar(new String[]{PODER_1, PODER_2}, 0, max));   // + Infinidad
         pl.avisos().cambiarTexto("cambio_ballesteros", armar(BALLESTEROS_VIEJO, 0, max), armar(BALLESTEROS, 0, max));   // hielo y wither
         pl.avisos().cambiarDia("cambio_nuclear_muerte", 12, 11);
+        pl.avisos().cambiarDia("cambio_pacificos", 8, 9);     // el dia 8 queda solo para "Solo herramientas TOD"
+        pl.avisos().cambiarDia("cambio_wither_x2", 8, 9);
+        pl.avisos().cambiarDia("cambio_equipo", 8, 10);
         pl.avisos().cambiarTexto("aviso_xp", armar(XP_VIEJO, 0, max), armar(XP, 0, max));   // + minerales y MythicMobs
         pl.avisos().cambiarTexto("cambio_noches_peligrosas", armar(NOCHES_P_VIEJO, 0, max), armar(NOCHES_P, 0, max));   // doble dano, sin mas mobs
         pl.avisos().cambiarTexto("cambio_totem", armar(new String[]{TOTEM_VIEJO}, 0, max), armar(new String[]{TOTEM}, 0, max));   // 2 segundos   // paso al dia 11
