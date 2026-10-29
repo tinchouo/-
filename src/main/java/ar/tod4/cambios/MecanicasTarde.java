@@ -401,10 +401,20 @@ final class MecanicasTarde implements Listener {
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void arcoNegro(org.bukkit.event.entity.EntityShootBowEvent e) {
         if (!(e.getEntity() instanceof org.bukkit.entity.AbstractSkeleton s) || !s.getScoreboardTags().contains("bal_negro")) return;
-        org.bukkit.util.Vector v = e.getProjectile().getVelocity().multiply(conf("negro", "fuerza", 0.9));
+        // en 1.21.4 la flecha todavia no tiene velocidad cuando sale el evento (se la da despues): se apunta a mano,
+        // como apunta el esqueleto (un poco mas alto segun la distancia, por la caida)
+        org.bukkit.Location o = e.getProjectile().getLocation();
+        org.bukkit.util.Vector dir;
+        if (s.getTarget() != null && s.getTarget().getWorld().equals(s.getWorld())) {
+            org.bukkit.Location t = s.getTarget().getLocation().add(0, s.getTarget().getHeight() / 3.0, 0);
+            double dx = t.getX() - o.getX(), dy = t.getY() - o.getY(), dz = t.getZ() - o.getZ();
+            dir = new org.bukkit.util.Vector(dx, dy + Math.hypot(dx, dz) * 0.2, dz);
+        } else dir = s.getLocation().getDirection();
+        if (dir.lengthSquared() < 1e-6) dir = new org.bukkit.util.Vector(0, 0.2, 1);
+        org.bukkit.util.Vector v = dir.normalize().multiply(1.6 * conf("negro", "fuerza", 0.9));
         double dist = s.getTarget() != null ? s.getTarget().getLocation().distance(s.getLocation()) : 12;
         int mecha = (int) Math.round(dist / Math.max(0.3, v.length()) + conf("negro", "mecha_extra_ticks", 10));
-        org.bukkit.entity.TNTPrimed tnt = s.getWorld().spawn(e.getProjectile().getLocation(), org.bukkit.entity.TNTPrimed.class, t -> {
+        org.bukkit.entity.TNTPrimed tnt = s.getWorld().spawn(o, org.bukkit.entity.TNTPrimed.class, t -> {
             t.setFuseTicks(Math.max(10, Math.min(80, mecha)));
             t.setSource(s);
             t.setVelocity(v);
