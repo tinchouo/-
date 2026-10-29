@@ -35,16 +35,23 @@ import net.kyori.adventure.text.Component;
  *
  * Da la misma pieza de la armadura Nightmare (Oraxen) con los MISMOS encantamientos, la mejora que tenia
  * (y su adorno), lo de los demas plugins guardado en la pieza, y la durabilidad al maximo.
+ *
+ * Los materiales los hace el plugin (no hace falta pack ni Oraxen): se ven como el bloque normal, encantado.
+ *   Nightmare Sculk     = 4 fragmentos de eco en cuadrado (2x2)
+ *   Resina Reforzada    = 9 bloques de resina (3x3)
  */
 final class Nightmare implements Listener {
 
     private final TOD4Mejoras pl;
-    private final NamespacedKey clave;
+    private final NamespacedKey clave, kSculk, kResina, kMaterial;
     private static final NamespacedKey ORAXEN = new NamespacedKey("oraxen", "id");
 
     Nightmare(TOD4Mejoras pl) {
         this.pl = pl;
         this.clave = new NamespacedKey(pl, "nightmare");
+        this.kSculk = new NamespacedKey(pl, "nightmare_sculk");
+        this.kResina = new NamespacedKey(pl, "resina_reforzada");
+        this.kMaterial = new NamespacedKey(pl, "material");
         registrar();
     }
 
@@ -56,7 +63,17 @@ final class Nightmare implements Listener {
 
     void registrar() {
         Bukkit.removeRecipe(clave);
+        Bukkit.removeRecipe(kSculk);
+        Bukkit.removeRecipe(kResina);
         if (!activa()) return;
+        ShapedRecipe sc = new ShapedRecipe(kSculk, material("nightmare_sculk"));
+        sc.shape("EE", "EE");
+        sc.setIngredient('E', Material.ECHO_SHARD);
+        Bukkit.addRecipe(sc);
+        ShapedRecipe re = new ShapedRecipe(kResina, material("resina_reforzada"));
+        re.shape("RRR", "RRR", "RRR");
+        re.setIngredient('R', Material.RESIN_BLOCK);
+        Bukkit.addRecipe(re);
         ShapedRecipe r = new ShapedRecipe(clave, muestra());
         r.shape("RRR", "CPC", "SSS");
         r.setIngredient('R', new RecipeChoice.MaterialChoice(Material.PAPER));
@@ -65,6 +82,30 @@ final class Nightmare implements Listener {
         r.setIngredient('P', new RecipeChoice.MaterialChoice(Material.NETHERITE_HELMET, Material.NETHERITE_CHESTPLATE,
                 Material.NETHERITE_LEGGINGS, Material.NETHERITE_BOOTS));
         Bukkit.addRecipe(r);
+    }
+
+    /** El material: papel que se ve como el bloque normal (sculk o resina), encantado, con su nombre y su marca. */
+    ItemStack material(String tipo) {
+        boolean sculk = tipo.equals("nightmare_sculk");
+        ItemStack it = new ItemStack(Material.PAPER);
+        ItemMeta m = it.getItemMeta();
+        m.setItemModel(NamespacedKey.minecraft(sculk ? "sculk" : "resin_block"));
+        m.setEnchantmentGlintOverride(true);
+        m.itemName(sculk ? TOD4Mejoras.c("Nightmare Sculk", "#c77dff").decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true)
+                : TOD4Mejoras.c("Resina Reforzada", "#ffb347").decoration(net.kyori.adventure.text.format.TextDecoration.BOLD, true));
+        m.lore(List.of(TOD4Mejoras.gris(sculk ? "Sculk cargado de pesadillas." : "Nueve bloques de resina en uno."),
+                Component.text("Sirve para la armadura Nightmare.", net.kyori.adventure.text.format.NamedTextColor.DARK_GRAY)
+                        .decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)));
+        m.getPersistentDataContainer().set(kMaterial, PersistentDataType.STRING, tipo);
+        it.setItemMeta(m);
+        return it;
+    }
+
+    /** Si el item es ese material (el del plugin o, si hay, el de Oraxen con ese nombre). */
+    private boolean es(ItemStack it, String tipo, String oraxenId) {
+        if (it == null || !it.hasItemMeta()) return false;
+        String t = it.getItemMeta().getPersistentDataContainer().get(kMaterial, PersistentDataType.STRING);
+        return tipo.equals(t) || oraxenId.equals(idOraxen(it));
     }
 
     private ItemStack muestra() {
@@ -97,8 +138,8 @@ final class Nightmare implements Listener {
     /** La pieza Nightmare, o null si algo no va (ingredientes que no son los de Oraxen, pieza que ya es de Oraxen...). */
     private ItemStack resultado(ItemStack[] m) {
         String resina = cfg("resina", "resina_reforzada"), sculk = cfg("sculk", "nightmare_sculk");
-        for (int i : new int[]{0, 1, 2}) if (!resina.equals(idOraxen(m[i]))) return null;
-        for (int i : new int[]{6, 7, 8}) if (!sculk.equals(idOraxen(m[i]))) return null;
+        for (int i : new int[]{0, 1, 2}) if (!es(m[i], "resina_reforzada", resina)) return null;
+        for (int i : new int[]{6, 7, 8}) if (!es(m[i], "nightmare_sculk", sculk)) return null;
         ItemStack vieja = m[4];
         if (vieja == null || idOraxen(vieja) != null) return null;   // solo netherite normal (no una que ya sea Nightmare)
         String id = switch (vieja.getType()) {

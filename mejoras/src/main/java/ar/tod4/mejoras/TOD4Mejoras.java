@@ -64,7 +64,7 @@ public final class TOD4Mejoras extends JavaPlugin {
     public void onDisable() {
         if (efectos != null) efectos.apagar();
         for (NamespacedKey k : recetas) Bukkit.removeRecipe(k);
-        Bukkit.removeRecipe(new NamespacedKey(this, "nightmare"));
+        for (String k : new String[]{"nightmare", "nightmare_sculk", "resina_reforzada"}) Bukkit.removeRecipe(new NamespacedKey(this, k));
     }
 
     // ================================================================= config
@@ -181,6 +181,20 @@ public final class TOD4Mejoras extends JavaPlugin {
                 t.getInventory().addItem(item(mejoras.get(a[1].toLowerCase()), n)).values().forEach(r -> t.getWorld().dropItem(t.getLocation(), r));
                 s.sendMessage(Component.text("Entregada.", NamedTextColor.GREEN));
             }
+            case "material" -> {
+                // /mejoras material <sculk|resina> [jugador] [cantidad]: los materiales de la armadura Nightmare
+                String t0 = a.length > 1 ? a[1].toLowerCase() : "";
+                String tipo = t0.startsWith("s") ? "nightmare_sculk" : t0.startsWith("r") ? "resina_reforzada" : null;
+                if (tipo == null) { s.sendMessage(Component.text("Uso: /mejoras material <sculk|resina> [jugador] [cantidad]", NamedTextColor.RED)); return true; }
+                Player t = a.length > 2 ? Bukkit.getPlayerExact(a[2]) : (s instanceof Player p ? p : null);
+                if (t == null) { s.sendMessage(Component.text("Jugador no encontrado.", NamedTextColor.RED)); return true; }
+                int n = 1;
+                try { if (a.length > 3) n = Math.max(1, Math.min(64, Integer.parseInt(a[3]))); } catch (NumberFormatException ignored) { }
+                ItemStack it = nightmare.material(tipo);
+                it.setAmount(n);
+                t.getInventory().addItem(it).values().forEach(r -> t.getWorld().dropItem(t.getLocation(), r));
+                s.sendMessage(Component.text("Entregado.", NamedTextColor.GREEN));
+            }
             default -> {
                 if (s instanceof Player p) Menu.principal(this, p);
                 else s.sendMessage(Component.text("/mejoras recargar | /mejoras dar <mejora> [jugador] [cantidad]", NamedTextColor.YELLOW));
@@ -192,7 +206,9 @@ public final class TOD4Mejoras extends JavaPlugin {
     @Override
     public List<String> onTabComplete(CommandSender s, Command cmd, String label, String[] a) {
         List<String> out = new ArrayList<>();
-        if (a.length == 1) out.addAll(List.of("recargar", "dar"));
+        if (a.length == 1) out.addAll(List.of("recargar", "dar", "material"));
+        else if (a.length == 2 && a[0].equalsIgnoreCase("material")) out.addAll(List.of("sculk", "resina"));
+        else if (a.length == 3 && a[0].equalsIgnoreCase("material")) for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
         else if (a.length == 2 && a[0].equalsIgnoreCase("dar")) out.addAll(mejoras.keySet());
         else if (a.length == 3 && a[0].equalsIgnoreCase("dar")) for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
         String last = a.length == 0 ? "" : a[a.length - 1].toLowerCase();
