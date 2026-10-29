@@ -181,6 +181,7 @@ final class Agujero implements Listener {
         if (w == null) {
             if (!crear && !new File(Bukkit.getWorldContainer(), nombreMundo()).exists()) return null;
             w = new WorldCreator(nombreMundo()).environment(World.Environment.NORMAL).generator(new Generador())
+                    .keepSpawnLoaded(net.kyori.adventure.util.TriState.FALSE)
                     .biomeProvider(new Biomas()).generateStructures(false).createWorld();
         }
         if (w == null) return null;
