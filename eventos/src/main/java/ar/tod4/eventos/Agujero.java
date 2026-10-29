@@ -832,7 +832,8 @@ final class Agujero implements Listener {
                 World w = cargarMundo(true);
                 if (w == null) { TOD4Eventos.err(s, "No pude crear el mundo."); return; }
                 TOD4Eventos.ok(s, "Cueva creada en el mundo &f" + w.getName() + "&a. Andá con &f/tod4eventos:agujero tp&a.");
-                Bukkit.getScheduler().runTaskLater(pl, () -> TOD4Eventos.ok(s, "Cofres puestos: &f" + cofres()), 40L);
+                // genera la cueva de a poco (2 chunks por tick) y pone los cofres
+                Bukkit.getScheduler().runTaskLater(pl, () -> { estado = Estado.CERRADO; reconstruir(s); }, 20L);
             }
             case "tp" -> {
                 if (p == null || mundo == null) { TOD4Eventos.err(s, "Primero &f/tod4eventos:agujero crear &c(y desde el juego)."); return; }
