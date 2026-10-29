@@ -29,13 +29,14 @@ import ar.tod4.aether.util.Style;
 public final class TOD4Aether extends JavaPlugin {
 
     static final String[] COMANDOS = {"aether_pocion", "aether_init", "aether_reset", "aether_tp", "aether_locate", "aether_goto", "aether_fill",
-            "aether_test", "aether_force", "aether_music", "aether_caida", "aether_loot", "aether_mobs", "aether_casco", "aether_aire", "aether_mesa", "aether_recargar"};
+            "aether_test", "aether_force", "aether_music", "aether_caida", "aether_loot", "aether_mobs", "aether_casco", "aether_aire", "aether_mesa", "aether_recargar", "agujero"};
 
     private Aether aether;
     private Loot loot;
     private Mobs mobs;
     private Aire aire;
     private Mesa6 mesa;
+    private Agujero agujero;
     private YamlConfiguration datos;
     private File datosF;
 
@@ -49,6 +50,7 @@ public final class TOD4Aether extends JavaPlugin {
         mobs = new Mobs(this, aether);
         aire = new Aire(this, aether);
         mesa = new Mesa6(this);
+        agujero = new Agujero(this, loot);
         for (String c : COMANDOS) Bukkit.getCommandMap().register("tod4", new Cmd(c));
         // como en TOD4: solo existen con el prefijo (/tod4:aether_...)
         Bukkit.getScheduler().runTask(this, () -> {
@@ -63,6 +65,7 @@ public final class TOD4Aether extends JavaPlugin {
     public void onDisable() {
         if (aether != null) aether.apagar();
         if (mobs != null) mobs.apagar();
+        if (agujero != null) agujero.apagar();
     }
 
     /** La primera vez: el mapa ya generado y la config del Aether estaban en plugins/TOD4. */
@@ -133,13 +136,15 @@ public final class TOD4Aether extends JavaPlugin {
                 case "aether_mobs" -> mobs.comando(s, a);
                 case "aether_casco", "aether_aire" -> aire.comando(s, c, a);
                 case "aether_mesa" -> mesa.comando(s, a);
+                case "agujero" -> agujero.comando(s, a);
                 case "aether_recargar" -> {
                     aether.recargar();
                     loot.recargar();
                     mobs.recargar();
                     aire.recargar();
                     mesa.recargar();
-                    Style.ok(s, "Aether recargado (aether.yml, loot.yml, mobs.yml y aire.yml).");
+                    agujero.recargar();
+                    Style.ok(s, "Aether recargado (aether.yml, loot.yml, mobs.yml, aire.yml, mesa6x6.yml y agujero.yml).");
                 }
                 default -> aether.comando(s, c, a);
             }
@@ -165,10 +170,15 @@ public final class TOD4Aether extends JavaPlugin {
                     case "aether_mobs" -> out.addAll(List.of("on", "off", "estado", "lugares", "probar"));
                     case "aether_aire" -> out.addAll(List.of("estado", "vaciar", "llenar"));
                     case "aether_mesa" -> out.addAll(List.of("dar", "abrir", "resultado"));
+                    case "agujero" -> out.addAll(agujero.subcomandos());
                     default -> { }
                 }
             } else if (a.length == 2 && c.equals("aether_loot") && !a[0].equalsIgnoreCase("guardar")) {
                 out.addAll(List.of("tier1", "tier2", "tier3", "tier4"));
+            } else if (a.length == 2 && c.equals("agujero") && a[0].equalsIgnoreCase("cofre")) {
+                out.addAll(List.of("facil", "dificil"));
+            } else if (a.length == 2 && c.equals("agujero") && a[0].equalsIgnoreCase("espera")) {
+                for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
             } else if (a.length == 2 && c.equals("aether_loot")) {
                 out.addAll(loot.nombres());
             }

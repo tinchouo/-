@@ -1,0 +1,74 @@
+# =====================================================================
+#  AGUJERO DEL INFIERNO 2.0        despues de cambiar algo: /tod4:aether_recargar
+#
+#  1) /tod4:agujero crear         crea la cueva (su propio mundo). /tod4:agujero tp para ir.
+#  2) Decorala como quieras. Cuando este lista: /tod4:agujero foto  (cada reconstruccion la deja asi).
+#  3) /tod4:agujero entrada        mirando el bloque que manda a la cueva (pisarlo o tocarlo).
+#     /tod4:agujero salida         parado donde aparecen los que escapan o terminan.
+#  Cofres: salen solos en lugares de la cueva (faciles y dificiles). Para agregar lugares, parado ahi adentro:
+#     /tod4:agujero cofre facil | cofre dificil      (quitar: /tod4:agujero quitarcofre)
+#  Otros: abrir (reconstruye y abre ya), cerrar [min], terminar (corta la corrida), espera <jugador>, estado
+# =====================================================================
+
+mundo: agujero_infierno
+# la forma de la cueva sale de esta semilla (cambiarla despues de crearla cambia solo lo que se genere de nuevo)
+semilla: 666
+# bioma de toda la cueva (sonidos y niebla): dripstone_caves, deep_dark, lush_caves, basalt_deltas...
+bioma: dripstone_caves
+
+# lo que dura la cancion (segundos): mientras suena se derrumba
+duracion_seg: 150
+# cuando termina: espera estos segundos y despues a los de adentro les saca "dano" cada "dano_cada_medio_seg"
+espera_dano_seg: 3
+# 3 = un corazon y medio, fijo (la armadura no lo baja). Cada medio segundo.
+dano: 3.0
+# despues queda derrumbada esto (minutos) y se reconstruye sola
+cerrado_min: 30
+# cada jugador puede entrar una vez cada tanto (minutos). Los admins no tienen espera.
+espera_jugador_min: 60
+
+# la musica (sonido del pack) y su volumen. La escuchan todos los que estan en el mundo de la cueva.
+musica: "tod4:agujero"
+musica_volumen: 1.0
+
+# piedras que caen del techo cerca de cada jugador, por segundo (al principio y al final), y % de estalactitas (pegan fuerte)
+derrumbe:
+  bloques_inicio: 1
+  bloques_fin: 6
+  punta_chance: 30
+
+# cuantos cofres de cada tipo hay en cada reconstruccion
+cofres:
+  facil: 8
+  dificil: 5
+
+# lo que tiene cada cofre:  "<item> <cantidad> [chance%]"  (igual que loot.yml; oraxen:id tambien)
+loot:
+  facil:
+    - "minecraft:diamond 2-5"
+    - "minecraft:gold_ingot 8-20"
+    - "minecraft:golden_apple 2-5"
+    - "minecraft:experience_bottle 16-32"
+    - "oraxen:moneda 3-6"
+    - "minecraft:iron_block 1-3 50%"
+    - "minecraft:ender_pearl 2-4 40%"
+  dificil:
+    - "minecraft:diamond_block 1-3"
+    - "minecraft:netherite_scrap 1-3"
+    - "minecraft:netherite_ingot 1 35%"
+    - "minecraft:enchanted_golden_apple 1 40%"
+    - "oraxen:moneda_roja 2-4"
+    - "oraxen:mineral_truco 2-5"
+    - "oraxen:totem_cuy 1 30%"
+    - "minecraft:experience_bottle 48-64"
+
+# mobs que aparecen cuando empieza a derrumbarse (repartidos por la cueva)
+#   mm:<nombre de MythicMobs>  o  minecraft:<mob>
+mobs:
+  cantidad: 16
+  tipos:
+    "mm:BreezeOld": 3
+    "minecraft:silverfish": 6
+    "minecraft:zombie": 3
+    "minecraft:skeleton": 2
+    "minecraft:cave_spider": 2
