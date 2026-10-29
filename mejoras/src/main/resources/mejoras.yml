@@ -129,3 +129,20 @@ mejoras:
     descripcion: ["Regeneración I a tus compañeros", "a 3 bloques (a vos no)"]
     efectos:
       curar: "sanador 3"
+
+# =====================================================================
+#  ARMADURA NIGHTMARE (crafteo en la mesa):
+#     R R R    R = Resina Reforzada         (Oraxen)
+#     C P C    P = pieza de netherite       C = obsidiana llorosa
+#     S S S    S = Nightmare Sculk          (Oraxen)
+#  Da esa pieza de la armadura Nightmare con los mismos encantamientos, su mejora y la durabilidad al maximo.
+#  Aca van los nombres de Oraxen de cada cosa.
+# =====================================================================
+nightmare:
+  activada: true
+  resina: resina_reforzada
+  sculk: nightmare_sculk
+  casco: green_pro_helmet
+  pechera: green_pro_chestplate
+  pantalones: green_pro_leggings
+  botas: green_pro_boots

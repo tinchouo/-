@@ -43,6 +43,7 @@ public final class TOD4Mejoras extends JavaPlugin {
     NamespacedKey K_MEJORA;
     private final List<NamespacedKey> recetas = new ArrayList<>();
     Efectos efectos;
+    Nightmare nightmare;
 
     @Override
     public void onEnable() {
@@ -54,12 +55,16 @@ public final class TOD4Mejoras extends JavaPlugin {
         efectos = new Efectos(this);
         getServer().getPluginManager().registerEvents(efectos, this);
         getServer().getPluginManager().registerEvents(new Menu.Listen(), this);
+        nightmare = new Nightmare(this);
+        getServer().getPluginManager().registerEvents(nightmare, this);
+        Bukkit.updateRecipes();
     }
 
     @Override
     public void onDisable() {
         if (efectos != null) efectos.apagar();
         for (NamespacedKey k : recetas) Bukkit.removeRecipe(k);
+        Bukkit.removeRecipe(new NamespacedKey(this, "nightmare"));
     }
 
     // ================================================================= config
@@ -93,6 +98,7 @@ public final class TOD4Mejoras extends JavaPlugin {
             r.setIngredient('T', Material.NETHERITE_UPGRADE_SMITHING_TEMPLATE);
             if (Bukkit.addRecipe(r)) recetas.add(k);
         }
+        if (nightmare != null) nightmare.registrar();
         Bukkit.updateRecipes();
         getLogger().info(mejoras.size() + " mejoras cargadas.");
     }
