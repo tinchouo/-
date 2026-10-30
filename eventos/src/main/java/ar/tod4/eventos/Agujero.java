@@ -869,14 +869,32 @@ final class Agujero implements Listener {
         }
     }
 
-    /** Recorre los chunks de la cueva de a 2 por tick. */
+    /**
+     * Recorre los chunks de la cueva sin trabar el server: los va cargando aparte (unos pocos adelante)
+     * y en cada tick trabaja como mucho ~20 ms.
+     */
     private void porChunks(java.util.function.BiConsumer<Integer, Integer> hacer, Runnable fin) {
         List<int[]> l = new ArrayList<>();
         for (int cx = Math.floorDiv(CuevaGen.MIN_X, 16); cx <= Math.floorDiv(CuevaGen.MAX_X, 16); cx++)
             for (int cz = Math.floorDiv(CuevaGen.MIN_Z, 16); cz <= Math.floorDiv(CuevaGen.MAX_Z, 16); cz++) l.add(new int[]{cx, cz});
-        final int[] i = {0};
+        final int[] i = {0}, pedido = {0};
         Bukkit.getScheduler().runTaskTimer(pl, task -> {
-            for (int k = 0; k < 2 && i[0] < l.size(); k++, i[0]++) hacer.accept(l.get(i[0])[0], l.get(i[0])[1]);
+            long t0 = System.nanoTime();
+            // pide los que vienen (se cargan/generan aparte)
+            while (pedido[0] < l.size() && pedido[0] < i[0] + 8) {
+                int[] c = l.get(pedido[0]++);
+                mundo.getChunkAtAsync(c[0], c[1], true);
+            }
+            while (i[0] < l.size() && System.nanoTime() - t0 < 20_000_000L) {
+                int[] c = l.get(i[0]);
+                if (!mundo.isChunkLoaded(c[0], c[1])) break;   // todavia cargando: el tick que viene
+                hacer.accept(c[0], c[1]);
+                i[0]++;
+                while (pedido[0] < l.size() && pedido[0] < i[0] + 8) {
+                    int[] q = l.get(pedido[0]++);
+                    mundo.getChunkAtAsync(q[0], q[1], true);
+                }
+            }
             if (i[0] >= l.size()) { task.cancel(); if (fin != null) fin.run(); }
         }, 1L, 1L);
     }
