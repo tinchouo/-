@@ -887,7 +887,10 @@ final class Agujero implements Listener {
             }
             while (i[0] < l.size() && System.nanoTime() - t0 < 20_000_000L) {
                 int[] c = l.get(i[0]);
-                if (!mundo.isChunkLoaded(c[0], c[1])) break;   // todavia cargando: el tick que viene
+                if (!mundo.isChunkLoaded(c[0], c[1])) {   // todavia cargando (o se descargo): se vuelve a pedir y sigue el tick que viene
+                    if (tick % 4 == 0) mundo.getChunkAtAsync(c[0], c[1], true);
+                    break;
+                }
                 hacer.accept(c[0], c[1]);
                 i[0]++;
                 while (pedido[0] < l.size() && pedido[0] < i[0] + 8) {
