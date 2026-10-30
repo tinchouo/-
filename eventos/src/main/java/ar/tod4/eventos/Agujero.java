@@ -881,7 +881,7 @@ final class Agujero implements Listener {
         Bukkit.getScheduler().runTaskTimer(pl, task -> {
             long t0 = System.nanoTime();
             // pide los que vienen (se cargan/generan aparte)
-            while (pedido[0] < l.size() && pedido[0] < i[0] + 8) {
+            while (pedido[0] < l.size() && pedido[0] < i[0] + 32) {
                 int[] c = l.get(pedido[0]++);
                 mundo.getChunkAtAsync(c[0], c[1], true);
             }
@@ -893,7 +893,7 @@ final class Agujero implements Listener {
                 }
                 hacer.accept(c[0], c[1]);
                 i[0]++;
-                while (pedido[0] < l.size() && pedido[0] < i[0] + 8) {
+                while (pedido[0] < l.size() && pedido[0] < i[0] + 32) {
                     int[] q = l.get(pedido[0]++);
                     mundo.getChunkAtAsync(q[0], q[1], true);
                 }
