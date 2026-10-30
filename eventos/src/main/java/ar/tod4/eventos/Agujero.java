@@ -354,6 +354,7 @@ final class Agujero implements Listener {
         jugando.remove(p.getUniqueId());
         Location dst = sala(mundo);
         p.teleport(dst);
+        ajustarLuego(p);
         p.playSound(dst, Sound.AMBIENT_CAVE, SoundCategory.MASTER, 1f, 0.7f);
         for (Player o : Bukkit.getOnlinePlayers()) if (o.hasPermission(PERM))
             o.sendMessage(c("&4☠ &c" + p.getName() + " &7bajó al &4&lAgujero del Infierno 2.0&7."));
@@ -379,6 +380,7 @@ final class Agujero implements Listener {
         Location s = bloque("salida");
         if (s == null) s = Bukkit.getWorlds().get(0).getSpawnLocation();
         p.teleport(s);
+        ajustarLuego(p);
         if (salvado) {
             p.showTitle(Title.title(c("&a&l¡ESCAPASTE!"), c("&7Saliste del Agujero del Infierno")));
             p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
@@ -1329,8 +1331,49 @@ final class Agujero implements Listener {
         }
     }
 
+    // ================================================================= modo aventura adentro
+
+    private org.bukkit.NamespacedKey kAventura;
+
+    /**
+     * Adentro de la cueva los jugadores estan en aventura (no pueden romper ni poner nada, ni bugearla); al salir vuelven
+     * a supervivencia. Solo se toca a los que estaban en supervivencia (no a admins, espectadores ni creativos).
+     */
+    private void ajustarModo(Player p) {
+        if (mundo == null || !p.isOnline()) return;
+        if (kAventura == null) kAventura = new org.bukkit.NamespacedKey(pl, "agujero_aventura");
+        var pdc = p.getPersistentDataContainer();
+        if (p.getWorld().equals(mundo)) {
+            if (p.hasPermission(PERM) || p.getGameMode() != GameMode.SURVIVAL) return;
+            p.setGameMode(GameMode.ADVENTURE);
+            pdc.set(kAventura, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
+        } else if (pdc.has(kAventura)) {
+            pdc.remove(kAventura);
+            if (p.getGameMode() == GameMode.ADVENTURE) p.setGameMode(GameMode.SURVIVAL);
+        }
+    }
+
+    /** Un poco despues (otros plugins, como Multiverse, cambian el modo al cambiar de mundo) y otra vez por las dudas. */
+    private void ajustarLuego(Player p) {
+        Bukkit.getScheduler().runTaskLater(pl, () -> ajustarModo(p), 2L);
+        Bukkit.getScheduler().runTaskLater(pl, () -> ajustarModo(p), 10L);
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void cambiaMundo(org.bukkit.event.player.PlayerChangedWorldEvent e) { ajustarLuego(e.getPlayer()); }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void reaparece(org.bukkit.event.player.PlayerRespawnEvent e) { ajustarLuego(e.getPlayer()); }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void cambiaModo(org.bukkit.event.player.PlayerGameModeChangeEvent e) {
+        // si algo lo pasa a supervivencia estando adentro, vuelve a aventura
+        if (e.getNewGameMode() == GameMode.SURVIVAL && enMundo(e.getPlayer())) ajustarLuego(e.getPlayer());
+    }
+
     @EventHandler
     public void entra(PlayerJoinEvent e) {
+        ajustarLuego(e.getPlayer());
         // si quedo pasando la linea de una corrida que ya termino (se desconecto), sale
         Player p = e.getPlayer();
         Bukkit.getScheduler().runTaskLater(pl, () -> {
