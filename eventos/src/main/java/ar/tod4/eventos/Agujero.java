@@ -886,7 +886,7 @@ final class Agujero implements Listener {
                 int[] c = l.get(fut.size());
                 fut.add(w.getChunkAtAsync(c[0], c[1], true).thenApply(ch -> { ch.addPluginChunkTicket(pl); return ch; }));
             }
-            while (i[0] < l.size() && System.nanoTime() - t0 < 20_000_000L) {
+            while (i[0] < fut.size() && System.nanoTime() - t0 < 20_000_000L) {
                 java.util.concurrent.CompletableFuture<Chunk> f = fut.get(i[0]);
                 if (!f.isDone()) break;   // todavia cargando: el tick que viene
                 int[] c = l.get(i[0]);
