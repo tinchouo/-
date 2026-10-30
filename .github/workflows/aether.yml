@@ -26,6 +26,8 @@ jobs:
           cp ../target/TOD4.jar ../aether/target/TOD4Aether.jar ../eventos/target/TOD4Eventos.jar plugins/
           # un aether.yml viejo en plugins/TOD4: se tiene que copiar solo a plugins/TOD4Aether
           cp ../aether/src/main/resources/aether.yml plugins/TOD4/aether.yml
+          # misiones con el sistema viejo (una opcional activa con progreso): tiene que pasar a la lista
+          printf 'misiones:\n  "5":\n    nombre: Dia 5\n    clase: dia\n    objetivos: []\n  op7:\n    nombre: Dia 7\n    clase: op\n    objetivos: []\nactiva:\n  dia: "5"\n  op: op7\nprog:\n  op:\n    11111111-1111-1111-1111-111111111111:\n      abc:\n        m0: 3\nreclamo:\n  op:\n    22222222-2222-2222-2222-222222222222: true\n' > plugins/TOD4/misiones.yml
           echo "eula=true" > eula.txt
           printf "online-mode=false\nspawn-protection=0\n" > server.properties
       - name: Arrancar
@@ -37,6 +39,8 @@ jobs:
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
           ls -la plugins/TOD4Aether | tr '\n' '#' | xargs -0 -I{} echo "::notice::{}"
           if grep -qiE "Exception|Unknown command" log.txt; then echo "::error::Hay errores"; exit 1; fi
+          echo "::notice::misiones.yml despues: $(tr '\n' '#' < plugins/TOD4/misiones.yml)"
+          grep -q "op_op7" plugins/TOD4/misiones.yml && grep -q "m0: 3" plugins/TOD4/misiones.yml || { echo "::error::La opcional vieja no paso a la lista"; exit 1; }
           echo "::notice::Arranco sin errores"
       - name: Guardar el log en la rama ci-logs
         if: always()

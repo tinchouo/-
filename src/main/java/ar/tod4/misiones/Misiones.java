@@ -64,11 +64,14 @@ public final class Misiones {
         st.set(ABIERTAS + "." + id, pl.dia());
         String nuevo = slotOp(id);
         for (String k : new String[]{"prog", "vis", "ultimo", "reclamo", "bypass"}) {
-            Object v = st.y().get(k + "." + OP);
-            if (v != null) {
-                st.set(k + "." + nuevo, v);
-                st.set(k + "." + OP, null);
+            ConfigurationSection v = st.y().getConfigurationSection(k + "." + OP);
+            if (v == null) continue;
+            // valor por valor (prog.op.<uuid>.<uid>.<meta> -> prog.op_<id>.<uuid>.<uid>.<meta>)
+            for (String sub : v.getKeys(true)) {
+                if (v.isConfigurationSection(sub)) continue;
+                st.set(k + "." + nuevo + "." + sub, v.get(sub));
             }
+            st.set(k + "." + OP, null);
         }
         st.save();
         pl.getLogger().info("Misiones: la opcional " + id + " pasó a la lista de opcionales (con el progreso de cada uno).");
