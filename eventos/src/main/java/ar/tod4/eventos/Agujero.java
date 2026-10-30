@@ -83,6 +83,7 @@ import net.kyori.adventure.title.Title;
 final class Agujero implements Listener {
 
     private static final String MOB = "agujero_mob", CARTEL = "agujero_cartel", PERM = "tod4eventos.admin";
+    private static final int VERSION_CFG = 2;
 
     private final TOD4Eventos pl;
     private final Random rnd = new Random();
@@ -99,7 +100,8 @@ final class Agujero implements Listener {
     private final Set<UUID> jugando = new HashSet<>();   // los que pasaron la linea en esta corrida
     private BossBar barra;
     private int tick;
-    private TextDisplay cartel;
+    private TextDisplay cartel, cartel2;
+    private boolean finalAvisado;
 
     Agujero(TOD4Eventos pl) {
         this.pl = pl;
@@ -118,6 +120,17 @@ final class Agujero implements Listener {
         File f = new File(pl.getDataFolder(), "agujero.yml");
         if (!f.exists()) pl.saveResource("agujero.yml", false);
         y = YamlConfiguration.loadConfiguration(f);
+        if (y.getInt("version", 1) < VERSION_CFG) {
+            // agujero.yml viejo: se guarda como agujero_viejo.yml y se pone el nuevo (mobs por zona, cancion de 3 min...)
+            File viejo = new File(pl.getDataFolder(), "agujero_viejo.yml");
+            if (viejo.exists()) viejo.delete();
+            if (f.renameTo(viejo)) {
+                pl.saveResource("agujero.yml", true);
+                y = YamlConfiguration.loadConfiguration(f);
+                pl.getLogger().info("[Agujero] agujero.yml actualizado (el anterior quedó en agujero_viejo.yml)");
+            }
+        }
+        linea = null;
         long s = y.getLong("semilla", 2026);
         if (gen == null || s != semillaGen) {
             semillaGen = s;
@@ -130,6 +143,8 @@ final class Agujero implements Listener {
     void apagar() {
         if (barra != null) barra.removeAll();
         if (cartel != null) cartel.remove();
+        if (cartel2 != null) cartel2.remove();
+        guardarFotoYa();
         guardar();
         d.save();
     }
@@ -295,37 +310,37 @@ final class Agujero implements Listener {
         return false;
     }
 
-    /** Bajar a la cueva (desde el bloque de entrada). */
+    /** Bajar a la cueva (desde la entrada). Derrumbada (o derrumbandose) no se puede. */
     private void bajar(Player p) {
         if (muyRapido(p) || p.getGameMode() == GameMode.SPECTATOR) return;
-        if (mundo == null) { TOD4Eventos.err(p, "El Agujero del Infierno todavía no existe."); return; }
+        if (mundo == null) { error(p, "El Agujero del Infierno todavía no existe."); return; }
         long ahora = System.currentTimeMillis();
-        if (estado == Estado.TERMINANDO || estado == Estado.RECONSTRUYENDO) {
-            p.sendActionBar(c(estado == Estado.TERMINANDO ? "&c¡La cueva se está derrumbando!" : "&7Reconstruyendo la cueva..."));
-            p.playSound(p.getLocation(), Sound.BLOCK_STONE_BREAK, 1f, 0.5f);
+        if (estado == Estado.TERMINANDO || estado == Estado.CERRADO || estado == Estado.RECONSTRUYENDO) {
+            error(p, "La cueva está derrumbada.");
             return;
         }
-        // derrumbada: se puede bajar a la sala, pero la linea esta tapada (no gasta la hora de espera)
-        boolean cerrada = estado == Estado.CERRADO;
-        if (!cerrada && !p.hasPermission(PERM)) {
+        if (!p.hasPermission(PERM)) {
             long ultima = d.y().getLong("ultima." + p.getUniqueId(), 0), espera = (long) (y.getDouble("espera_jugador_min", 60) * 60000);
             if (ahora - ultima < espera) {
-                p.sendActionBar(c("&cPodrás volver a bajar en &f" + mmss(espera - (ahora - ultima))));
+                error(p, "Podrás volver a bajar en " + mmss(espera - (ahora - ultima)) + ".");
                 return;
             }
         }
-        if (!cerrada) d.set("ultima." + p.getUniqueId(), ahora);
+        d.set("ultima." + p.getUniqueId(), ahora);
         jugando.remove(p.getUniqueId());
         Location dst = sala(mundo);
         p.teleport(dst);
         p.playSound(dst, Sound.AMBIENT_CAVE, SoundCategory.MASTER, 1f, 0.7f);
-        String sub = cerrada ? "&7Está derrumbada. Se reconstruye en &f" + mmss(cerradoHasta - ahora)
-                : estado == Estado.CORRIENDO ? "&c¡Ya se está derrumbando!" : "&7Cuando cruces, empieza a derrumbarse";
-        p.showTitle(Title.title(c("&4&lAGUJERO DEL INFIERNO 2.0"), c(sub)));
         for (Player o : Bukkit.getOnlinePlayers()) if (o.hasPermission(PERM)) {
-            o.sendMessage(c("&4☠ &c" + p.getName() + " &7bajó al &4&lAgujero del Infierno 2.0&7" + (cerrada ? " (está derrumbada)." : ".")));
+            o.sendMessage(c("&4☠ &c" + p.getName() + " &7bajó al &4&lAgujero del Infierno 2.0&7."));
             o.playSound(o.getLocation(), Sound.AMBIENT_CAVE, SoundCategory.MASTER, 1f, 1f);
         }
+    }
+
+    /** Como los errores de TOD4: ✖ en rojo y el sonido grave. */
+    private static void error(Player p, String m) {
+        p.sendMessage(c("&c✖ " + m));
+        p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.6f);
     }
 
     /** Subir (desde el bloque de salida de la sala de entrada). */
@@ -372,13 +387,19 @@ final class Agujero implements Listener {
 
     // ================================================================= la corrida
 
-    private double duracion() { return y.getDouble("duracion_seg", 150); }
+    private double duracion() { return y.getDouble("duracion_seg", 180); }
+
+    private double finalSeg() { ConfigurationSection cs = y.getConfigurationSection("derrumbe"); return cs == null ? 30 : cs.getDouble("final_seg", 30); }
 
     private void empezar() {
         estado = Estado.CORRIENDO;
         inicio = System.currentTimeMillis();
         d.set("en_curso", true);
-        barra = Bukkit.createBossBar(legacy("&4&lAGUJERO DEL INFIERNO 2.0"), BarColor.RED, BarStyle.SEGMENTED_10);
+        // la barra: solo el tiempo (con el pack, la barra de este color es invisible: ver agujero.yml)
+        BarColor col;
+        try { col = BarColor.valueOf(y.getString("barra_color", "WHITE").toUpperCase()); } catch (Exception ex) { col = BarColor.WHITE; }
+        barra = Bukkit.createBossBar(legacy("&c&l" + mmss((long) (duracion() * 1000))), col, BarStyle.SOLID);
+        finalAvisado = false;
         String mus = y.getString("musica", "tod4:agujero");
         float vol = (float) y.getDouble("musica_volumen", 1.0);
         for (Player p : mundo.getPlayers()) p.playSound(p, mus, SoundCategory.RECORDS, vol, 1f);
@@ -389,14 +410,16 @@ final class Agujero implements Listener {
     private void cada() {
         tick++;
         cartel();
+        dibujarLinea();
+        guardarFotoSiHace();
         if (mundo == null) return;
         long ahora = System.currentTimeMillis();
         switch (estado) {
             case CORRIENDO -> {
                 double t = (ahora - inicio) / 1000.0, dur = duracion();
                 barra.setProgress(Math.max(0, Math.min(1, 1 - t / dur)));
-                barra.setTitle(legacy("&4&lAGUJERO DEL INFIERNO 2.0  &f" + mmss((long) ((dur - t) * 1000))));
-                derrumbe(t / dur);
+                barra.setTitle(legacy((dur - t <= finalSeg() ? "&4&l" : "&c&l") + mmss((long) ((dur - t) * 1000))));
+                derrumbe(t, dur);
                 if (t >= dur) {
                     estado = Estado.TERMINANDO;
                     barra.setTitle(legacy("&4&l¡SE DERRUMBÓ!"));
@@ -406,7 +429,7 @@ final class Agujero implements Listener {
             }
             case TERMINANDO -> {
                 double t = (ahora - inicio) / 1000.0 - duracion();
-                derrumbe(1);
+                derrumbe(duracion(), duracion());
                 boolean queda = false;
                 for (Player p : mundo.getPlayers()) {
                     if (!juega(p) || p.isDead() || enSala(p.getLocation())) continue;   // en la sala de entrada estas a salvo
@@ -439,17 +462,34 @@ final class Agujero implements Listener {
         } catch (Throwable ignored) { }
     }
 
-    /** Caen piedras y estalactitas del techo cerca de los que estan jugando; cuanto mas avanzado, mas. */
-    private void derrumbe(double f) {
-        if (tick % 2 != 0) return;   // una vez por segundo
+    /**
+     * Caen piedras y estalactitas del techo cerca de los que estan jugando (cada medio segundo).
+     * Desde el principio pocas, y van subiendo; en los ultimos segundos (final_seg) caen muchas mas, mas lejos,
+     * con temblor y ruido, para que se note que se viene abajo. Muchas de las del final se rompen al caer (no tapan todo).
+     */
+    private void derrumbe(double t, double dur) {
         ConfigurationSection cs = y.getConfigurationSection("derrumbe");
-        double ini = cs == null ? 1 : cs.getDouble("bloques_inicio", 1), fin = cs == null ? 6 : cs.getDouble("bloques_fin", 6);
-        double punta = cs == null ? 30 : cs.getDouble("punta_chance", 30);
-        int n = (int) Math.round(ini + (fin - ini) * f * f);
+        double ini = cs == null ? 0.3 : cs.getDouble("por_segundo_inicio", 0.3), medio = cs == null ? 2 : cs.getDouble("por_segundo_medio", 2);
+        double fin = cs == null ? 14 : cs.getDouble("por_segundo_final", 14), fseg = finalSeg();
+        double punta = cs == null ? 30 : cs.getDouble("punta_chance", 30), rompen = cs == null ? 70 : cs.getDouble("final_se_rompen", 70);
+        boolean esFinal = dur - t <= fseg;
+        double f = Math.max(0, Math.min(1, t / Math.max(1, dur - fseg)));
+        double porSeg = esFinal ? fin : ini + (medio - ini) * f * f;
+        if (esFinal && !finalAvisado) {
+            finalAvisado = true;
+            for (Player p : mundo.getPlayers()) {
+                if (!juega(p) || enSala(p.getLocation())) continue;
+                p.showTitle(Title.title(c(""), c("&4&l¡SE VIENE ABAJO!"), Title.Times.times(java.time.Duration.ZERO, java.time.Duration.ofMillis(1500), java.time.Duration.ofMillis(500))));
+                p.playSound(p.getLocation(), Sound.ENTITY_WARDEN_ROAR, SoundCategory.HOSTILE, 1.5f, 0.5f);
+            }
+        }
+        int radio = esFinal ? 14 : 10;
         for (Player p : mundo.getPlayers()) {
             if (!juega(p) || enSala(p.getLocation())) continue;
+            double q = porSeg / 2;   // cada medio segundo
+            int n = (int) q + (rnd.nextDouble() < q - (int) q ? 1 : 0);
             for (int i = 0; i < n; i++) {
-                Block b = p.getLocation().add(rnd.nextInt(21) - 10, 0, rnd.nextInt(21) - 10).getBlock();
+                Block b = p.getLocation().add(rnd.nextInt(radio * 2 + 1) - radio, 0, rnd.nextInt(radio * 2 + 1) - radio).getBlock();
                 if (!b.isPassable()) continue;
                 int k = 0;
                 while (k++ < 14 && b.getRelative(BlockFace.UP).isPassable()) b = b.getRelative(BlockFace.UP);
@@ -464,13 +504,17 @@ final class Agujero implements Listener {
                 fb.setHurtEntities(true);
                 fb.setDamagePerBlock(esPunta ? 3f : 1f);
                 fb.setMaxDamage(esPunta ? 20 : 6);
-                fb.setCancelDrop(esPunta);
+                fb.setCancelDrop(esPunta || (esFinal && rnd.nextDouble() * 100 < rompen));
                 fb.addScoreboardTag(MOB);
                 mundo.spawnParticle(Particle.BLOCK, at, 12, 0.4, 0.1, 0.4, bd);
             }
-            if (f > 0.15 && rnd.nextDouble() < 0.4)
+            if (esFinal) {
+                if (rnd.nextDouble() < 0.6) p.playSound(p.getLocation(), rnd.nextBoolean() ? Sound.BLOCK_DEEPSLATE_BREAK : Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 1f, 0.4f + rnd.nextFloat() * 0.3f);
+                if (rnd.nextDouble() < 0.25) p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 80, 0, false, false));
+                mundo.spawnParticle(Particle.FALLING_DUST, p.getLocation().add(0, 3, 0), 20, 6, 1, 6, Material.GRAVEL.createBlockData());
+            } else if (f > 0.15 && rnd.nextDouble() < 0.2) {
                 p.playSound(p.getLocation(), rnd.nextBoolean() ? Sound.BLOCK_DEEPSLATE_BREAK : Sound.BLOCK_BASALT_BREAK, SoundCategory.BLOCKS, 1f, 0.5f);
-            if (f > 0.8 && rnd.nextDouble() < 0.3) p.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA, 60, 0, false, false));
+            }
         }
     }
 
@@ -525,36 +569,125 @@ final class Agujero implements Listener {
         }
     }
 
+    /**
+     * Los mobs al empezar: "cantidad" repartidos por toda la cueva (tipos) y, aparte, los de cada zona (mobs.zonas):
+     * el lago de lava (solo ahi hay blazes), la catedral, las columnas...
+     * Tipos: mm:<MythicMobs>, creeper:<random|mini|calamar|void|nuclear|flash> (los de TOD4) o minecraft:<mob>.
+     */
     private void mobs() {
         ConfigurationSection cs = y.getConfigurationSection("mobs.tipos");
         int cant = y.getInt("mobs.cantidad", 16);
-        if (cs == null || cant <= 0) return;
-        List<CuevaGen.Punto> pts = new ArrayList<>();
-        for (CuevaGen.Punto p : gen.puntos()) if (p.tipo.equals("mob")) pts.add(p);
-        Collections.shuffle(pts, rnd);
+        if (cs != null && cant > 0) {
+            List<CuevaGen.Punto> pts = new ArrayList<>();
+            for (CuevaGen.Punto p : gen.puntos()) if (p.tipo.equals("mob")) pts.add(p);
+            Collections.shuffle(pts, rnd);
+            for (int i = 0; i < cant && i < pts.size(); i++) {
+                String tipo = sortear(cs);
+                if (tipo == null) continue;
+                Location l = piso(new Location(mundo, pts.get(i).x + 0.5, pts.get(i).y, pts.get(i).z + 0.5));
+                if (l != null) mob(tipo, l);
+            }
+        }
+        ConfigurationSection zs = y.getConfigurationSection("mobs.zonas");
+        if (zs == null) return;
+        for (String zona : zs.getKeys(false)) {
+            CuevaGen.Sala sala = null;
+            for (CuevaGen.Sala sl : gen.salas()) if (sl.tipo.equalsIgnoreCase(zona)) sala = sl;
+            ConfigurationSection tz = zs.getConfigurationSection(zona + ".tipos");
+            if (sala == null || tz == null) { pl.getLogger().warning("[Agujero] Zona de mobs rara: " + zona); continue; }
+            int n = zs.getInt(zona + ".cantidad", 0);
+            for (int i = 0; i < n; i++) {
+                String tipo = sortear(tz);
+                if (tipo == null) continue;
+                Location l = lugarEnSala(sala, tipo.toLowerCase().contains("blaze"));
+                if (l != null) mob(tipo, l);
+            }
+        }
+    }
+
+    private String sortear(ConfigurationSection cs) {
         double tot = 0;
         for (String k : cs.getKeys(false)) tot += Math.max(0, cs.getDouble(k));
-        for (int i = 0; i < cant && i < pts.size(); i++) {
-            double r = rnd.nextDouble() * tot;
-            String tipo = null;
-            for (String k : cs.getKeys(false)) { r -= Math.max(0, cs.getDouble(k)); if (r < 0) { tipo = k; break; } }
-            if (tipo == null) continue;
-            Location l = piso(new Location(mundo, pts.get(i).x + 0.5, pts.get(i).y, pts.get(i).z + 0.5));
-            if (l == null) continue;
-            Entity en;
-            if (tipo.startsWith("mm:")) {
-                en = mm(tipo.substring(3), l);
-                if (en == null) { pl.getLogger().warning("[Agujero] MythicMobs no hizo aparecer " + tipo.substring(3)); continue; }
-                if (tipo.equalsIgnoreCase("mm:BombaVoladora")) en.teleport(l.clone().add(0, 3, 0));
-            } else {
-                EntityType t = org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.fromString(tipo.contains(":") ? tipo : "minecraft:" + tipo));
-                if (t == null || !t.isSpawnable()) { pl.getLogger().warning("[Agujero] No existe el mob " + tipo); continue; }
-                en = mundo.spawnEntity(l, t);
+        double r = rnd.nextDouble() * tot;
+        for (String k : cs.getKeys(false)) { r -= Math.max(0, cs.getDouble(k)); if (r < 0) return k; }
+        return null;
+    }
+
+    /** Un lugar al azar dentro de la sala: en el piso, o (volador) en el aire (en el lago: arriba de la lava). */
+    private Location lugarEnSala(CuevaGen.Sala s, boolean vuela) {
+        for (int k = 0; k < 30; k++) {
+            double ang = rnd.nextDouble() * Math.PI * 2, d = Math.sqrt(rnd.nextDouble()) * 0.85;
+            double x = s.x + Math.cos(ang) * s.rx * d, z = s.z + Math.sin(ang) * s.rz * d;
+            if (vuela) {
+                double yy = (s.tipo.equals("lago") ? gen.nivelLava() : s.piso) + 3 + rnd.nextInt(5);
+                Block b = mundo.getBlockAt((int) Math.floor(x), (int) Math.floor(yy), (int) Math.floor(z));
+                if (b.isPassable() && !b.isLiquid() && b.getRelative(BlockFace.UP).isPassable()) return b.getLocation().add(0.5, 0, 0.5);
+                continue;
             }
-            en.addScoreboardTag(MOB);
-            if (tipo.equalsIgnoreCase("mm:BreezeOld")) en.addScoreboardTag("breeze_old");
-            if (en instanceof LivingEntity le) le.setRemoveWhenFarAway(false);
+            double y0 = s.tipo.equals("lago") ? gen.nivelLava() + 1 : s.piso;
+            Location l = piso(new Location(mundo, x, y0, z));
+            if (l != null && !l.getBlock().getRelative(BlockFace.DOWN).isLiquid()) return l;
         }
+        return null;
+    }
+
+    private Method CREEPER;
+    private Object CREEPERS;
+
+    /** Un creeper de TOD4 (random, calamar, nuclear...). */
+    private Entity creeper(String tipo, Location l) {
+        try {
+            if (CREEPER == null) {
+                org.bukkit.plugin.Plugin t = Bukkit.getPluginManager().getPlugin("TOD4");
+                if (t == null) return null;
+                CREEPERS = t.getClass().getMethod("creepers").invoke(t);
+                CREEPER = CREEPERS.getClass().getMethod("aparecer", String.class, Location.class);
+            }
+            return (Entity) CREEPER.invoke(CREEPERS, tipo, l);
+        } catch (Throwable ex) {
+            CREEPER = null;
+            return null;
+        }
+    }
+
+    private void mob(String tipo, Location l) {
+        Entity en;
+        if (tipo.startsWith("mm:")) {
+            en = mm(tipo.substring(3), l);
+            if (en == null) { pl.getLogger().warning("[Agujero] MythicMobs no hizo aparecer " + tipo.substring(3) + " (¿existe con ese nombre?)"); return; }
+            if (tipo.equalsIgnoreCase("mm:BombaVoladora")) en.teleport(l.clone().add(0, 3, 0));
+        } else if (tipo.startsWith("creeper:")) {
+            en = creeper(tipo.substring(8), l);
+            if (en == null) { pl.getLogger().warning("[Agujero] TOD4 no hizo aparecer el creeper " + tipo.substring(8)); return; }
+        } else {
+            EntityType t = org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.fromString(tipo.contains(":") ? tipo : "minecraft:" + tipo));
+            if (t == null || !t.isSpawnable()) { pl.getLogger().warning("[Agujero] No existe el mob " + tipo); return; }
+            en = mundo.spawnEntity(l, t);
+        }
+        en.addScoreboardTag(MOB);
+        if (tipo.equalsIgnoreCase("mm:BreezeOld")) en.addScoreboardTag("breeze_old");
+        if (en instanceof LivingEntity le) le.setRemoveWhenFarAway(false);
+    }
+
+    // ================================================================= ni perlas ni cargas de viento
+
+    private static boolean prohibido(ItemStack it) {
+        return it != null && (it.getType() == Material.ENDER_PEARL || it.getType() == Material.WIND_CHARGE);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void tira(PlayerInteractEvent e) {
+        if (!enMundo(e.getPlayer()) || e.getAction() == Action.PHYSICAL || !prohibido(e.getItem())) return;
+        if (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK) return;
+        e.setCancelled(true);
+        e.getPlayer().sendActionBar(c("&cEn el Agujero del Infierno no se pueden usar perlas ni cargas de viento."));
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void lanza(org.bukkit.event.entity.ProjectileLaunchEvent e) {
+        if (mundo == null || !e.getEntity().getWorld().equals(mundo)) return;
+        if (e.getEntity() instanceof org.bukkit.entity.EnderPearl || (e.getEntity() instanceof org.bukkit.entity.WindCharge && e.getEntity().getShooter() instanceof Player))
+            e.setCancelled(true);
     }
 
     /** Un lugar parado cerca de ese punto: aire con piso firme abajo (busca 5 arriba y abajo). */
@@ -633,6 +766,10 @@ final class Agujero implements Listener {
 
     private Map<Long, short[]> foto;
     private BlockData[] fotoBD;
+    private List<String> fotoPal;            // la paleta como texto (para guardarla)
+    private Map<String, Short> fotoIdx;
+    private boolean fotoSucia;
+    private long fotoUltimo;
 
     private static long clave(int cx, int cz) { return ((long) cx << 32) ^ (cz & 0xffffffffL); }
 
@@ -662,6 +799,9 @@ final class Agujero implements Listener {
                 m.put(k, a);
             }
             foto = m; fotoBD = bd;
+            fotoPal = new ArrayList<>();
+            fotoIdx = new HashMap<>();
+            for (BlockData x : bd) { fotoIdx.putIfAbsent(x.getAsString(), (short) fotoPal.size()); fotoPal.add(x.getAsString()); }
         } catch (IOException ex) {
             pl.getLogger().warning("[Agujero] No pude leer la foto: " + ex.getMessage());
         }
@@ -718,9 +858,13 @@ final class Agujero implements Listener {
             estado = Estado.ABIERTO;
             cerradoHasta = 0;
             guardar();
+            linea = null;
             String msg = "&aAgujero del Infierno reconstruido &7(" + cambios[0] + " bloques, " + puestos + " cofres). Está abierto.";
             if (quien != null) TOD4Eventos.ok(quien, msg);
-            for (Player o : Bukkit.getOnlinePlayers()) if (o.hasPermission(PERM) && o != quien) o.sendMessage(c("&4☠ " + msg));
+            for (Player o : Bukkit.getOnlinePlayers()) {
+                if (o.hasPermission(PERM) && o != quien) o.sendMessage(c("&4☠ " + msg));
+                o.sendMessage(c("&4☠ &cSe reconstruyó el &4&lAgujero del Infierno 2.0&c."));
+            }
         });
     }
 
@@ -757,65 +901,260 @@ final class Agujero implements Listener {
                 int yy = i / 256 + CuevaGen.MIN_Y, lz = (i % 256) / 16, lx = i % 16;
                 BlockData bd = sn.getBlockData(lx, yy, lz);
                 // los cofres del agujero no van en la foto (se ponen nuevos cada vez)
-                String k = bd.getMaterial() == Material.CHEST && cofresPuestos.contains((cx * 16 + lx) + "," + yy + "," + (cz * 16 + lz)) ? "minecraft:air" : bd.getAsString();
+                String k = esCofre(bd.getMaterial()) && cofresPuestos.contains((cx * 16 + lx) + "," + yy + "," + (cz * 16 + lz)) ? "minecraft:air" : bd.getAsString();
                 Short id = idx.get(k);
                 if (id == null) { id = (short) pal.size(); pal.add(k); idx.put(k, id); }
                 a[i] = id;
             }
             m.put(clave(cx, cz), a);
         }, () -> {
-            try (DataOutputStream out = new DataOutputStream(new GZIPOutputStream(new FileOutputStream(fotoF())))) {
-                out.writeInt(pal.size());
-                for (String p : pal) out.writeUTF(p);
-                out.writeInt(m.size());
-                for (Map.Entry<Long, short[]> e : m.entrySet()) {
-                    out.writeLong(e.getKey());
-                    for (short v : e.getValue()) out.writeShort(v);
-                }
+            try {
+                escribirFoto(fotoF(), pal, m);
             } catch (IOException ex) {
                 TOD4Eventos.err(s, "No pude guardar la foto: " + ex.getMessage());
                 return;
             }
             foto = null;
+            fotoSucia = false;
             cargarFoto();
             TOD4Eventos.ok(s, "Foto guardada (" + pal.size() + " tipos de bloque). Cada reconstrucción deja la cueva así.");
         });
+    }
+
+    private static void escribirFoto(File f, List<String> pal, Map<Long, short[]> m) throws IOException {
+        File tmp = new File(f.getParentFile(), f.getName() + ".tmp");
+        try (DataOutputStream out = new DataOutputStream(new java.io.BufferedOutputStream(new GZIPOutputStream(new FileOutputStream(tmp))))) {
+            out.writeInt(pal.size());
+            for (String p : pal) out.writeUTF(p);
+            out.writeInt(m.size());
+            for (Map.Entry<Long, short[]> e : m.entrySet()) {
+                out.writeLong(e.getKey());
+                for (short v : e.getValue()) out.writeShort(v);
+            }
+        }
+        java.nio.file.Files.move(tmp.toPath(), f.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+    }
+
+    // ================================================================= lo que cambia un admin queda en la foto
+
+    /** Un admin en creativo edita la cueva: cada bloque que pone o rompe queda en la foto (la reconstruccion lo respeta). */
+    private boolean editor(Player p) { return p.hasPermission(PERM) && p.getGameMode() == GameMode.CREATIVE; }
+
+    private short idxFoto(String k) {
+        Short i = fotoIdx.get(k);
+        if (i != null) return i;
+        short n = (short) fotoPal.size();
+        fotoPal.add(k);
+        fotoIdx.put(k, n);
+        BlockData bd;
+        try { bd = Bukkit.createBlockData(k); } catch (Exception ex) { bd = Material.AIR.createBlockData(); }
+        fotoBD = java.util.Arrays.copyOf(fotoBD == null ? new BlockData[0] : fotoBD, n + 1);
+        fotoBD[n] = bd;
+        return n;
+    }
+
+    /** Anota en la foto como esta ahora ese bloque (aire = siempre aire, para los lugares de cofre). */
+    private void anotar(Block b, boolean aire) {
+        if (mundo == null || !b.getWorld().equals(mundo)) return;
+        int x = b.getX(), yy = b.getY(), z = b.getZ();
+        if (x < CuevaGen.MIN_X || x > CuevaGen.MAX_X || z < CuevaGen.MIN_Z || z > CuevaGen.MAX_Z || yy < CuevaGen.MIN_Y || yy > CuevaGen.MAX_Y) return;
+        cargarFoto();
+        if (foto == null) {   // todavia no hay foto: arranca de la cueva generada
+            foto = new HashMap<>();
+            fotoPal = new ArrayList<>();
+            fotoIdx = new HashMap<>();
+            fotoBD = new BlockData[0];
+        }
+        int cx = x >> 4, cz = z >> 4;
+        short[] a = foto.get(clave(cx, cz));
+        if (a == null) {
+            short[] g = gen.chunk(cx, cz);
+            short[] map = new short[base.length];
+            for (int i = 0; i < base.length; i++) map[i] = idxFoto(base[i].getAsString());
+            a = new short[g.length];
+            for (int i = 0; i < g.length; i++) a[i] = map[g[i]];
+            foto.put(clave(cx, cz), a);
+        }
+        a[(yy - CuevaGen.MIN_Y) * 256 + (z & 15) * 16 + (x & 15)] = idxFoto(aire ? "minecraft:air" : b.getBlockData().getAsString());
+        fotoSucia = true;
+        fotoUltimo = System.currentTimeMillis();
+    }
+
+    private Map<Long, short[]> copiaFoto() {
+        Map<Long, short[]> m = new HashMap<>();
+        for (Map.Entry<Long, short[]> e : foto.entrySet()) m.put(e.getKey(), e.getValue().clone());
+        return m;
+    }
+
+    /** Guarda la foto (en otro hilo) un rato despues del ultimo cambio. */
+    private void guardarFotoSiHace() {
+        if (!fotoSucia || foto == null || System.currentTimeMillis() - fotoUltimo < 3000) return;
+        fotoSucia = false;
+        List<String> pal = new ArrayList<>(fotoPal);
+        Map<Long, short[]> m = copiaFoto();
+        File f = fotoF();
+        Bukkit.getScheduler().runTaskAsynchronously(pl, () -> {
+            try { escribirFoto(f, pal, m); } catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar la foto: " + ex.getMessage()); }
+        });
+    }
+
+    private void guardarFotoYa() {
+        if (!fotoSucia || foto == null) return;
+        fotoSucia = false;
+        try { escribirFoto(fotoF(), fotoPal, foto); } catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar la foto: " + ex.getMessage()); }
+    }
+
+    private static boolean esCofre(Material m) { return m == Material.CHEST || m == Material.TRAPPED_CHEST; }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void rompe(org.bukkit.event.block.BlockBreakEvent e) {
+        Player p = e.getPlayer();
+        if (!enMundo(p)) return;
+        if (!editor(p)) { e.setCancelled(true); p.sendActionBar(c("&cEn el Agujero del Infierno no se puede romper nada.")); return; }
+        Block b = e.getBlock();
+        if (esCofre(b.getType())) {
+            String t = quitarLugar(b);
+            cofresPuestos.remove(b.getX() + "," + b.getY() + "," + b.getZ());
+            if (t != null) TOD4Eventos.ok(p, "Lugar de cofre &f" + t + " &aquitado.");
+        }
+        // un tick despues: el bloque y lo que se cayo con el (flores, puertas...)
+        Block arriba = b.getRelative(BlockFace.UP), abajo = b.getRelative(BlockFace.DOWN);
+        BlockData ar = arriba.getBlockData(), ab = abajo.getBlockData();
+        Bukkit.getScheduler().runTask(pl, () -> {
+            anotar(b, false);
+            if (!arriba.getBlockData().equals(ar)) anotar(arriba, false);
+            if (!abajo.getBlockData().equals(ab)) anotar(abajo, false);
+        });
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void pone(org.bukkit.event.block.BlockPlaceEvent e) {
+        Player p = e.getPlayer();
+        if (!enMundo(p)) return;
+        if (!editor(p)) { e.setCancelled(true); p.sendActionBar(c("&cEn el Agujero del Infierno no se puede poner nada.")); return; }
+        Block b = e.getBlockPlaced();
+        if (esCofre(b.getType())) {
+            // poner un cofre = lugar de cofre (cofre normal: facil, cofre trampa: dificil). Se llena ya, y en la foto queda aire.
+            String tipo = b.getType() == Material.TRAPPED_CHEST ? "dificil" : "facil";
+            String dir = b.getBlockData() instanceof Directional dd ? dd.getFacing().name() : "NORTH";
+            quitarLugar(b);
+            List<String> l = d.y().getStringList("cofres_extra." + tipo);
+            l.add(b.getX() + "," + b.getY() + "," + b.getZ() + "," + dir);
+            d.set("cofres_extra." + tipo, l);
+            cofresPuestos.add(b.getX() + "," + b.getY() + "," + b.getZ());
+            Bukkit.getScheduler().runTask(pl, () -> {
+                if (b.getState() instanceof Chest ch) {
+                    ch.getBlockInventory().clear();
+                    llenar(ch, tipo);
+                }
+                anotar(b, true);
+            });
+            TOD4Eventos.ok(p, "Lugar de cofre &f" + (tipo.equals("facil") ? "fácil" : "difícil") + " &a(" + l.size() + " " + tipo + "s). "
+                    + "&7Cofre normal = fácil, cofre trampa = difícil. Rompelo para sacar el lugar.");
+            return;
+        }
+        List<Block> bs = new ArrayList<>();
+        if (e instanceof org.bukkit.event.block.BlockMultiPlaceEvent mp) for (org.bukkit.block.BlockState st : mp.getReplacedBlockStates()) bs.add(st.getBlock());
+        else bs.add(b);
+        Bukkit.getScheduler().runTask(pl, () -> { for (Block x : bs) anotar(x, false); });
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void baldeVacia(org.bukkit.event.player.PlayerBucketEmptyEvent e) { balde(e, e.getBlockClicked().getRelative(e.getBlockFace())); }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void baldeLlena(org.bukkit.event.player.PlayerBucketFillEvent e) { balde(e, e.getBlockClicked()); }
+
+    private void balde(org.bukkit.event.player.PlayerBucketEvent e, Block b) {
+        Player p = e.getPlayer();
+        if (!enMundo(p)) return;
+        if (!editor(p)) { e.setCancelled(true); return; }
+        Block cl = e.getBlockClicked();
+        Bukkit.getScheduler().runTask(pl, () -> { anotar(b, false); anotar(cl, false); });
+    }
+
+    /** Marcos, cuadros y soportes: solo los admins en creativo. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void cuadro(org.bukkit.event.hanging.HangingBreakByEntityEvent e) {
+        if (mundo == null || !e.getEntity().getWorld().equals(mundo)) return;
+        if (!(e.getRemover() instanceof Player p) || !editor(p)) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void tocaEntidad(org.bukkit.event.player.PlayerInteractEntityEvent e) {
+        if (!enMundo(e.getPlayer()) || editor(e.getPlayer())) return;
+        if (e.getRightClicked() instanceof org.bukkit.entity.Hanging || e.getRightClicked() instanceof org.bukkit.entity.ArmorStand) e.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void pegaEntidad(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        if (mundo == null || !e.getEntity().getWorld().equals(mundo)) return;
+        if (!(e.getEntity() instanceof org.bukkit.entity.Hanging || e.getEntity() instanceof org.bukkit.entity.ArmorStand)) return;
+        if (!(e.getDamager() instanceof Player p) || !editor(p)) e.setCancelled(true);
+    }
+
+    /** Las explosiones no rompen la sala de entrada (ahi estan los carteles). El resto se arregla al reconstruir. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void explota(org.bukkit.event.entity.EntityExplodeEvent e) {
+        if (mundo == null || !e.getLocation().getWorld().equals(mundo)) return;
+        e.blockList().removeIf(b -> enSala(b.getLocation()));
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void explotaBloque(org.bukkit.event.block.BlockExplodeEvent e) {
+        if (mundo == null || !e.getBlock().getWorld().equals(mundo)) return;
+        e.blockList().removeIf(b -> enSala(b.getLocation()));
+    }
+
+    /** Saca el lugar de cofre que este en ese bloque. Devuelve su tipo o null. */
+    private String quitarLugar(Block b) {
+        String pre = b.getX() + "," + b.getY() + "," + b.getZ();
+        for (String t : new String[]{"facil", "dificil"}) {
+            List<String> l = d.y().getStringList("cofres_extra." + t);
+            if (l.removeIf(x -> x.equals(pre) || x.startsWith(pre + ","))) { d.set("cofres_extra." + t, l); return t; }
+        }
+        return null;
     }
 
     // ================================================================= cofres
 
     private final Set<String> cofresPuestos = new HashSet<>();
 
-    /** Pone los cofres faciles y dificiles en lugares al azar (de los puntos de la cueva y los que agregaste). */
+    /**
+     * Pone los cofres. Con cofres.generados: false (lo normal) van en TODOS los lugares que pusiste vos
+     * (poniendo un cofre en creativo, o /agujero cofre). Con true, ademas usa lugares de la cueva generada, al azar.
+     */
     private int cofres() {
         cofresPuestos.clear();
         int puestos = 0;
+        boolean generados = y.getBoolean("cofres.generados", false);
+        BlockFace[] caras = {BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST};
         for (String tipo : new String[]{"facil", "dificil"}) {
-            List<int[]> pts = new ArrayList<>();
-            for (CuevaGen.Punto p : gen.puntos()) if (p.tipo.equals(tipo)) pts.add(new int[]{p.x, p.y, p.z});
-            for (String l : d.y().getStringList("cofres_extra." + tipo)) {
-                String[] q = l.split(",");
-                pts.add(new int[]{Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2])});
+            List<String[]> pts = new ArrayList<>();
+            for (String l : d.y().getStringList("cofres_extra." + tipo)) pts.add(l.split(","));
+            int cant = pts.size();
+            if (generados) {
+                for (CuevaGen.Punto p : gen.puntos()) if (p.tipo.equals(tipo)) pts.add(new String[]{"" + p.x, "" + p.y, "" + p.z});
+                Collections.shuffle(pts, rnd);
+                cant = y.getInt("cofres." + tipo, tipo.equals("facil") ? 8 : 5);
             }
-            Collections.shuffle(pts, rnd);
-            int cant = y.getInt("cofres." + tipo, tipo.equals("facil") ? 8 : 5);
-            List<String> lineas = y.getStringList("loot." + tipo);
             for (int i = 0, n = 0; i < pts.size() && n < cant; i++) {
-                Location l = piso(new Location(mundo, pts.get(i)[0] + 0.5, pts.get(i)[1], pts.get(i)[2] + 0.5));
-                if (l == null) continue;
-                Block b = l.getBlock();
+                String[] q = pts.get(i);
+                Block b;
+                try { b = mundo.getBlockAt(Integer.parseInt(q[0]), Integer.parseInt(q[1]), Integer.parseInt(q[2])); } catch (Exception ex) { continue; }
+                if (!b.isPassable() && !esCofre(b.getType())) {
+                    Location l = piso(b.getLocation().add(0.5, 0, 0.5));
+                    if (l == null) continue;
+                    b = l.getBlock();
+                }
                 b.setType(Material.CHEST, false);
                 if (b.getBlockData() instanceof Directional dir) {
-                    dir.setFacing(new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST}[rnd.nextInt(4)]);
+                    BlockFace f = caras[rnd.nextInt(4)];
+                    if (q.length > 3) try { f = BlockFace.valueOf(q[3]); } catch (Exception ignored) { }
+                    dir.setFacing(f);
                     b.setBlockData(dir, false);
                 }
-                if (b.getState() instanceof Chest ch) {
-                    List<ItemStack> items = tirar(lineas);
-                    List<Integer> slots = new ArrayList<>();
-                    for (int k = 0; k < 27; k++) slots.add(k);
-                    Collections.shuffle(slots, rnd);
-                    for (int k = 0; k < items.size() && k < 27; k++) ch.getBlockInventory().setItem(slots.get(k), items.get(k));
-                }
+                if (b.getState() instanceof Chest ch) llenar(ch, tipo);
                 cofresPuestos.add(b.getX() + "," + b.getY() + "," + b.getZ());
                 n++; puestos++;
             }
@@ -823,31 +1162,92 @@ final class Agujero implements Listener {
         return puestos;
     }
 
+    private void llenar(Chest ch, String tipo) {
+        List<ItemStack> items = tirar(y.getStringList("loot." + tipo));
+        List<Integer> slots = new ArrayList<>();
+        for (int k = 0; k < 27; k++) slots.add(k);
+        Collections.shuffle(slots, rnd);
+        for (int k = 0; k < items.size() && k < 27; k++) ch.getBlockInventory().setItem(slots.get(k), items.get(k));
+    }
+
     // ================================================================= cartel en la entrada
 
+    /** Arriba de la entrada: el titulo y, si esta derrumbada, otro cartel con "Reconstruyendo" y el tiempo. */
     private void cartel() {
         int[] z = zona("entrada");
-        if (z == null) { if (cartel != null) { cartel.remove(); cartel = null; } return; }
+        if (z == null) {
+            if (cartel != null) { cartel.remove(); cartel = null; }
+            if (cartel2 != null) { cartel2.remove(); cartel2 = null; }
+            return;
+        }
         Location b = new Location(bloque("entrada").getWorld(), (z[0] + z[3]) / 2.0, z[4], (z[2] + z[5]) / 2.0);   // + 0.5 = el centro de la zona
         if (!b.getWorld().isChunkLoaded(b.getBlockX() >> 4, b.getBlockZ() >> 4)) return;
-        if (cartel == null || !cartel.isValid()) {
-            for (Entity en : b.getWorld().getNearbyEntities(b, 3, 4, 3)) if (en.getScoreboardTags().contains(CARTEL)) en.remove();
-            cartel = b.getWorld().spawn(b.clone().add(0.5, 2.6, 0.5), TextDisplay.class, t -> {
-                t.addScoreboardTag(CARTEL);
-                t.setPersistent(false);
-                t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
-                t.setShadowed(true);
-            });
+        if (cartel == null || !cartel.isValid() || cartel2 == null || !cartel2.isValid()) {
+            for (Entity en : b.getWorld().getNearbyEntities(b, 3, 5, 3)) if (en.getScoreboardTags().contains(CARTEL)) en.remove();
+            cartel = holo(b.clone().add(0.5, 3.0, 0.5), 1.4f);
+            cartel2 = holo(b.clone().add(0.5, 2.1, 0.5), 1.0f);
+            cartel.text(c("&4&lAGUJERO DEL INFIERNO 2.0"));
         }
         long ahora = System.currentTimeMillis();
         String linea = switch (estado) {
-            case ABIERTO -> "&aAbierto";
-            case CORRIENDO -> "&c¡Se está derrumbando! &f" + mmss((long) ((duracion() - (ahora - inicio) / 1000.0) * 1000));
+            case ABIERTO -> "";
+            case CORRIENDO -> "&c¡Se está derrumbando!\n&f" + mmss((long) ((duracion() - (ahora - inicio) / 1000.0) * 1000));
             case TERMINANDO -> "&4¡Se derrumbó!";
-            case CERRADO -> "&7Será reconstruida en &f" + mmss(cerradoHasta - ahora);
-            case RECONSTRUYENDO -> "&7Reconstruyendo...";
+            case CERRADO -> "&cReconstruyendo\n&f" + mmss(cerradoHasta - ahora);
+            case RECONSTRUYENDO -> "&cReconstruyendo...";
         };
-        cartel.text(c("&4&lAGUJERO DEL INFIERNO 2.0\n" + linea));
+        cartel2.text(c(linea));
+    }
+
+    private TextDisplay holo(Location l, float escala) {
+        return l.getWorld().spawn(l, TextDisplay.class, t -> {
+            t.addScoreboardTag(CARTEL);
+            t.setPersistent(false);
+            t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+            t.setShadowed(true);
+            t.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0));
+            t.setTransformation(new org.bukkit.util.Transformation(new org.joml.Vector3f(), new org.joml.AxisAngle4f(),
+                    new org.joml.Vector3f(escala, escala, escala), new org.joml.AxisAngle4f()));
+        });
+    }
+
+    // ================================================================= la linea, marcada con particulas
+
+    private List<Location> linea;
+
+    /** Puntos del piso sobre la linea (el borde de la sala de entrada). */
+    private List<Location> linea() {
+        if (linea != null || mundo == null) return linea;
+        List<Location> l = new ArrayList<>();
+        CuevaGen.Sala e = gen.entrada;
+        double r = radioLinea();
+        int n = (int) Math.ceil(2 * Math.PI * r * 2);   // cada medio bloque
+        for (int i = 0; i < n; i++) {
+            double a = 2 * Math.PI * i / n, x = e.x + Math.cos(a) * r, z = e.z + Math.sin(a) * r;
+            for (int dy = 4; dy >= -5; dy--) {
+                Block b = mundo.getBlockAt((int) Math.floor(x), (int) Math.floor(e.piso) + dy, (int) Math.floor(z));
+                if (b.isPassable() && !b.isLiquid() && b.getRelative(BlockFace.DOWN).getType().isSolid()) {
+                    l.add(new Location(mundo, x, b.getY() + 0.15, z));
+                    break;
+                }
+            }
+        }
+        linea = l;
+        return l;
+    }
+
+    private static final Particle.DustOptions ROJO = new Particle.DustOptions(org.bukkit.Color.fromRGB(200, 20, 20), 1.1f);
+
+    private void dibujarLinea() {
+        if (mundo == null || estado == Estado.CERRADO || estado == Estado.RECONSTRUYENDO) return;
+        List<Location> l = linea();
+        if (l == null || l.isEmpty()) return;
+        Location centro = sala(mundo);
+        for (Player p : mundo.getPlayers()) {
+            if (p.getLocation().distanceSquared(centro) > 40 * 40) continue;
+            for (Location x : l) p.spawnParticle(Particle.DUST, x, 1, 0.05, 0, 0.05, 0, ROJO);
+            if (tick % 4 == 0) for (int i = 0; i < l.size(); i += 6) p.spawnParticle(Particle.SMALL_FLAME, l.get(i), 1, 0.05, 0.05, 0.05, 0.005);
+        }
     }
 
     @EventHandler
@@ -912,7 +1312,20 @@ final class Agujero implements Listener {
                     Location l = bloque(k);
                     if (l != null && l.getWorld().equals(p.getWorld())) { mostrarZona(p, k, k.equals("entrada") ? org.bukkit.Color.RED : org.bukkit.Color.LIME); algo = true; }
                 }
-                if (algo) TOD4Eventos.ok(s, "Mostrando la zona (roja = entrada, verde = salida).");
+                if (enMundo(p)) {
+                    // los lugares de cofre: verde = facil, violeta = dificil
+                    for (String t : new String[]{"facil", "dificil"}) for (String x : d.y().getStringList("cofres_extra." + t)) {
+                        String[] q = x.split(",");
+                        Location l = new Location(mundo, Integer.parseInt(q[0]) + 0.5, Integer.parseInt(q[1]) + 0.5, Integer.parseInt(q[2]) + 0.5);
+                        Particle.DustOptions col = new Particle.DustOptions(t.equals("facil") ? org.bukkit.Color.LIME : org.bukkit.Color.PURPLE, 2f);
+                        new org.bukkit.scheduler.BukkitRunnable() {
+                            int n = 0;
+                            @Override public void run() { if (!p.isOnline() || ++n > 16) { cancel(); return; } p.spawnParticle(Particle.DUST, l, 8, 0.25, 0.4, 0.25, 0, col); }
+                        }.runTaskTimer(pl, 0L, 10L);
+                        algo = true;
+                    }
+                }
+                if (algo) TOD4Eventos.ok(s, "Mostrando las zonas (roja = entrada, verde = salida) y los lugares de cofre (verde = fácil, violeta = difícil).");
                 else TOD4Eventos.err(s, "No hay ninguna zona en este mundo.");
             }
             case "salida" -> {
@@ -951,7 +1364,7 @@ final class Agujero implements Listener {
                 String t = a[1].toLowerCase();
                 List<String> l = d.y().getStringList("cofres_extra." + t);
                 Location lo = p.getLocation();
-                l.add(lo.getBlockX() + "," + lo.getBlockY() + "," + lo.getBlockZ());
+                l.add(lo.getBlockX() + "," + lo.getBlockY() + "," + lo.getBlockZ() + "," + p.getFacing().getOppositeFace().name());
                 d.set("cofres_extra." + t, l);
                 TOD4Eventos.ok(s, "Lugar de cofre &f" + t + " &aagregado (" + l.size() + " agregados a mano).");
             }

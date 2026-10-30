@@ -2,15 +2,18 @@
 #  AGUJERO DEL INFIERNO 2.0        despues de cambiar algo: /tod4eventos:agujero recargar
 #
 #  1) /tod4eventos:agujero crear         crea la cueva (su propio mundo). /tod4eventos:agujero tp para ir.
-#  2) Decorala como quieras. Cuando este lista: /tod4eventos:agujero foto  (cada reconstruccion la deja asi).
-#  3) /tod4eventos:agujero entrada        mirando el bloque de afuera que baja a la cueva (pisarlo o tocarlo).
-#     /tod4eventos:agujero bloquesalida   mirando el bloque de la sala de entrada (adentro) que sube afuera.
+#  2) Decorala en CREATIVO: cada bloque que pongas o rompas queda guardado solo (la reconstruccion lo respeta).
+#     (si editas con WorldEdit: /tod4eventos:agujero foto, con la cueva recien abierta)
+#  3) /tod4eventos:agujero entrada 1 / entrada 2        mirando las dos puntas de la entrada (afuera)
+#     /tod4eventos:agujero bloquesalida 1 / 2           mirando las dos puntas de la salida (adentro)
 #     /tod4eventos:agujero salida         parado donde aparecen los que suben.
 #     /tod4eventos:agujero llegada        (opcional) parado en la sala de entrada, donde aparecen al bajar.
-#  Cofres: salen solos en lugares de la cueva (faciles y dificiles). Para agregar lugares, parado ahi adentro:
-#     /tod4eventos:agujero cofre facil | cofre dificil      (quitar: /tod4eventos:agujero quitarcofre)
+#     /tod4eventos:agujero ver            muestra las zonas y los lugares de cofre con particulas
+#  Cofres: en creativo, pone un COFRE (facil) o un COFRE TRAMPA (dificil) donde quieras uno. Romperlo saca el lugar.
 #  Otros: abrir (reconstruye y abre ya), cerrar [min], terminar (corta la corrida), espera <jugador>, estado
+#  Los jugadores no pueden romper ni poner nada, ni usar perlas ni cargas de viento.
 # =====================================================================
+version: 2
 
 mundo: agujero_infierno
 # la forma de la cueva sale de esta semilla (cambiarla despues de crearla cambia solo lo que se genere de nuevo)
@@ -21,30 +24,41 @@ bioma: dripstone_caves
 # la "linea": salir de la sala de entrada (radio en bloques desde el medio de la sala). Adentro de la sala no pasa nada.
 linea_radio: 8.5
 
-# lo que dura la cancion (segundos): mientras suena se derrumba
-duracion_seg: 150
+# lo que dura la cancion (segundos): mientras suena se derrumba (la cancion dura 3:09 con el final que se apaga)
+duracion_seg: 180
 # cuando termina: espera estos segundos y despues a los que siguen pasando la linea les saca "dano" cada medio segundo
 espera_dano_seg: 3
 # 3 = un corazon y medio, fijo (la armadura no lo baja). Cada medio segundo.
 dano: 3.0
 # cuando ya no queda nadie pasando la linea aparece una pared en la linea y queda derrumbada esto (minutos);
-# se puede bajar a la sala pero no pasar. Despues se reconstruye sola.
+# mientras, no se puede bajar ("La cueva está derrumbada."). Despues se reconstruye sola y se avisa en el chat.
 cerrado_min: 30
-# cada jugador puede bajar a jugar una vez cada tanto (minutos). Bajar con la cueva derrumbada no cuenta. Los admins no tienen espera.
+# cada jugador puede bajar una vez cada tanto (minutos). Los admins no tienen espera.
 espera_jugador_min: 60
 
 # la musica (sonido del pack) y su volumen. La escuchan todos los que estan en el mundo de la cueva.
 musica: "tod4:agujero"
 musica_volumen: 1.0
 
-# piedras que caen del techo cerca de cada jugador, por segundo (al principio y al final), y % de estalactitas (pegan fuerte)
+# arriba (donde dice "Wither") sale solo el tiempo. La barra es de este color; con el pack, la barra
+# de este color es invisible (texturas boss_bar/white_background.png y white_progress.png transparentes).
+barra_color: WHITE
+
+# piedras que caen del techo cerca de cada jugador (por segundo): pocas al principio, van subiendo hasta "medio",
+# y en los ultimos final_seg segundos caen muchas (por_segundo_final), con temblor y ruido.
+# final_se_rompen: % de las del final que se rompen al caer (si no, tapan todos los tuneles). punta_chance: % de estalactitas (pegan fuerte)
 derrumbe:
-  bloques_inicio: 1
-  bloques_fin: 6
+  por_segundo_inicio: 0.3
+  por_segundo_medio: 2
+  final_seg: 30
+  por_segundo_final: 14
+  final_se_rompen: 70
   punta_chance: 30
 
-# cuantos cofres de cada tipo hay en cada reconstruccion
+# los cofres van en los lugares que pusiste vos (en creativo: cofre = facil, cofre trampa = dificil).
+# generados: true = ademas usa lugares de la cueva generada, y entonces pone esta cantidad de cada tipo, al azar.
 cofres:
+  generados: false
   facil: 8
   dificil: 5
 
@@ -68,14 +82,33 @@ loot:
     - "oraxen:totem_cuy 1 30%"
     - "minecraft:experience_bottle 48-64"
 
-# mobs que aparecen cuando empieza a derrumbarse (repartidos por la cueva)
-#   mm:<nombre de MythicMobs>  o  minecraft:<mob>
+# mobs que aparecen cuando empieza a derrumbarse
+#   mm:<nombre de MythicMobs>   creeper:<random|mini|calamar|void|nuclear|flash> (los de TOD4)   minecraft:<mob>
+# "cantidad" repartidos por toda la cueva (tuneles y salas), y aparte los de cada zona.
 mobs:
-  cantidad: 16
+  cantidad: 22
   tipos:
     "mm:BreezeOld": 3
     "mm:BombaVoladora": 3
-    "minecraft:silverfish": 5
+    "mm:EnderZombie": 3
+    "creeper:calamar": 2
+    "creeper:random": 2
+    "minecraft:silverfish": 4
     "minecraft:zombie": 2
     "minecraft:skeleton": 2
     "minecraft:cave_spider": 1
+  # zonas: entrada, cruce, columnas, lago (el de lava, con el camino de basalto), catedral, pozo, galeria
+  zonas:
+    lago:            # solo aca hay blazes (te tiran y te podes caer a la lava)
+      cantidad: 6
+      tipos:
+        "minecraft:blaze": 5
+        "creeper:nuclear": 1
+    catedral:        # la sala mas grande
+      cantidad: 2
+      tipos:
+        "creeper:nuclear": 1
+    columnas:
+      cantidad: 1
+      tipos:
+        "creeper:nuclear": 1
