@@ -870,33 +870,29 @@ final class Agujero implements Listener {
     }
 
     /**
-     * Recorre los chunks de la cueva sin trabar el server: los va cargando aparte (unos pocos adelante)
-     * y en cada tick trabaja como mucho ~20 ms.
+     * Recorre los chunks de la cueva sin trabar el server: los va cargando aparte (unos cuantos adelante, agarrados con
+     * un ticket para que no se descarguen) y en cada tick trabaja como mucho ~20 ms.
      */
     private void porChunks(java.util.function.BiConsumer<Integer, Integer> hacer, Runnable fin) {
         List<int[]> l = new ArrayList<>();
         for (int cx = Math.floorDiv(CuevaGen.MIN_X, 16); cx <= Math.floorDiv(CuevaGen.MAX_X, 16); cx++)
             for (int cz = Math.floorDiv(CuevaGen.MIN_Z, 16); cz <= Math.floorDiv(CuevaGen.MAX_Z, 16); cz++) l.add(new int[]{cx, cz});
-        final int[] i = {0}, pedido = {0};
+        World w = mundo;
+        List<java.util.concurrent.CompletableFuture<Chunk>> fut = new ArrayList<>();
+        final int[] i = {0};
         Bukkit.getScheduler().runTaskTimer(pl, task -> {
             long t0 = System.nanoTime();
-            // pide los que vienen (se cargan/generan aparte)
-            while (pedido[0] < l.size() && pedido[0] < i[0] + 32) {
-                int[] c = l.get(pedido[0]++);
-                mundo.getChunkAtAsync(c[0], c[1], true);
+            while (fut.size() < l.size() && fut.size() < i[0] + 24) {
+                int[] c = l.get(fut.size());
+                fut.add(w.getChunkAtAsync(c[0], c[1], true).thenApply(ch -> { ch.addPluginChunkTicket(pl); return ch; }));
             }
             while (i[0] < l.size() && System.nanoTime() - t0 < 20_000_000L) {
+                java.util.concurrent.CompletableFuture<Chunk> f = fut.get(i[0]);
+                if (!f.isDone()) break;   // todavia cargando: el tick que viene
                 int[] c = l.get(i[0]);
-                if (!mundo.isChunkLoaded(c[0], c[1])) {   // todavia cargando (o se descargo): se vuelve a pedir y sigue el tick que viene
-                    if (tick % 4 == 0) mundo.getChunkAtAsync(c[0], c[1], true);
-                    break;
-                }
-                hacer.accept(c[0], c[1]);
+                try { hacer.accept(c[0], c[1]); } catch (Exception ex) { pl.getLogger().warning("[Agujero] Chunk " + c[0] + "," + c[1] + ": " + ex); }
+                w.removePluginChunkTicket(c[0], c[1], pl);
                 i[0]++;
-                while (pedido[0] < l.size() && pedido[0] < i[0] + 32) {
-                    int[] q = l.get(pedido[0]++);
-                    mundo.getChunkAtAsync(q[0], q[1], true);
-                }
             }
             if (i[0] >= l.size()) { task.cancel(); if (fin != null) fin.run(); }
         }, 1L, 1L);
