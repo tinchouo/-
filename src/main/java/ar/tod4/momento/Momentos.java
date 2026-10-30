@@ -611,8 +611,11 @@ public final class Momentos implements Listener {
         if (azar > 0 && azar < objetivo.size()) { Collections.shuffle(objetivo); objetivo = objetivo.subList(0, azar); }
         int n = 0;
         for (Player p : objetivo) for (int i = 0; i < cant; i++) {
-            Entity e = hacerAparecer(mob, p.getLocation());
-            if (e != null) n++;
+            Entity e;
+            // aparece aunque el jugador este en una region que no deja (WorldGuard): ver forzarSpawn
+            forzando = true;
+            try { e = hacerAparecer(mob, p.getLocation()); } finally { forzando = false; }
+            if (e != null) { n++; e.addScoreboardTag(MOB_MOMENTO); protegidos.add(e.getUniqueId()); }
             if (e instanceof LivingEntity le && vida > 0) {
                 le.getPersistentDataContainer().set(pl.creepers().vidaFija(), PersistentDataType.BYTE, (byte) 1);
                 poner(le, vida);
@@ -621,6 +624,71 @@ public final class Momentos implements Listener {
             }
         }
         return n;
+    }
+
+    // ================================================================= los mobs del Momento: aparecen en cualquier lado y no se borran con comandos
+
+    static final String MOB_MOMENTO = "momento_mob";
+    private boolean forzando;
+    private final Set<UUID> protegidos = new HashSet<>();
+
+    /** Mientras hay un Momento activo con mobs suyos vivos. */
+    private boolean hayProtegidos() {
+        if (mid == null) { protegidos.clear(); return false; }
+        protegidos.removeIf(u -> { Entity e = Bukkit.getEntity(u); return e == null || !e.isValid() || e.isDead(); });
+        return !protegidos.isEmpty();
+    }
+
+    /** Los mobs del Momento aparecen aunque una region (WorldGuard) no deje aparecer mobs ahi. */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void forzarSpawn(org.bukkit.event.entity.EntitySpawnEvent e) {
+        if (forzando && e.isCancelled()) e.setCancelled(false);
+    }
+
+    /** Y pegan aunque la region no deje (a los que juegan el Momento; no a los del Gulag, cuyes ni exentos). */
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void forzarDano(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        if (!e.isCancelled() || mid == null || !(e.getEntity() instanceof Player p)) return;
+        Entity d = e.getDamager();
+        if (d instanceof org.bukkit.entity.Projectile pr && pr.getShooter() instanceof Entity sh) d = sh;
+        if (!d.getScoreboardTags().contains(MOB_MOMENTO)) return;
+        if (!afecta(p) || exento(p) || ar.tod4.hook.Gulag.participa(p.getUniqueId())) return;
+        e.setCancelled(false);
+    }
+
+    /** /kill (y cualquier cosa que mate "a la fuerza") no les hace nada mientras dura el Momento. */
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void sinKill(org.bukkit.event.entity.EntityDamageEvent e) {
+        if (e.getCause() != org.bukkit.event.entity.EntityDamageEvent.DamageCause.KILL) return;
+        if (e.getEntity().getScoreboardTags().contains(MOB_MOMENTO) && mid != null) e.setCancelled(true);
+    }
+
+    /** Los comandos que borran mobs (/kill @e, /mm mobs kill, /killall, /butcher...) no andan mientras hay mobs del Momento. */
+    private boolean borraMobs(String linea) {
+        String[] p = linea.trim().replaceFirst("^/", "").toLowerCase().split("\\s+", 2);
+        String cmd = p[0].contains(":") ? p[0].substring(p[0].indexOf(':') + 1) : p[0], resto = p.length > 1 ? p[1] : "";
+        return switch (cmd) {
+            case "kill" -> resto.contains("@e") || resto.contains("type=");
+            case "mm", "mythicmobs", "mythicmob" -> resto.matches(".*\\b(kill|killall|despawn|remove)\\b.*");
+            case "killall", "ekillall", "butcher", "ebutcher", "remove", "eremove", "mobkill" -> true;
+            default -> false;
+        };
+    }
+
+    private static final String NO_KILL = "&cHay mobs del Momento Truco: no se pueden borrar con comandos. Si hay que cortarlo, terminá el Momento desde &f/tod4:momentostruco&c.";
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void comandoJugador(org.bukkit.event.player.PlayerCommandPreprocessEvent e) {
+        if (!borraMobs(e.getMessage()) || !hayProtegidos()) return;
+        e.setCancelled(true);
+        Style.raw(e.getPlayer(), NO_KILL);
+    }
+
+    @EventHandler(priority = EventPriority.LOWEST)
+    public void comandoConsola(org.bukkit.event.server.ServerCommandEvent e) {
+        if (!borraMobs(e.getCommand()) || !hayProtegidos()) return;
+        e.setCancelled(true);
+        Style.raw(e.getSender(), NO_KILL);
     }
 
     private static void poner(LivingEntity le, double vida) {
