@@ -219,6 +219,31 @@ final class Agujero implements Listener {
         return l != null && l.getWorld() != null ? l : null;
     }
 
+    /**
+     * Zona (entrada o salida): de la esquina k a la esquina k+"2". Sin segunda esquina es un solo bloque (como antes).
+     * Devuelve {minX, minY, minZ, maxX, maxY, maxZ} o null.
+     */
+    private int[] zona(String k) {
+        Location a = bloque(k);
+        if (a == null) return null;
+        Location b = bloque(k + "2");
+        if (b == null || !b.getWorld().equals(a.getWorld())) b = a;
+        return new int[]{Math.min(a.getBlockX(), b.getBlockX()), Math.min(a.getBlockY(), b.getBlockY()), Math.min(a.getBlockZ(), b.getBlockZ()),
+                Math.max(a.getBlockX(), b.getBlockX()), Math.max(a.getBlockY(), b.getBlockY()), Math.max(a.getBlockZ(), b.getBlockZ())};
+    }
+
+    /** El bloque esta en la zona. */
+    private boolean enZona(String k, Block bl) {
+        int[] z = zona(k);
+        if (z == null || !bl.getWorld().equals(bloque(k).getWorld())) return false;
+        return bl.getX() >= z[0] && bl.getX() <= z[3] && bl.getY() >= z[1] && bl.getY() <= z[4] && bl.getZ() >= z[2] && bl.getZ() <= z[5];
+    }
+
+    /** Parado en la zona: con los pies adentro o pisando un bloque de la zona. */
+    private boolean pisaZona(String k, Block pies) {
+        return enZona(k, pies) || enZona(k, pies.getRelative(BlockFace.DOWN));
+    }
+
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void pisa(PlayerMoveEvent e) {
         if (e.getFrom().getBlockX() == e.getTo().getBlockX() && e.getFrom().getBlockY() == e.getTo().getBlockY()
@@ -226,25 +251,39 @@ final class Agujero implements Listener {
         Player p = e.getPlayer();
         Block pies = e.getTo().getBlock();
         if (enMundo(p)) {
-            Location s = bloque("bloque_salida");
-            if (s != null && (igual(pies, s) || igual(pies.getRelative(BlockFace.DOWN), s))) { subir(p); return; }
+            if (pisaZona("bloque_salida", pies)) { subir(p); return; }
             moverse(p, e.getTo());
             return;
         }
-        Location b = bloque("entrada");
-        if (b != null && b.getWorld().equals(p.getWorld()) && (igual(pies, b) || igual(pies.getRelative(BlockFace.DOWN), b))) bajar(p);
+        if (pisaZona("entrada", pies)) bajar(p);
     }
 
     @EventHandler(priority = EventPriority.HIGH)
     public void toca(PlayerInteractEvent e) {
         if (e.getAction() != Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null || e.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
-        Location b = bloque("entrada"), s = bloque("bloque_salida");
-        if (b != null && igual(e.getClickedBlock(), b)) { e.setCancelled(true); bajar(e.getPlayer()); }
-        else if (s != null && igual(e.getClickedBlock(), s)) { e.setCancelled(true); subir(e.getPlayer()); }
+        if (enZona("entrada", e.getClickedBlock())) { e.setCancelled(true); bajar(e.getPlayer()); }
+        else if (enZona("bloque_salida", e.getClickedBlock())) { e.setCancelled(true); subir(e.getPlayer()); }
     }
 
-    private static boolean igual(Block a, Location b) {
-        return a.getWorld().equals(b.getWorld()) && a.getX() == b.getBlockX() && a.getY() == b.getBlockY() && a.getZ() == b.getBlockZ();
+    /** Muestra el borde de la zona con particulas durante unos segundos. */
+    private void mostrarZona(Player p, String k, org.bukkit.Color color) {
+        int[] z = zona(k);
+        if (z == null) return;
+        World w = bloque(k).getWorld();
+        org.bukkit.Particle.DustOptions dust = new org.bukkit.Particle.DustOptions(color, 1.2f);
+        double x0 = z[0], y0 = z[1], z0 = z[2], x1 = z[3] + 1, y1 = z[4] + 1, z1 = z[5] + 1;
+        List<Location> pts = new ArrayList<>();
+        for (double[] ar : new double[][]{{y0, z0}, {y1, z0}, {y0, z1}, {y1, z1}}) for (double x = x0; x <= x1 + 0.01; x += 0.5) pts.add(new Location(w, x, ar[0], ar[1]));
+        for (double[] ar : new double[][]{{x0, z0}, {x1, z0}, {x0, z1}, {x1, z1}}) for (double yy = y0; yy <= y1 + 0.01; yy += 0.5) pts.add(new Location(w, ar[0], yy, ar[1]));
+        for (double[] ar : new double[][]{{x0, y0}, {x1, y0}, {x0, y1}, {x1, y1}}) for (double zz = z0; zz <= z1 + 0.01; zz += 0.5) pts.add(new Location(w, ar[0], ar[1], zz));
+        if (pts.size() > 3000) return;
+        new org.bukkit.scheduler.BukkitRunnable() {
+            int n = 0;
+            @Override public void run() {
+                if (!p.isOnline() || ++n > 16) { cancel(); return; }
+                for (Location l : pts) p.spawnParticle(org.bukkit.Particle.DUST, l, 1, 0, 0, 0, 0, dust);
+            }
+        }.runTaskTimer(pl, 0L, 10L);
     }
 
     private final Map<UUID, Long> avisado = new HashMap<>();
@@ -787,8 +826,9 @@ final class Agujero implements Listener {
     // ================================================================= cartel en la entrada
 
     private void cartel() {
-        Location b = bloque("entrada");
-        if (b == null) { if (cartel != null) { cartel.remove(); cartel = null; } return; }
+        int[] z = zona("entrada");
+        if (z == null) { if (cartel != null) { cartel.remove(); cartel = null; } return; }
+        Location b = new Location(bloque("entrada").getWorld(), (z[0] + z[3]) / 2.0, z[4], (z[2] + z[5]) / 2.0);   // + 0.5 = el centro de la zona
         if (!b.getWorld().isChunkLoaded(b.getBlockX() >> 4, b.getBlockZ() >> 4)) return;
         if (cartel == null || !cartel.isValid()) {
             for (Entity en : b.getWorld().getNearbyEntities(b, 3, 4, 3)) if (en.getScoreboardTags().contains(CARTEL)) en.remove();
@@ -840,15 +880,40 @@ final class Agujero implements Listener {
                 p.teleport(sala(mundo));
             }
             case "entrada", "bloquesalida" -> {
+                // sin numero: un solo bloque. "1" y "2": las dos esquinas de la zona (todos los bloques entre las dos).
                 if (p == null) return;
                 Block b = p.getTargetBlockExact(6);
                 if (b == null) { TOD4Eventos.err(s, "Mirá el bloque (a menos de 6 bloques)."); return; }
                 boolean ent = m.equals("entrada");
-                if (!ent && !enMundo(p)) { TOD4Eventos.err(s, "El bloque de salida va adentro, en la sala de entrada de la cueva."); return; }
-                d.set(ent ? "entrada" : "bloque_salida", b.getLocation());
+                if (!ent && !enMundo(p)) { TOD4Eventos.err(s, "La salida va adentro, en la sala de entrada de la cueva."); return; }
+                String k = ent ? "entrada" : "bloque_salida";
+                String que = ent ? "Entrada" : "Salida";
+                String esq = a.length > 1 ? a[1] : "";
+                if (esq.equals("2")) {
+                    if (bloque(k) == null) { TOD4Eventos.err(s, "Primero la esquina 1: &f/tod4eventos:agujero " + m + " 1"); return; }
+                    if (!bloque(k).getWorld().equals(b.getWorld())) { TOD4Eventos.err(s, "Las dos esquinas tienen que estar en el mismo mundo."); return; }
+                    d.set(k + "2", b.getLocation());
+                } else {
+                    d.set(k, b.getLocation());
+                    d.set(k + "2", null);
+                }
                 if (cartel != null) { cartel.remove(); cartel = null; }
-                TOD4Eventos.ok(s, (ent ? "Bloque de entrada" : "Bloque de salida") + ": &f" + b.getType().name().toLowerCase() + " &aen " + b.getX() + " " + b.getY() + " " + b.getZ()
-                        + "&a. Pisarlo o tocarlo " + (ent ? "baja a la cueva." : "sube afuera."));
+                int[] z = zona(k);
+                int cant = (z[3] - z[0] + 1) * (z[4] - z[1] + 1) * (z[5] - z[2] + 1);
+                if (esq.equals("1")) TOD4Eventos.ok(s, que + ": esquina 1 en &f" + b.getX() + " " + b.getY() + " " + b.getZ() + "&a. Ahora mirá la otra punta y &f/tod4eventos:agujero " + m + " 2");
+                else TOD4Eventos.ok(s, que + ": &f" + cant + (cant == 1 ? " bloque" : " bloques") + " &7(" + z[0] + " " + z[1] + " " + z[2] + " → " + z[3] + " " + z[4] + " " + z[5] + ")&a. "
+                        + "Pisar o tocar cualquiera " + (ent ? "baja a la cueva." : "sube afuera.") + " &7Se ve el borde unos segundos.");
+                mostrarZona(p, k, ent ? org.bukkit.Color.RED : org.bukkit.Color.LIME);
+            }
+            case "ver" -> {
+                if (p == null) return;
+                boolean algo = false;
+                for (String k : new String[]{"entrada", "bloque_salida"}) {
+                    Location l = bloque(k);
+                    if (l != null && l.getWorld().equals(p.getWorld())) { mostrarZona(p, k, k.equals("entrada") ? org.bukkit.Color.RED : org.bukkit.Color.LIME); algo = true; }
+                }
+                if (algo) TOD4Eventos.ok(s, "Mostrando la zona (roja = entrada, verde = salida).");
+                else TOD4Eventos.err(s, "No hay ninguna zona en este mundo.");
             }
             case "salida" -> {
                 if (p == null) return;
@@ -912,9 +977,9 @@ final class Agujero implements Listener {
             default -> {
                 TOD4Eventos.info(s, "Agujero del Infierno 2.0: &f" + estado + (estado == Estado.CERRADO ? " &7(se reconstruye en " + mmss(cerradoHasta - System.currentTimeMillis()) + ")" : "")
                         + " &7| mundo: &f" + (mundo == null ? "sin crear" : mundo.getName()) + " &7| foto: &f" + (fotoF().exists() ? "sí" : "no (la cueva generada)"));
-                TOD4Eventos.info(s, "Entrada: &f" + (bloque("entrada") == null ? "sin poner" : "puesta") + " &7| bloque de salida: &f" + (bloque("bloque_salida") == null ? "sin poner" : "puesto")
+                TOD4Eventos.info(s, "Entrada: &f" + (bloque("entrada") == null ? "sin poner" : "puesta") + " &7| salida de la cueva: &f" + (bloque("bloque_salida") == null ? "sin poner" : "puesta")
                         + " &7| salida: &f" + (bloque("salida") == null ? "sin poner (spawn)" : "puesta"));
-                TOD4Eventos.info(s, "&f/tod4eventos:agujero crear|tp|entrada|bloquesalida|salida|llegada|foto|abrir|cerrar [min]|terminar|cofre <facil|dificil>|quitarcofre|espera <jugador>|recargar");
+                TOD4Eventos.info(s, "&f/tod4eventos:agujero crear|tp|entrada [1|2]|bloquesalida [1|2]|ver|salida|llegada|foto|abrir|cerrar [min]|terminar|cofre <facil|dificil>|quitarcofre|espera <jugador>|recargar");
             }
         }
     }
@@ -924,8 +989,9 @@ final class Agujero implements Listener {
     }
 
     List<String> tab(String[] a) {
-        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "cofre", "quitarcofre", "espera", "recargar", "estado");
+        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "cofre", "quitarcofre", "espera", "recargar", "estado");
         if (a.length == 2 && a[0].equalsIgnoreCase("cofre")) return List.of("facil", "dificil");
+        if (a.length == 2 && (a[0].equalsIgnoreCase("entrada") || a[0].equalsIgnoreCase("bloquesalida"))) return List.of("1", "2");
         if (a.length == 2 && a[0].equalsIgnoreCase("espera")) { List<String> l = new ArrayList<>(); for (Player p : Bukkit.getOnlinePlayers()) l.add(p.getName()); return l; }
         return List.of();
     }
