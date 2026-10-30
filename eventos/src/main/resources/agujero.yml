@@ -10,10 +10,12 @@
 #     /tod4eventos:agujero llegada        (opcional) parado en la sala de entrada, donde aparecen al bajar.
 #     /tod4eventos:agujero ver            muestra las zonas y los lugares de cofre con particulas
 #  Cofres: en creativo, pone un COFRE (facil) o un COFRE TRAMPA (dificil) donde quieras uno. Romperlo saca el lugar.
+#  Items propios para el loot: /tod4eventos:agujero item <nombre> con el item en la mano (los del loot del Aether,
+#  como "chip", ya se pueden usar por su nombre; y los de Oraxen tambien: "tinchoin" busca el de Oraxen con ese id).
 #  Otros: abrir (reconstruye y abre ya), cerrar [min], terminar (corta la corrida), espera <jugador>, estado
 #  Los jugadores no pueden romper ni poner nada, ni usar perlas ni cargas de viento.
 # =====================================================================
-version: 2
+version: 3
 
 mundo: agujero_infierno
 # la forma de la cueva sale de esta semilla (cambiarla despues de crearla cambia solo lo que se genere de nuevo)
@@ -62,53 +64,65 @@ cofres:
   facil: 8
   dificil: 5
 
-# lo que tiene cada cofre:  "<item> <cantidad> [chance%]"  (igual que loot.yml; oraxen:id tambien)
+# lo que tiene cada cofre:  "<item> <cantidad> [chance%]"   cantidad: 3  |  2-5  |  1:45,2:35,3:12 (1 con peso 45, 2 con 35...)
+#   item: minecraft:x, oraxen:x, o un nombre guardado (chip, tinchoin...)
 loot:
+  # los cofres "petes": chips, comida y cosas de decoracion
   facil:
-    - "minecraft:diamond 2-5"
-    - "minecraft:gold_ingot 8-20"
-    - "minecraft:golden_apple 2-5"
-    - "minecraft:experience_bottle 16-32"
-    - "oraxen:moneda 3-6"
-    - "minecraft:iron_block 1-3 50%"
-    - "minecraft:ender_pearl 2-4 40%"
+    - "chip 7-15"
+    - "minecraft:apple 2-5"
+    - "minecraft:bread 2-6 60%"
+    - "minecraft:baked_potato 2-5 40%"
+    - "minecraft:torch 4-12 50%"
+    - "minecraft:arrow 6-16 40%"
+    - "minecraft:coal 4-10 50%"
+    - "minecraft:iron_nugget 5-15 40%"
+    - "minecraft:experience_bottle 3-8 50%"
+    - "minecraft:candle 1-3 30%"
+    - "minecraft:lantern 1-2 25%"
+    - "minecraft:pointed_dripstone 2-4 30%"
+    - "minecraft:glow_lichen 2-6 30%"
+    - "minecraft:bone 2-6 40%"
+    - "minecraft:cobweb 1-3 20%"
+  # los cofres buenos (escondidos):
+  #   fracoin: siempre, de 1 a 5 (casi siempre 1 o 2)
+  #   notch: rara (con 8 cofres buenos, ~1 por ronda)
+  #   tinchoin: rarisima (1 de cada 100 cofres)
   dificil:
-    - "minecraft:diamond_block 1-3"
-    - "minecraft:netherite_scrap 1-3"
-    - "minecraft:netherite_ingot 1 35%"
-    - "minecraft:enchanted_golden_apple 1 40%"
-    - "oraxen:moneda_roja 2-4"
-    - "oraxen:mineral_truco 2-5"
-    - "oraxen:totem_cuy 1 30%"
-    - "minecraft:experience_bottle 48-64"
+    - "fracoin 1:45,2:35,3:12,4:6,5:2"
+    - "minecraft:enchanted_golden_apple 1 12%"
+    - "tinchoin 1 1%"
 
 # mobs que aparecen cuando empieza a derrumbarse
 #   mm:<nombre de MythicMobs>   creeper:<random|mini|calamar|void|nuclear|flash> (los de TOD4)   minecraft:<mob>
 # "cantidad" repartidos por toda la cueva (tuneles y salas), y aparte los de cada zona.
 mobs:
-  cantidad: 22
+  cantidad: 45
   tipos:
+    "creeper:random": 6
+    "creeper:calamar": 6
+    "mm:enderzombie": 5
+    "zombie_tanque": 4          # zombi con mucha vida y armadura de hierro (para tanquear)
+    "minecraft:zombie": 3
+    "minecraft:skeleton": 6
     "mm:BreezeOld": 3
     "mm:BombaVoladora": 3
-    "mm:EnderZombie": 3
-    "creeper:calamar": 2
-    "creeper:random": 2
-    "minecraft:silverfish": 4
-    "minecraft:zombie": 2
-    "minecraft:skeleton": 2
-    "minecraft:cave_spider": 1
-  # zonas: entrada, cruce, columnas, lago (el de lava, con el camino de basalto), catedral, pozo, galeria
+    "minecraft:silverfish": 3
+  # zonas: entrada, cruce, columnas (la de estalactitas), lago (el de lava), isla (el medio del lago), catedral, pozo, galeria
   zonas:
+    columnas:        # la sala de las estalactitas: solo aca hay Flash Creepers
+      cantidad: 4
+      tipos:
+        "creeper:flash": 1
     lago:            # solo aca hay blazes (te tiran y te podes caer a la lava)
       cantidad: 6
       tipos:
-        "minecraft:blaze": 5
-        "creeper:nuclear": 1
-    catedral:        # la sala mas grande
-      cantidad: 2
-      tipos:
-        "creeper:nuclear": 1
-    columnas:
+        "minecraft:blaze": 1
+    isla:            # el creeper nuclear, en el medio del lago de lava
       cantidad: 1
       tipos:
         "creeper:nuclear": 1
+
+# el zombi para tanquear (zombie_tanque)
+zombie_tanque:
+  vida: 50

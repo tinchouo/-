@@ -41,7 +41,13 @@ public final class CuevaGen {
 
     // ================================================================= limites
 
-    public static final int MIN_X = -110, MAX_X = 110, MIN_Z = -110, MAX_Z = 110, MIN_Y = 4, MAX_Y = 104;
+    public static final int MIN_X = -165, MAX_X = 165, MIN_Z = -165, MAX_Z = 165, MIN_Y = 4, MAX_Y = 104;
+
+    /** Version de la forma (si cambia, la cueva vieja no sirve y se arma de cero). 2 = mas grande y toda de pizarra. */
+    public static final int VERSION = 2;
+
+    /** Cuanto mas lejos estan las salas (1 = la primera version). */
+    private static final double E = 1.5;
 
     // ================================================================= piezas
 
@@ -91,35 +97,35 @@ public final class CuevaGen {
         Random r = new Random(semilla);
         // ---- salas
         // pisos parecidos entre si: pocas subidas y bajadas
-        entrada = sala("entrada", 0, 44, -98, 7, 8, 7);
-        Sala junta = sala("cruce", 0, 42, -50, 11, 9, 10);
-        Sala columnas = sala("columnas", -58, 40, -18, 25, 15, 21);
-        lago = sala("lago", 58, 33, 8, 23, 17, 25);
+        entrada = sala("entrada", 0, 44, -98 * E, 7, 8, 7);
+        Sala junta = sala("cruce", 0, 42, -50 * E, 12, 9, 11);
+        Sala columnas = sala("columnas", -58 * E, 40, -18 * E, 29, 15, 24);
+        lago = sala("lago", 58 * E, 33, 8 * E, 27, 17, 29);
         nivelLava = lago.piso + 3;
-        Sala catedral = sala("catedral", 2, 38, 58, 27, 34, 23);
-        pozo = sala("pozo", 70, 10, 78, 8, 30, 8);
-        Sala oeste = sala("galeria", -78, 42, 62, 13, 10, 15);
+        Sala catedral = sala("catedral", 2 * E, 38, 58 * E, 31, 34, 26);
+        pozo = sala("pozo", 70 * E, 10, 78 * E, 8, 30, 8);
+        Sala oeste = sala("galeria", -78 * E, 42, 62 * E, 15, 10, 17);
 
         // ---- tuneles anchos (piso = el de la sala de donde salen y adonde llegan; el lago entra a la altura del camino)
         double lagoPiso = nivelLava + 1;
         tunel(r, entrada.x, entrada.piso, entrada.z, junta.x, junta.piso, junta.z, 5.0, false);
         tunel(r, junta.x, junta.piso, junta.z, columnas.x + 14, columnas.piso, columnas.z - 8, 5.2, false);
-        tunel(r, junta.x, junta.piso, junta.z, lago.x - 16, lagoPiso, lago.z - 12, 4.8, false);
+        tunel(r, junta.x, junta.piso, junta.z, lago.x - 19, lagoPiso, lago.z - 14, 4.8, false);
         tunel(r, columnas.x + 8, columnas.piso, columnas.z + 14, catedral.x - 16, catedral.piso, catedral.z - 10, 5.0, false);
-        tunel(r, lago.x - 6, lagoPiso, lago.z + 18, catedral.x + 18, catedral.piso, catedral.z - 4, 4.6, false);
+        tunel(r, lago.x - 7, lagoPiso, lago.z + 21, catedral.x + 20, catedral.piso, catedral.z - 4, 4.6, false);
         tunel(r, columnas.x - 6, columnas.piso, columnas.z + 16, oeste.x, oeste.piso, oeste.z - 10, 4.4, false);
         tunel(r, oeste.x + 10, oeste.piso, oeste.z + 4, catedral.x - 22, catedral.piso + 4, catedral.z + 6, 3.6, false);   // entra un poco alto a la catedral
         // al pozo se entra por arriba: el tunel llega a la boca y el pozo baja ~28 bloques
         // al pozo se llega por arriba y se baja por una rampa en espiral pegada a la pared (el medio es un hueco hasta el fondo)
-        tunel(r, lago.x + 14, lagoPiso, lago.z + 18, pozo.x - 1, POZO_ARRIBA, pozo.z - 8, 3.8, false);
+        tunel(r, lago.x + 16, lagoPiso, lago.z + 21, pozo.x - 1, POZO_ARRIBA, pozo.z - 8, 3.8, false);
         rampa0 = Math.atan2(-8, -1);
 
         // ---- pasillos chicos: algunos sin salida (con un nicho al final), otros que unen tuneles
         List<Seg> anchos = new ArrayList<>(segs);
         int sinSalida = 0;
-        for (int i = 0; i < 26; i++) {
+        for (int i = 0; i < 44; i++) {
             Seg a = anchos.get(r.nextInt(anchos.size()));
-            double ang = r.nextDouble() * Math.PI * 2, largo = 22 + r.nextDouble() * 34;
+            double ang = r.nextDouble() * Math.PI * 2, largo = 26 + r.nextDouble() * 44;
             double bx = a.x + Math.cos(ang) * largo, bz = a.z + Math.sin(ang) * largo, by = a.y - a.r * 0.6 + (r.nextDouble() - 0.4) * 10;
             bx = Math.max(MIN_X + 14, Math.min(MAX_X - 14, bx));
             bz = Math.max(MIN_Z + 14, Math.min(MAX_Z - 14, bz));
@@ -166,9 +172,9 @@ public final class CuevaGen {
             formas.add(new Forma(x, z, 2.0 + r.nextDouble() * 1.6, catedral.piso - 2, catedral.piso + 7 + r.nextDouble() * 9, 2));
         }
         // camino del lago: de cada boca de tunel a la isla del medio
-        camino.add(new double[]{lago.x - 16, lago.z - 12, lago.x, lago.z});
-        camino.add(new double[]{lago.x - 6, lago.z + 18, lago.x, lago.z});
-        camino.add(new double[]{lago.x + 14, lago.z + 18, lago.x, lago.z});
+        camino.add(new double[]{lago.x - 19, lago.z - 14, lago.x, lago.z});
+        camino.add(new double[]{lago.x - 7, lago.z + 21, lago.x, lago.z});
+        camino.add(new double[]{lago.x + 16, lago.z + 21, lago.x, lago.z});
 
         // ---- cofres faciles y mobs: a lo largo de los tuneles anchos, contra la pared
         int k = 0;
@@ -365,14 +371,10 @@ public final class CuevaGen {
         return false;
     }
 
-    /** La roca de cada lugar: pizarra abajo, piedra arriba, vetas de toba, andesita y granito; piedra negra cerca del lago. */
+    /** La roca: toda pizarra (deepslate), con vetas de pizarra rota. */
     private short roca(int x, int y, int z) {
-        double n1 = ruido(x * 0.045, y * 0.06, z * 0.045), n2 = ruido(x * 0.09 + 50, y * 0.09, z * 0.09 + 50);
-        double dl = Math.hypot((x - lago.x) / (lago.rx + 14), (z - lago.z) / (lago.rz + 14));
-        if (dl < 1 && n2 > -0.2) return n1 > 0.3 ? BASALTO : NEGRA;
-        if (n2 > 0.62) return TOBA;
-        if (n2 < -0.66) return n1 > 0 ? ANDESITA : GRANITO;
-        return y < 40 + 5 * n1 ? PIZARRA : PIEDRA;
+        double n2 = ruido(x * 0.09 + 50, y * 0.09, z * 0.09 + 50);
+        return n2 > 0.66 ? PIZARRA_ROTA : PIZARRA;
     }
 
     private Sala salaDe(int x, int y, int z, String tipo) {

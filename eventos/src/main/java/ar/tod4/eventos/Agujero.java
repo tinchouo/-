@@ -83,7 +83,7 @@ import net.kyori.adventure.title.Title;
 final class Agujero implements Listener {
 
     private static final String MOB = "agujero_mob", CARTEL = "agujero_cartel", PERM = "tod4eventos.admin";
-    private static final int VERSION_CFG = 2;
+    private static final int VERSION_CFG = 3;
 
     private final TOD4Eventos pl;
     private final Random rnd = new Random();
@@ -111,9 +111,33 @@ final class Agujero implements Listener {
         if (cerradoHasta > System.currentTimeMillis()) estado = Estado.CERRADO;
         // se apago el server con una corrida en curso: se reconstruye enseguida
         if (d.y().getBoolean("en_curso", false)) { estado = Estado.CERRADO; cerradoHasta = System.currentTimeMillis() + 20000; d.set("en_curso", false); }
-        Bukkit.getScheduler().runTask(pl, () -> cargarMundo(false));
+        Bukkit.getScheduler().runTask(pl, () -> { cargarMundo(false); versionForma(); });
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::cada, 40L, 10L);
+    }
+
+    /**
+     * La forma de la cueva cambio (CuevaGen.VERSION): la foto y los lugares de adentro (cofres, salida, llegada) eran
+     * de la cueva vieja. Se guardan aparte (agujero_foto_v1.bin.gz y "respaldo_v1" en agujero_datos.yml) y la cueva
+     * se arma de cero con la forma nueva en unos segundos.
+     */
+    private void versionForma() {
+        int v = d.y().getInt("forma_version", 1);
+        if (v >= CuevaGen.VERSION) return;
+        d.set("forma_version", CuevaGen.VERSION);
+        if (mundo == null) return;   // todavia no se creo: sale con la forma nueva
+        File f = fotoF();
+        if (f.exists()) f.renameTo(new File(pl.getDataFolder(), "agujero_foto_v" + v + ".bin.gz"));
+        foto = null;
+        for (String k : new String[]{"cofres_extra", "bloque_salida", "bloque_salida2", "llegada"}) {
+            Object o = d.y().get(k);
+            if (o != null) { d.set("respaldo_v" + v + "." + k, o); d.set(k, null); }
+        }
+        estado = Estado.CERRADO;
+        cerradoHasta = System.currentTimeMillis() + 15000;
+        guardar();
+        pl.getLogger().info("[Agujero] Cueva nueva (más grande, de pizarra): se arma de cero en 15 s. La foto vieja quedó en agujero_foto_v" + v
+                + ".bin.gz. Hay que volver a poner la salida (bloquesalida 1/2) y los cofres.");
     }
 
     void recargar() {
@@ -331,10 +355,8 @@ final class Agujero implements Listener {
         Location dst = sala(mundo);
         p.teleport(dst);
         p.playSound(dst, Sound.AMBIENT_CAVE, SoundCategory.MASTER, 1f, 0.7f);
-        for (Player o : Bukkit.getOnlinePlayers()) if (o.hasPermission(PERM)) {
+        for (Player o : Bukkit.getOnlinePlayers()) if (o.hasPermission(PERM))
             o.sendMessage(c("&4☠ &c" + p.getName() + " &7bajó al &4&lAgujero del Infierno 2.0&7."));
-            o.playSound(o.getLocation(), Sound.AMBIENT_CAVE, SoundCategory.MASTER, 1f, 1f);
-        }
     }
 
     /** Como los errores de TOD4: ✖ en rojo y el sonido grave. */
@@ -424,6 +446,7 @@ final class Agujero implements Listener {
                     estado = Estado.TERMINANDO;
                     barra.setTitle(legacy("&4&l¡SE DERRUMBÓ!"));
                     barra.setProgress(0);
+                    pared();   // la salida se tapa en el momento: el que quedo del otro lado, quedo adentro
                     for (Player p : mundo.getPlayers()) p.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 1.5f, 0.5f);
                 }
             }
@@ -592,14 +615,16 @@ final class Agujero implements Listener {
         if (zs == null) return;
         for (String zona : zs.getKeys(false)) {
             CuevaGen.Sala sala = null;
-            for (CuevaGen.Sala sl : gen.salas()) if (sl.tipo.equalsIgnoreCase(zona)) sala = sl;
+            boolean isla = zona.equalsIgnoreCase("isla");   // el medio del lago de lava
+            for (CuevaGen.Sala sl : gen.salas()) if (sl.tipo.equalsIgnoreCase(isla ? "lago" : zona)) sala = sl;
             ConfigurationSection tz = zs.getConfigurationSection(zona + ".tipos");
             if (sala == null || tz == null) { pl.getLogger().warning("[Agujero] Zona de mobs rara: " + zona); continue; }
             int n = zs.getInt(zona + ".cantidad", 0);
             for (int i = 0; i < n; i++) {
                 String tipo = sortear(tz);
                 if (tipo == null) continue;
-                Location l = lugarEnSala(sala, tipo.toLowerCase().contains("blaze"));
+                Location l = isla ? piso(new Location(mundo, sala.x + rnd.nextInt(5) - 2 + 0.5, gen.nivelLava() + 1, sala.z + rnd.nextInt(5) - 2 + 0.5))
+                        : lugarEnSala(sala, tipo.toLowerCase().contains("blaze"));
                 if (l != null) mob(tipo, l);
             }
         }
@@ -656,6 +681,8 @@ final class Agujero implements Listener {
             en = mm(tipo.substring(3), l);
             if (en == null) { pl.getLogger().warning("[Agujero] MythicMobs no hizo aparecer " + tipo.substring(3) + " (¿existe con ese nombre?)"); return; }
             if (tipo.equalsIgnoreCase("mm:BombaVoladora")) en.teleport(l.clone().add(0, 3, 0));
+        } else if (tipo.equalsIgnoreCase("zombie_tanque")) {
+            en = tanque(l);
         } else if (tipo.startsWith("creeper:")) {
             en = creeper(tipo.substring(8), l);
             if (en == null) { pl.getLogger().warning("[Agujero] TOD4 no hizo aparecer el creeper " + tipo.substring(8)); return; }
@@ -667,6 +694,28 @@ final class Agujero implements Listener {
         en.addScoreboardTag(MOB);
         if (tipo.equalsIgnoreCase("mm:BreezeOld")) en.addScoreboardTag("breeze_old");
         if (en instanceof LivingEntity le) le.setRemoveWhenFarAway(false);
+    }
+
+    /** Zombi para tanquear: mucha vida, armadura de hierro, casi no lo empujas. No suelta la armadura. */
+    private Entity tanque(Location l) {
+        return mundo.spawn(l, org.bukkit.entity.Zombie.class, z -> {
+            z.setAdult();
+            var hp = z.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+            if (hp != null) hp.setBaseValue(y.getDouble("zombie_tanque.vida", 50));
+            z.setHealth(y.getDouble("zombie_tanque.vida", 50));
+            var kb = z.getAttribute(org.bukkit.attribute.Attribute.KNOCKBACK_RESISTANCE);
+            if (kb != null) kb.setBaseValue(0.8);
+            var eq = z.getEquipment();
+            eq.setHelmet(new ItemStack(Material.IRON_HELMET));
+            eq.setChestplate(new ItemStack(Material.IRON_CHESTPLATE));
+            eq.setLeggings(new ItemStack(Material.IRON_LEGGINGS));
+            eq.setBoots(new ItemStack(Material.IRON_BOOTS));
+            eq.setItemInMainHand(new ItemStack(Material.STONE_SWORD));
+            for (org.bukkit.inventory.EquipmentSlot sl : org.bukkit.inventory.EquipmentSlot.values()) {
+                try { eq.setDropChance(sl, 0f); } catch (Exception ignored) { }
+            }
+            z.setShouldBurnInDay(false);
+        });
     }
 
     // ================================================================= ni perlas ni cargas de viento
@@ -748,7 +797,20 @@ final class Agujero implements Listener {
         return Integer.parseInt(s.trim());
     }
 
-    private static ItemStack item(String id) {
+    /** Un item del loot: minecraft:x, oraxen:x, o un nombre guardado (con /agujero item, o en el loot del Aether: chip...). */
+    private ItemStack item(String id) {
+        if (!id.contains(":")) {
+            String b64 = d.y().getString("items." + id.toLowerCase());
+            if (b64 == null) {
+                File af = new File(pl.getDataFolder().getParentFile(), "TOD4Aether/loot.yml");
+                if (af.exists()) b64 = YamlConfiguration.loadConfiguration(af).getString("guardados." + id.toLowerCase());
+            }
+            if (b64 != null) {
+                try { return ItemStack.deserializeBytes(java.util.Base64.getDecoder().decode(b64)); } catch (Exception ex) { return null; }
+            }
+            ItemStack ox = item("oraxen:" + id);
+            if (ox != null) return ox;
+        }
         if (id.startsWith("oraxen:")) {
             try {
                 Class<?> k = Class.forName("io.th0rgal.oraxen.api.OraxenItems");
@@ -1271,6 +1333,7 @@ final class Agujero implements Listener {
                 TOD4Eventos.info(s, "Creando el mundo de la cueva...");
                 World w = cargarMundo(true);
                 if (w == null) { TOD4Eventos.err(s, "No pude crear el mundo."); return; }
+                d.set("forma_version", CuevaGen.VERSION);
                 TOD4Eventos.ok(s, "Cueva creada en el mundo &f" + w.getName() + "&a. Andá con &f/tod4eventos:agujero tp&a.");
                 // genera la cueva de a poco (2 chunks por tick) y pone los cofres
                 Bukkit.getScheduler().runTaskLater(pl, () -> { estado = Estado.CERRADO; reconstruir(s); }, 20L);
@@ -1380,6 +1443,16 @@ final class Agujero implements Listener {
                 }
                 TOD4Eventos.err(s, "No hay ningún lugar agregado a mano a menos de 3 bloques.");
             }
+            case "item" -> {
+                // guarda el item de la mano con un nombre, para usarlo en el loot de agujero.yml
+                if (p == null || a.length < 2) { TOD4Eventos.info(s, "Uso: &f/tod4eventos:agujero item <nombre> &7con el item en la mano (ej: tinchoin). En el loot: &f\"tinchoin 1 1%\""); return; }
+                ItemStack mano = p.getInventory().getItemInMainHand();
+                if (mano.getType().isAir()) { TOD4Eventos.err(s, "Tené el item en la mano."); return; }
+                ItemStack uno = mano.clone();
+                uno.setAmount(1);
+                d.set("items." + a[1].toLowerCase(), java.util.Base64.getEncoder().encodeToString(uno.serializeAsBytes()));
+                TOD4Eventos.ok(s, "Guardado como &f" + a[1].toLowerCase() + "&a. En el loot: &f\"" + a[1].toLowerCase() + " 1-3\"");
+            }
             case "espera" -> {
                 if (a.length < 2) { TOD4Eventos.info(s, "Uso: &f/tod4eventos:agujero espera <jugador> &7(le saca la hora de espera)"); return; }
                 org.bukkit.OfflinePlayer o = Bukkit.getOfflinePlayerIfCached(a[1]);
@@ -1402,7 +1475,7 @@ final class Agujero implements Listener {
     }
 
     List<String> tab(String[] a) {
-        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "cofre", "quitarcofre", "espera", "recargar", "estado");
+        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "item", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "cofre", "quitarcofre", "espera", "recargar", "estado");
         if (a.length == 2 && a[0].equalsIgnoreCase("cofre")) return List.of("facil", "dificil");
         if (a.length == 2 && (a[0].equalsIgnoreCase("entrada") || a[0].equalsIgnoreCase("bloquesalida"))) return List.of("1", "2");
         if (a.length == 2 && a[0].equalsIgnoreCase("espera")) { List<String> l = new ArrayList<>(); for (Player p : Bukkit.getOnlinePlayers()) l.add(p.getName()); return l; }
