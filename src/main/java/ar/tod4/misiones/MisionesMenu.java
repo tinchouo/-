@@ -160,29 +160,79 @@ public final class MisionesMenu {
         Menu m = new Menu(4, "&8Misiones Activas");
         m.set(4, Items.pane(Material.LIME_STAINED_GLASS_PANE));
         m.set(31, Items.pane(Material.LIGHT_BLUE_STAINED_GLASS_PANE));
-        for (String clase : new String[]{Misiones.DIA, Misiones.OP}) {
-            boolean dia = clase.equals(Misiones.DIA);
-            int slot = dia ? 11 : 15;
-            String id = ms.activa(clase);
-            if (id == null) {
-                m.set(slot, Items.of(Material.BARRIER, "&c🔒 Bloqueado", " ", "&7No hay ninguna misión " + Misiones.nombreClase(clase) + " activa."));
-                continue;
-            }
-            m.set(slot, libro(p, clase, id), e -> {
-                if (ms.estado(clase, p) == Misiones.Estado.COMPLETADA) { ms.reclamar(clase, p); jugador(p); }
+        // izquierda: la diaria (como siempre)
+        String id = ms.activa(Misiones.DIA);
+        if (id == null) {
+            m.set(11, Items.of(Material.BARRIER, "&c🔒 Bloqueado", " ", "&7No hay ninguna misión diaria activa."));
+        } else {
+            m.set(11, libro(p, Misiones.DIA, id), e -> {
+                if (ms.estado(Misiones.DIA, p) == Misiones.Estado.COMPLETADA) { ms.reclamar(Misiones.DIA, p); jugador(p); }
             });
-            if (ms.estado(clase, p) != Misiones.Estado.BLOQUEADA) m.set(dia ? 20 : 24, premios(clase, id));
+            m.set(20, premios(Misiones.DIA, id));
         }
+        // derecha: la hoja con la lista de opcionales
+        m.set(15, hojaOpcionales(p), e -> opcionales(p, 0));
+        m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
+    }
+
+    private ItemStack hojaOpcionales(Player p) {
+        List<String> ab = ms.abiertas();
+        int pend = ms.pendientes(p), recl = ms.paraReclamar(p);
+        List<String> lore = new ArrayList<>();
+        lore.add(" ");
+        if (ab.isEmpty()) lore.add("&7Todavía no hay misiones opcionales.");
+        else {
+            lore.add("&7Misiones: &f" + ab.size());
+            lore.add("&7Sin hacer: &f" + (pend - recl));
+            if (recl > 0) lore.add("&e&lPara reclamar: &f" + recl);
+            lore.add(" ");
+            lore.add("&7Se pueden hacer cuando quieras,");
+            lore.add("&7no hace falta la diaria.");
+            lore.add(" ");
+            lore.add("&e▶ Click para ver la lista");
+        }
+        ItemStack it = Items.of(Material.PAPER, "&b&lMisiones Opcionales", lore);
+        if (recl > 0) Items.glow(it);
+        return it;
+    }
+
+    private static final int[] LIBROS = {1, 2, 3, 4, 5, 6, 7, 28, 29, 30, 31, 32, 33, 34};
+
+    /** La lista de opcionales: un libro por cada una y abajo su pluma con la recompensa. Primero las que faltan, las mas nuevas arriba. */
+    private void opcionales(Player p, int pag) {
+        Style.click(p);
+        List<String> ids = new ArrayList<>(ms.abiertas());
+        java.util.Collections.reverse(ids);   // las mas nuevas primero
+        List<String> orden = new ArrayList<>();
+        for (String id : ids) if (ms.estado(Misiones.slotOp(id), p) == Misiones.Estado.COMPLETADA) orden.add(id);
+        for (String id : ids) if (ms.estado(Misiones.slotOp(id), p) == Misiones.Estado.EN_CURSO) orden.add(id);
+        for (String id : ids) if (!orden.contains(id)) orden.add(id);
+        int paginas = Math.max(1, (orden.size() + LIBROS.length - 1) / LIBROS.length);
+        int pg = Math.max(0, Math.min(pag, paginas - 1));
+        Menu m = new Menu(6, paginas > 1 ? "&8Misiones Opcionales &7(" + (pg + 1) + "/" + paginas + ")" : "&8Misiones Opcionales");
+        if (orden.isEmpty()) m.set(13, Items.of(Material.BARRIER, "&c🔒 Bloqueado", " ", "&7No hay ninguna misión opcional."));
+        for (int i = 0; i < LIBROS.length && pg * LIBROS.length + i < orden.size(); i++) {
+            String id = orden.get(pg * LIBROS.length + i);
+            String slot = Misiones.slotOp(id);
+            m.set(LIBROS[i], libro(p, slot, id), e -> {
+                if (ms.estado(slot, p) == Misiones.Estado.COMPLETADA) { ms.reclamar(slot, p); opcionales(p, pg); }
+            });
+            m.set(LIBROS[i] + 9, premios(slot, id));
+        }
+        for (int i = 45; i < 54; i++) m.set(i, Items.pane(Material.BLACK_STAINED_GLASS_PANE));
+        m.set(45, Items.of(Material.ARROW, "&7◀ Volver"), e -> jugador(p));
+        if (pg > 0) m.set(48, Items.of(Material.SPECTRAL_ARROW, "&ePágina anterior"), e -> opcionales(p, pg - 1));
+        if (pg < paginas - 1) m.set(50, Items.of(Material.SPECTRAL_ARROW, "&ePágina siguiente"), e -> opcionales(p, pg + 1));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
 
     private ItemStack libro(Player p, String clase, String id) {
-        boolean dia = clase.equals(Misiones.DIA);
+        boolean dia = Misiones.esDia(clase);
         String titulo = (dia ? "&a&lMisión Diaria: &f" : "&b&lMisión Opcional: &f") + ms.nombre(id);
         Misiones.Estado est = ms.estado(clase, p);
-        if (est == Misiones.Estado.BLOQUEADA)
-            return Items.of(Material.BOOK, titulo, " ", ms.textoEstado(est), " ", "&7Completa y reclama la Diaria primero.");
-        List<Component> lore = loreJugador(p, clase, id);
+        List<Component> lore = new ArrayList<>();
+        if (!dia) lore.add(Txt.c("&8Día " + ms.diaDe(id)));
+        lore.addAll(loreJugador(p, clase, id));
         lore.add(Txt.c(" "));
         lore.add(Txt.c("&fEstado: " + ms.textoEstado(est)));
         if (est == Misiones.Estado.COMPLETADA) lore.add(Txt.c("&e&l★ ¡Click para reclamar!"));
@@ -197,7 +247,7 @@ public final class MisionesMenu {
      */
     private List<Component> loreJugador(Player p, String clase, String id) {
         List<Component> l = new ArrayList<>();
-        String col = Misiones.color(clase);
+        String col = Misiones.esDia(clase) ? "&a" : "&b";
         String ultimo = null;
         for (Objetivo o : ms.objetivos(id)) {
             if (o.vacio()) continue;
@@ -241,7 +291,7 @@ public final class MisionesMenu {
         for (ItemStack it : r) {
             lore.add(linea("&8▪ &d" + it.getAmount() + "x ", Items.nombre(it).colorIfAbsent(NamedTextColor.WHITE), null));
         }
-        return conLore(new ItemStack(Material.FEATHER), clase.equals(Misiones.DIA) ? "&d&lRecompensas Diarias" : "&d&lRecompensas Opcionales", lore);
+        return conLore(new ItemStack(Material.FEATHER), Misiones.esDia(clase) ? "&d&lRecompensas Diarias" : "&d&lRecompensas", lore);
     }
 
     // ================================================================= admin: panel y listas
@@ -251,7 +301,7 @@ public final class MisionesMenu {
         Menu m = new Menu(3, "&8Gestor de Misiones TOD4");
         m.set(11, Items.of(Material.EMERALD, "&a&lMisiones Diarias", "", "&7Activa: &f" + activaTxt(Misiones.DIA),
                 "&7Creadas: &f" + ms.ids(Misiones.DIA).size(), "", "&e▶ Click para abrir"), e -> lista(p, Misiones.DIA));
-        m.set(15, Items.of(Material.DIAMOND, "&b&lMisiones Opcionales", "", "&7Activa: &f" + activaTxt(Misiones.OP),
+        m.set(15, Items.of(Material.DIAMOND, "&b&lMisiones Opcionales", "", "&7En la lista: &f" + ms.abiertas().size(),
                 "&7Creadas: &f" + ms.ids(Misiones.OP).size(), "", "&e▶ Click para abrir"), e -> lista(p, Misiones.OP));
         m.fill(Material.GRAY_STAINED_GLASS_PANE).open(p);
     }
@@ -268,11 +318,11 @@ public final class MisionesMenu {
         List<String> ids = ms.ids(clase);
         for (int i = 0; i < ids.size() && i < 45; i++) {
             String id = ids.get(i);
-            boolean act = id.equals(ms.activa(clase));
+            boolean act = dia ? id.equals(ms.activa(clase)) : ms.abierta(id);
             int n = 0;
             for (Objetivo o : ms.objetivos(id)) n += o.metas().size();
             ItemStack it = Items.of(act ? Material.ENCHANTED_BOOK : Material.PAPER, (act ? Misiones.color(clase) : "&f") + ms.nombre(id)
-                            + (act ? " &8[&aACTIVA&8]" : ""),
+                            + (act ? (dia ? " &8[&aACTIVA&8]" : " &8[&bEN LA LISTA · Día " + ms.diaDe(id) + "&8]") : ""),
                     "&8ID: " + id, "", "&7Objetivos: &f" + n, "&7Recompensas: &f" + ms.recompensas(id).size(), "", "&e▶ Click para editar");
             m.set(i, it, e -> mision(p, id));
         }
@@ -311,11 +361,26 @@ public final class MisionesMenu {
         if (!ms.existe(id)) { panel(p); return; }
         Style.click(p);
         String clase = ms.clase(id);
-        boolean act = id.equals(ms.activa(clase));
+        boolean dia = clase.equals(Misiones.DIA);
+        boolean act = dia ? id.equals(ms.activa(clase)) : ms.abierta(id);
         Menu m = new Menu(6, "&8Misión " + id + ": " + Txt.strip(ms.nombre(id)));
-        m.set(4, Items.of(act ? Material.ENCHANTED_BOOK : Material.BOOK, Misiones.color(clase) + "&l" + ms.nombre(id),
-                "&8ID: " + id, "&7Tipo: &f" + (clase.equals(Misiones.DIA) ? "Diaria" : "Opcional"), "&7Activa: " + si(act),
-                "", "&7Abajo están sus objetivos.", "&7Cada uno se edita con click."));
+        if (dia) {
+            m.set(4, Items.of(act ? Material.ENCHANTED_BOOK : Material.BOOK, Misiones.color(clase) + "&l" + ms.nombre(id),
+                    "&8ID: " + id, "&7Tipo: &fDiaria", "&7Activa: " + si(act),
+                    "", "&7Abajo están sus objetivos.", "&7Cada uno se edita con click."));
+        } else if (act) {
+            m.set(4, Items.of(Material.ENCHANTED_BOOK, Misiones.color(clase) + "&l" + ms.nombre(id),
+                    "&8ID: " + id, "&7Tipo: &fOpcional", "&7En la lista: &aSÍ", "&7Día: &f" + ms.diaDe(id),
+                    "", "&7Sale como \"la misión opcional", "&7del Día " + ms.diaDe(id) + "\".", "",
+                    "&e▶ Click: día +1  &7| &eClick derecho: día -1"), e -> {
+                ms.setDia(id, ms.diaDe(id) + (e.isRightClick() ? -1 : 1));
+                mision(p, id);
+            });
+        } else {
+            m.set(4, Items.of(Material.BOOK, Misiones.color(clase) + "&l" + ms.nombre(id),
+                    "&8ID: " + id, "&7Tipo: &fOpcional", "&7En la lista: &cNO",
+                    "", "&7Abajo están sus objetivos.", "&7Cada uno se edita con click."));
+        }
         List<Objetivo> l = ms.objetivos(id);
         int s = 9;
         for (int i = 0; i < l.size() && s < 36; i++) {
@@ -338,10 +403,22 @@ public final class MisionesMenu {
         m.set(45, Items.of(Material.ARROW, "&7◀ Volver"), e -> lista(p, clase));
         m.set(47, Items.of(Material.CHEST, "&d&lRecompensas", "", "&7Ítems: &f" + ms.recompensas(id).size(), "", "&e▶ Click para editar"),
                 e -> recompensas(p, id));
-        if (act) {
+        if (act && !dia) {
+            m.set(49, Items.of(Material.REDSTONE_TORCH, "&c&lSacar de la lista", "", "&7Nadie la puede hacer más", "&7(se borra el progreso de todos).", "", "&c▶ Click para sacarla"), e -> {
+                ms.cerrar(id, true);
+                mision(p, id);
+            });
+        } else if (act) {
             m.set(49, Items.of(Material.REDSTONE_TORCH, "&c&lDesactivar misión", "", "&7Está activa ahora.", "", "&c▶ Click para desactivar"), e -> {
                 ms.desactivar(clase, true);
                 mision(p, id);
+            });
+        } else if (!dia) {
+            m.set(49, Items.of(Material.NETHER_STAR, "&a&lAgregar a la lista", "", "&7Se suma a las opcionales que ya están", "&7(no reemplaza a ninguna). Queda con el",
+                    "&7día de hoy (&f" + pl.dia() + "&7) y empieza de cero.", "", "&a▶ Click para agregar"), e -> {
+                if (ms.objetivos(id).stream().allMatch(Objetivo::vacio)) { Style.err(p, "La misión no tiene objetivos."); return; }
+                p.closeInventory();
+                ms.activar(clase, id);
             });
         } else {
             m.set(49, Items.of(Material.NETHER_STAR, "&a&lActivar misión", "", "&7Reemplaza a la " + Misiones.nombreClase(clase) + " activa",

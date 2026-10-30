@@ -229,7 +229,10 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         String id = a[1];
         String clase = misiones.claseDe(id);
         if (clase == null) { Style.err(s, "Esa ID de misión no existe."); return; }
-        if (!id.equals(misiones.activa(clase))) { Style.err(s, "La misión &f" + id + " &cno está activa."); return; }
+        if (clase.equals(Misiones.DIA) ? !id.equals(misiones.activa(clase)) : !misiones.abierta(id)) {
+            Style.err(s, "La misión &f" + id + " &cno está " + (clase.equals(Misiones.DIA) ? "activa." : "en la lista de opcionales.")); return;
+        }
+        if (!clase.equals(Misiones.DIA)) clase = Misiones.slotOp(id);
         boolean evento = a.length > 2 && a[2].equalsIgnoreCase("evento");
         List<Player> ps = new ArrayList<>();
         if (a[0].equalsIgnoreCase("todos")) ps.addAll(Bukkit.getOnlinePlayers());
@@ -358,7 +361,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             if (c.equals("alma") || c.equals("altar")) for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
             if (c.equals("video")) out.addAll(video.ids());
             if (c.equals("completar")) {
-                for (String cl : new String[]{Misiones.DIA, Misiones.OP}) if (misiones.activa(cl) != null) out.add(misiones.activa(cl));
+                if (misiones.activa(Misiones.DIA) != null) out.add(misiones.activa(Misiones.DIA));
+                out.addAll(misiones.abiertas());
             }
         } else if (a.length == 3 && c.equals("completar")) {
             out.add("evento");

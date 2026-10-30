@@ -27,16 +27,21 @@ import ar.tod4.util.Txt;
 import net.kyori.adventure.title.Title;
 
 /**
- * Misiones TOD4 (portado de misiones.sk): una diaria y una opcional activas a la vez.
+ * Misiones TOD4 (portado de misiones.sk).
+ *  Diaria: una sola activa (se activa con la ruleta).
+ *  Opcionales: una LISTA. Cada opcional que se agrega queda abierta con el dia en que se agrego, y cada jugador
+ *  la puede hacer cuando quiera (no hace falta la diaria). Cada una tiene su progreso.
  * Cada mision tiene una ID sin espacios (1, 2, 3... / op1, op2...) y un nombre.
  * Estados por jugador: En curso -> Completada (todas las metas) -> Reclamada (recompensa entregada).
- * La opcional esta bloqueada mientras haya una diaria activa sin reclamar.
+ *
+ * El progreso se guarda por "lugar": "dia" para la diaria y "op_<id>" para cada opcional.
  */
 public final class Misiones {
 
     public enum Estado { NINGUNA, BLOQUEADA, EN_CURSO, COMPLETADA, RECLAMADA }
 
     public static final String DIA = "dia", OP = "op";
+    private static final String ABIERTAS = "op_abiertas";
 
     final TOD4 pl;
     final Store st;
@@ -45,8 +50,28 @@ public final class Misiones {
     public Misiones(TOD4 pl) {
         this.pl = pl;
         this.st = new Store(pl, "misiones");
+        migrarOpcional();
         new Seguimiento(pl, this);
         Bukkit.getScheduler().runTaskTimer(pl, () -> { for (Player p : Bukkit.getOnlinePlayers()) verificar(p); }, 40L, 40L);
+    }
+
+    /** La opcional que estaba activa (sistema viejo) pasa a la lista, con el progreso de cada uno. */
+    private void migrarOpcional() {
+        String id = st.y().getString("activa." + OP);
+        if (id == null) return;
+        st.set("activa." + OP, null);
+        if (!existe(id) || abierta(id)) return;
+        st.set(ABIERTAS + "." + id, pl.dia());
+        String nuevo = slotOp(id);
+        for (String k : new String[]{"prog", "vis", "ultimo", "reclamo", "bypass"}) {
+            Object v = st.y().get(k + "." + OP);
+            if (v != null) {
+                st.set(k + "." + nuevo, v);
+                st.set(k + "." + OP, null);
+            }
+        }
+        st.save();
+        pl.getLogger().info("Misiones: la opcional " + id + " pasó a la lista de opcionales (con el progreso de cada uno).");
     }
 
     public Store store() { return st; }
@@ -55,6 +80,64 @@ public final class Misiones {
 
     /** Color de la mision: verde la diaria, celeste la opcional. */
     public static String color(String clase) { return clase.equals(DIA) ? "&a" : "&b"; }
+
+    // ================================================================= lugares (diaria / cada opcional)
+
+    public static String slotOp(String id) { return "op_" + id; }
+
+    public static boolean esDia(String slot) { return slot.equals(DIA); }
+
+    /** La ID de la mision de ese lugar (null = no hay / ya no esta abierta). */
+    public String mision(String slot) {
+        if (esDia(slot)) return activa(DIA);
+        if (!slot.startsWith("op_")) return null;
+        String id = slot.substring(3);
+        return abierta(id) && existe(id) ? id : null;
+    }
+
+    /** Las opcionales abiertas, en el orden en que se agregaron. */
+    public List<String> abiertas() {
+        List<String> out = new ArrayList<>();
+        ConfigurationSection s = st.y().getConfigurationSection(ABIERTAS);
+        if (s != null) for (String k : s.getKeys(false)) if (existe(k)) out.add(k);
+        return out;
+    }
+
+    public boolean abierta(String id) { return id != null && st.y().isSet(ABIERTAS + "." + id); }
+
+    /** El dia de una opcional abierta. */
+    public int diaDe(String id) { return st.y().getInt(ABIERTAS + "." + id, pl.dia()); }
+
+    public void setDia(String id, int d) { if (abierta(id)) st.set(ABIERTAS + "." + id, Math.max(1, d)); }
+
+    /** La diaria (si hay) y cada opcional abierta. */
+    public List<String> lugares() {
+        List<String> l = new ArrayList<>();
+        if (activa(DIA) != null) l.add(DIA);
+        for (String id : abiertas()) l.add(slotOp(id));
+        return l;
+    }
+
+    /** Como se llama en los mensajes: "Misión Opcional (Día 8)" / "Misión Diaria". */
+    public String titulo(String slot) {
+        if (esDia(slot)) return "Misión Diaria";
+        String id = mision(slot);
+        return "Misión Opcional" + (id == null ? "" : " (Día " + diaDe(id) + ")");
+    }
+
+    /** Opcionales abiertas que el jugador todavia no reclamo. */
+    public int pendientes(Player p) {
+        int n = 0;
+        for (String id : abiertas()) if (!reclamada(slotOp(id), p)) n++;
+        return n;
+    }
+
+    /** Opcionales completas, listas para reclamar. */
+    public int paraReclamar(Player p) {
+        int n = 0;
+        for (String id : abiertas()) if (estado(slotOp(id), p) == Estado.COMPLETADA) n++;
+        return n;
+    }
 
     // ================================================================= misiones guardadas
 
@@ -124,14 +207,17 @@ public final class Misiones {
     }
 
     public void borrar(String id) {
-        for (String c : new String[]{DIA, OP}) if (id.equals(activa(c))) desactivar(c, false);
+        if (id.equals(activa(DIA))) desactivar(DIA, false);
+        if (abierta(id)) cerrar(id, false);
         st.set("misiones." + id, null);
         cache.remove(id);
     }
 
     // ================================================================= activa
 
+    /** La diaria activa (las opcionales ahora son una lista: abiertas()). */
     public String activa(String clase) {
+        if (!clase.equals(DIA)) return null;
         String id = st.y().getString("activa." + clase);
         return existe(id) ? id : null;
     }
@@ -141,14 +227,18 @@ public final class Misiones {
             // la diaria se activa cuando la ruleta cae en verde (asi nadie la ve antes)
             st.set("activa." + clase, null);
             pl.avisos().ruletaGlobal(Paleta.VERDE, () -> {
-                empezar(clase, id);
+                st.set("activa." + DIA, id);
+                empezar(DIA);
                 if (pl.discord() != null) pl.discord().publicarMision(this, clase, id);
                 caja("&a&l¡NUEVA MISIÓN DIARIA!", "&fCompleta la misión para recibir la", "&frecompensa del día.", "&a");
                 sonarTodos(pl.getConfig().getString("misiones.sonido_activar_dia", "block.end_portal.spawn"));
                 for (Player p : Bukkit.getOnlinePlayers()) verificar(p);
             });
         } else {
-            empezar(clase, id);
+            // opcional: se suma a la lista (las otras siguen abiertas)
+            if (abierta(id)) return;
+            st.set(ABIERTAS + "." + id, pl.dia());
+            empezar(slotOp(id));
             if (pl.discord() != null) pl.discord().publicarMision(this, clase, id);
             caja("&b&l¡NUEVA MISIÓN OPCIONAL!", "&fCompleta la misión para recibir", "&frecompensas extra.", "&b");
             sonarTodos(pl.getConfig().getString("misiones.sonido_activar_op", "block.note_block.chime"));
@@ -156,9 +246,9 @@ public final class Misiones {
         }
     }
 
-    private void empezar(String clase, String id) {
-        st.set("activa." + clase, id);
-        for (String k : new String[]{"prog", "vis", "ultimo", "reclamo", "bypass"}) st.set(k + "." + clase, null);
+    /** Progreso de cero en ese lugar. */
+    private void empezar(String slot) {
+        for (String k : new String[]{"prog", "vis", "ultimo", "reclamo", "bypass"}) st.set(k + "." + slot, null);
     }
 
     private void sonarTodos(String s) {
@@ -178,10 +268,20 @@ public final class Misiones {
         Style.broadcast("");
     }
 
+    /** Desactiva la diaria. */
     public void desactivar(String clase, boolean avisar) {
         if (activa(clase) == null) return;
         st.set("activa." + clase, null);
         if (avisar) Style.broadcast("&c✖ La misión " + nombreClase(clase) + " se ha desactivado.");
+    }
+
+    /** Saca una opcional de la lista (y su progreso). */
+    public void cerrar(String id, boolean avisar) {
+        if (!abierta(id)) return;
+        int d = diaDe(id);
+        st.set(ABIERTAS + "." + id, null);
+        empezar(slotOp(id));
+        if (avisar) Style.broadcast("&c✖ La misión opcional del Día " + d + " se ha quitado.");
     }
 
     // ================================================================= progreso
@@ -246,7 +346,7 @@ public final class Misiones {
 
     /** {metas hechas, metas totales} de la mision activa de esa clase. */
     public int[] metas(String clase, Player p) {
-        String id = activa(clase);
+        String id = mision(clase);
         if (id == null) return new int[]{0, 0};
         int hechas = 0, total = 0;
         for (Objetivo o : objetivos(id)) {
@@ -259,26 +359,22 @@ public final class Misiones {
     }
 
     public boolean completa(String clase, Player p) {
-        if (activa(clase) == null) return false;
+        if (mision(clase) == null) return false;
         if (bypass(clase, p)) return true;
         int[] m = metas(clase, p);
         return m[1] > 0 && m[0] >= m[1];
     }
 
+    /** Estado en ese lugar ("dia" o "op_<id>"). Las opcionales ya no se bloquean. */
     public Estado estado(String clase, Player p) {
-        if (activa(clase) == null) return Estado.NINGUNA;
-        if (clase.equals(OP) && bloqueada(p)) return Estado.BLOQUEADA;
+        if (mision(clase) == null) return Estado.NINGUNA;
         if (reclamada(clase, p)) return Estado.RECLAMADA;
         return completa(clase, p) ? Estado.COMPLETADA : Estado.EN_CURSO;
     }
 
-    /** La opcional se bloquea mientras haya una diaria activa sin reclamar (como antes). */
-    public boolean bloqueada(Player p) { return activa(DIA) != null && !reclamada(DIA, p); }
-
-    /** Puede sumar progreso en esa clase. */
+    /** Puede sumar progreso en ese lugar. */
     boolean cuenta(String clase, Player p) {
-        if (activa(clase) == null || reclamada(clase, p)) return false;
-        return !(clase.equals(OP) && bloqueada(p));
+        return mision(clase) != null && !reclamada(clase, p);
     }
 
     /**
@@ -286,7 +382,7 @@ public final class Misiones {
      * cada meta nueva suena "meta" y avisa n/total; la ultima suena solo "gg".
      */
     public void verificar(Player p) {
-        for (String c : new String[]{DIA, OP}) {
+        for (String c : lugares()) {
             if (!cuenta(c, p)) continue;
             int[] m = metas(c, p);
             int hechas = bypass(c, p) ? m[1] : m[0], total = m[1];
@@ -295,15 +391,15 @@ public final class Misiones {
             int ultimo = st.y().getInt(uk, 0);
             if (hechas <= ultimo) continue;
             st.set(uk, hechas);
-            boolean dia = c.equals(DIA);
+            boolean dia = esDia(c);
             if (hechas < total) {
                 p.playSound(p.getLocation(), pl.getConfig().getString("misiones.sonido_meta", "tod4:meta_mision"), SoundCategory.MASTER, 1f, 1f);
                 Style.raw(p, dia ? "&2&lMisión Diaria: &a[" + hechas + "/" + total + " objetivos completados]"
-                        : "&b&lMisión Opcional: &f[" + hechas + "/" + total + " objetivos completados]");
-                p.sendActionBar(Txt.c(color(c) + "✔ Objetivo completado &7(" + hechas + "/" + total + ")"));
+                        : "&b&l" + titulo(c) + ": &f[" + hechas + "/" + total + " objetivos completados]");
+                p.sendActionBar(Txt.c((dia ? "&a" : "&b") + "✔ Objetivo completado &7(" + hechas + "/" + total + ")"));
             } else {
                 p.playSound(p.getLocation(), pl.getConfig().getString("misiones.sonido_gg", "tod4:gg_mision"), SoundCategory.MASTER, 1f, 1f);
-                Style.raw(p, "&e&l¡Completaste todos tus objetivos! (" + total + "/" + total + ")");
+                Style.raw(p, "&e&l¡Completaste todos tus objetivos! " + (dia ? "" : "&b(" + titulo(c) + ") ") + "&e&l(" + total + "/" + total + ")");
                 Style.raw(p, "&eUsa &f/misiones &epara reclamar tu recompensa.");
             }
         }
@@ -318,7 +414,7 @@ public final class Misiones {
 
     /** /tod4:completar ... evento : solo los objetivos de tipo Evento. */
     public boolean completarEvento(String clase, Player p) {
-        String id = activa(clase);
+        String id = mision(clase);
         if (id == null) return false;
         boolean hay = false;
         for (Objetivo o : objetivos(id)) {
@@ -332,7 +428,7 @@ public final class Misiones {
 
     /** Reclamar: entrega lo que hay que entregar, da la recompensa y lo anuncia. */
     public void reclamar(String clase, Player p) {
-        String id = activa(clase);
+        String id = mision(clase);
         if (id == null) return;
         if (estado(clase, p) != Estado.COMPLETADA) { Style.err(p, "Todavía no completaste la misión."); return; }
         boolean bypass = bypass(clase, p);
@@ -357,25 +453,22 @@ public final class Misiones {
             Map<Integer, ItemStack> sobra = p.getInventory().addItem(it.clone());
             for (ItemStack s : sobra.values()) p.getWorld().dropItemNaturally(p.getLocation(), s);
         }
-        boolean dia = clase.equals(DIA);
+        boolean dia = esDia(clase);
         p.playSound(p.getLocation(), pl.getConfig().getString(dia ? "misiones.sonido_completar_dia" : "misiones.sonido_completar_op",
                 dia ? "tod4:completar_diaria" : "tod4:completar_opcional"), SoundCategory.MASTER, 1f, 1f);
-        p.showTitle(Title.title(Txt.c(color(clase) + "&l¡MISIÓN COMPLETADA!"), Txt.c("&fRecompensa entregada en tu inventario."),
+        p.showTitle(Title.title(Txt.c((dia ? "&a" : "&b") + "&l¡MISIÓN COMPLETADA!"), Txt.c("&fRecompensa entregada en tu inventario."),
                 Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(1900), Duration.ofMillis(500))));
         Style.broadcast(dia ? "&a✔ &a&l" + p.getName() + " &7ha completado la &amisión diaria&7."
-                : "&b✔ &b&l" + p.getName() + " &7ha completado la &bmisión opcional&7.");
+                : "&b✔ &b&l" + p.getName() + " &7ha completado la &bmisión opcional del Día " + diaDe(id) + "&7.");
     }
 
     // ================================================================= tab / sidebar
 
     /** Simbolo del tab, igual que el tabulador.sk viejo. */
     public String simboloTab(Player p) {
-        // diaria sin reclamar: ✖ rojo | opcional reclamada: ✔ azul (haya o no diaria) | diaria reclamada: ✔ verde | nada: - gris
-        boolean opRecl = activa(OP) != null && reclamada(OP, p);
-        if (activa(DIA) != null && !reclamada(DIA, p)) return "&c✖ ";
-        if (opRecl) return "&b✔ ";
-        if (activa(DIA) != null) return "&a✔ ";
-        return "&7- ";
+        // solo la diaria: sin reclamar ✖ rojo | reclamada ✔ verde | no hay - gris
+        if (activa(DIA) == null) return "&7- ";
+        return reclamada(DIA, p) ? "&a✔ " : "&c✖ ";
     }
 
     private static final String[] PUNTOS = {"", ".", "..", "..."};
@@ -395,11 +488,11 @@ public final class Misiones {
     /** Para PlaceholderAPI. */
     public String textoEstado(Estado e) { return textoEstado(e, 3); }
 
-    /** Misiones activas con sus objetivos (para el seguimiento). */
+    /** Misiones activas con sus objetivos, por lugar (la diaria y cada opcional abierta; para el seguimiento). */
     Map<String, List<Objetivo>> activas() {
         Map<String, List<Objetivo>> m = new LinkedHashMap<>();
-        for (String c : new String[]{DIA, OP}) {
-            String id = activa(c);
+        for (String c : lugares()) {
+            String id = mision(c);
             if (id != null) m.put(c, objetivos(id));
         }
         return m;

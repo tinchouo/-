@@ -60,7 +60,8 @@ public final class Papi extends PlaceholderExpansion {
             }
             case "mision_opcional": {
                 Player p = op.getPlayer();
-                return p == null ? "" : pl.misiones().textoEstado(pl.misiones().estado(ar.tod4.misiones.Misiones.OP, p));
+                // las opcionales son una lista: cuantas le faltan reclamar
+                return p == null ? "" : String.valueOf(pl.misiones().pendientes(p));
             }
             case "mundo": {
                 Player p = op.getPlayer();

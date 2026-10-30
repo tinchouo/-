@@ -224,18 +224,10 @@ public final class Sidebar implements Listener {
     private List<String> abajo(Player p) {
         List<String> out = new ArrayList<>();
         Misiones ms = pl.misiones();
-        boolean dia = ms != null && ms.activa(Misiones.DIA) != null;
-        boolean op = ms != null && ms.activa(Misiones.OP) != null;
-        if (dia || op) {
-            int anim = ticks % 4;
-            if (dia) {
-                out.add("&a■ &f&lMisión diaria");
-                item(out, ms.textoEstado(ms.estado(Misiones.DIA, p), anim));
-            }
-            if (op) {
-                out.add("&b■ &f&lMisión opcional");
-                item(out, ms.textoEstado(ms.estado(Misiones.OP, p), anim));
-            }
+        // solo la diaria (las opcionales son una lista: se ven en /misiones)
+        if (ms != null && ms.activa(Misiones.DIA) != null) {
+            out.add("&a■ &f&lMisión diaria");
+            item(out, ms.textoEstado(ms.estado(Misiones.DIA, p), ticks % 4));
             return out;
         }
         if (calma != null) out.addAll(Ancho.cortar(calma, " ", " ", anchoMax()));
