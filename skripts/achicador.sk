@@ -1,0 +1,102 @@
+# =====================================================================
+#  PALO ACHICADOR  -  Skript (Paper 1.21.4)
+#  Va en plugins/Skript/scripts/  ->  /sk reload achicador
+#
+#  /achicador                da el Palo Achicador (solo admins: tod4.admin)
+#  /achicador <tamaño>       cualquier tamaño, de 0.0625 a 16 (1 = normal, 0.5 = la mitad, 2 = el doble)
+#  /achicador normal         todos los conectados vuelven al tamaño normal
+#
+#  Con el palo en la mano:
+#    click derecho a un jugador            le pone el tamaño elegido
+#    shift + click derecho a un jugador    lo deja normal
+#    click izquierdo                       tamaño mas chico
+#    shift + click izquierdo               tamaño mas grande
+#  Usa el atributo "scale" de Minecraft (como /attribute): queda aunque se desconecte o muera.
+# =====================================================================
+
+options:
+    # los tamaños que se recorren con el click izquierdo (se puede poner cualquiera con /achicador <tamaño>)
+    tamanos: 0.1,0.15,0.2,0.25,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1,1.25,1.5,2,3,4
+    nombre: Palo Achicador
+
+command /achicador [<text>]:
+    permission: tod4.admin
+    permission message: &c✖ No tienes permiso.
+    trigger:
+        if arg-1 is "normal":
+            loop all players:
+                execute console command "attribute %name of loop-player% minecraft:scale base set 1"
+            send "&d✦ &7Todos volvieron al tamaño &fnormal&7."
+            stop
+        if arg-1 is set:
+            set {_n} to arg-1 parsed as number
+            if {_n} is not set:
+                send "&c✖ Uso: &e/achicador [tamaño] &7(1 = normal, 0.5 = la mitad) o &e/achicador normal"
+                stop
+            if {_n} < 0.0625:
+                send "&c✖ El tamaño va de 0.0625 a 16 (1 = normal)."
+                stop
+            if {_n} > 16:
+                send "&c✖ El tamaño va de 0.0625 a 16 (1 = normal)."
+                stop
+            set {achicador::%uuid of player%} to {_n}
+        if {achicador::%uuid of player%} is not set:
+            set {achicador::%uuid of player%} to 0.5
+        if player's inventory doesn't contain stick named "&d&l{@nombre}":
+            give player stick named "&d&l{@nombre}" with lore "&7Click derecho a un jugador: &fle pone el tamaño" and "&7Shift + click derecho: &flo deja normal" and "&7Click izquierdo: &fmás chico" and "&7Shift + click izquierdo: &fmás grande"
+        send "&d✦ &7Palo Achicador: tamaño &f%{achicador::%uuid of player%}%"
+
+# --------------------------------------------------------------------- click derecho a un jugador
+
+on right click on player:
+    player has permission "tod4.admin"
+    uncolored name of player's tool is "{@nombre}"
+    cancel event
+    set {_v} to clicked entity
+    if player is sneaking:
+        set {_s} to 1
+    else:
+        set {_s} to {achicador::%uuid of player%}
+        if {_s} is not set:
+            set {_s} to 0.5
+    execute console command "attribute %name of {_v}% minecraft:scale base set %{_s}%"
+    play sound "block.amethyst_block.chime" with volume 1 and pitch 1.6 at {_v}
+    if {_s} is 1:
+        send action bar "&d✦ &f%name of {_v}% &7volvió al tamaño &fnormal" to player
+    else:
+        send action bar "&d✦ &f%name of {_v}% &7ahora mide &f%{_s}%" to player
+
+# que el palo no pegue (click izquierdo a un jugador)
+on damage of player:
+    attacker is a player
+    attacker has permission "tod4.admin"
+    uncolored name of attacker's tool is "{@nombre}"
+    cancel event
+
+# --------------------------------------------------------------------- elegir el tamaño
+
+on left click:
+    player has permission "tod4.admin"
+    uncolored name of player's tool is "{@nombre}"
+    cancel event
+    set {_s} to {achicador::%uuid of player%}
+    if {_s} is not set:
+        set {_s} to 0.5
+    set {_l::*} to split "{@tamanos}" at ","
+    loop {_l::*}:
+        set {_x} to loop-value parsed as number
+        if player is sneaking:
+            # el primero mas grande
+            if {_x} > {_s}:
+                if {_nuevo} is not set:
+                    set {_nuevo} to {_x}
+        else:
+            # el ultimo mas chico
+            if {_x} < {_s}:
+                set {_nuevo} to {_x}
+    if {_nuevo} is not set:
+        send action bar "&d✦ &7Ya no hay otro tamaño para ese lado (&f%{_s}%&7)" to player
+        stop
+    set {achicador::%uuid of player%} to {_nuevo}
+    play sound "ui.button.click" with volume 0.6 and pitch 1.4 at player
+    send action bar "&d✦ &7Tamaño: &f%{_nuevo}% &8(1 = normal)" to player
