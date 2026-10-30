@@ -57,7 +57,6 @@ public final class TOD4Mejoras extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new Menu.Listen(), this);
         nightmare = new Nightmare(this);
         getServer().getPluginManager().registerEvents(nightmare, this);
-        getServer().getPluginManager().registerEvents(new Suerte(this), this);
         Bukkit.updateRecipes();
     }
 
@@ -65,7 +64,7 @@ public final class TOD4Mejoras extends JavaPlugin {
     public void onDisable() {
         if (efectos != null) efectos.apagar();
         for (NamespacedKey k : recetas) Bukkit.removeRecipe(k);
-        for (String k : new String[]{"nightmare", "nightmare_sculk", "resina_reforzada", "pocion_suerte"}) Bukkit.removeRecipe(new NamespacedKey(this, k));
+        for (String k : new String[]{"nightmare", "nightmare_sculk", "resina_reforzada"}) Bukkit.removeRecipe(new NamespacedKey(this, k));
     }
 
     // ================================================================= config
