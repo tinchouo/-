@@ -253,6 +253,8 @@ revivir:
   nombre_totem: "Tótem Cuy"
   mensaje_totem: "&6✟ &6&l{jugador} &7ha usado un &6&l{totem}&7."
   sonido_ritual: "tod4:revivir"
+  # los items de revivir solo sirven el dia en que aparecen (al dia siguiente dicen en rojo que quedaron inutilizables)
+  items_vencen: true
   sonido_revivido: "tod4:revivido"
   sonido_muerte: "minecraft:dedsafio"
   comandos_muerte:
@@ -305,6 +307,9 @@ discord:
   muertes_everyone: true         # @everyone abajo de cada muerte
   # morir en el gulag es para siempre: este mensaje en vez del normal ({jugador}, {dia}; \n = otro renglon)
   gulag_mensaje: "## ⛓ {jugador} ha caído en el Gulag.\nHa caído de manera definitiva y no podrá ser revivido."
+  # canal de revividos: "✨ Trick revivió a @Agus" (solo etiqueta al revivido; {quien}, {revivido}, {dia})
+  revividos: true
+  revivido_mensaje: "### ✨ {quien} revivió a {revivido}"
   pie: "-# TrucOfDeath 4"
   canales:
     cambios: "1553108084304388216"    # mensajes naranjas (cambio de dificultad, nuevo mob...)
@@ -312,6 +317,7 @@ discord:
     dungeons: "1563924288665427989"   # mensajes azules (nueva dungeon)
     misiones: "1553108308863225937"   # misiones diarias y opcionales nuevas
     muertes: "1554183344529342504"
+    revividos: ""                     # /tod4 discord canal revividos <id>
 
 # Subasta (/tod4 subasta, /pujar). Todo se cuenta en amarillas. Si tu config.yml no tiene esta parte, se usan estos valores.
 subasta:

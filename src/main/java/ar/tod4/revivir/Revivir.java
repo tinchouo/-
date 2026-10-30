@@ -71,6 +71,7 @@ public final class Revivir implements Listener {
     private final Map<String, Long> ultimoAtacanteT = new HashMap<>();
     private final Map<String, String> tumbaAbiertaPor = new HashMap<>();
     private final Map<UUID, Boolean> cinematicaPendiente = new HashMap<>();
+    private final Vencimiento venc;
 
     public Revivir(TOD4 pl) {
         this.pl = pl;
@@ -85,6 +86,7 @@ public final class Revivir implements Listener {
             st.set("item_prem", new ItemStack(Material.NETHER_STAR));
             st.set("item_prem_cant", 1);
         }
+        this.venc = new Vencimiento(pl, this::esItemRevivir);
     }
 
     public Store store() { return st; }
@@ -141,9 +143,17 @@ public final class Revivir implements Listener {
 
     private int cant(boolean prem) { return st.y().getInt(prem ? "item_prem_cant" : "item_normal_cant", 1); }
 
-    /** "premium", "normal" o "ninguno" segun lo que tenga en la mano. */
+    /** Si es un item de revivir (el normal o el premium), sin contar la cantidad. */
+    private boolean esItemRevivir(ItemStack it) {
+        if (it == null || it.getType().isAir()) return false;
+        ItemStack ip = item(true), in = item(false);
+        return (ip != null && Items.sameKind(it, ip)) || (in != null && Items.sameKind(it, in));
+    }
+
+    /** "premium", "normal", "vencido" (es de un dia anterior) o "ninguno" segun lo que tenga en la mano. */
     private String modo(ItemStack mano) {
         if (mano == null || mano.getType().isAir()) return "ninguno";
+        if (esItemRevivir(mano) && venc.vencido(mano)) return "vencido";
         ItemStack ip = item(true), in = item(false);
         if (ip != null && Items.sameKind(mano, ip) && mano.getAmount() >= cant(true)) return "premium";
         if (in != null && Items.sameKind(mano, in) && mano.getAmount() >= cant(false)) return "normal";
@@ -296,7 +306,13 @@ public final class Revivir implements Listener {
         if (esAltar(b.getLocation(), 0.5)) {
             e.setCancelled(true);
             if (bloqueado()) { Style.err(p, MSG_BLOQUEADO); return; }
-            String modo = modo(p.getInventory().getItemInMainHand());
+            ItemStack mano = p.getInventory().getItemInMainHand();
+            if (venc.activo() && venc.marcar(mano)) p.getInventory().setItemInMainHand(mano);
+            String modo = modo(mano);
+            if (modo.equals("vencido")) {
+                Style.err(p, "Este ítem de revivir ya no sirve: era del día " + venc.dia(mano) + ". Solo sirve el día en que aparece.");
+                return;
+            }
             if (modo.equals("ninguno")) { Style.err(p, "Debes tener en la mano el ítem de resurrección."); return; }
             if (modo.equals("normal") && !tieneAlma(p.getName())) { Style.err(p, "No tienes alma para revivir."); return; }
             menuAlmas(p, modo);
@@ -378,6 +394,7 @@ public final class Revivir implements Listener {
         for (Player o : Bukkit.getOnlinePlayers())
             o.playSound(o.getLocation(), pl.getConfig().getString("revivir.sonido_ritual", "tod4:revivir"), SoundCategory.MASTER, 1f, 1f);
         Style.broadcast("&e✦ &e&l" + quien + " &7ha revivido a &e&l" + n + "&7.");
+        if (pl.discord() != null) pl.discord().publicarRevivido(quien, n);
         // contador de revividos (los OP no cuentan, igual que sus muertes)
         org.bukkit.OfflinePlayer rev = Bukkit.getOfflinePlayerIfCached(n);
         if (pl.extras() != null && (rev == null || !rev.isOp())) pl.extras().contar("revividos");

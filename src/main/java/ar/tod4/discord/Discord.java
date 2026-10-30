@@ -52,7 +52,8 @@ public final class Discord implements Listener {
             "avisos", "1563954729883668621",
             "dungeons", "1563924288665427989",
             "misiones", "1553108308863225937",
-            "muertes", "1554183344529342504");
+            "muertes", "1554183344529342504",
+            "revividos", "");
 
     private final TOD4 pl;
     private final Map<String, String> lang = new HashMap<>();
@@ -94,7 +95,10 @@ public final class Discord implements Listener {
     // ================================================================= mandar (DiscordSRV, por reflexion)
 
     /** Manda el texto al canal. Devuelve un error para mostrar, o null si salio. */
-    public String enviar(String canalK, String texto, boolean conEveryone) {
+    public String enviar(String canalK, String texto, boolean conEveryone) { return enviar(canalK, texto, conEveryone, false); }
+
+    /** conUsuarios: las menciones <@id> del texto avisan (las de nadie mas). */
+    public String enviar(String canalK, String texto, boolean conEveryone, boolean conUsuarios) {
         if (!activo()) return "Discord está apagado (discord.activado: false).";
         String id = canal(canalK);
         if (id == null) return "No hay canal para \"" + canalK + "\".";
@@ -111,7 +115,9 @@ public final class Discord implements Listener {
                 @SuppressWarnings({"unchecked", "rawtypes"})
                 Class<Enum> mt = (Class<Enum>) Class.forName(J + "entities.Message$MentionType", true, cl);
                 @SuppressWarnings({"unchecked", "rawtypes"})
-                Collection<?> menciones = conEveryone ? EnumSet.of(Enum.valueOf(mt, "EVERYONE")) : EnumSet.noneOf(mt);
+                EnumSet menciones = EnumSet.noneOf(mt);
+                if (conEveryone) menciones.add(Enum.valueOf(mt, "EVERYONE"));
+                if (conUsuarios) menciones.add(Enum.valueOf(mt, "USER"));
                 Method am = Class.forName(J + "requests.restaction.MessageAction", true, cl).getMethod("allowedMentions", Collection.class);
                 accion = am.invoke(accion, menciones);
             } catch (Throwable ignored) {
@@ -259,6 +265,69 @@ public final class Discord implements Listener {
                 + (ev ? "\n@everyone" : ""), ev);
     }
 
+    // ================================================================= revividos
+
+    /**
+     * Canal de revividos: "✨ Trick revivió a @Agus". Solo se etiqueta al revivido (sin @everyone).
+     * Su Discord sale de: /tod4 discord vincular, la cuenta vinculada de DiscordSRV (/discord link),
+     * o alguien del servidor de Discord que se llame igual. Si no se encuentra, sale su nombre en negrita.
+     */
+    public void publicarRevivido(String quien, String n) {
+        if (!activo() || !pl.getConfig().getBoolean("discord.revividos", true) || canal("revividos") == null) return;
+        publicar("revividos", textoRevivido(quien, n), false, true);
+    }
+
+    private String textoRevivido(String quien, String n) {
+        String q = Bukkit.getOfflinePlayerIfCached(quien) != null || Bukkit.getPlayerExact(quien) != null ? "**" + esc(quien) + "**" : "Un administrador";
+        String id = idDiscord(n);
+        String a = id != null ? "<@" + id + ">" : "**" + esc(n) + "**";
+        return pl.getConfig().getString("discord.revivido_mensaje", "### ✨ {quien} revivió a {revivido}").replace("\\n", "\n")
+                .replace("{quien}", q).replace("{revivido}", a).replace("{dia}", String.valueOf(pl.dia()))
+                + "\n-# Día " + pl.dia() + " · " + pie().replaceFirst("^-#\\s*", "");
+    }
+
+    private void publicar(String canalK, String texto, boolean conEveryone, boolean conUsuarios) {
+        String err = enviar(canalK, texto, conEveryone, conUsuarios);
+        if (err != null) pl.getLogger().warning("Discord (" + canalK + "): " + err);
+    }
+
+    /** El id de Discord de un jugador, o null. */
+    public String idDiscord(String n) { String[] r = buscarId(n); return r == null ? null : r[0]; }
+
+    /** {id, de donde salio} o null. */
+    private String[] buscarId(String n) {
+        String manual = pl.datos().y().getString("discord_ids." + n.toLowerCase());
+        if (manual != null && !manual.isBlank()) return new String[]{manual, "vinculado con /tod4 discord vincular"};
+        Plugin d = Bukkit.getPluginManager().getPlugin("DiscordSRV");
+        if (d == null || !d.isEnabled()) return null;
+        ClassLoader cl = d.getClass().getClassLoader();
+        // cuenta vinculada en DiscordSRV
+        try {
+            org.bukkit.OfflinePlayer op = Bukkit.getOfflinePlayerIfCached(n);
+            if (op != null) {
+                Object srv = Class.forName("github.scarsz.discordsrv.DiscordSRV", true, cl).getMethod("getPlugin").invoke(null);
+                Object alm = srv.getClass().getMethod("getAccountLinkManager").invoke(srv);
+                Object id = alm.getClass().getMethod("getDiscordId", java.util.UUID.class).invoke(alm, op.getUniqueId());
+                if (id != null && !String.valueOf(id).isBlank()) return new String[]{String.valueOf(id), "cuenta vinculada de DiscordSRV"};
+            }
+        } catch (Throwable ignored) { }
+        // alguien del servidor de Discord que se llame igual (apodo o usuario), si hay uno solo
+        try {
+            Object srv = Class.forName("github.scarsz.discordsrv.DiscordSRV", true, cl).getMethod("getPlugin").invoke(null);
+            Object g = srv.getClass().getMethod("getMainGuild").invoke(srv);
+            if (g == null) return null;
+            java.util.Set<String> ids = new java.util.LinkedHashSet<>();
+            for (String metodo : new String[]{"getMembersByEffectiveName", "getMembersByName", "getMembersByNickname"}) {
+                try {
+                    Object l = g.getClass().getMethod(metodo, String.class, boolean.class).invoke(g, n, true);
+                    if (l instanceof List<?> lista) for (Object mem : lista) ids.add(String.valueOf(mem.getClass().getMethod("getId").invoke(mem)));
+                } catch (NoSuchMethodException ignored) { }
+            }
+            if (ids.size() == 1) return new String[]{ids.iterator().next(), "alguien del Discord que se llama igual"};
+        } catch (Throwable ignored) { }
+        return null;
+    }
+
     // ================================================================= texto plano en espanol
 
     /** Un texto de Minecraft (con nombres traducibles) como texto plano en espanol. */
@@ -301,6 +370,12 @@ public final class Discord implements Listener {
         return sb.toString();
     }
 
+    private String quienEs(String n) {
+        String[] r = buscarId(n);
+        return r == null ? "&cno encontré su Discord&7: va a salir su nombre en negrita, sin etiqueta. Vinculalo con &e/tod4 discord vincular " + n + " <id>"
+                : "&aetiqueta a &f" + r[0] + " &7(" + r[1] + ")";
+    }
+
     /** Que los nombres con _ o * no se vuelvan formato en Discord. */
     private static String esc(String s) { return s.replaceAll("([\\\\*_~|`>])", "\\\\$1"); }
 
@@ -330,11 +405,48 @@ public final class Discord implements Listener {
                 if (a.length < 3 || !pl.avisos().existe(a[2])) { Style.err(s, "Uso: &e/tod4 discord ver <id del mensaje>"); return; }
                 s.sendMessage(textoAviso(pl.avisos().seccion(a[2])));
             }
+            case "canal" -> {
+                if (a.length < 4 || !CANALES.containsKey(a[2].toLowerCase())) { Style.err(s, "Uso: &e/tod4 discord canal <" + String.join("|", CANALES.keySet()) + "> <id del canal>"); return; }
+                String id = a[3].replaceAll("[^0-9]", "");
+                if (id.isEmpty()) { Style.err(s, "El id del canal son solo números (click derecho en el canal > Copiar ID)."); return; }
+                pl.getConfig().set("discord.canales." + a[2].toLowerCase(), id);
+                pl.saveConfig();
+                Style.ok(s, "Canal &f" + a[2].toLowerCase() + "&a: &f" + id + "&a. Probalo con &e/tod4 discord prueba " + a[2].toLowerCase());
+            }
+            case "vincular" -> {
+                if (a.length < 4) { Style.err(s, "Uso: &e/tod4 discord vincular <jugador> <id de Discord|borrar>"); return; }
+                String k = "discord_ids." + a[2].toLowerCase();
+                if (a[3].equalsIgnoreCase("borrar")) {
+                    pl.datos().set(k, null);
+                    Style.ok(s, "Borrado. &7Ahora: " + quienEs(a[2]));
+                    return;
+                }
+                String id = a[3].replaceAll("[^0-9]", "");
+                if (id.length() < 15) { Style.err(s, "Eso no parece un id de Discord (click derecho en la persona > Copiar ID de usuario)."); return; }
+                pl.datos().set(k, id);
+                Style.ok(s, "&f" + a[2] + " &a→ &f" + id);
+            }
+            case "id" -> {
+                if (a.length < 3) { Style.err(s, "Uso: &e/tod4 discord id <jugador>"); return; }
+                Style.info(s, a[2] + ": " + quienEs(a[2]));
+            }
+            case "revivir" -> {
+                // prueba: manda el mensaje de revivido (etiqueta de verdad a ese jugador) sin revivir a nadie
+                if (a.length < 3) { Style.err(s, "Uso: &e/tod4 discord revivir <jugador> &7(manda el mensaje de prueba, no revive)"); return; }
+                if (canal("revividos") == null) { Style.err(s, "Falta el canal: &e/tod4 discord canal revividos <id>"); return; }
+                String err = enviar("revividos", textoRevivido(s.getName(), a[2]) + "\n-# (prueba, no revivió nadie)", false, true);
+                if (err == null) Style.ok(s, "Mandado. " + quienEs(a[2]));
+                else Style.err(s, err);
+            }
             default -> {
                 Style.ok(s, "&e/tod4 discord prueba [canal] &7- manda un mensaje de prueba (sin @everyone)");
+                Style.ok(s, "&e/tod4 discord canal <nombre> <id> &7- pone el id de un canal (ej: revividos)");
+                Style.ok(s, "&e/tod4 discord vincular <jugador> <id> &7- su Discord, para etiquetarlo al revivir");
+                Style.ok(s, "&e/tod4 discord id <jugador> &7- a quién va a etiquetar");
+                Style.ok(s, "&e/tod4 discord revivir <jugador> &7- prueba del mensaje de revivido (no revive)");
                 Style.ok(s, "&e/tod4 discord ver <id> &7- muestra acá cómo saldría un mensaje");
                 Style.ok(s, "&e/tod4 discord aviso <id> &7- publica un mensaje en Discord sin mandarlo en el juego");
-                Style.ok(s, "&7Canales: cambios, avisos, dungeons, misiones, muertes");
+                Style.ok(s, "&7Canales: " + String.join(", ", CANALES.keySet()));
             }
         }
     }
