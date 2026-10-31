@@ -558,10 +558,6 @@ public final class Revivir implements Listener {
                 net.kyori.adventure.text.format.NamedTextColor.DARK_GREEN);
         // los que mueren en el Gulag no se pueden revivir en el altar (no sale su cabeza); solo un admin con /tod4:revivir
         boolean gulag = ar.tod4.hook.Gulag.muereEnGulag(v.getUniqueId());
-        // d10.solo_salvacion: el que muere sin equipo tampoco tiene cabeza en el altar (va con los del Gulag)
-        boolean solo = !gulag && pl.cambios() != null && pl.cambios().on("d10.solo_salvacion") && pl.equipos() != null && pl.equipos().solo(v);
-        if (solo) Bukkit.getScheduler().runTask(pl, () -> Style.broadcast("&8☠ " + n + " murió sin equipo: nadie lo puede revivir."));
-        gulag = gulag || solo;
         List<String> muertos = st.y().getStringList(gulag ? GULAG : "muertos");
         if (!muertos.contains(n)) {
             muertos.add(n);
