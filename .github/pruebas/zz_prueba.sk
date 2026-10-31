@@ -1,0 +1,22 @@
+# solo para el CI: hace explotar un chancho con la explosion del Creeper Nuclear con ruedas
+command /probarnuclear:
+	trigger:
+		set {_l} to location(0, -60, 0, world "world")
+		spawn a pig at {_l}
+		set {_p} to last spawned entity
+		set name of {_p} to "Creeper Nuclear"
+		set {_id} to "%uuid of {_p}%"
+		set {_bar} to "tod4:cnr_%{_id}%"
+		execute console command "bossbar add %{_bar}% """""
+		execute console command "bossbar set %{_bar}% name {""text"":""☢ CREEPER NUCLEAR ☢  5s"",""color"":""yellow"",""bold"":true}"
+		execute console command "execute at %{_id}% run bossbar set %{_bar}% players @a[distance=..80]"
+		execute console command "execute at %{_id}% run playsound tod4:creeper.nuclear.count1 hostile @a ~ ~ ~ 5 1"
+		execute console command "bossbar list"
+		execute console command "bossbar remove %{_bar}%"
+		explotarNuclear({_l}, {_p})
+		wait 3 seconds
+		set {_aire} to 0
+		loop blocks in radius 6 of {_l}:
+			if loop-block is air:
+				add 1 to {_aire}
+		broadcast "NUCLEAR_PRUEBA chancho vivo: %{_p} is alive% | aire cerca: %{_aire}%"

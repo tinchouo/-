@@ -1,7 +1,7 @@
 name: Probar scripts
 on:
   push:
-    paths: ['skripts/**', '.github/workflows/skript.yml']
+    paths: ['skripts/**', '.github/workflows/skript.yml', '.github/pruebas/**']
   workflow_dispatch:
 jobs:
   probar:
@@ -29,26 +29,7 @@ jobs:
           curl -sL -o plugins/Skript.jar "$U"
           cp ../skripts/*.sk plugins/Skript/scripts/
           # prueba de la explosion del Creeper Nuclear con ruedas (creeper_nuclear.sk)
-          printf '%s\n' 'command /probarnuclear:' '\ttrigger:' \
-            '\t\tset {_l} to location(0, -60, 0, world "world")' \
-            '\t\tspawn a pig at {_l}' \
-            '\t\tset {_p} to last spawned entity' \
-            '\t\tset name of {_p} to "Creeper Nuclear"' \
-            '\t\tset {_id} to "%uuid of {_p}%"' \
-            '\t\tset {_bar} to "tod4:cnr_%{_id}%"' \
-            '\t\texecute console command "bossbar add %{_bar}% """""' \
-            '\t\texecute console command "bossbar set %{_bar}% name {""text"":""☢ CREEPER NUCLEAR ☢  5s"",""color"":""yellow"",""bold"":true}"' \
-            '\t\texecute console command "execute at %{_id}% run bossbar set %{_bar}% players @a[distance=..80]"' \
-            '\t\texecute console command "execute at %{_id}% run playsound tod4:creeper.nuclear.count1 hostile @a ~ ~ ~ 5 1"' \
-            '\t\texecute console command "bossbar list"' \
-            '\t\texecute console command "bossbar remove %{_bar}%"' \
-            '\t\texplotarNuclear({_l}, {_p})' \
-            '\t\twait 3 seconds' \
-            '\t\tset {_aire} to 0' \
-            '\t\tloop blocks in radius 6 of {_l}:' \
-            '\t\t\tif loop-block is air:' \
-            '\t\t\t\tadd 1 to {_aire}' \
-            '\t\tbroadcast "NUCLEAR_PRUEBA chancho vivo: %{_p} is alive% | aire cerca: %{_aire}%"' > plugins/Skript/scripts/zz_prueba.sk
+          cp ../.github/pruebas/zz_prueba.sk plugins/Skript/scripts/
           echo "eula=true" > eula.txt
           printf "online-mode=false\nlevel-type=minecraft\\:flat\nspawn-protection=0\n" > server.properties
           ls -la . plugins
