@@ -78,7 +78,8 @@ public final class Creepers implements Listener {
     private int tick;
 
     private static final class Nuke {
-        Creeper c;
+        LivingEntity c;
+        boolean queda;   // al explotar, la entidad queda (el Creeper Nuclear con ruedas, que es inmortal)
         int t, total;
         BossBar bar;
         int seg = -1;
@@ -498,7 +499,7 @@ public final class Creepers implements Listener {
     }
 
     private void nuke(Nuke n) {
-        Creeper c = n.c;
+        LivingEntity c = n.c;
         if (c.isDead() || !c.isValid()) { terminar(n); return; }      // lo mataron: no explota
         Location l = c.getLocation();
         int s = (int) Math.ceil(n.t / 20.0);
@@ -525,7 +526,7 @@ public final class Creepers implements Listener {
         if (--n.t <= 0) {
             terminar(n);
             detonar(l, c);   // el creeper todavia existe: figura como el que mato ("fue volado por Creeper Nuclear")
-            c.remove();
+            if (!n.queda) c.remove();
         }
     }
 
@@ -535,12 +536,30 @@ public final class Creepers implements Listener {
         n.ven.clear();
     }
 
+    /**
+     * La cuenta del Creeper Nuclear (barra arriba, sonidos) y su explosion, para cualquier mob (el Creeper Nuclear con
+     * ruedas: /tod4 nuclear <uuid> [segundos], lo llama creeper_nuclear.sk). El mob queda vivo despues (es inmortal).
+     * false = no existe o ya esta contando.
+     */
+    public boolean cuentaNuclear(LivingEntity e, double seg) {
+        if (e == null || !e.isValid() || nukes.containsKey(e.getUniqueId())) return false;
+        Nuke n = new Nuke();
+        n.c = e;
+        n.queda = true;
+        n.total = n.t = (int) Math.max(20, seg * 20);
+        n.bar = BossBar.bossBar(Component.empty(), 1f, BossBar.Color.YELLOW, BossBar.Overlay.NOTCHED_10);
+        nukes.put(e.getUniqueId(), n);
+        e.getWorld().playSound(e.getLocation(), Sound.ENTITY_CREEPER_PRIMED, SoundCategory.HOSTILE, 3f, 0.5f);
+        e.getWorld().playSound(e.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, SoundCategory.HOSTILE, 4f, 0.6f);
+        return true;
+    }
+
     public void apagar() {
         for (Nuke n : new ArrayList<>(nukes.values())) terminar(n);
     }
 
     /** La explosion nuclear: crater de ~15, fuego y mortal hasta el mismo radio, dano decreciente hasta el borde, veneno y hongo de humo. */
-    private void detonar(Location l, Creeper causa) {
+    private void detonar(Location l, LivingEntity causa) {
         World w = l.getWorld();
         double mortal = cfg.getDouble("nuclear.radio_mortal", 22), dano = cfg.getDouble("nuclear.radio_dano", 40);
         double max = cfg.getDouble("nuclear.dano_centro", 800), min = cfg.getDouble("nuclear.dano_borde_mortal", 400);
@@ -561,6 +580,7 @@ public final class Creepers implements Listener {
             if (!p.isDead()) p.addPotionEffect(new PotionEffect(PotionEffectType.POISON, veneno * 20, 2));
         }
         for (Entity en : w.getNearbyEntities(l, mortal, mortal, mortal)) {
+            if (en == causa) continue;
             if (en instanceof LivingEntity le && !(en instanceof Player) && le.getLocation().distance(l) <= mortal) le.damage(200, src);
         }
         if (!sinBloques) crater(l, (int) Math.round(mortal));

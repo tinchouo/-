@@ -296,6 +296,16 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "discord": discord.cmd(s, a); return true;
             case "subasta": subasta.cmd(s, a); return true;
             case "corazon": corazon.cmd(s, a); return true;
+            case "nuclear": {
+                // /tod4 nuclear <uuid> [segundos]: la cuenta y la explosion del Creeper Nuclear en ese mob (creeper_nuclear.sk)
+                if (a.length < 2) { Style.info(s, "Uso: &e/tod4 nuclear <uuid del mob> [segundos]"); return true; }
+                org.bukkit.entity.Entity en;
+                try { en = Bukkit.getEntity(java.util.UUID.fromString(a[1])); } catch (IllegalArgumentException ex) { en = null; }
+                double seg = 10;
+                if (a.length > 2) try { seg = Double.parseDouble(a[2]); } catch (NumberFormatException ignored) { }
+                if (!(en instanceof org.bukkit.entity.LivingEntity le) || !creepers.cuentaNuclear(le, seg)) Style.err(s, "No existe ese mob o ya está contando.");
+                return true;
+            }
             case "ballestero": {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
@@ -346,7 +356,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "backrooms", "nuclear", "recargar")); break;
                 case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

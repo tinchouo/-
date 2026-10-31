@@ -1,0 +1,159 @@
+# Guardar en: plugins/Skript/scripts/creeper_nuclear.sk   (luego /sk reload creeper_nuclear)
+#
+# CLICK DERECHO RAPIDO sobre el Creeper Nuclear  = montarse. Conduces con WASD hacia donde MIRAS; Shift para bajarte.
+# MANTENER click derecho 5 s sobre el Creeper    = arma la bomba -> cuenta atras -> explosion.
+# La cuenta (la barra de arriba con el tiempo y los sonidos) y la explosion son las del Creeper Nuclear de TOD4
+# (/tod4 nuclear). Es inmortal: no le entra ningun dano y queda despues de explotar (se puede volver a armar).
+# Si sueltas despues de ~1 s y antes de los 5 s, se cancela el armado.
+# Requiere Skript 2.10+ y Minecraft 1.21.2+ (teclas WASD) y NO depende de ModelEngine/BetterModel para montar.
+
+options:
+	nombre: Creeper Nuclear
+	tiempo-mantener: 5
+	# segundos de la cuenta regresiva (la barra de arriba) hasta que explota
+	cuenta: 10
+	velocidad: 0.28
+	debug: 1
+	giro: 25
+
+on right click on pig:
+	if "%name of event-entity%" does not contain "{@nombre}":
+		stop
+	cancel the event
+	set {_pig} to event-entity
+	set {_p} to player
+	set {_id} to "%uuid of {_pig}%"
+	if {-cnr::%{_id}%::armado} is set:
+		stop
+	set {_ahora} to now
+	# Ignora el evento duplicado (mano principal + secundaria) del mismo click
+	if {-cnr::%{_id}%::ultimo} is set:
+		if difference between {-cnr::%{_id}%::ultimo} and {_ahora} is less than 0.1 seconds:
+			stop
+	# Ya hay un bucle en marcha: esto es solo otro pulso del click mantenido
+	if {-cnr::%{_id}%::activo} is set:
+		set {-cnr::%{_id}%::ultimo} to {_ahora}
+		stop
+	if {-cnr::%{_id}%::conduciendo} is set:
+		stop
+
+	# ---------- Click nuevo: distinguir toque (montar) de mantener (armar) ----------
+	set {-cnr::%{_id}%::activo} to true
+	set {-cnr::%{_id}%::ultimo} to {_ahora}
+	set {_total} to {@tiempo-mantener} * 10
+	set {_paso} to 0
+	while {_paso} < {_total}:
+		wait 2 ticks
+		add 1 to {_paso}
+		if {_pig} is dead:
+			delete {-cnr::%{_id}%::*}
+			stop
+		if {_p} is not online:
+			delete {-cnr::%{_id}%::*}
+			stop
+		# Dejo de llegar el click mantenido (llega uno cada ~0.2 s)
+		if difference between {-cnr::%{_id}%::ultimo} and now is greater than 0.45 seconds:
+			delete {-cnr::%{_id}%::*}
+			if {_paso} is greater than 12:
+				send action bar "§7Armado cancelado" to {_p}
+				stop
+			# ===== Fue un toque rapido: MONTARSE Y CONDUCIR =====
+			if size of (passengers of {_pig}) is greater than 0:
+				send action bar "§cYa esta ocupado" to {_p}
+				stop
+			make {_p} ride {_pig}
+			set {-cnr::%{_id}%::conduciendo} to true
+			send action bar "§aMontado §7- WASD para mover, Shift para bajar" to {_p}
+			while vehicle of {_p} is {_pig}:
+				set {_yaw} to yaw of {_p}
+				set {_f} to 0
+				set {_s} to 0
+				if {_p} is pressing forward movement key:
+					add 1 to {_f}
+				if {_p} is pressing backward movement key:
+					subtract 1 from {_f}
+				if {_p} is pressing right movement key:
+					add 1 to {_s}
+				if {_p} is pressing left movement key:
+					subtract 1 from {_s}
+				if {@debug} is 1:
+					send action bar "§7W/S: %{_f}%  A/D: %{_s}%" to {_p}
+				set {_vel} to velocity of {_pig}
+				set {_vy} to y component of {_vel}
+				# ESPACIO = saltar (solo si esta en el suelo)
+				if {_p} is pressing jump key:
+					if {_pig} is on ground:
+						set {_vy} to 0.52
+				if {_f} is 0:
+					if {_s} is 0:
+						set velocity of {_pig} to vector(0, {_vy}, 0)
+						wait 1 tick
+						continue
+				set {_dx} to ({_f} * (0 - sin({_yaw}))) + ({_s} * (0 - cos({_yaw})))
+				set {_dz} to ({_f} * cos({_yaw})) + ({_s} * (0 - sin({_yaw})))
+				set {_len} to sqrt(({_dx} * {_dx}) + ({_dz} * {_dz}))
+				set {_dx} to {_dx} / {_len}
+				set {_dz} to {_dz} / {_len}
+				# Subir solos escalones de 1 bloque (no salta si hay pared de 2+)
+				set {_pie} to location of {_pig}
+				add vector({_dx} * 0.8, 0.1, {_dz} * 0.8) to {_pie}
+				set {_alto} to location of {_pig}
+				add vector({_dx} * 0.8, 1.2, {_dz} * 0.8) to {_alto}
+				if block at {_pie} is solid:
+					if block at {_alto} is not solid:
+						if {_pig} is on ground:
+							set {_vy} to 0.45
+
+				set velocity of {_pig} to vector({_dx} * {@velocidad}, {_vy}, {_dz} * {@velocidad})
+				# Girar el cuerpo suavemente hacia donde lo conduces
+				# (W = hacia donde miras, A/D = diagonales o de lado, S = marcha atras sin girar)
+				if {_f} is 1:
+					set {_off} to {_s} * 45
+				else if {_f} is 0:
+					set {_off} to {_s} * 90
+				else:
+					set {_off} to 0
+				set {_diff} to ({_yaw} + {_off}) - (yaw of {_pig})
+				if {_diff} is greater than 180:
+					subtract 360 from {_diff}
+				if {_diff} is greater than 180:
+					subtract 360 from {_diff}
+				if {_diff} is less than -180:
+					add 360 to {_diff}
+				if {_diff} is less than -180:
+					add 360 to {_diff}
+				if {_diff} is greater than {@giro}:
+					set {_diff} to {@giro}
+				if {_diff} is less than (0 - {@giro}):
+					set {_diff} to (0 - {@giro})
+				set yaw of {_pig} to (yaw of {_pig}) + {_diff}
+				wait 1 tick
+			delete {-cnr::%{_id}%::conduciendo}
+			stop
+		# Barra de progreso (solo cuando ya es claramente un click mantenido)
+		if {_paso} is greater than or equal to 6:
+			set {_llenos} to floor({_paso} / {_total} * 20)
+			set {_barra} to ""
+			loop 20 times:
+				if loop-number is less than or equal to {_llenos}:
+					set {_barra} to "%{_barra}%§c▌"
+				else:
+					set {_barra} to "%{_barra}%§7▌"
+			set {_resto} to ({_total} - {_paso}) / 10
+			send action bar "§e☢ Armando bomba nuclear §8[%{_barra}%§8] §7%{_resto}%s" to {_p}
+
+	# ---------- Armado: la cuenta y la explosion del Creeper Nuclear (las hace TOD4) ----------
+	delete {-cnr::%{_id}%::activo}
+	delete {-cnr::%{_id}%::ultimo}
+	set {-cnr::%{_id}%::armado} to true
+	execute console command "mm signal %{_id}% armar"
+	execute console command "tod4 nuclear %{_id}% {@cuenta}"
+	# cuando ya exploto, se puede volver a armar
+	wait {@cuenta} seconds
+	wait 10 ticks
+	delete {-cnr::%{_id}%::*}
+
+# Inmortal: no le entra ningun dano (ni la explosion, ni caidas, ni golpes)
+on damage of pig:
+	if "%name of victim%" contains "{@nombre}":
+		cancel the event
