@@ -23,3 +23,6 @@ command /probarnuclear:
 		if {_p} is alive:
 			set {_vivo} to "si"
 		broadcast "NUCLEAR_PRUEBA chancho vivo: %{_vivo}% | aire cerca: %{_aire}%"
+
+on death of pig:
+	broadcast "NUCLEAR_PRUEBA murio el chancho: %damage cause% | nombre: %name of victim%"
