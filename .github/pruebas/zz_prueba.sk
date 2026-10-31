@@ -5,6 +5,7 @@ command /probarnuclear:
 		spawn a pig at {_l}
 		set {_p} to last spawned entity
 		set name of {_p} to "Creeper Nuclear"
+		make {_p} invulnerable
 		set {_id} to "%uuid of {_p}%"
 		set {_bar} to "tod4:cnr_%{_id}%"
 		execute console command "bossbar add %{_bar}% {""text"":""☢ CREEPER NUCLEAR ☢"",""color"":""yellow"",""bold"":true}"

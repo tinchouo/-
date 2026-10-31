@@ -27,6 +27,8 @@ on right click on pig:
 		stop
 	cancel the event
 	set {_pig} to event-entity
+	# inmortal (ademas de Invincible en MythicMobs)
+	make {_pig} invulnerable
 	set {_p} to player
 	set {_id} to "%uuid of {_pig}%"
 	if {-cnr::%{_id}%::armado} is set:
