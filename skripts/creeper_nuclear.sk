@@ -203,7 +203,7 @@ function explotarNuclear(l: location, causa: entity):
 				set {_dano} to 4 + 20 * (1 - ({_d} - {@radio-mortal}) / ({@radio-dano} - {@radio-mortal}))
 			damage loop-player by {_dano} / 2
 			if loop-player is alive:
-				apply poison of tier 3 to loop-player for {@veneno-seg} seconds
+				execute console command "effect give %name of loop-player% minecraft:poison {@veneno-seg} 2"
 	# los demas mobs cerca mueren
 	loop all living entities in radius {@radio-mortal} of {_l}:
 		if loop-entity is not a player:
@@ -243,7 +243,13 @@ function crater(l: location):
 						set {_b} to block at location({_cx} + {_dx}, {_cy} + {_dy}, {_cz} + {_dz}, {_w})
 						if {_b} is not air:
 							if {_b} is not water or lava or bedrock or barrier or obsidian or crying obsidian or reinforced deepslate or end portal frame or end portal or end gateway or command block or chain command block or repeating command block or structure block or jigsaw block or respawn anchor or ancient debris or netherite block or enchanting table or anvil or player head or player wall head:
-								if {_b} is chest or trapped chest or barrel or furnace or blast furnace or smoker or hopper or dispenser or dropper or any shulker box:
+								# cofres, barriles, hornos, shulkers...: se rompen y tiran lo que tienen
+								set {_tipo} to "%type of {_b}%"
+								set {_cont} to false
+								loop "chest", "barrel", "furnace", "smoker", "hopper", "dispenser", "dropper" and "shulker":
+									if {_tipo} contains loop-value-1:
+										set {_cont} to true
+								if {_cont} is true:
 									break {_b} naturally
 								else:
 									set block at {_b} to air
@@ -280,20 +286,20 @@ function hongo(l: location):
 		set {_h} to min(30, {_t} * 0.55)
 		set {_k} to 0
 		while {_k} < {_h}:
-			play 2 campfire signal smoke at {_l} ~ vector(0, {_k}, 0)
+			force draw 2 campfire signal smoke particles at {_l} ~ vector(0, {_k}, 0)
 			add 2.5 to {_k}
 		set {_rr} to min(13, 3 + {_t} * 0.14)
 		loop 18 times:
 			set {_a} to loop-value-2 * 20 + {_t} * 3
 			set {_c} to {_l} ~ vector(cos({_a}) * {_rr}, {_h} + 2 + sin({_a} * 3) * 1.2, sin({_a}) * {_rr})
-			play 3 campfire signal smoke at {_c}
-			play 2 large smoke at {_c}
-		play 10 cloud at {_l} ~ vector(0, {_h} + 3, 0)
+			force draw 3 campfire signal smoke particles at {_c}
+			force draw 2 large smoke particles at {_c}
+		force draw 10 cloud particles at {_l} ~ vector(0, {_h} + 3, 0)
 		if {_t} < 25:
 			set {_br} to {_t} * 1.4
 			loop 24 times:
 				set {_a} to loop-value-2 * 15
-				play 1 cloud at {_l} ~ vector(cos({_a}) * {_br}, 0.5, sin({_a}) * {_br})
+				force draw 1 cloud particle at {_l} ~ vector(cos({_a}) * {_br}, 0.5, sin({_a}) * {_br})
 			if mod({_t}, 5) is 0:
-				play 1 explosion emitter at {_l} ~ vector(0, {_h}, 0)
+				force draw 1 explosion emitter particle at {_l} ~ vector(0, {_h}, 0)
 		wait 2 ticks
