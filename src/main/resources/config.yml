@@ -111,6 +111,8 @@ cambios:
     explosion_craneo: 2
     explosion_inicio: 2
   equipo_caido_porcentaje: 5    # dia 8: % de dano de mas por cada companero de equipo muerto (sin tope)
+  # d10.solo_vida: cuanta vida maxima pierde el que no tiene equipo (o esta solo en el suyo), en %
+  solo_vida_porcentaje: 25
   esqueletos:                   # dia 9: esqueletos armados (la armadura usa las chances de zombies_*)
     poder_min: 1
     poder_max: 3

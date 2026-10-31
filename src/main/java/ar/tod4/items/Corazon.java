@@ -70,21 +70,35 @@ public final class Corazon implements Listener {
 
     public int extra(Player p) { return p.getPersistentDataContainer().getOrDefault(kCuenta, PersistentDataType.INTEGER, 0); }
 
-    /** Pone el modificador de vida segun cuantos corazones extra tiene (2 de vida = 1 corazon). */
-    private void aplicar(Player p) {
+    /** d10.solo_corazones: sin equipo de verdad, los corazones rojos no se pueden comer y los que ya tiene no cuentan. */
+    private boolean bloqueado(Player p) {
+        return pl.cambios() != null && pl.cambios().on("d10.solo_corazones") && pl.equipos() != null && pl.equipos().solo(p);
+    }
+
+    /**
+     * Pone el modificador de vida segun cuantos corazones extra tiene (2 de vida = 1 corazon).
+     * Sin equipo (con el cambio d10.solo_corazones) no cuentan, pero no se pierden: vuelven al entrar a un equipo.
+     */
+    public void aplicar(Player p) {
         AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
         if (ai == null) return;
-        int n = extra(p);
+        int n = bloqueado(p) ? 0 : extra(p);
         AttributeModifier ya = ai.getModifier(kMod);
         if (ya != null && ya.getAmount() == n * 2.0) return;
         if (ya != null) ai.removeModifier(kMod);
         if (n > 0) ai.addModifier(new AttributeModifier(kMod, n * 2.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.ANY));
+        if (p.getHealth() > ai.getValue()) p.setHealth(Math.max(0.5, ai.getValue()));
     }
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void come(PlayerItemConsumeEvent e) {
         if (!esCorazon(e.getItem())) return;
         Player p = e.getPlayer();
+        if (bloqueado(p)) {
+            e.setCancelled(true);
+            Style.err(p, "Sin equipo no puedes usar Corazones Rojos.");
+            return;
+        }
         p.getPersistentDataContainer().set(kCuenta, PersistentDataType.INTEGER, extra(p) + 1);
         aplicar(p);
         Bukkit.getScheduler().runTask(pl, () -> {

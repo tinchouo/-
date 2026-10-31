@@ -91,6 +91,10 @@ public final class Cambios {
         add(new Cambio("d9.hueso", 9, "Sin polvo de hueso", false, "&7El polvo de hueso no", "&7hace crecer nada."));
         add(new Cambio("d9.esqueletos", 9, "Esqueletos armados", false, "&7Armadura como los zombies, arco Poder 1-3", "&7y flechas de daño II, levitación,", "&7ceguera o lentitud III."));
         add(new Cambio("d10.ballesteros", 10, "Esqueleto Ballestero", false, "&715% de los esqueletos: rojo (ballesta),", "&7de hielo (cohetes), wither (arco con TNT).", "&7Se mueven y solo le tiran a su objetivo."));
+        add(new Cambio("d10.solo_uhc", 10, "Solitario: modo UHC", false, "&7Sin equipo (o solo en el tuyo) no regeneras", "&7vida. Solo curan las manzanas doradas y", "&7las pociones de curación y regeneración."));
+        add(new Cambio("d10.solo_salvacion", 10, "Solitario: nadie te salva", false, "&7Sin equipo los tótems no funcionan", "&7y si morís no te pueden revivir", "&7en el altar (un admin sí)."));
+        add(new Cambio("d10.solo_corazones", 10, "Solitario: sin corazones rojos", false, "&7Sin equipo no podés comer Corazones Rojos", "&7y los que ya tenés no cuentan (máximo 10).", "&7Vuelven apenas entrás a un equipo."));
+        add(new Cambio("d10.solo_vida", 10, "Solitario: menos vida", false, "&7Sin equipo tenés un cuarto", "&7menos de vida máxima."));
         add(new Cambio("d10.minero", 10, "Zombie Minero", false, "&750 de vida, pico, 3 corazones por golpe.", "&7Te ve a través de los bloques, cava", "&7y de cerca pone TNT x2. Abajo de Y 40."));
         add(new Cambio("d11.hambre", 11, "Hambre más rápida", false, "&7El hambre baja el doble de rápido."));
         add(new Cambio("d11.nuclear_muerte", 11, "Nuclear al morir", false, "&7Al morir, 1% de que aparezca", "&7un Creeper Nuclear (aparte del eléctrico)."));

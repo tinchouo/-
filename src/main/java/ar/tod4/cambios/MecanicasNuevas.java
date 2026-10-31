@@ -102,6 +102,7 @@ final class MecanicasNuevas implements Listener {
 
     private void cadaMedioSegundo() {
         tick++;
+        if (tick % 4 == 0) soloVida();   // cada 2 segundos
         mineros();
         if (tick % 20 == 0) mineroAparece();   // cada 10 segundos
         if (tick % 2 == 0) withers();
@@ -324,6 +325,54 @@ final class MecanicasNuevas implements Listener {
         if (ar.tod4.hook.Cuyes.activo(p) || ar.tod4.hook.Gulag.participa(p.getUniqueId())) return;
         int n = pl.equipos().caidos(p.getUniqueId());
         if (n > 0) e.setDamage(e.getDamage() * (1 + n * pl.equipos().porCaido() / 100.0));
+    }
+
+    // ================================================================= solitario (sin equipo de verdad)
+
+    private boolean solo(Player p) { return pl.equipos() != null && pl.equipos().solo(p); }
+
+    /** d10.solo_uhc: no regenera sola (comida, pacifico). Las manzanas doradas y las pociones si curan. */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void soloUhc(org.bukkit.event.entity.EntityRegainHealthEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !cb.on("d10.solo_uhc") || !solo(p)) return;
+        switch (e.getRegainReason()) {
+            case SATIATED, REGEN, EATING -> e.setCancelled(true);
+            default -> { }
+        }
+    }
+
+    /** d10.solo_salvacion: el totem no te salva (lo de no revivir esta en Revivir). */
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void soloTotem(EntityResurrectEvent e) {
+        if (!(e.getEntity() instanceof Player p) || !cb.on("d10.solo_salvacion") || !solo(p)) return;
+        e.setCancelled(true);
+        ar.tod4.util.Style.raw(p, "&c✖ Tu tótem no funcionó: sin equipo, nadie te salva.");
+    }
+
+    private org.bukkit.NamespacedKey kSoloVida;
+
+    /** d10.solo_vida: un cuarto menos de vida maxima (cambios.solo_vida_porcentaje). Se saca apenas tiene equipo. */
+    private void soloVida() {
+        if (kSoloVida == null) kSoloVida = new org.bukkit.NamespacedKey(pl, "solo_vida");
+        boolean on = cb.on("d10.solo_vida");
+        double pct = c().getDouble("cambios.solo_vida_porcentaje", 25) / 100.0;
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            // d10.solo_corazones: los corazones rojos se sacan y se devuelven segun tenga equipo o no
+            if (pl.corazon() != null && !p.isDead()) pl.corazon().aplicar(p);
+            var ai = p.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+            if (ai == null) continue;
+            org.bukkit.attribute.AttributeModifier ya = null;
+            for (var m : ai.getModifiers()) if (m.getKey().equals(kSoloVida)) ya = m;
+            boolean quiere = on && !p.isDead() && solo(p);
+            if (quiere && (ya == null || Math.abs(ya.getAmount() + pct) > 1e-6)) {
+                if (ya != null) ai.removeModifier(ya);
+                ai.addModifier(new org.bukkit.attribute.AttributeModifier(kSoloVida, -pct,
+                        org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1, org.bukkit.inventory.EquipmentSlotGroup.ANY));
+                if (p.getHealth() > ai.getValue()) p.setHealth(ai.getValue());
+            } else if (!quiere && ya != null) {
+                ai.removeModifier(ya);
+            }
+        }
     }
 
     // ================================================================= d9.esqueletos: armadura, arco con Poder y flechas especiales

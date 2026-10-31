@@ -166,6 +166,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     public Momentos momentos() { return momentos; }
     public ar.tod4.clones.Clones clones() { return clones; }
     public ar.tod4.equipos.Equipos equipos() { return equipos; }
+    public ar.tod4.items.Corazon corazon() { return corazon; }
 
     // ================================================================= comandos
 

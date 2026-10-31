@@ -159,6 +159,16 @@ public final class Equipos implements Listener {
     /** Si el jugador tiene equipo. */
     public boolean tieneEquipo(UUID u) { return de.get(u) != null; }
 
+    /**
+     * Sin equipo de verdad: sin equipo, o solo en el suyo (hace falta al menos un compañero).
+     * No cuentan los OP, los cuyes ni los que estan en el Gulag. Para los cambios del solitario.
+     */
+    public boolean solo(Player p) {
+        if (p.isOp() || ar.tod4.hook.Cuyes.activo(p) || ar.tod4.hook.Gulag.participa(p.getUniqueId())) return false;
+        Equipo e = de.get(p.getUniqueId());
+        return e == null || e.miembros.size() < 2;
+    }
+
     /** Si los dos estan en el mismo equipo (y tienen uno). */
     public boolean mismoEquipo(UUID a, UUID b) {
         Equipo e = de.get(a);
