@@ -19,4 +19,7 @@ command /probarnuclear:
 		loop blocks in radius 6 of {_l}:
 			if loop-block is air:
 				add 1 to {_aire}
-		broadcast "NUCLEAR_PRUEBA chancho vivo: %{_p} is alive% | aire cerca: %{_aire}%"
+		set {_vivo} to "no"
+		if {_p} is alive:
+			set {_vivo} to "si"
+		broadcast "NUCLEAR_PRUEBA chancho vivo: %{_vivo}% | aire cerca: %{_aire}%"
