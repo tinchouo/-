@@ -45,6 +45,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private MomentosMenu momentosMenu;
     private Palo palo;
     private ar.tod4.video.Video video;
+    private ar.tod4.video.Screamer screamer;
+    private ar.tod4.alucina.Alucinacion alucinacion;
     private ar.tod4.equipos.Equipos equipos;
     private ar.tod4.mobs.Creepers creepers;
     private ar.tod4.clones.Clones clones;
@@ -69,6 +71,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         momentosMenu = new MomentosMenu(this, momentos);
         palo = new Palo(this);
         video = new ar.tod4.video.Video(this);
+        screamer = new ar.tod4.video.Screamer(this);
+        alucinacion = new ar.tod4.alucina.Alucinacion(this);
         new ar.tod4.mobs.Mobs(this);
         creepers = new ar.tod4.mobs.Creepers(this);
         equipos = new ar.tod4.equipos.Equipos(this);
@@ -93,7 +97,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         getLogger().info("TOD4 listo. Dia actual: " + dia());
     }
 
-    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video",
+    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video", "screamer", "alucinar",
             "equipo", "creeper", "clones", "totems");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
@@ -141,6 +145,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 w.setGameRule(org.bukkit.GameRule.PLAYERS_SLEEPING_PERCENTAGE, 100);
         if (misionesMenu != null) misionesMenu.cerrarTodo();
         if (video != null) video.terminarTodos();
+        if (screamer != null) screamer.terminarTodos();
         if (creepers != null) creepers.apagar();
         if (cambios != null) cambios.apagar();
         if (momentos != null) momentos.apagar();
@@ -167,6 +172,8 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     public ar.tod4.clones.Clones clones() { return clones; }
     public ar.tod4.equipos.Equipos equipos() { return equipos; }
     public ar.tod4.items.Corazon corazon() { return corazon; }
+    public ar.tod4.alucina.Alucinacion alucinacion() { return alucinacion; }
+    public ar.tod4.video.Screamer screamer() { return screamer; }
 
     // ================================================================= comandos
 
@@ -218,6 +225,26 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 if (t == null) { Style.err(s, "Jugador no encontrado."); return true; }
                 if (!video.existe(a[1])) { Style.err(s, "No existe el video &f" + a[1] + "&c (config.yml -> videos)."); return true; }
                 if (!video.reproducir(t, a[1])) Style.err(s, "Ese jugador ya está viendo un video.");
+                return true;
+            }
+            case "screamer": {
+                if (a.length < 1) { Style.info(s, "Uso: &e/tod4:screamer <jugador> [screamer]"); return true; }
+                Player t = Bukkit.getPlayerExact(a[0]);
+                if (t == null) { Style.err(s, "Jugador no encontrado."); return true; }
+                String id = a.length > 1 ? a[1] : screamer.porDefecto();
+                if (!screamer.existe(id)) { Style.err(s, "No existe el screamer &f" + id + "&c (config.yml -> screamers)."); return true; }
+                if (!screamer.tirar(t, id)) Style.err(s, "Ese jugador ya está viendo un video o un screamer.");
+                return true;
+            }
+            case "alucinar": {
+                if (a.length < 1) { Style.info(s, "Uso: &e/tod4:alucinar <jugador> [segundos] &7(0 = se le pasa)"); return true; }
+                Player t = Bukkit.getPlayerExact(a[0]);
+                if (t == null) { Style.err(s, "Jugador no encontrado."); return true; }
+                int seg = alucinacion.segundosPorDefecto();
+                if (a.length > 1) try { seg = Integer.parseInt(a[1]); } catch (NumberFormatException ex) { Style.err(s, "Los segundos tienen que ser un número."); return true; }
+                if (seg <= 0) { alucinacion.terminar(t); Style.ok(s, t.getName() + " ya no alucina."); return true; }
+                alucinacion.empezar(t, seg);
+                Style.ok(s, t.getName() + " alucina por " + seg + " s.");
                 return true;
             }
             default: return false;
@@ -347,7 +374,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (a.length == 1) {
             switch (c) {
                 case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
-                case "video": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
+                case "video": case "screamer": case "alucinar": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
                 case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); out.addAll(revivir.store().y().getStringList("muertos_gulag")); break;
@@ -361,6 +388,9 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         } else if (a.length == 2) {
             if (c.equals("alma") || c.equals("altar")) for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
             if (c.equals("video")) out.addAll(video.ids());
+            if (c.equals("screamer")) out.addAll(screamer.ids());
+            if (c.equals("alucinar")) out.addAll(List.of("30", "60", "0"));
+            if (c.equals("tod4") && a[0].equalsIgnoreCase("corazon")) { out.addAll(List.of("rojo", "amarillo", "morado")); for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); }
             if (c.equals("completar")) {
                 if (misiones.activa(Misiones.DIA) != null) out.add(misiones.activa(Misiones.DIA));
                 out.addAll(misiones.abiertas());

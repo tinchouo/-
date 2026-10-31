@@ -756,6 +756,11 @@ public final class Momentos implements Listener {
         return s + " s";
     }
 
+    /** El Corazon Morado deja la vida en 10: los corazones que un Momento le saco por un rato ya no vuelven. */
+    public void olvidarQuitados(UUID u) {
+        if (st.y().isConfigurationSection("quitados." + u)) { st.set("quitados." + u, null); st.touch(); }
+    }
+
     /** Cada segundo: descuenta el tiempo de los corazones quitados (solo a los conectados) y los devuelve al terminar. */
     private void tickCorazones() {
         ConfigurationSection s = st.y().getConfigurationSection("quitados");

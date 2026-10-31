@@ -119,7 +119,7 @@ public final class Sidebar implements Listener {
                 if (sb != null) {
                     render(p, sb);
                     if (teams) copiarTeams(sb);
-                    if (ticks % 2 == 0) { vida(sb); nametags(sb); }
+                    if (ticks % 2 == 0) { vida(p, sb); nametags(sb); }
                 }
             }
             if (ticks % 2 == 0) tab(p);
@@ -286,13 +286,27 @@ public final class Sidebar implements Listener {
         return !valor.equals(m.put(clave, valor));
     }
 
-    private void vida(Scoreboard sb) {
+    private void vida(Player viendo, Scoreboard sb) {
         Objective v = sb.getObjective("tod4_vida");
         if (v == null) return;
+        boolean loco = ar.tod4.alucina.Alucinacion.activa(viendo.getUniqueId());   // alucinando: en su tab la vida de todos salta
         for (Player t : Bukkit.getOnlinePlayers()) {
             Score s = v.getScore(t.getName());
             if (!s.isScoreSet()) enviado.computeIfAbsent(sb, k -> new HashMap<>()).remove("v:" + t.getName());
             String txt;
+            if (loco && !(t.getGameMode() == org.bukkit.GameMode.SPECTATOR && t.isOp())) {
+                org.bukkit.attribute.AttributeInstance mx = t.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                double max = mx != null ? mx.getValue() : 20;
+                double hp = rnd.nextInt(6) == 0 ? 0 : 1 + rnd.nextInt((int) Math.max(1, Math.round(max)));
+                double f = hp / Math.max(1, max);
+                txt = hp <= 0 ? "&40" : (f > 0.6 ? "&a" : f >= 0.3 ? "&e" : "&c") + corazones(hp) + "&l❤";
+                if (rnd.nextInt(4) == 0) txt += " &6+" + corazones(2 + rnd.nextInt(8)) + "&l❤";
+                int orden = (int) Math.ceil(hp);
+                cambio(sb, "v:" + t.getName(), "loco" + rnd.nextInt());
+                if (!s.isScoreSet() || s.getScore() != orden) s.setScore(orden);
+                s.numberFormat(NumberFormat.fixed(Txt.c(txt)));
+                continue;
+            }
             if (t.getGameMode() == org.bukkit.GameMode.SPECTATOR && t.isOp()) txt = "";
             else if (t.isDead() || t.getGameMode() == org.bukkit.GameMode.SPECTATOR || t.getHealth() <= 0) txt = "&40";
             else {

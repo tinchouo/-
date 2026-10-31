@@ -33,7 +33,7 @@ jobs:
       - name: Arrancar
         run: |
           cd srv
-          (sleep 100; for c in "tod4:aether_mesa" "tod4:aether_mobs" "tod4:aether_aire" "tod4:aether_caida" "tod4:aether_loot ver tier4" "tod4:aether_recargar" "tod4 recargar" "tod4:cambios" "time set 13000" "tod4:aether_reset status" "tod4eventos:agujero crear" esperar "tod4eventos:agujero estado" "tod4eventos:agujero abrir" esperar esperar "tod4eventos:agujero foto" esperar esperar "tod4eventos:agujero abrir" esperar esperar "tod4eventos:agujero estado"; do if [ "$c" = esperar ]; then sleep 10; continue; fi; echo "$c"; sleep 2; done; echo stop) | timeout 400 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
+          (sleep 100; for c in "tod4:aether_mesa" "tod4:aether_mobs" "tod4:aether_aire" "tod4:aether_caida" "tod4:aether_loot ver tier4" "tod4:aether_recargar" "tod4 recargar" "tod4:cambios" "time set 13000" "tod4:aether_reset status" "tod4eventos:agujero crear" esperar "tod4eventos:agujero estado" "tod4eventos:agujero abrir" esperar esperar "tod4eventos:agujero foto" esperar esperar "tod4eventos:agujero cerrar 1" esperar "tod4:alucinar" "tod4:alucinar nadie 5" "tod4:screamer" "tod4:screamer nadie" "tod4 corazon amarillo nadie" "tod4 corazon morado" "tod4eventos:agujero abrir" esperar esperar "tod4eventos:agujero estado"; do if [ "$c" = esperar ]; then sleep 10; continue; fi; echo "$c"; sleep 2; done; echo stop) | timeout 400 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
           M=$(grep -iE -A8 "Exception|TOD4|Aether|aether" log.txt | grep -v "Downloading\|Loading library" | head -150 | tr '\n' '#')
           echo "::warning::${M//%/%25}"
           grep -q "Done (" log.txt || { tail -40 log.txt | while IFS= read -r l; do echo "::error::${l//%/%25}"; done; exit 1; }
@@ -41,6 +41,7 @@ jobs:
           if grep -qiE "Exception|Unknown command" log.txt; then echo "::error::Hay errores"; exit 1; fi
           echo "::notice::misiones.yml despues: $(tr '\n' '#' < plugins/TOD4/misiones.yml)"
           grep -q "op_op7" plugins/TOD4/misiones.yml && grep -q "m0: 3" plugins/TOD4/misiones.yml || { echo "::error::La opcional vieja no paso a la lista"; exit 1; }
+          grep -q "zombie_alucinado" plugins/TOD4Eventos/agujero.yml || { echo "::error::Falta zombie_alucinado en agujero.yml"; exit 1; }
           echo "::notice::Arranco sin errores"
       - name: Guardar el log en la rama ci-logs
         if: always()

@@ -292,6 +292,24 @@ videos:
     ticks_por_cuadro: 2
     sonido: "lobotomia:video"
 
+# Screamers: como los videos pero sin trabar la camara (el jugador sigue jugando y la imagen se desvanece).
+# /tod4:screamer <jugador> [screamer]. Los mobs con la etiqueta tod4_screamer lo tiran al pegar.
+# Si esta seccion no esta, igual anda "pesadilla" (el del pack TOD4_screamer_corazones.zip).
+screamers:
+  pesadilla:
+    modelo: "tod4:screamer"
+    cuadros: 27
+    ticks_por_cuadro: 1
+    sonido: "tod4_screamer:screamer"
+    volumen: 1.0
+screamer_espera_seg: 20     # cada cuanto le puede volver a tocar a un mismo jugador por un mob
+
+# Alucinacion (Zombi Alucinado del Agujero, mobs con la etiqueta tod4_alucina, /tod4:alucinar):
+# el que la tiene ve la vida, el hambre y el tab cambiando al azar (es solo lo que ve).
+alucinacion:
+  segundos: 30
+  cambia_cada_ticks: 20
+
 
 # Mobs de MythicMobs + Better Model
 mobs:

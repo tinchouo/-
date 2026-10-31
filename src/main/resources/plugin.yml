@@ -36,6 +36,10 @@ commands:
     description: Palo de Retorno
   video:
     description: Reproduce un video a pantalla completa a un jugador
+  screamer:
+    description: Le tira un screamer a un jugador
+  alucinar:
+    description: Hace alucinar a un jugador (vida, hambre y tab cambiados)
   equipo:
     description: Equipos (admins)
   eq:

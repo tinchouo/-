@@ -34,34 +34,74 @@ import net.kyori.adventure.text.format.TextDecoration;
 /**
  * Corazon Rojo: se come y da un corazon de vida extra para siempre (sin tope).
  * Al morir se pierden todos los corazones extra (eso no lo dice el item, a proposito).
- * Textura: tod4:corazon (TOD4_extras.zip).
+ * Corazon Amarillo: 2 corazones amarillos (absorcion) para siempre; los golpes los gastan primero y no vuelven.
+ * Corazon Morado: deja la vida maxima en 10 corazones (lo normal) y te cura entero, tengas mas o menos.
+ * Con el cambio d10.solo_corazones, sin equipo no se puede comer ninguno de los tres.
+ * Texturas: tod4:corazon, tod4:corazon_amarillo, tod4:corazon_morado (TOD4_extras.zip).
  */
 public final class Corazon implements Listener {
     private final TOD4 pl;
-    private final NamespacedKey kItem, kCuenta, kMod;
+    private final NamespacedKey kItem, kCuenta, kMod, kAmarillo, kMorado, kAmarillos, kModAbs;
+
+    public enum Tipo { ROJO, AMARILLO, MORADO }
 
     public Corazon(TOD4 pl) {
         this.pl = pl;
         this.kItem = new NamespacedKey(pl, "corazon_rojo");
         this.kCuenta = new NamespacedKey(pl, "corazones_extra");
         this.kMod = new NamespacedKey(pl, "corazones_extra");
+        this.kAmarillo = new NamespacedKey(pl, "corazon_amarillo");
+        this.kMorado = new NamespacedKey(pl, "corazon_morado");
+        this.kAmarillos = new NamespacedKey(pl, "corazones_amarillos");
+        this.kModAbs = new NamespacedKey(pl, "corazones_amarillos");
         Bukkit.getPluginManager().registerEvents(this, pl);
     }
 
-    public ItemStack item(int cant) {
+    public ItemStack item(int cant) { return item(Tipo.ROJO, cant); }
+
+    public ItemStack item(Tipo t, int cant) {
         ItemStack it = new ItemStack(Material.APPLE, Math.max(1, cant));
         ItemMeta meta = it.getItemMeta();
-        meta.displayName(Txt.c("&c&lCorazón Rojo").decoration(TextDecoration.ITALIC, false));
-        meta.lore(List.of(
-                Txt.c("&7Comerlo te da un &ccorazón &7de vida").decoration(TextDecoration.ITALIC, false),
-                Txt.c("&7extra &fpermanente&7.").decoration(TextDecoration.ITALIC, false)));
-        meta.setItemModel(new NamespacedKey("tod4", "corazon"));
+        switch (t) {
+            case AMARILLO -> {
+                meta.displayName(Txt.c("&e&lCorazón Amarillo").decoration(TextDecoration.ITALIC, false));
+                meta.lore(List.of(
+                        Txt.c("&7Comerlo te da &e2 corazones amarillos").decoration(TextDecoration.ITALIC, false),
+                        Txt.c("&fpermanentes&7. Si te pegan, se pierden.").decoration(TextDecoration.ITALIC, false)));
+                meta.setItemModel(new NamespacedKey("tod4", "corazon_amarillo"));
+                meta.getPersistentDataContainer().set(kAmarillo, PersistentDataType.BYTE, (byte) 1);
+            }
+            case MORADO -> {
+                meta.displayName(Txt.c("&5&lCorazón Morado").decoration(TextDecoration.ITALIC, false));
+                meta.lore(List.of(
+                        Txt.c("&7Comerlo deja tu vida en &d10 corazones").decoration(TextDecoration.ITALIC, false),
+                        Txt.c("&7y te &fcura entero&7.").decoration(TextDecoration.ITALIC, false)));
+                meta.setItemModel(new NamespacedKey("tod4", "corazon_morado"));
+                meta.getPersistentDataContainer().set(kMorado, PersistentDataType.BYTE, (byte) 1);
+            }
+            default -> {
+                meta.displayName(Txt.c("&c&lCorazón Rojo").decoration(TextDecoration.ITALIC, false));
+                meta.lore(List.of(
+                        Txt.c("&7Comerlo te da un &ccorazón &7de vida").decoration(TextDecoration.ITALIC, false),
+                        Txt.c("&7extra &fpermanente&7.").decoration(TextDecoration.ITALIC, false)));
+                meta.setItemModel(new NamespacedKey("tod4", "corazon"));
+                meta.getPersistentDataContainer().set(kItem, PersistentDataType.BYTE, (byte) 1);
+            }
+        }
         FoodComponent food = meta.getFood();
         food.setCanAlwaysEat(true);
         meta.setFood(food);
-        meta.getPersistentDataContainer().set(kItem, PersistentDataType.BYTE, (byte) 1);
         it.setItemMeta(meta);
         return it;
+    }
+
+    private Tipo tipo(ItemStack it) {
+        if (it == null || !it.hasItemMeta()) return null;
+        var pdc = it.getItemMeta().getPersistentDataContainer();
+        if (pdc.has(kItem, PersistentDataType.BYTE)) return Tipo.ROJO;
+        if (pdc.has(kAmarillo, PersistentDataType.BYTE)) return Tipo.AMARILLO;
+        if (pdc.has(kMorado, PersistentDataType.BYTE)) return Tipo.MORADO;
+        return null;
     }
 
     private boolean esCorazon(ItemStack it) {
@@ -92,51 +132,126 @@ public final class Corazon implements Listener {
 
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void come(PlayerItemConsumeEvent e) {
-        if (!esCorazon(e.getItem())) return;
+        Tipo t = tipo(e.getItem());
+        if (t == null) return;
         Player p = e.getPlayer();
         if (bloqueado(p)) {
             e.setCancelled(true);
-            Style.err(p, "Sin equipo no puedes usar Corazones Rojos.");
+            Style.err(p, "Sin equipo no puedes usar Corazones " + (t == Tipo.ROJO ? "Rojos" : t == Tipo.AMARILLO ? "Amarillos" : "Morados") + ".");
             return;
         }
-        p.getPersistentDataContainer().set(kCuenta, PersistentDataType.INTEGER, extra(p) + 1);
-        aplicar(p);
-        Bukkit.getScheduler().runTask(pl, () -> {
-            AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
-            if (ai != null) p.setHealth(Math.min(ai.getValue(), p.getHealth() + 2));
-        });
+        switch (t) {
+            case ROJO -> {
+                p.getPersistentDataContainer().set(kCuenta, PersistentDataType.INTEGER, extra(p) + 1);
+                aplicar(p);
+                Bukkit.getScheduler().runTask(pl, () -> {
+                    AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
+                    if (ai != null) p.setHealth(Math.min(ai.getValue(), p.getHealth() + 2));
+                });
+                p.getWorld().spawnParticle(Particle.HEART, p.getLocation().add(0, 1.8, 0), 8, 0.4, 0.3, 0.4, 0);
+            }
+            case AMARILLO -> {
+                Bukkit.getScheduler().runTask(pl, () -> {
+                    double n = amarillos(p) + 4;   // 2 corazones
+                    p.getPersistentDataContainer().set(kAmarillos, PersistentDataType.DOUBLE, n);
+                    aplicarAmarillos(p);
+                    p.setAbsorptionAmount(Math.min(topeAbs(p), p.getAbsorptionAmount() + 4));
+                });
+                p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(0, 1.2, 0), 25, 0.4, 0.5, 0.4, 0,
+                        new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 210, 40), 1.3f));
+            }
+            case MORADO -> {
+                Bukkit.getScheduler().runTask(pl, () -> morado(p));
+                p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(0, 1.2, 0), 25, 0.4, 0.5, 0.4, 0,
+                        new Particle.DustOptions(org.bukkit.Color.fromRGB(170, 60, 230), 1.3f));
+            }
+        }
         p.getWorld().playSound(p.getLocation(), Sound.ENTITY_PLAYER_BURP, SoundCategory.PLAYERS, 0.8f, 0.8f);
-        p.playSound(p.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 0.8f, 1.6f);
-        p.getWorld().spawnParticle(Particle.HEART, p.getLocation().add(0, 1.8, 0), 8, 0.4, 0.3, 0.4, 0);
+        p.playSound(p.getLocation(), Sound.BLOCK_BEACON_POWER_SELECT, SoundCategory.PLAYERS, 0.8f, t == Tipo.MORADO ? 1.0f : 1.6f);
     }
 
-    /** Al morir se pierden. */
+    // ================================================================= amarillos
+
+    /** Cuanta absorcion (en vida, 2 = 1 corazon) le queda de los corazones amarillos. */
+    public double amarillos(Player p) { return p.getPersistentDataContainer().getOrDefault(kAmarillos, PersistentDataType.DOUBLE, 0.0); }
+
+    private double topeAbs(Player p) {
+        AttributeInstance ai = p.getAttribute(Attribute.MAX_ABSORPTION);
+        return ai == null ? 0 : ai.getValue();
+    }
+
+    /** El tope de absorcion sube lo que quedan de amarillos (si no, el juego los borra). */
+    private void aplicarAmarillos(Player p) {
+        AttributeInstance ai = p.getAttribute(Attribute.MAX_ABSORPTION);
+        if (ai == null) return;
+        double n = amarillos(p);
+        AttributeModifier ya = ai.getModifier(kModAbs);
+        if (ya != null && ya.getAmount() == n) return;
+        if (ya != null) ai.removeModifier(kModAbs);
+        if (n > 0) ai.addModifier(new AttributeModifier(kModAbs, n, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.ANY));
+    }
+
+    /** Despues de un golpe: los amarillos que se gastaron ya no vuelven. */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void golpe(org.bukkit.event.entity.EntityDamageEvent e) {
+        if (!(e.getEntity() instanceof Player p) || amarillos(p) <= 0) return;
+        Bukkit.getScheduler().runTask(pl, () -> {
+            if (!p.isOnline() || p.isDead()) return;
+            double n = amarillos(p), abs = p.getAbsorptionAmount();
+            if (abs >= n) return;
+            if (abs <= 0.01) p.getPersistentDataContainer().remove(kAmarillos);
+            else p.getPersistentDataContainer().set(kAmarillos, PersistentDataType.DOUBLE, abs);
+            aplicarAmarillos(p);
+        });
+    }
+
+    // ================================================================= morado
+
+    /** Vida maxima en 10 corazones (sin rojos, sin lo que le hayan sacado) y la vida llena. */
+    public void morado(Player p) {
+        p.getPersistentDataContainer().remove(kCuenta);
+        aplicar(p);
+        if (pl.momentos() != null) pl.momentos().olvidarQuitados(p.getUniqueId());
+        AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
+        if (ai == null) return;
+        ai.setBaseValue(20.0);
+        p.setHealth(Math.max(0.5, ai.getValue()));
+    }
+
+    /** Al morir se pierden (los rojos y los amarillos). */
     @EventHandler(priority = EventPriority.MONITOR)
     public void muere(PlayerDeathEvent e) {
         Player p = e.getEntity();
+        if (amarillos(p) > 0) { p.getPersistentDataContainer().remove(kAmarillos); aplicarAmarillos(p); }
         if (extra(p) == 0) return;
         p.getPersistentDataContainer().remove(kCuenta);
         aplicar(p);
     }
 
     @EventHandler
-    public void entra(PlayerJoinEvent e) { aplicar(e.getPlayer()); }
+    public void entra(PlayerJoinEvent e) { aplicar(e.getPlayer()); aplicarAmarillos(e.getPlayer()); }
 
     @EventHandler
-    public void reaparece(PlayerRespawnEvent e) { Bukkit.getScheduler().runTask(pl, () -> aplicar(e.getPlayer())); }
+    public void reaparece(PlayerRespawnEvent e) { Bukkit.getScheduler().runTask(pl, () -> { aplicar(e.getPlayer()); aplicarAmarillos(e.getPlayer()); }); }
 
-    /** /tod4 corazon [jugador] [cantidad] */
+    /** /tod4 corazon [rojo|amarillo|morado] [jugador] [cantidad] */
     public void cmd(CommandSender s, String[] a) {
+        Tipo t = Tipo.ROJO;
+        int i = 1;
+        if (a.length > 1) {
+            for (Tipo x : Tipo.values()) if (x.name().equalsIgnoreCase(a[1])) { t = x; i = 2; }
+        }
         Player dest = s instanceof Player p ? p : null;
         int cant = 1;
-        if (a.length > 1) {
-            Player o = Bukkit.getPlayerExact(a[1]);
+        if (a.length > i) {
+            Player o = Bukkit.getPlayerExact(a[i]);
             if (o != null) dest = o;
-            else try { cant = Integer.parseInt(a[1]); } catch (NumberFormatException ex) { Style.err(s, "No encontré a " + a[1] + "."); return; }
+            else try { cant = Integer.parseInt(a[i]); } catch (NumberFormatException ex) { Style.err(s, "No encontré a " + a[i] + "."); return; }
         }
-        if (a.length > 2) try { cant = Integer.parseInt(a[2]); } catch (NumberFormatException ignored) { }
-        if (dest == null) { Style.err(s, "Uso: &e/tod4 corazon [jugador] [cantidad]"); return; }
-        for (ItemStack sobra : dest.getInventory().addItem(item(cant)).values()) dest.getWorld().dropItem(dest.getLocation(), sobra);
-        Style.ok(s, "Le di " + cant + " Corazón Rojo a " + dest.getName() + ".");
+        if (a.length > i + 1) try { cant = Integer.parseInt(a[i + 1]); } catch (NumberFormatException ignored) { }
+        if (dest == null) { Style.err(s, "Uso: &e/tod4 corazon [rojo|amarillo|morado] [jugador] [cantidad]"); return; }
+        for (ItemStack sobra : dest.getInventory().addItem(item(t, cant)).values()) dest.getWorld().dropItem(dest.getLocation(), sobra);
+        String nom = t == Tipo.ROJO ? "Corazón Rojo" : t == Tipo.AMARILLO ? "Corazón Amarillo" : "Corazón Morado";
+        Style.ok(s, "Le di " + cant + " " + nom + " a " + dest.getName() + ".");
     }
 }

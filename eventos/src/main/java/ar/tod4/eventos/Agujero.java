@@ -154,6 +154,14 @@ final class Agujero implements Listener {
                 pl.getLogger().info("[Agujero] agujero.yml actualizado (el anterior quedó en agujero_viejo.yml)");
             }
         }
+        // el Zombi Alucinado se agrega una sola vez a la lista de mobs (si despues lo sacan, no vuelve)
+        if (!d.y().getBoolean("alucinado_agregado", false)) {
+            d.set("alucinado_agregado", true);
+            if (y.isConfigurationSection("mobs.tipos") && !y.contains("mobs.tipos.zombie_alucinado")) {
+                y.set("mobs.tipos.zombie_alucinado", 4);
+                try { y.save(f); pl.getLogger().info("[Agujero] Agregué zombie_alucinado (4) a mobs.tipos de agujero.yml"); } catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar agujero.yml: " + ex); }
+            }
+        }
         linea = null;
         long s = y.getLong("semilla", 2026);
         if (gen == null || s != semillaGen) {
@@ -166,6 +174,7 @@ final class Agujero implements Listener {
 
     void apagar() {
         if (barra != null) barra.removeAll();
+        for (BossBar b : barrasLocas.values()) b.removeAll();
         if (cartel != null) cartel.remove();
         if (cartel2 != null) cartel2.remove();
         guardarFotoYa();
@@ -431,8 +440,41 @@ final class Agujero implements Listener {
         mobs();
     }
 
+    // ================================================================= el tiempo, alucinando
+
+    /** Los que alucinan (TOD4 les pone la marca tod4_alucina) ven su propia barra con el tiempo saltando al azar. */
+    private final Map<UUID, BossBar> barrasLocas = new HashMap<>();
+
+    private void barrasLocas() {
+        for (UUID u : new ArrayList<>(barrasLocas.keySet())) {
+            Player p = Bukkit.getPlayer(u);
+            boolean sigue = p != null && barra != null && jugando.contains(u) && p.hasMetadata("tod4_alucina");
+            if (sigue) continue;
+            barrasLocas.remove(u).removeAll();
+            if (p != null && barra != null && jugando.contains(u)) barra.addPlayer(p);
+        }
+        if (barra == null) return;
+        for (UUID u : jugando) {
+            Player p = Bukkit.getPlayer(u);
+            if (p == null || !p.hasMetadata("tod4_alucina")) continue;
+            BossBar b = barrasLocas.get(u);
+            if (b == null) {
+                barra.removePlayer(p);
+                b = Bukkit.createBossBar("", barra.getColor(), barra.getStyle());
+                b.addPlayer(p);
+                barrasLocas.put(u, b);
+            } else if (tick % 2 != 0) continue;   // cambia cada 1 s
+            long ms = (long) (rnd.nextDouble() * duracion() * 1000);
+            if (rnd.nextInt(6) == 0) ms = rnd.nextBoolean() ? 0 : (long) (duracion() * 1000) * (1 + rnd.nextInt(3));
+            String txt = rnd.nextInt(8) == 0 ? (rnd.nextBoolean() ? "&4&l¡SE DERRUMBÓ!" : "&a&l¡YA PUEDES SALIR!") : (rnd.nextBoolean() ? "&4&l" : "&c&l") + mmss(ms);
+            b.setTitle(legacy(txt));
+            b.setProgress(rnd.nextDouble());
+        }
+    }
+
     private void cada() {
         tick++;
+        barrasLocas();
         cartel();
         dibujarLinea();
         guardarFotoSiHace();
@@ -550,6 +592,8 @@ final class Agujero implements Listener {
         cerradoHasta = System.currentTimeMillis() + (long) (y.getDouble("cerrado_min", 30) * 60000);
         guardar();
         if (barra != null) { barra.removeAll(); barra = null; }
+        for (BossBar b : barrasLocas.values()) b.removeAll();
+        barrasLocas.clear();
         jugando.clear();
         for (Player p : mundo.getPlayers()) p.stopSound(y.getString("musica", "tod4:agujero"), SoundCategory.RECORDS);
         for (Entity en : mundo.getEntities()) if (en.getScoreboardTags().contains(MOB)) en.remove();
@@ -558,22 +602,37 @@ final class Agujero implements Listener {
             o.sendMessage(c("&4☠ &7El Agujero del Infierno se derrumbó. Se reconstruye en &f" + mmss(cerradoHasta - System.currentTimeMillis()) + "&7."));
     }
 
-    /** Tapa la linea: una pared de escombros justo afuera de la sala de entrada. */
+    /**
+     * Tapa la linea: una pared de escombros justo afuera de la sala de entrada, solo en los huecos de la cueva generada
+     * (el tunel que va para adentro). Lo que cavo un admin a mano (la subida de salida, por ejemplo) no se tapa.
+     */
     private void pared() {
         CuevaGen.Sala e = gen.entrada;
         double r0 = radioLinea(), r1 = r0 + 2.5;
         Material[] esc = {Material.COBBLED_DEEPSLATE, Material.COBBLED_DEEPSLATE, Material.TUFF, Material.COBBLESTONE, Material.ANDESITE};
         int R = (int) Math.ceil(r1) + 1;
+        Map<Long, short[]> forma = new HashMap<>();
         for (int dx = -R; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
             double h = Math.hypot(dx + 0.5, dz + 0.5);
             if (h < r0 || h > r1) continue;
             for (int dy = -3; dy <= 12; dy++) {
-                Block b = mundo.getBlockAt((int) Math.floor(e.x) + dx, (int) Math.floor(e.piso) + dy, (int) Math.floor(e.z) + dz);
+                int x = (int) Math.floor(e.x) + dx, yy = (int) Math.floor(e.piso) + dy, z = (int) Math.floor(e.z) + dz;
+                if (!huecoGenerado(forma, x, yy, z)) continue;
+                Block b = mundo.getBlockAt(x, yy, z);
                 if (b.isPassable() && !protegido(b)) b.setType(esc[rnd.nextInt(esc.length)], false);
             }
         }
         mundo.playSound(sala(mundo), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 2f, 0.4f);
         mundo.spawnParticle(Particle.EXPLOSION, sala(mundo).add(0, 2, 6), 6, 2, 2, 2);
+    }
+
+    /** true = en la cueva generada (sin lo que se edito a mano) ese bloque es hueco. */
+    private boolean huecoGenerado(Map<Long, short[]> cache, int x, int yy, int z) {
+        if (yy < CuevaGen.MIN_Y || yy > CuevaGen.MAX_Y) return false;
+        int cx = x >> 4, cz = z >> 4;
+        short[] c = cache.computeIfAbsent(((long) cx << 32) ^ (cz & 0xffffffffL), k -> gen.chunk(cx, cz));
+        short v = c[(yy - CuevaGen.MIN_Y) * 256 + (z & 15) * 16 + (x & 15)];
+        return v == CuevaGen.AIRE || v >= CuevaGen.PUNTA_ABAJO;
     }
 
     // ================================================================= mobs
@@ -685,6 +744,8 @@ final class Agujero implements Listener {
             if (tipo.equalsIgnoreCase("mm:BombaVoladora")) en.teleport(l.clone().add(0, 3, 0));
         } else if (tipo.equalsIgnoreCase("zombie_tanque")) {
             en = tanque(l);
+        } else if (tipo.equalsIgnoreCase("zombie_alucinado")) {
+            en = alucinado(l);
         } else if (tipo.startsWith("creeper:")) {
             en = creeper(tipo.substring(8), l);
             if (en == null) { pl.getLogger().warning("[Agujero] TOD4 no hizo aparecer el creeper " + tipo.substring(8)); return; }
@@ -696,6 +757,34 @@ final class Agujero implements Listener {
         en.addScoreboardTag(MOB);
         if (tipo.equalsIgnoreCase("mm:BreezeOld")) en.addScoreboardTag("breeze_old");
         if (en instanceof LivingEntity le) le.setRemoveWhenFarAway(false);
+    }
+
+    /**
+     * Zombi Alucinado: un zombi mas fuerte que al pegarte te hace alucinar (TOD4: vida, hambre, tab y el tiempo de aca).
+     * Si MythicMobs tiene "ZombieAlucinado" (ZombieAlucinado.yml, ahi se le pone el disguise) sale ese; si no, uno de aca.
+     * Los dos llevan la etiqueta tod4_alucina, que es lo que mira TOD4.
+     */
+    private Entity alucinado(Location l) {
+        Entity en = mm(y.getString("zombie_alucinado.mythicmobs", "ZombieAlucinado"), l);
+        if (en == null) {
+            en = mundo.spawn(l, org.bukkit.entity.Zombie.class, z -> {
+                z.setAdult();
+                var hp = z.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                if (hp != null) hp.setBaseValue(y.getDouble("zombie_alucinado.vida", 40));
+                z.setHealth(y.getDouble("zombie_alucinado.vida", 40));
+                var dmg = z.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+                if (dmg != null) dmg.setBaseValue(y.getDouble("zombie_alucinado.danio", 5));
+                var vel = z.getAttribute(org.bukkit.attribute.Attribute.MOVEMENT_SPEED);
+                if (vel != null) vel.setBaseValue(y.getDouble("zombie_alucinado.velocidad", 0.28));
+                var kb = z.getAttribute(org.bukkit.attribute.Attribute.KNOCKBACK_RESISTANCE);
+                if (kb != null) kb.setBaseValue(0.4);
+                z.getEquipment().clear();
+                z.setShouldBurnInDay(false);
+                z.setCanPickupItems(false);
+            });
+        }
+        en.addScoreboardTag("tod4_alucina");
+        return en;
     }
 
     /** Zombi para tanquear: mucha vida, armadura de hierro, casi no lo empujas. No suelta la armadura. */
@@ -905,6 +994,8 @@ final class Agujero implements Listener {
         if (mundo == null || estado == Estado.RECONSTRUYENDO) return;
         estado = Estado.RECONSTRUYENDO;
         if (barra != null) { barra.removeAll(); barra = null; }
+        for (BossBar b : barrasLocas.values()) b.removeAll();
+        barrasLocas.clear();
         jugando.clear();
         d.set("en_curso", false);
         cargarFoto();

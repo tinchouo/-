@@ -103,6 +103,7 @@ mobs:
     "creeper:calamar": 6
     "mm:enderzombie": 5
     "zombie_tanque": 4          # zombi con mucha vida y armadura de hierro (para tanquear)
+    "zombie_alucinado": 4       # al pegarte, por 30 s ves la vida, el hambre, el tab y el tiempo cambiados
     "minecraft:zombie": 3
     "minecraft:skeleton": 6
     "mm:BreezeOld": 3
@@ -122,6 +123,14 @@ mobs:
       cantidad: 1
       tipos:
         "creeper:nuclear": 1
+
+# el Zombi Alucinado (zombie_alucinado): si MythicMobs tiene este mob, sale ese (ahi va el disguise);
+# si no, sale un zombi comun con estos valores. Los segundos de la alucinacion van en el config.yml de TOD4.
+zombie_alucinado:
+  mythicmobs: "ZombieAlucinado"
+  vida: 40
+  danio: 5
+  velocidad: 0.28
 
 # el zombi para tanquear (zombie_tanque)
 zombie_tanque:
