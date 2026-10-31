@@ -154,7 +154,7 @@ on right click on pig:
 	set {-cnr::%{_id}%::armado} to true
 	execute console command "mm signal %{_id}% armar"
 	set {_bar} to "tod4:cnr_%{_id}%"
-	execute console command "bossbar add %{_bar}% """""
+	execute console command "bossbar add %{_bar}% {""text"":""☢ CREEPER NUCLEAR ☢"",""color"":""yellow"",""bold"":true}"
 	execute console command "bossbar set %{_bar}% color yellow"
 	execute console command "bossbar set %{_bar}% style notched_10"
 	execute console command "bossbar set %{_bar}% max {@cuenta}"
@@ -207,7 +207,7 @@ function explotarNuclear(l: location, causa: entity):
 	# los demas mobs cerca mueren
 	loop all living entities in radius {@radio-mortal} of {_l}:
 		if loop-entity is not a player:
-			if loop-entity is not {_causa}:
+			if "%uuid of loop-entity%" is not "%uuid of {_causa}%":
 				damage loop-entity by 100
 	crater({_l})
 	hongo({_l})
