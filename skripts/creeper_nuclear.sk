@@ -155,5 +155,6 @@ on right click on pig:
 
 # Inmortal: no le entra ningun dano (ni la explosion, ni caidas, ni golpes)
 on damage of pig:
-	if "%name of victim%" contains "{@nombre}":
+	set {_n} to name of victim
+	if {_n} contains "{@nombre}":
 		cancel the event
