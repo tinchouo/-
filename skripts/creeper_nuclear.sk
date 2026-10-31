@@ -2,8 +2,9 @@
 #
 # CLICK DERECHO RAPIDO sobre el Creeper Nuclear  = montarse. Conduces con WASD hacia donde MIRAS; Shift para bajarte.
 # MANTENER click derecho 5 s sobre el Creeper    = arma la bomba -> cuenta atras -> explosion.
-# La cuenta (la barra de arriba con el tiempo y los sonidos) y la explosion son las del Creeper Nuclear de TOD4
-# (/tod4 nuclear). Es inmortal: no le entra ningun dano y queda despues de explotar (se puede volver a armar).
+# La cuenta (la barra de arriba con el tiempo y los sonidos tod4:creeper.nuclear) y la explosion son como las del
+# Creeper Nuclear: crater, mortal hasta 22 bloques, dano hasta 40, veneno, fuego y hongo de humo. Todo en este script.
+# Es inmortal: no le entra ningun dano y queda despues de explotar (se puede volver a armar).
 # Si sueltas despues de ~1 s y antes de los 5 s, se cancela el armado.
 # Requiere Skript 2.10+ y Minecraft 1.21.2+ (teclas WASD) y NO depende de ModelEngine/BetterModel para montar.
 
@@ -12,6 +13,11 @@ options:
 	tiempo-mantener: 5
 	# segundos de la cuenta regresiva (la barra de arriba) hasta que explota
 	cuenta: 10
+	# la explosion (como la del Creeper Nuclear)
+	radio-mortal: 22
+	radio-dano: 40
+	radio-crater: 15
+	veneno-seg: 10
 	velocidad: 0.28
 	debug: 1
 	giro: 25
@@ -142,15 +148,36 @@ on right click on pig:
 			set {_resto} to ({_total} - {_paso}) / 10
 			send action bar "§e☢ Armando bomba nuclear §8[%{_barra}%§8] §7%{_resto}%s" to {_p}
 
-	# ---------- Armado: la cuenta y la explosion del Creeper Nuclear (las hace TOD4) ----------
+	# ---------- Armado: cuenta regresiva con la barra de arriba (como el Creeper Nuclear) ----------
 	delete {-cnr::%{_id}%::activo}
 	delete {-cnr::%{_id}%::ultimo}
 	set {-cnr::%{_id}%::armado} to true
 	execute console command "mm signal %{_id}% armar"
-	execute console command "tod4 nuclear %{_id}% {@cuenta}"
+	set {_bar} to "tod4:cnr_%{_id}%"
+	execute console command "bossbar add %{_bar}% """""
+	execute console command "bossbar set %{_bar}% color yellow"
+	execute console command "bossbar set %{_bar}% style notched_10"
+	execute console command "bossbar set %{_bar}% max {@cuenta}"
+	play sound "entity.creeper.primed" with volume 3 and pitch 0.5 at {_pig}
+	play sound "block.beacon.activate" with volume 4 and pitch 0.6 at {_pig}
+	loop {@cuenta} times:
+		set {_n} to {@cuenta} - loop-number + 1
+		execute console command "bossbar set %{_bar}% name {""text"":""☢ CREEPER NUCLEAR ☢  %{_n}%s"",""color"":""yellow"",""bold"":true}"
+		execute console command "bossbar set %{_bar}% value %{_n}%"
+		execute console command "execute at %{_id}% run bossbar set %{_bar}% players @a[distance=..80]"
+		# un sonido por segundo: count1 (10-7), count2 (6-3), count4 (2-1)
+		if {_n} >= 7:
+			set {_snd} to "count1"
+		else if {_n} >= 3:
+			set {_snd} to "count2"
+		else:
+			set {_snd} to "count4"
+		execute console command "execute at %{_id}% run playsound tod4:creeper.nuclear.%{_snd}% hostile @a ~ ~ ~ 5 1"
+		wait 1 second
+	execute console command "bossbar remove %{_bar}%"
+	explotarNuclear(location of {_pig}, {_pig})
 	# cuando ya exploto, se puede volver a armar
-	wait {@cuenta} seconds
-	wait 10 ticks
+	wait 1 second
 	delete {-cnr::%{_id}%::*}
 
 # Inmortal: no le entra ningun dano (ni la explosion, ni caidas, ni golpes)
@@ -158,3 +185,115 @@ on damage of pig:
 	set {_n} to name of victim
 	if {_n} contains "{@nombre}":
 		cancel the event
+
+# ===================================================================== la explosion nuclear
+
+function explotarNuclear(l: location, causa: entity):
+	set {_w} to world of {_l}
+	create an explosion of force 6 at {_l}
+	play sound "entity.generic.explode" with volume 16 and pitch 0.5 at {_l}
+	play sound "entity.lightning_bolt.thunder" with volume 16 and pitch 0.6 at {_l}
+	# jugadores: mortal hasta radio-mortal (solo salva un totem), despues dano que baja hasta radio-dano; y veneno
+	loop all players in radius {@radio-dano} of {_l}:
+		if gamemode of loop-player is survival or adventure:
+			set {_d} to distance between loop-player and {_l}
+			if {_d} <= {@radio-mortal}:
+				set {_dano} to 400 + 400 * (1 - {_d} / {@radio-mortal})
+			else:
+				set {_dano} to 4 + 20 * (1 - ({_d} - {@radio-mortal}) / ({@radio-dano} - {@radio-mortal}))
+			damage loop-player by {_dano} / 2
+			if loop-player is alive:
+				apply poison of tier 3 to loop-player for {@veneno-seg} seconds
+	# los demas mobs cerca mueren
+	loop all living entities in radius {@radio-mortal} of {_l}:
+		if loop-entity is not a player:
+			if loop-entity is not {_causa}:
+				damage loop-entity by 100
+	crater({_l})
+	hongo({_l})
+
+# Crater irregular (mas hondo que alto), de a dos capas por tick para no trabar el server; despues fuego alrededor.
+function crater(l: location):
+	set {_R} to {@radio-crater}
+	set {_abajo} to round({_R} * 0.75)
+	set {_arriba} to round({_R} * 0.5)
+	set {_f1} to random number between 0 and 360
+	set {_f2} to random number between 0 and 360
+	set {_f3} to random number between 0 and 360
+	set {_cx} to x-coordinate of {_l}
+	set {_cy} to y-coordinate of {_l}
+	set {_cz} to z-coordinate of {_l}
+	set {_w} to world of {_l}
+	set {_dy} to {_arriba}
+	set {_capa} to 0
+	while {_dy} >= (0 - {_abajo}):
+		if {_dy} >= 0:
+			set {_ry} to {_arriba}
+		else:
+			set {_ry} to {_abajo}
+		set {_dx} to 0 - {_R}
+		while {_dx} <= {_R}:
+			set {_dz} to 0 - {_R}
+			while {_dz} <= {_R}:
+				set {_q} to (({_dx} * {_dx}) + ({_dz} * {_dz})) / ({_R} * {_R}) + ({_dy} * {_dy}) / ({_ry} * {_ry})
+				if {_q} <= 1:
+					set {_a} to atan2({_dx}, {_dz})
+					set {_borde} to 0.82 + 0.1 * sin({_a} * 3 + {_f1}) + 0.06 * sin({_a} * 7 + {_f2}) + 0.04 * sin({_dy} * 40 + {_f3})
+					if {_q} <= {_borde} * {_borde}:
+						set {_b} to block at location({_cx} + {_dx}, {_cy} + {_dy}, {_cz} + {_dz}, {_w})
+						if {_b} is not air:
+							if {_b} is not water or lava or bedrock or barrier or obsidian or crying obsidian or reinforced deepslate or end portal frame or end portal or end gateway or command block or chain command block or repeating command block or structure block or jigsaw block or respawn anchor or ancient debris or netherite block or enchanting table or anvil or player head or player wall head:
+								if {_b} is chest or trapped chest or barrel or furnace or blast furnace or smoker or hopper or dispenser or dropper or any shulker box:
+									break {_b} naturally
+								else:
+									set block at {_b} to air
+				add 1 to {_dz}
+			add 1 to {_dx}
+		subtract 1 from {_dy}
+		add 1 to {_capa}
+		if mod({_capa}, 2) is 0:
+			wait 1 tick
+	fuego({_l}, {@radio-mortal})
+
+function fuego(l: location, radio: number):
+	set {_w} to world of {_l}
+	loop ({_radio} * {_radio}) times:
+		chance of 35%:
+			set {_a} to random number between 0 and 360
+			set {_d} to sqrt(random number between 0 and 1) * {_radio}
+			set {_x} to (x-coordinate of {_l}) + cos({_a}) * {_d}
+			set {_z} to (z-coordinate of {_l}) + sin({_a}) * {_d}
+			set {_y} to (y-coordinate of {_l}) + 8
+			loop 22 times:
+				set {_b} to block at location({_x}, {_y}, {_z}, {_w})
+				if {_b} is solid:
+					set {_arriba} to block at location({_x}, {_y} + 1, {_z}, {_w})
+					if {_arriba} is air:
+						set block at {_arriba} to fire
+					exit loop
+				subtract 1 from {_y}
+
+# Hongo de humo: columna que sube y un sombrero que se abre arriba (como el del Creeper Nuclear).
+function hongo(l: location):
+	loop 120 times:
+		set {_t} to loop-value-1
+		set {_h} to min(30, {_t} * 0.55)
+		set {_k} to 0
+		while {_k} < {_h}:
+			play 2 campfire signal smoke at {_l} ~ vector(0, {_k}, 0)
+			add 2.5 to {_k}
+		set {_rr} to min(13, 3 + {_t} * 0.14)
+		loop 18 times:
+			set {_a} to loop-value-2 * 20 + {_t} * 3
+			set {_c} to {_l} ~ vector(cos({_a}) * {_rr}, {_h} + 2 + sin({_a} * 3) * 1.2, sin({_a}) * {_rr})
+			play 3 campfire signal smoke at {_c}
+			play 2 large smoke at {_c}
+		play 10 cloud at {_l} ~ vector(0, {_h} + 3, 0)
+		if {_t} < 25:
+			set {_br} to {_t} * 1.4
+			loop 24 times:
+				set {_a} to loop-value-2 * 15
+				play 1 cloud at {_l} ~ vector(cos({_a}) * {_br}, 0.5, sin({_a}) * {_br})
+			if mod({_t}, 5) is 0:
+				play 1 explosion emitter at {_l} ~ vector(0, {_h}, 0)
+		wait 2 ticks
