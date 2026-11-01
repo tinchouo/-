@@ -92,10 +92,6 @@ public final class Phantom implements Listener {
             log("le pego a " + p.getName() + (lejos == null ? " (no encontre lugar para irse)" : " y se fue a " + lejos.getBlockX() + " " + lejos.getBlockY() + " " + lejos.getBlockZ()));
             // y vuelve
             Bukkit.getScheduler().runTaskLater(pl, () -> volver(m, p), Math.max(1L, (long) (d("vuelve_seg", 4) * 20)));
-            if (pl.getConfig().getBoolean("phantom.debug", false))
-                for (int t = 10; t < d("vuelve_seg", 4) * 20; t += 10) {
-                    Bukkit.getScheduler().runTaskLater(pl, () -> log("  esperando en " + m.getLocation().toVector()), t);
-                }
         });
     }
 
