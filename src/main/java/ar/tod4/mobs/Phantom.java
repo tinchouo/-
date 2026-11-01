@@ -91,6 +91,10 @@ public final class Phantom implements Listener {
             log("le pego a " + p.getName() + (lejos == null ? " (no encontre lugar para irse)" : " y se fue a " + lejos.getBlockX() + " " + lejos.getBlockY() + " " + lejos.getBlockZ()));
             // y vuelve
             Bukkit.getScheduler().runTaskLater(pl, () -> volver(m, p), Math.max(1L, (long) (d("vuelve_seg", 4) * 20)));
+            if (pl.getConfig().getBoolean("phantom.debug", false))
+                for (int t = 10; t < d("vuelve_seg", 4) * 20; t += 10) {
+                    Bukkit.getScheduler().runTaskLater(pl, () -> log("  esperando en " + m.getLocation().toVector() + " aware=" + m.isAware()), t);
+                }
         });
     }
 
@@ -198,7 +202,15 @@ public final class Phantom implements Listener {
     /** El enderman no se teletransporta por su cuenta (solo cuando lo manda esto). */
     @EventHandler(ignoreCancelled = true)
     public void tele(EntityTeleportEvent e) {
-        if (!moviendo && es(e.getEntity())) e.setCancelled(true);
+        if (!moviendo && es(e.getEntity())) {
+            e.setCancelled(true);
+            log("cancele un teletransporte del juego a " + (e.getTo() == null ? "?" : e.getTo().toVector()));
+        }
+    }
+
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void teleVer(EntityTeleportEvent e) {
+        if (es(e.getEntity()) && !e.isCancelled() && !moviendo) log("se teletransporto solo (otro plugin lo dejo) a " + e.getTo());
     }
 
     /** No agarra ni deja bloques (la cueva no se toca). */
