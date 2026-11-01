@@ -83,6 +83,7 @@ public final class Phantom implements Listener {
             m.setTarget(null);
             if (m instanceof Enderman en) en.setScreaming(false);
             if (lejos != null) mover(m, lejos);
+            if (lejos != null && m.getLocation().distanceSquared(lejos) > 1) log("el teletransporte no se hizo (quedo en " + m.getLocation().toVector() + ")");
             log("le pego a " + p.getName() + (lejos == null ? " (no encontre lugar para irse)" : " y se fue a " + lejos.getBlockX() + " " + lejos.getBlockY() + " " + lejos.getBlockZ()));
             // y vuelve
             Bukkit.getScheduler().runTaskLater(pl, () -> volver(m, p), Math.max(1L, (long) (d("vuelve_seg", 4) * 20)));
@@ -90,8 +91,12 @@ public final class Phantom implements Listener {
     }
 
     private void volver(Mob m, Player p) {
-        if (!m.isValid() || !jugable(p) || !p.getWorld().equals(m.getWorld())) return;
+        if (!m.isValid() || !jugable(p) || !p.getWorld().equals(m.getWorld())) {
+            log("no vuelve (mob valido " + m.isValid() + ", jugador " + p.getName() + " jugable " + jugable(p) + ")");
+            return;
+        }
         double dist = d("vuelve_distancia", 10);
+        log("vuelve: esta a " + Math.round(m.getLocation().distance(p.getLocation())) + " bloques de " + p.getName());
         if (m.getLocation().distance(p.getLocation()) > dist + 4) {
             Location cerca = lugar(p.getLocation(), dist - 1.5, dist + 1.5, p.getLocation());
             if (cerca != null) mover(m, cerca);
