@@ -23,7 +23,9 @@ options:
 	giro: 25
 
 on right click on pig:
-	if "%name of event-entity%" does not contain "{@nombre}":
+	if name of event-entity is not set:
+		stop
+	if name of event-entity does not contain "{@nombre}":
 		stop
 	cancel the event
 	set {_pig} to event-entity
