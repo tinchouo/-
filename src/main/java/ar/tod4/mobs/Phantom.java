@@ -83,23 +83,24 @@ public final class Phantom implements Listener {
             m.setTarget(null);
             // se queda quieto donde se fue hasta que le toque volver (si no, vuelve caminando enseguida)
             m.getPathfinder().stopPathfinding();
-            m.setAware(false);
+            m.setAI(false);          // sin IA no se mueve nada (con setAware seguia el impulso de cuando corria)
             quieto(m, true);
             if (m instanceof Enderman en) en.setScreaming(false);
             if (lejos != null) mover(m, lejos);
+            m.setVelocity(new Vector());
             if (lejos != null && m.getLocation().distanceSquared(lejos) > 1) log("el teletransporte no se hizo (quedo en " + m.getLocation().toVector() + ")");
             log("le pego a " + p.getName() + (lejos == null ? " (no encontre lugar para irse)" : " y se fue a " + lejos.getBlockX() + " " + lejos.getBlockY() + " " + lejos.getBlockZ()));
             // y vuelve
             Bukkit.getScheduler().runTaskLater(pl, () -> volver(m, p), Math.max(1L, (long) (d("vuelve_seg", 4) * 20)));
             if (pl.getConfig().getBoolean("phantom.debug", false))
                 for (int t = 10; t < d("vuelve_seg", 4) * 20; t += 10) {
-                    Bukkit.getScheduler().runTaskLater(pl, () -> log("  esperando en " + m.getLocation().toVector() + " aware=" + m.isAware()), t);
+                    Bukkit.getScheduler().runTaskLater(pl, () -> log("  esperando en " + m.getLocation().toVector()), t);
                 }
         });
     }
 
     private void volver(Mob m, Player p) {
-        if (m.isValid()) { m.setAware(true); quieto(m, false); }
+        if (m.isValid()) { m.setAI(true); quieto(m, false); }
         if (!m.isValid() || !jugable(p) || !p.getWorld().equals(m.getWorld())) {
             log("no vuelve (mob valido " + m.isValid() + ", jugador " + p.getName() + " jugable " + jugable(p) + ")");
             return;
