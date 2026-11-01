@@ -81,6 +81,7 @@ public final class Phantom implements Listener {
             // se va lejos
             Location lejos = lugar(m.getLocation(), d("lejos_min", 18), d("lejos_max", 26), p.getLocation());
             m.setTarget(null);
+            m.setAware(false);   // se queda quieto donde se fue hasta que le toque volver (si no, vuelve caminando enseguida)
             if (m instanceof Enderman en) en.setScreaming(false);
             if (lejos != null) mover(m, lejos);
             if (lejos != null && m.getLocation().distanceSquared(lejos) > 1) log("el teletransporte no se hizo (quedo en " + m.getLocation().toVector() + ")");
@@ -91,6 +92,7 @@ public final class Phantom implements Listener {
     }
 
     private void volver(Mob m, Player p) {
+        if (m.isValid()) m.setAware(true);
         if (!m.isValid() || !jugable(p) || !p.getWorld().equals(m.getWorld())) {
             log("no vuelve (mob valido " + m.isValid() + ", jugador " + p.getName() + " jugable " + jugable(p) + ")");
             return;
