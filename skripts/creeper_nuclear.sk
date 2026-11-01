@@ -2,7 +2,7 @@
 #
 # CLICK DERECHO RAPIDO sobre el Creeper Nuclear  = montarse. Conduces con WASD hacia donde MIRAS; Shift para bajarte.
 # MANTENER click derecho 5 s sobre el Creeper    = arma la bomba -> cuenta atras -> explosion.
-# La cuenta dura 1 minuto (la barra de arriba con el tiempo y los sonidos tod4:creeper.nuclear, para todos hasta 500 bloques).
+# La cuenta dura 1 minuto: la barra de arriba con el tiempo y los sonidos tod4:creeper.nuclear los ven y escuchan TODOS los jugadores.
 # La explosion NO rompe nada: mata a todos los jugadores (supervivencia/aventura) que esten a 500 bloques o menos EN ESE MUNDO
 # (el Nether y el End no cuentan: el portal no la deja pasar), mata a los mobs de al lado y deja el hongo de humo.
 # Es inmortal: no le entra ningun dano y queda despues de explotar (se puede volver a armar).
@@ -14,7 +14,7 @@ options:
 	tiempo-mantener: 5
 	# segundos de la cuenta regresiva (la barra de arriba) hasta que explota
 	cuenta: 60
-	# mueren todos los jugadores a esta distancia o menos (solo en el mismo mundo); la barra y los sonidos llegan hasta aca
+	# mueren todos los jugadores a esta distancia o menos (solo en el mismo mundo)
 	radio-muerte: 500
 	# los mobs de al lado tambien mueren
 	radio-mobs: 22
@@ -169,7 +169,8 @@ on right click on pig:
 		set {_n} to {@cuenta} - loop-number + 1
 		execute console command "bossbar set %{_bar}% name {""text"":""☢ CREEPER NUCLEAR ☢  %{_n}%s"",""color"":""yellow"",""bold"":true}"
 		execute console command "bossbar set %{_bar}% value %{_n}%"
-		execute console command "execute at %{_id}% run bossbar set %{_bar}% players @a[distance=..{@radio-muerte}]"
+		# la barra la ven todos los jugadores del server (en cualquier mundo)
+		execute console command "bossbar set %{_bar}% players @a"
 		# un sonido por segundo, en la misma proporcion que antes (de 10 s): count1 el primer 40%, count2 el siguiente 40%, count4 el ultimo 20%
 		if {_n} > {@cuenta} * 0.6:
 			set {_snd} to "count1"
@@ -177,8 +178,8 @@ on right click on pig:
 			set {_snd} to "count2"
 		else:
 			set {_snd} to "count4"
-		# fuerte hasta 80 bloques; mas lejos (hasta radio-muerte) se escucha bajito, desde donde esta el creeper
-		execute console command "execute at %{_id}% run playsound tod4:creeper.nuclear.%{_snd}% hostile @a[distance=..{@radio-muerte}] ~ ~ ~ 5 1 0.35"
+		# lo escuchan todos los jugadores del server, igual de fuerte, esten donde esten
+		execute console command "execute as @a at @s run playsound tod4:creeper.nuclear.%{_snd}% hostile @s ~ ~ ~ 1 1"
 		wait 1 second
 	execute console command "bossbar remove %{_bar}%"
 	explotarNuclear(location of {_pig}, {_pig})
@@ -199,9 +200,9 @@ function explotarNuclear(l: location, causa: entity):
 	force draw 4 explosion emitter particles at {_l}
 	play sound "entity.generic.explode" with volume 16 and pitch 0.5 at {_l}
 	play sound "entity.lightning_bolt.thunder" with volume 16 and pitch 0.6 at {_l}
-	# la explosion se escucha fuerte en todo el radio
-	execute console command "execute at %uuid of {_causa}% run playsound minecraft:entity.generic.explode hostile @a[distance=..{@radio-muerte}] ~ ~ ~ 16 0.5 1"
-	execute console command "execute at %uuid of {_causa}% run playsound minecraft:entity.lightning_bolt.thunder hostile @a[distance=..{@radio-muerte}] ~ ~ ~ 16 0.6 1"
+	# la explosion la escuchan todos los jugadores del server
+	execute console command "execute as @a at @s run playsound minecraft:entity.generic.explode hostile @s ~ ~ ~ 1 0.5"
+	execute console command "execute as @a at @s run playsound minecraft:entity.lightning_bolt.thunder hostile @s ~ ~ ~ 1 0.6"
 	# mueren todos los jugadores (supervivencia/aventura) del mismo mundo hasta radio-muerte (el Nether/End no: es otro mundo)
 	loop all players:
 		if world of loop-player is world of {_l}:
