@@ -108,6 +108,13 @@ public final class Screamer implements Listener {
             d.setViewRange(4f);
             d.setTeleportDuration(0);
         });
+        if (!s.pantalla.isValid()) {
+            // otro plugin no dejo crear la imagen (anti-lag, limite de entidades, etc.)
+            pl.getLogger().warning("[Screamer] No se pudo crear la imagen para " + p.getName() + ": otro plugin cancelo la entidad (item_display).");
+            ultimoDiag = "&c✖ La imagen no se pudo crear (otro plugin la canceló). El sonido sí se mandó.";
+            if (!sonido.isEmpty()) p.playSound(p.getLocation(), sonido, SoundCategory.MASTER, vol, 1f);
+            return true;
+        }
         p.showEntity(pl, s.pantalla);
         sesiones.put(p.getUniqueId(), s);
         ultimo.put(p.getUniqueId(), System.currentTimeMillis());
@@ -115,7 +122,11 @@ public final class Screamer implements Listener {
 
         int total = cuadros * cada;
         s.tarea = Bukkit.getScheduler().runTaskTimer(pl, () -> {
-            if (!p.isOnline() || s.pantalla.isDead()) { terminar(p); return; }
+            if (!p.isOnline()) { terminar(p); return; }
+            if (s.pantalla.isDead()) {
+                pl.getLogger().warning("[Screamer] La imagen de " + p.getName() + " desaparecio en el cuadro " + (s.tick / cada + 1) + " (la saco otro plugin).");
+                terminar(p); return;
+            }
             if (!s.pantalla.getWorld().equals(p.getWorld())) { terminar(p); return; }
             Location f = frente(p);
             if (s.pantalla.getLocation().distanceSquared(f) > 0.0004) s.pantalla.teleport(f);
@@ -126,8 +137,13 @@ public final class Screamer implements Listener {
             s.tick++;
             if (s.tick >= total) terminar(p);
         }, 1L, 1L);
+        ultimoDiag = "&a✔ &7Screamer a &f" + p.getName() + "&7: imagen creada (entidad " + s.pantalla.getEntityId() + "), "
+                + cuadros + " cuadros, modelo &f" + modelo + "&7, sonido &f" + (sonido.isEmpty() ? "ninguno" : sonido) + "&7.";
         return true;
     }
+
+    /** Lo que paso con el ultimo screamer (para avisarle al que uso el comando). */
+    public String ultimoDiag = "";
 
     public void terminar(Player p) {
         Sesion s = sesiones.remove(p.getUniqueId());

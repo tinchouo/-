@@ -234,6 +234,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 String id = a.length > 1 ? a[1] : screamer.porDefecto();
                 if (!screamer.existe(id)) { Style.err(s, "No existe el screamer &f" + id + "&c (config.yml -> screamers)."); return true; }
                 if (!screamer.tirar(t, id)) Style.err(s, "Ese jugador ya está viendo un video o un screamer.");
+                else Style.raw(s, screamer.ultimoDiag);
                 return true;
             }
             case "alucinar": {
