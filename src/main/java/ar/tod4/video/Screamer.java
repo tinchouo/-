@@ -78,9 +78,12 @@ public final class Screamer implements Listener {
         return it;
     }
 
-    private static Location ojo(Player p) {
-        Location l = p.getEyeLocation();
-        l.setPitch(0);
+    /** Medio bloque adelante de los ojos, mirando al jugador (como en /tod4:video; pegado a los ojos el cliente no lo dibuja). */
+    private static Location frente(Player p) {
+        Location ojo = p.getEyeLocation();
+        Location l = ojo.clone().add(ojo.getDirection().multiply(0.5));
+        l.setYaw(ojo.getYaw() + 180);
+        l.setPitch(-ojo.getPitch());
         return l;
     }
 
@@ -95,28 +98,27 @@ public final class Screamer implements Listener {
         float vol = (float) (c != null ? c.getDouble("volumen", 1.0) : 1.0);
 
         Sesion s = new Sesion();
-        s.pantalla = p.getWorld().spawn(ojo(p), ItemDisplay.class, d -> {
+        s.pantalla = p.getWorld().spawn(frente(p), ItemDisplay.class, d -> {
             d.setVisibleByDefault(false);
             d.setPersistent(false);
             d.setItemStack(cuadro(modelo, 1));
             d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
             d.setBrightness(new Display.Brightness(15, 15));
-            d.setTransformation(new Transformation(new Vector3f(0, 0, 0.5f), new AxisAngle4f(), new Vector3f(1.3f, 1.3f, 1.3f), new AxisAngle4f()));
+            d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1.3f, 1.3f, 1.3f), new AxisAngle4f()));
             d.setViewRange(4f);
             d.setTeleportDuration(0);
         });
         p.showEntity(pl, s.pantalla);
         sesiones.put(p.getUniqueId(), s);
         ultimo.put(p.getUniqueId(), System.currentTimeMillis());
-        if (!sonido.isEmpty()) p.playSound(p, sonido, SoundCategory.MASTER, vol, 1f);
+        if (!sonido.isEmpty()) p.playSound(p.getLocation(), sonido, SoundCategory.MASTER, vol, 1f);   // en el lugar, como /playsound
 
         int total = cuadros * cada;
         s.tarea = Bukkit.getScheduler().runTaskTimer(pl, () -> {
             if (!p.isOnline() || s.pantalla.isDead()) { terminar(p); return; }
-            if (!s.pantalla.getWorld().equals(p.getWorld()) || s.pantalla.getLocation().distanceSquared(p.getEyeLocation()) > 0.01) {
-                if (!s.pantalla.getWorld().equals(p.getWorld())) { terminar(p); return; }
-                s.pantalla.teleport(ojo(p));
-            }
+            if (!s.pantalla.getWorld().equals(p.getWorld())) { terminar(p); return; }
+            Location f = frente(p);
+            if (s.pantalla.getLocation().distanceSquared(f) > 0.0004) s.pantalla.teleport(f);
             if (s.tick % cada == 0) {
                 int n = Math.min(cuadros, s.tick / cada + 1);
                 s.pantalla.setItemStack(cuadro(modelo, n));

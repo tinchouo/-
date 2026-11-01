@@ -28,7 +28,7 @@ jobs:
       - name: Probar el screamer con un jugador
         run: |
           cd srv
-          (sleep 90; echo "op tester"; sleep 3; echo "tod4:screamer tester"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 6; echo stop) | timeout 200 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          (sleep 90; echo "op tester"; sleep 3; echo "tod4:screamer tester"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 6; echo stop) | timeout 200 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
           (cd ../bot && timeout 60 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true
