@@ -39,6 +39,8 @@ jobs:
           grep -E "\[Phantom\]" log.txt | head -10
           grep -q "\[Phantom\] le pego a tester" log.txt || { echo "::error::El Phantom no pego"; exit 1; }
           N=$(grep -c '"type":69' bot.txt); echo "imagenes de screamer: $N"; [ "$N" -ge 3 ] || { echo "::error::El screamer no salio en cada golpe"; exit 1; }
+          grep -E "player_chat|profileless_chat|GENIO" bot.txt | cut -c1-900 | head -5
+          grep -E "(player_chat|profileless_chat|system_chat).*tod4:emojis" bot.txt > /dev/null || echo "::warning::No vi la imagen de :GENIO: en el chat"
           grep -q "27 cuadros, modelo tod4:screamer, sonido tod4_screamer:screamer" log.txt || { echo "::error::El screamer no salio con los valores del pack"; exit 1; }
       - name: Guardar el log en la rama ci-logs
         if: always()
