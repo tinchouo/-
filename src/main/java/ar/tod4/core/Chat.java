@@ -36,6 +36,20 @@ public final class Chat implements Listener {
         Bukkit.getPluginManager().registerEvents(this, pl);
     }
 
+    /**
+     * :GENIO: en el chat -> la imagen del pack (fuente tod4:emojis, alto de 3 renglones).
+     * La imagen cuelga hacia abajo desde el renglon del mensaje, asi que se agregan 2 renglones vacios para que no tape nada.
+     */
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    public void emojis(AsyncChatEvent e) {
+        String plano = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(e.message());
+        if (!plano.toUpperCase(java.util.Locale.ROOT).contains(":GENIO:")) return;
+        Component genio = Component.text("\ue100").font(net.kyori.adventure.key.Key.key("tod4", "emojis")).color(NamedTextColor.WHITE);
+        Component m = e.message().replaceText(net.kyori.adventure.text.TextReplacementConfig.builder()
+                .match("(?i):GENIO:").replacement(genio).build());
+        e.message(m.append(Component.text("\n\n")));
+    }
+
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void chat(AsyncChatEvent e) {
         if (!pl.getConfig().getBoolean("chat.formato", true)) return;

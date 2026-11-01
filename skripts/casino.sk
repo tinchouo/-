@@ -1,0 +1,594 @@
+# ==========================================================
+#  SISTEMA DE CASINO / TRAGAMONEDAS (NBT & Custom Items)
+# ==========================================================
+
+options:
+    # NUEVO: efecto Suerte de Minecraft. Sin Suerte todo es al azar como siempre.
+    # tres_N = % de que la tirada salga línea de 3 con Suerte de nivel N
+    # dos_N  = si la tirada no iba a dar nada, % de que se convierta en línea de 2
+    tres_1: 5
+    dos_1: 25
+    tres_2: 10
+    dos_2: 50
+    tres_3: 15
+    dos_3: 75
+    tres_4: 25
+    dos_4: 100
+    # nivel 5 o más
+    tres_5: 40
+    dos_5: 100
+
+on load:
+    delete {casino.in_use::*}
+    # CAMBIO: ya no se pone una moneda por defecto. Si quedó guardada la esmeralda
+    # "True Coin" automática de antes, se borra para que el slot arranque vacío.
+    if {casino.cost} is emerald named "&eTrue Coin":
+        delete {casino.cost}
+
+# ---------------------------------------------------------
+# PROTECCIÓN DE MÁQUINAS
+# ---------------------------------------------------------
+on break:
+    if {casino.blocks::*} contains location of event-block:
+        cancel event
+        send "&c[Casino] Este bloque es una máquina tragamonedas." to player
+        send "&cPara romperlo, deselecciónalo primero usando el Palo Seleccionador." to player
+
+# ---------------------------------------------------------
+# PANEL DE ADMINISTRACIÓN Y CONFIGURACIÓN
+# ---------------------------------------------------------
+command /casino [<text>]:
+    permission: casino.admin
+    permission message: &cNo tienes permisos.
+    trigger:
+        if arg-1 is "limpiar":
+            delete {casino.items::*}
+            delete {casino.r2::*}
+            delete {casino.r3::*}
+            delete {casino.pool::*} 
+            set {casino.counter} to 0
+            send "&a[Casino] Se han borrado absolutamente TODAS las recompensas. La base de datos está limpia." to player
+            stop
+            
+        set {_menu} to chest inventory with 3 rows named "&8Admin Casino"
+        set {_black} to black stained glass pane named " "
+        
+        loop 27 times:
+            set slot loop-number - 1 of {_menu} to {_black}
+            
+        set slot 11 of {_menu} to stick named "&dPalo Seleccionador" with lore "&7Click derecho en un bloque para añadir/quitar de las tragaperras."
+        
+        # CAMBIO: si no hay moneda configurada, el slot 13 queda vacío para poner un item de tu inventario.
+        if {casino.cost} is set:
+            set slot 13 of {_menu} to {casino.cost}
+
+        set slot 15 of {_menu} to chest named "&6Editar Recompensas" with lore "&7Haz click para abrir el menú interactivo de premios."
+        open {_menu} to player
+
+# ---------------------------------------------------------
+# MANEJO CENTRALIZADO DE TODOS LOS MENÚS
+# ---------------------------------------------------------
+on inventory click:
+    # --- 1. MENÚ PRINCIPAL DEL CASINO ---
+    if name of player's current inventory is "&8Admin Casino":
+        # CAMBIO: se distingue el menú de tu inventario por el dueño (igual que en recompensas),
+        # porque por nombre ambos devolvían "Admin Casino" y se cancelaban tus clicks.
+        set {_abajo} to false
+        if holder of clicked inventory is player:
+            set {_abajo} to true
+        if {_abajo} is false:
+            if clicked slot is not 13:
+                cancel event
+                
+                if clicked slot is 11:
+                    give stick named "&dPalo Seleccionador" with lore "&7Click derecho en un bloque para añadir/quitar de las tragaperras." to player
+                    send "&aPalo recibido. Haz click derecho en un bloque para convertirlo." to player
+                    close player's inventory
+                else if clicked slot is 15:
+                    casino_abrir_recompensas(player)
+        else:
+            if click type is left mouse button with shift:
+                cancel event
+            if click type is right mouse button with shift:
+                cancel event
+
+    # --- 2. MENÚ DE RECOMPENSAS ---
+    else if name of player's current inventory is "&8Recompensas Casino":
+        cancel event
+
+        if event-item is air:
+            stop
+            
+        # CAMBIO: antes se distinguía por el nombre del inventario clickeado, pero
+        # el inventario del jugador también devolvía ese nombre. Ahora se distingue
+        # por el dueño: el inventario del jugador tiene dueño, el menú no.
+        set {_abajo} to false
+        if holder of clicked inventory is player:
+            set {_abajo} to true
+
+        # Si clickea en el menú de arriba (Editar o Borrar recompensas)
+        if {_abajo} is false:
+            # CAMBIO: "%clicked slot%" daba texto de slot en vez del número, y no coincidía
+            # con el mapa guardado (que usa números 0, 1, 2...). Se usa el índice numérico.
+            set {_idx} to index of clicked slot
+            if {casino.menu_map::%player%::%{_idx}%} is set:
+                set {_id} to {casino.menu_map::%player%::%{_idx}%}
+                
+                # Borrar con Ruedita o Q
+                if click type is middle mouse button or drop key:
+                    delete {casino.items::%{_id}%}
+                    delete {casino.r2::%{_id}%}
+                    delete {casino.r3::%{_id}%}
+                    casino_abrir_recompensas(player)
+                    send "&cItem removido de las recompensas." to player
+                    
+                # Sumar / Restar
+                else if click type is left mouse button:
+                    add 1 to {casino.r3::%{_id}%}
+                    casino_abrir_recompensas(player)
+                else if click type is left mouse button with shift:
+                    if {casino.r3::%{_id}%} > 0:
+                        remove 1 from {casino.r3::%{_id}%}
+                        casino_abrir_recompensas(player)
+                else if click type is right mouse button:
+                    add 1 to {casino.r2::%{_id}%}
+                    casino_abrir_recompensas(player)
+                else if click type is right mouse button with shift:
+                    if {casino.r2::%{_id}%} > 0:
+                        remove 1 from {casino.r2::%{_id}%}
+                        casino_abrir_recompensas(player)
+                        
+        # Si clickea en SU inventario de abajo (Agregar nueva recompensa)
+        else:
+            # Copia exacta del item (conserva encantamientos/datos custom) con cantidad 1
+            set {_item} to event-item
+            set item amount of {_item} to 1
+            set {_exists} to false
+            loop {casino.items::*}:
+                if loop-value is {_item}:
+                    set {_exists} to true
+                    stop loop
+                    
+            if {_exists} is true:
+                send "&c[Casino] Ese item ya está en las recompensas." to player
+            if {_exists} is false:
+                if {casino.counter} is not set:
+                    set {casino.counter} to 0
+                add 1 to {casino.counter}
+                set {_id} to {casino.counter}
+                set {casino.items::%{_id}%} to {_item}
+                set {casino.r2::%{_id}%} to 0 
+                set {casino.r3::%{_id}%} to 3 
+                casino_abrir_recompensas(player)
+                send "&aItem custom añadido a las recompensas." to player
+
+    # --- 3. JUEGO DE TRAGAMONEDAS ---
+    else if name of player's current inventory is "&8Tragamonedas":
+        cancel event
+        # NUEVO: los clicks en tu propio inventario no cuentan como botones de la máquina
+        if holder of clicked inventory is player:
+            stop
+        if name of clicked inventory is not "&8Tragamonedas":
+            stop
+
+        # NUEVO: botón Automático (se puede tocar aunque esté girando, para apagarlo)
+        if clicked slot is 35:
+            if {casino.auto::%player%} is true:
+                delete {casino.auto::%player%}
+            else:
+                set {casino.auto::%player%} to true
+            casino_botones(player, event-inventory)
+            play sound "ui.button.click" with volume 0.5 to player
+            stop
+        # Botón Velocidad: x1 -> x2 -> Instantáneo -> x1
+        if clicked slot is 43:
+            set {_v} to casino_vel(player)
+            delete {casino.x2::%player%}
+            if {_v} is 1:
+                set {casino.vel::%player%} to 2
+            else if {_v} is 2:
+                set {casino.vel::%player%} to 3
+            else:
+                delete {casino.vel::%player%}
+            casino_botones(player, event-inventory)
+            play sound "ui.button.click" with volume 0.5 to player
+            stop
+
+        if {casino.spin::%player%} is true:
+            stop
+
+        if clicked slot is 36:
+            close player's inventory
+
+        else if clicked slot is 44:
+            set {casino.spin::%player%} to true
+            # NUEVO: los sonidos salen desde el bloque de la máquina (los escuchan los de alrededor)
+            set {_loc} to {casino.machine_loc::%player%}
+            if {_loc} is not set:
+                set {_loc} to player's location
+            # NUEVO: en modo automático se repite hasta apagarlo, quedarse sin monedas o cerrar
+            set {_seguir} to true
+            while {_seguir} is true:
+                set {_seguir} to false
+                if name of player's current inventory is not "&8Tragamonedas":
+                    delete {casino.spin::%player%}
+                    stop
+
+                set {_precio} to item amount of {casino.cost}
+                set {_cost_base} to 1 of {casino.cost}
+                set {_tiene} to 0
+
+                loop all items in player's inventory:
+                    set {_check} to 1 of loop-item
+                    if {_check} is {_cost_base}:
+                        add item amount of loop-item to {_tiene}
+
+                if {_tiene} < {_precio}:
+                    send "&cNo tienes suficientes monedas para tirar." to player
+                    play sound "entity.villager.no" to player
+                    if {casino.auto::%player%} is true:
+                        delete {casino.auto::%player%}
+                        casino_botones(player, event-inventory)
+                    delete {casino.spin::%player%}
+                    stop
+
+                remove {_precio} of {_cost_base} from player's inventory
+
+                # velocidad: 1 = normal, 2 = x2, 3 = instantáneo (sin animación: una tirada cada medio segundo)
+                set {_vel} to casino_vel(player)
+                if {_vel} is 3:
+                    set {_paso} to 1 tick
+                    set {_pausa} to 1 tick
+                    set {_verGana} to 7 ticks
+                    set {_verPierde} to 7 ticks
+                    set {_fuegos} to 0 ticks
+                else if {_vel} is 2:
+                    set {_paso} to 1 tick
+                    set {_pausa} to 3 ticks
+                    set {_verGana} to 12 ticks
+                    set {_verPierde} to 10 ticks
+                    set {_fuegos} to 3 ticks
+                else:
+                    set {_paso} to 2 ticks
+                    set {_pausa} to 6 ticks
+                    set {_verGana} to 25 ticks
+                    set {_verPierde} to 20 ticks
+                    set {_fuegos} to 6 ticks
+
+                # NUEVO: nivel de Suerte del jugador (0 = no tiene)
+                set {_nivel} to 0
+                set {_ef} to player's active luck effect
+                if {_ef} is set:
+                    set {_nivel} to potion level of {_ef}
+                set {_p3} to 0
+                set {_p2} to 0
+                if {_nivel} >= 5:
+                    set {_p3} to {@tres_5}
+                    set {_p2} to {@dos_5}
+                else if {_nivel} is 4:
+                    set {_p3} to {@tres_4}
+                    set {_p2} to {@dos_4}
+                else if {_nivel} is 3:
+                    set {_p3} to {@tres_3}
+                    set {_p2} to {@dos_3}
+                else if {_nivel} is 2:
+                    set {_p3} to {@tres_2}
+                    set {_p2} to {@dos_2}
+                else if {_nivel} is 1:
+                    set {_p3} to {@tres_1}
+                    set {_p2} to {@dos_1}
+                set slot 25 of event-inventory to black stained glass pane named " "
+
+                # INSTANTÁNEO: las tres filas salen de una (la de la línea ganadora con la Suerte), sin girar
+                if {_vel} is 3:
+                    loop 12, 13, 14, 21, 22, 23, 30, 31 and 32:
+                        set slot loop-value of event-inventory to random element out of {casino.items::*}
+                    if {_nivel} > 0:
+                        if chance of {_p3}%:
+                            set slot 22 of event-inventory to slot 21 of event-inventory
+                            set slot 23 of event-inventory to slot 21 of event-inventory
+                        else if slot 21 of event-inventory is not slot 22 of event-inventory:
+                            if slot 21 of event-inventory is not slot 23 of event-inventory:
+                                if slot 22 of event-inventory is not slot 23 of event-inventory:
+                                    if chance of {_p2}%:
+                                        set slot 22 of event-inventory to slot 21 of event-inventory
+                    play sound "block.note_block.hat" with volume 0.5 at {_loc}
+
+                # 16 pasos (antes 20): la fila del paso 15 es la que queda en la línea ganadora
+                set {_n} to 0
+                set {_vueltas} to 16
+                if {_vel} is 3:
+                    set {_vueltas} to 0
+                loop {_vueltas} times:
+                    if name of player's current inventory is not "&8Tragamonedas":
+                        stop loop
+                    add 1 to {_n}
+
+                    set slot 30 of event-inventory to slot 21 of event-inventory
+                    set slot 31 of event-inventory to slot 22 of event-inventory
+                    set slot 32 of event-inventory to slot 23 of event-inventory
+
+                    set slot 21 of event-inventory to slot 12 of event-inventory
+                    set slot 22 of event-inventory to slot 13 of event-inventory
+                    set slot 23 of event-inventory to slot 14 of event-inventory
+
+                    set slot 12 of event-inventory to random element out of {casino.items::*}
+                    set slot 13 of event-inventory to random element out of {casino.items::*}
+                    set slot 14 of event-inventory to random element out of {casino.items::*}
+                    # NUEVO: Suerte. Esta fila es la que va a quedar en la línea ganadora.
+                    if {_n} is 15:
+                        if {_nivel} > 0:
+                            if chance of {_p3}%:
+                                # línea de 3
+                                set slot 13 of event-inventory to slot 12 of event-inventory
+                                set slot 14 of event-inventory to slot 12 of event-inventory
+                            else if slot 12 of event-inventory is not slot 13 of event-inventory:
+                                if slot 12 of event-inventory is not slot 14 of event-inventory:
+                                    if slot 13 of event-inventory is not slot 14 of event-inventory:
+                                        # no iba a dar nada: puede pasar a línea de 2
+                                        if chance of {_p2}%:
+                                            set slot 13 of event-inventory to slot 12 of event-inventory
+
+                    play sound "block.note_block.hat" with volume 0.5 at {_loc}
+                    wait {_paso}
+
+                if name of player's current inventory is "&8Tragamonedas":
+                    wait {_pausa}
+
+                    set {_s1} to 1 of slot 21 of event-inventory
+                    set {_s2} to 1 of slot 22 of event-inventory
+                    set {_s3} to 1 of slot 23 of event-inventory
+
+                    set {_id1} to ""
+                    set {_id2} to ""
+                    set {_id3} to ""
+
+                    loop {casino.items::*}:
+                        if loop-value is {_s1}:
+                            set {_id1} to loop-index
+                        if loop-value is {_s2}:
+                            set {_id2} to loop-index
+                        if loop-value is {_s3}:
+                            set {_id3} to loop-index
+
+                    set {_premio} to 0
+                    set {_tipoGanado} to 0
+                    set {_itemGanado} to air
+
+                    if {_id1} is not "":
+                        if {_id1} is {_id2}:
+                            if {_id2} is {_id3}:
+                                set {_premio} to {casino.r3::%{_id1}%}
+                                set {_itemGanado} to {_s1}
+                                set {_tipoGanado} to 3
+
+                    if {_premio} is 0:
+                        if {_id1} is not "":
+                            if {_id1} is {_id2}:
+                                set {_premio} to {casino.r2::%{_id1}%}
+                                set {_itemGanado} to {_s1}
+                                set {_tipoGanado} to 2
+                            else if {_id1} is {_id3}:
+                                set {_premio} to {casino.r2::%{_id1}%}
+                                set {_itemGanado} to {_s1}
+                                set {_tipoGanado} to 2
+                        if {_premio} is 0:
+                            if {_id2} is not "":
+                                if {_id2} is {_id3}:
+                                    set {_premio} to {casino.r2::%{_id2}%}
+                                    set {_itemGanado} to {_s2}
+                                    set {_tipoGanado} to 2
+
+                    if {_premio} > 0:
+                        # CAMBIO: en vez de reconstruir el item con "X of item" (que puede perder
+                        # encantamientos guardados / datos custom), se usa una copia EXACTA del item
+                        # guardado y solo se le cambia la cantidad.
+                        set {_entrega} to {casino.items::%{_id1}%}
+                        if {_tipoGanado} is 2:
+                            if {_id1} is not {_id2}:
+                                if {_id1} is not {_id3}:
+                                    set {_entrega} to {casino.items::%{_id2}%}
+                        set item amount of {_entrega} to {_premio}
+
+                        set slot 25 of event-inventory to {_entrega}
+
+                        if {_tipoGanado} is 3:
+                            play sound "entity.player.levelup" with volume 1 and pitch 1 at {_loc}
+                            play sound "ui.toast.challenge_complete" with volume 1 and pitch 1 at {_loc}
+                        else:
+                            play sound "entity.experience_orb.pickup" with volume 1 and pitch 1 at {_loc}
+
+                        # NUEVO: si no entra en el inventario, el premio se tira al piso (antes se perdía)
+                        if player has enough space for {_entrega}:
+                            give {_entrega} to player
+                        else:
+                            drop {_entrega} at player
+                            send "&e[Casino] Tu inventario está lleno: el premio quedó en el piso." to player
+                            if {casino.auto::%player%} is true:
+                                delete {casino.auto::%player%}
+                                casino_botones(player, event-inventory)
+                                send "&e[Casino] Se apagó el modo automático." to player
+
+                        # FUEGOS ARTIFICIALES solo con línea de 3 (se lanzan 3 bloques arriba del jugador)
+                        if {_tipoGanado} is 3:
+                            set {_fx} to player's location
+                            add 3 to y-coordinate of {_fx}
+                            set {_cohetes} to 3
+                            if {_vel} is 3:
+                                set {_cohetes} to 1
+                            loop {_cohetes} times:
+                                launch ball large coloured red, yellow and light green fading to white at {_fx} timed 2
+                                if {_vel} is not 3:
+                                    wait {_fuegos}
+
+                        wait {_verGana}
+                        if name of player's current inventory is "&8Tragamonedas":
+                            set slot 25 of event-inventory to black stained glass pane named " "
+                    else:
+                        play sound "block.note_block.didgeridoo" with volume 1 and pitch 1 at {_loc}
+                        set slot 25 of event-inventory to barrier named "&cSin premio"
+                        wait {_verPierde}
+                        if name of player's current inventory is "&8Tragamonedas":
+                            set slot 25 of event-inventory to black stained glass pane named " "
+
+                    # NUEVO: modo automático -> otra tirada
+                    if {casino.auto::%player%} is true:
+                        if name of player's current inventory is "&8Tragamonedas":
+                            set {_seguir} to true
+
+            delete {casino.spin::%player%}
+
+# ---------------------------------------------------------
+# EVENTOS DE CIERRE Y DESCONEXIÓN
+# ---------------------------------------------------------
+on inventory close:
+    if name of event-inventory is "&8Admin Casino":
+        if slot 13 of event-inventory is not barrier:
+            if slot 13 of event-inventory is not air:
+                set {casino.cost} to slot 13 of event-inventory
+                send "&aCosto de tirada guardado/actualizado." to player
+    
+    if name of event-inventory is "&8Tragamonedas":
+        if {casino.current_machine::%player%} is set:
+            # CORRECCIÓN DE BUG: Liberar la máquina usando el ID exacto
+            set {_machine_id} to {casino.current_machine::%player%}
+            delete {casino.in_use::%{_machine_id}%}
+            delete {casino.current_machine::%player%}
+            delete {casino.machine_loc::%player%}
+        delete {casino.auto::%player%}
+        if {casino.spin::%player%} is true:
+            delete {casino.spin::%player%}
+
+on quit:
+    if {casino.current_machine::%player%} is set:
+        # CORRECCIÓN DE BUG: Liberar la máquina usando el ID exacto al desconectarse
+        set {_machine_id} to {casino.current_machine::%player%}
+        delete {casino.in_use::%{_machine_id}%}
+        delete {casino.current_machine::%player%}
+        delete {casino.machine_loc::%player%}
+        delete {casino.auto::%player%}
+        delete {casino.spin::%player%}
+
+# ---------------------------------------------------------
+# FUNCIONES
+# ---------------------------------------------------------
+function casino_abrir_recompensas(p: player):
+    set {_inv} to chest inventory with 6 rows named "&8Recompensas Casino"
+    set {_slot} to 0
+    delete {casino.menu_map::%{_p}%::*}
+    
+    loop {casino.items::*}:
+        set {_id} to loop-index
+        set {_item} to loop-value
+        set {_r2} to {casino.r2::%{_id}%}
+        set {_r3} to {casino.r3::%{_id}%}
+        
+        set {_display} to 1 of {_item}
+        set lore of {_display} to "&eLínea de 2: &b%{_r2}%" and "&eLínea de 3: &a%{_r3}%" and " " and "&7Click Izquierdo: &a+1 (Línea de 3)" and "&7Shift + Izquierdo: &c-1 (Línea de 3)" and "&7Click Derecho: &b+1 (Línea de 2)" and "&7Shift + Derecho: &c-1 (Línea de 2)" and "&7Ruedita del ratón (o Q): &4Eliminar"
+        
+        set slot {_slot} of {_inv} to {_display}
+        set {casino.menu_map::%{_p}%::%{_slot}%} to {_id}
+        add 1 to {_slot}
+        
+    set {_black} to black stained glass pane named "&eHaz click en un item de tu inventario" with lore "&7para añadirlo a la máquina."
+    loop 54 times:
+        if slot loop-number - 1 of {_inv} is air:
+            set slot loop-number - 1 of {_inv} to {_black}
+            
+    open {_inv} to {_p}
+
+# ---------------------------------------------------------
+# PALO SELECCIONADOR Y APERTURA DE JUEGO
+# ---------------------------------------------------------
+on right click:
+    if name of player's tool is "&dPalo Seleccionador":
+        cancel event
+        if event-block is set:
+            if {casino.blocks::*} contains location of event-block:
+                remove location of event-block from {casino.blocks::*}
+                send "&cBloque deseleccionado. Ya no es una tragamonedas." to player
+            else:
+                add location of event-block to {casino.blocks::*}
+                send "&aBloque añadido como tragamonedas." to player
+        stop
+
+    if {casino.blocks::*} contains location of event-block:
+        cancel event
+        
+        # CORRECCIÓN DE BUG: Convertimos la location a un texto de coordenadas exactas para evitar fallos
+        set {_machine_id} to "%x-coordinate of event-block%_%y-coordinate of event-block%_%z-coordinate of event-block%_%world of event-block%"
+        
+        if {casino.in_use::%{_machine_id}%} is set:
+            send "&cYa hay alguien en esta máquina." to player
+            stop
+            
+        if size of {casino.items::*} is 0:
+            send "&cEl casino está cerrado. No hay items en las recompensas." to player
+            stop
+        if {casino.cost} is not set:
+            send "&cEl casino está cerrado. Falta configurar el costo." to player
+            stop
+            
+        set {casino.in_use::%{_machine_id}%} to player
+        set {casino.current_machine::%player%} to {_machine_id}
+        # NUEVO: el centro del bloque, para que los sonidos salgan de ahí
+        set {_l} to location of event-block
+        add 0.5 to x-coordinate of {_l}
+        add 0.5 to y-coordinate of {_l}
+        add 0.5 to z-coordinate of {_l}
+        set {casino.machine_loc::%player%} to {_l}
+        casino_abrir(player)
+
+function casino_abrir(p: player):
+    set {_inv} to chest inventory with 5 rows named "&8Tragamonedas"
+    set {_black} to black stained glass pane named " "
+    set {_red} to red stained glass pane named "&c&l- LÍNEA GANADORA -"
+    set {_gold} to yellow stained glass pane named "&6- PREMIO -"
+    
+    loop 45 times:
+        set slot loop-number - 1 of {_inv} to {_black}
+        
+    set slot 18 of {_inv} to {_red}
+    set slot 19 of {_inv} to {_red}
+    set slot 20 of {_inv} to {_red}
+    set slot 24 of {_inv} to {_red}
+    set slot 26 of {_inv} to {_red}
+    
+    set slot 16 of {_inv} to {_gold}
+    set slot 34 of {_inv} to {_gold}
+    
+    set slot 36 of {_inv} to barrier named "&cSalir"
+    
+    # CORRECCIÓN ESC: Se añade la advertencia directamente en el lore del botón
+    set slot 44 of {_inv} to emerald block named "&aApostar" with lore "&7Costo: &e%item amount of {casino.cost}%x moneda(s)" and "" and "&c&l¡ATENCIÓN!" and "&cSi cierras el menú con &eESC" and "&cmientras gira, ¡perderás la apuesta!"
+    
+    loop 12, 13, 14, 21, 22, 23, 30, 31 and 32:
+        set slot loop-value of {_inv} to random element out of {casino.items::*}
+
+    # NUEVO: botones Automático (arriba de Apostar) y Velocidad (al lado de Apostar)
+    delete {casino.auto::%{_p}%}
+    casino_botones({_p}, {_inv})
+        
+    open {_inv} to {_p}
+
+# NUEVO: dibuja los botones Automático y Velocidad según cómo los tiene el jugador
+function casino_botones(p: player, inv: inventory):
+    if {casino.auto::%{_p}%} is true:
+        set slot 35 of {_inv} to lime dye named "&a&lAutomático: ON" with lore "&7Gira solo hasta que lo apagues," and "&7te quedes sin monedas o cierres." and "" and "&eClick para apagar"
+    else:
+        set slot 35 of {_inv} to gray dye named "&7Automático: OFF" with lore "&7Gira solo hasta que lo apagues," and "&7te quedes sin monedas o cierres." and "" and "&eClick para prender"
+    set {_v} to casino_vel({_p})
+    if {_v} is 3:
+        set slot 43 of {_inv} to clock named "&d&lVelocidad: Instantáneo" with lore "&7Sin animación: una tirada" and "&7cada medio segundo." and "" and "&eClick para volver a x1"
+    else if {_v} is 2:
+        set slot 43 of {_inv} to clock named "&b&lVelocidad: x2" with lore "&7La ruleta gira el doble de rápido." and "" and "&eClick para Instantáneo"
+    else:
+        set slot 43 of {_inv} to clock named "&eVelocidad: x1" with lore "&7Velocidad normal." and "" and "&eClick para x2"
+
+# 1 = normal, 2 = x2, 3 = instantáneo (el x2 que quedó guardado de antes cuenta como 2)
+function casino_vel(p: player) :: number:
+    if {casino.vel::%{_p}%} is set:
+        return {casino.vel::%{_p}%}
+    if {casino.x2::%{_p}%} is true:
+        return 2
+    return 1
