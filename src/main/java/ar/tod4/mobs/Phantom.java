@@ -81,7 +81,10 @@ public final class Phantom implements Listener {
             // se va lejos
             Location lejos = lugar(m.getLocation(), d("lejos_min", 18), d("lejos_max", 26), p.getLocation());
             m.setTarget(null);
-            m.setAware(false);   // se queda quieto donde se fue hasta que le toque volver (si no, vuelve caminando enseguida)
+            // se queda quieto donde se fue hasta que le toque volver (si no, vuelve caminando enseguida)
+            m.getPathfinder().stopPathfinding();
+            m.setAware(false);
+            quieto(m, true);
             if (m instanceof Enderman en) en.setScreaming(false);
             if (lejos != null) mover(m, lejos);
             if (lejos != null && m.getLocation().distanceSquared(lejos) > 1) log("el teletransporte no se hizo (quedo en " + m.getLocation().toVector() + ")");
@@ -92,7 +95,7 @@ public final class Phantom implements Listener {
     }
 
     private void volver(Mob m, Player p) {
-        if (m.isValid()) m.setAware(true);
+        if (m.isValid()) { m.setAware(true); quieto(m, false); }
         if (!m.isValid() || !jugable(p) || !p.getWorld().equals(m.getWorld())) {
             log("no vuelve (mob valido " + m.isValid() + ", jugador " + p.getName() + " jugable " + jugable(p) + ")");
             return;
@@ -131,6 +134,17 @@ public final class Phantom implements Listener {
             }
         }
         sinPegarHasta.entrySet().removeIf(en -> System.currentTimeMillis() > en.getValue() + 60000);
+    }
+
+    private final org.bukkit.NamespacedKey kQuieto = new org.bukkit.NamespacedKey("tod4", "phantom_quieto");
+
+    /** Velocidad en 0 mientras espera lejos (se saca al volver; no se guarda si se reinicia el server). */
+    private void quieto(Mob m, boolean si) {
+        var a = m.getAttribute(org.bukkit.attribute.Attribute.MOVEMENT_SPEED);
+        if (a == null) return;
+        if (a.getModifier(kQuieto) != null) a.removeModifier(kQuieto);
+        if (si) a.addTransientModifier(new org.bukkit.attribute.AttributeModifier(kQuieto, -1.0,
+                org.bukkit.attribute.AttributeModifier.Operation.MULTIPLY_SCALAR_1, org.bukkit.inventory.EquipmentSlotGroup.ANY));
     }
 
     // ================================================================= teletransporte
