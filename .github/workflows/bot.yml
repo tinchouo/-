@@ -22,18 +22,21 @@ jobs:
           URL=$(echo "$J" | jq -r 'max_by(.id) | .downloads."server:default".url')
           curl -sL -o paper.jar "$URL"
           cp ../target/TOD4.jar plugins/
+          # como en el server de verdad: un config.yml que no tiene la parte del screamer
+          mkdir -p plugins/TOD4 && printf 'config_version: 12\n' > plugins/TOD4/config.yml
           echo "eula=true" > eula.txt
           printf "online-mode=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\n" > server.properties
           cd .. && mkdir bot && cd bot && npm init -y > /dev/null && npm i minecraft-protocol@latest > /dev/null && cp ../.github/pruebas/bot.js .
       - name: Probar el screamer con un jugador
         run: |
           cd srv
-          (sleep 90; echo "op tester"; sleep 3; echo "tod4:screamer tester"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 6; echo stop) | timeout 200 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          (sleep 90; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 6; echo stop) | timeout 200 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
           (cd ../bot && timeout 60 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true
           cat bot.txt | head -150
           grep -iE "tester|screamer|Exception|error" log.txt | head -40
+          grep -q "27 cuadros, modelo tod4:screamer, sonido tod4_screamer:screamer" log.txt || { echo "::error::El screamer no salio con los valores del pack"; exit 1; }
       - name: Guardar el log en la rama ci-logs
         if: always()
         run: |

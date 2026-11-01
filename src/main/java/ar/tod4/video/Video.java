@@ -63,11 +63,15 @@ public final class Video implements Listener {
         Bukkit.getPluginManager().registerEvents(this, pl);
     }
 
-    public boolean existe(String id) { return pl.getConfig().isConfigurationSection("videos." + id); }
+    public boolean existe(String id) { return id.equalsIgnoreCase(Screamer.ID) || pl.getConfig().isConfigurationSection("videos." + id); }
 
+    /** Los videos del config.yml mas el screamer (que anda aunque el config.yml no lo tenga). */
     public java.util.Set<String> ids() {
+        java.util.Set<String> out = new java.util.TreeSet<>();
         ConfigurationSection s = pl.getConfig().getConfigurationSection("videos");
-        return s == null ? java.util.Set.of() : s.getKeys(false);
+        if (s != null) out.addAll(s.getKeys(false));
+        out.add(Screamer.ID);
+        return out;
     }
 
     /** Duracion del video en ticks. */

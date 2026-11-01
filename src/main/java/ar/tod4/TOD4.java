@@ -97,7 +97,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         getLogger().info("TOD4 listo. Dia actual: " + dia());
     }
 
-    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video", "screamer", "alucinar",
+    private static final List<String> SOLO_ADMIN = List.of("panel", "completar", "momentostruco", "cambios", "avisos", "altar", "alma", "revivir", "palo", "video", "alucinar",
             "equipo", "creeper", "clones", "totems");
 
     /** Saca los nombres sueltos (/panel, /alma...) y deja solo /tod4:panel, /tod4:alma... Tambien saca /tod4:misiones. */
@@ -224,17 +224,13 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 Player t = Bukkit.getPlayerExact(a[0]);
                 if (t == null) { Style.err(s, "Jugador no encontrado."); return true; }
                 if (!video.existe(a[1])) { Style.err(s, "No existe el video &f" + a[1] + "&c (config.yml -> videos)."); return true; }
+                if (a[1].equalsIgnoreCase(ar.tod4.video.Screamer.ID)) {
+                    // el screamer no traba la camara: la imagen aparece encima y el jugador sigue jugando
+                    if (!screamer.tirar(t)) Style.err(s, "Ese jugador ya está viendo un video o un screamer.");
+                    else Style.raw(s, screamer.ultimoDiag);
+                    return true;
+                }
                 if (!video.reproducir(t, a[1])) Style.err(s, "Ese jugador ya está viendo un video.");
-                return true;
-            }
-            case "screamer": {
-                if (a.length < 1) { Style.info(s, "Uso: &e/tod4:screamer <jugador> [screamer]"); return true; }
-                Player t = Bukkit.getPlayerExact(a[0]);
-                if (t == null) { Style.err(s, "Jugador no encontrado."); return true; }
-                String id = a.length > 1 ? a[1] : screamer.porDefecto();
-                if (!screamer.existe(id)) { Style.err(s, "No existe el screamer &f" + id + "&c (config.yml -> screamers)."); return true; }
-                if (!screamer.tirar(t, id)) Style.err(s, "Ese jugador ya está viendo un video o un screamer.");
-                else Style.raw(s, screamer.ultimoDiag);
                 return true;
             }
             case "alucinar": {
@@ -375,7 +371,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         if (a.length == 1) {
             switch (c) {
                 case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
-                case "video": case "screamer": case "alucinar": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
+                case "video": case "alucinar": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;
                 case "revivir": out.addAll(revivir.store().y().getStringList("muertos")); out.addAll(revivir.store().y().getStringList("muertos_gulag")); break;
@@ -389,7 +385,6 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         } else if (a.length == 2) {
             if (c.equals("alma") || c.equals("altar")) for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName());
             if (c.equals("video")) out.addAll(video.ids());
-            if (c.equals("screamer")) out.addAll(screamer.ids());
             if (c.equals("alucinar")) out.addAll(List.of("30", "60", "0"));
             if (c.equals("tod4") && a[0].equalsIgnoreCase("corazon")) { out.addAll(List.of("rojo", "amarillo", "morado")); for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); }
             if (c.equals("completar")) {

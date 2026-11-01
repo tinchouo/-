@@ -292,11 +292,9 @@ videos:
     ticks_por_cuadro: 2
     sonido: "lobotomia:video"
 
-# Screamers: como los videos pero sin trabar la camara (el jugador sigue jugando y la imagen se desvanece).
-# /tod4:screamer <jugador> [screamer]. Los mobs con la etiqueta tod4_screamer lo tiran al pegar.
-# Si esta seccion no esta, igual anda "pesadilla" (el del pack TOD4_screamer_corazones.zip).
-screamers:
-  pesadilla:
+  # El screamer: /tod4:video <jugador> screamer. No traba la camara (la imagen aparece encima y se desvanece).
+  # Los mobs con la etiqueta tod4_screamer lo tiran al pegar. Si esta parte no esta, igual anda con estos valores.
+  screamer:
     modelo: "tod4:screamer"
     cuadros: 27
     ticks_por_cuadro: 1

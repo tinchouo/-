@@ -35,7 +35,7 @@ import ar.tod4.TOD4;
  * ni cambiar el modo de juego: el jugador sigue jugando y la imagen le aparece encima (y se va desvaneciendo).
  *  - Los cuadros son un item de Oraxen/pack con un modelo por cuadro (custom_model_data 1..N), igual que los videos.
  *  - Solo lo ve ese jugador. Mientras dura, el cuadro lo sigue a donde vaya.
- * Uso: /tod4:screamer <jugador> [screamer]   (config.yml -> screamers; si no hay ninguno, usa "pesadilla")
+ * Uso: /tod4:video <jugador> screamer   (config.yml -> videos.screamer; si no esta, usa lo del pack)
  * Cualquier mob con la etiqueta "tod4_screamer" se lo tira al pegar (con espera entre uno y otro: screamer_espera_seg).
  */
 public final class Screamer implements Listener {
@@ -57,16 +57,12 @@ public final class Screamer implements Listener {
         Bukkit.getPluginManager().registerEvents(this, pl);
     }
 
-    private ConfigurationSection cfg(String id) { return pl.getConfig().getConfigurationSection("screamers." + id); }
+    /** El screamer va como un video mas: /tod4:video <jugador> screamer (config.yml -> videos.screamer, opcional). */
+    public static final String ID = "screamer";
 
-    public Set<String> ids() {
-        ConfigurationSection s = pl.getConfig().getConfigurationSection("screamers");
-        return s == null || s.getKeys(false).isEmpty() ? Set.of("pesadilla") : s.getKeys(false);
-    }
-
-    public boolean existe(String id) { return cfg(id) != null || id.equals("pesadilla"); }
-
-    public String porDefecto() { return ids().iterator().next(); }
+    // Se lee cada valor con su valor por defecto: si el config.yml no tiene la seccion, igual anda con lo del pack.
+    private String txt(String k, String def) { return pl.getConfig().getString("videos." + ID + "." + k, def); }
+    private int num(String k, int def) { return pl.getConfig().getInt("videos." + ID + "." + k, def); }
 
     private static ItemStack cuadro(String modelo, int n) {
         ItemStack it = new ItemStack(Material.PAPER);
@@ -87,15 +83,13 @@ public final class Screamer implements Listener {
         return l;
     }
 
-    public boolean tirar(Player p, String id) {
+    public boolean tirar(Player p) {
         if (sesiones.containsKey(p.getUniqueId()) || Video.viendo(p)) return false;
-        ConfigurationSection c = cfg(id);
-        // "pesadilla" anda sin nada en el config.yml (es el que viene en el pack)
-        String modelo = c != null ? c.getString("modelo", "tod4:screamer_" + id) : "tod4:screamer";
-        int cuadros = Math.max(1, c != null ? c.getInt("cuadros", 1) : 27);
-        int cada = Math.max(1, c != null ? c.getInt("ticks_por_cuadro", 1) : 1);
-        String sonido = c != null ? c.getString("sonido", "") : "tod4_screamer:screamer";
-        float vol = (float) (c != null ? c.getDouble("volumen", 1.0) : 1.0);
+        String modelo = txt("modelo", "tod4:screamer");
+        int cuadros = Math.max(1, num("cuadros", 27));
+        int cada = Math.max(1, num("ticks_por_cuadro", 1));
+        String sonido = txt("sonido", "tod4_screamer:screamer");
+        float vol = (float) pl.getConfig().getDouble("videos." + ID + ".volumen", 1.0);
 
         Sesion s = new Sesion();
         s.pantalla = p.getWorld().spawn(frente(p), ItemDisplay.class, d -> {
@@ -168,7 +162,7 @@ public final class Screamer implements Listener {
         long espera = pl.getConfig().getLong("screamer_espera_seg", 20) * 1000L;
         Long u = ultimo.get(p.getUniqueId());
         if (u != null && System.currentTimeMillis() - u < espera) return;
-        tirar(p, porDefecto());
+        tirar(p);
     }
 
     @EventHandler
