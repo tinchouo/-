@@ -746,6 +746,8 @@ final class Agujero implements Listener {
             en = tanque(l);
         } else if (tipo.equalsIgnoreCase("zombie_alucinado")) {
             en = alucinado(l);
+        } else if (tipo.equalsIgnoreCase("phantom_truco")) {
+            en = phantom(l);
         } else if (tipo.startsWith("creeper:")) {
             en = creeper(tipo.substring(8), l);
             if (en == null) { pl.getLogger().warning("[Agujero] TOD4 no hizo aparecer el creeper " + tipo.substring(8)); return; }
@@ -784,6 +786,30 @@ final class Agujero implements Listener {
             });
         }
         en.addScoreboardTag("tod4_alucina");
+        return en;
+    }
+
+    /**
+     * Phantom Truco: el de MythicMobs (PhantomTruco.yml, ahi va el modelo) o, si no esta, un enderman con los mismos valores.
+     * Lo que hace (screamer, empujon, se va y vuelve) lo hace TOD4 por las etiquetas tod4_phantom y tod4_screamer.
+     */
+    private Entity phantom(Location l) {
+        Entity en = mm(y.getString("phantom_truco.mythicmobs", "PhantomTruco"), l);
+        if (en == null) {
+            en = mundo.spawn(l, org.bukkit.entity.Enderman.class, z -> {
+                var hp = z.getAttribute(org.bukkit.attribute.Attribute.MAX_HEALTH);
+                if (hp != null) hp.setBaseValue(y.getDouble("phantom_truco.vida", 90));
+                z.setHealth(y.getDouble("phantom_truco.vida", 90));
+                var dmg = z.getAttribute(org.bukkit.attribute.Attribute.ATTACK_DAMAGE);
+                if (dmg != null) dmg.setBaseValue(y.getDouble("phantom_truco.danio", 7));
+                var vel = z.getAttribute(org.bukkit.attribute.Attribute.MOVEMENT_SPEED);
+                if (vel != null) vel.setBaseValue(y.getDouble("phantom_truco.velocidad", 0.32));
+                z.customName(c("&5&lPhantom Truco"));
+                z.setCustomNameVisible(false);
+            });
+        }
+        en.addScoreboardTag("tod4_phantom");
+        en.addScoreboardTag("tod4_screamer");
         return en;
     }
 

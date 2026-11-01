@@ -74,6 +74,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         screamer = new ar.tod4.video.Screamer(this);
         alucinacion = new ar.tod4.alucina.Alucinacion(this);
         new ar.tod4.mobs.Mobs(this);
+        new ar.tod4.mobs.Phantom(this);
         creepers = new ar.tod4.mobs.Creepers(this);
         equipos = new ar.tod4.equipos.Equipos(this);
         new ar.tod4.core.Chat(this);

@@ -132,6 +132,14 @@ zombie_alucinado:
   danio: 5
   velocidad: 0.28
 
+# Phantom Truco (phantom_truco): no esta en la lista de arriba; se pone donde lo quieras (en tipos o en una zona).
+# Si MythicMobs tiene este mob, sale ese (ahi va el modelo); si no, un enderman con estos valores.
+phantom_truco:
+  mythicmobs: "PhantomTruco"
+  vida: 90
+  danio: 7
+  velocidad: 0.32
+
 # el zombi para tanquear (zombie_tanque)
 zombie_tanque:
   vida: 50

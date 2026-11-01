@@ -302,6 +302,19 @@ videos:
     volumen: 1.0
 screamer_espera_seg: 20     # cada cuanto le puede volver a tocar a un mismo jugador por un mob
 
+# Phantom Truco (mobs con la etiqueta tod4_phantom, PhantomTruco.yml de MythicMobs): te pega, te empuja,
+# se teletransporta lejos y a los segundos aparece a unos 10 bloques y viene corriendo. Si nada de esto esta, usa estos valores.
+phantom:
+  sin_pegar_seg: 5        # despues de pegar, cuanto tarda en poder pegar otra vez
+  empuje: 1.4             # que tan fuerte te empuja
+  empuje_arriba: 0.45
+  lejos_min: 18           # adonde se va despues de pegar (bloques)
+  lejos_max: 26
+  vuelve_seg: 4           # a los cuantos segundos vuelve
+  vuelve_distancia: 10    # a cuantos bloques tuyo aparece cuando vuelve
+  busca_radio: 30         # de que tan lejos te ve
+  debug: false            # true = escribe en la consola lo que hace
+
 # Alucinacion (Zombi Alucinado del Agujero, mobs con la etiqueta tod4_alucina, /tod4:alucinar):
 # el que la tiene ve la vida, el hambre y el tab cambiando al azar (es solo lo que ve).
 alucinacion:
