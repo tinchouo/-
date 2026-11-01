@@ -300,7 +300,7 @@ videos:
     ticks_por_cuadro: 1
     sonido: "tod4_screamer:screamer"
     volumen: 1.0
-screamer_espera_seg: 20     # cada cuanto le puede volver a tocar a un mismo jugador por un mob
+screamer_espera_seg: 0      # 0 = en cada golpe; si no, segundos de espera para el mismo jugador
 
 # Phantom Truco (mobs con la etiqueta tod4_phantom, PhantomTruco.yml de MythicMobs): te pega, te empuja,
 # se teletransporta lejos y a los segundos aparece a unos 10 bloques y viene corriendo. Si nada de esto esta, usa estos valores.

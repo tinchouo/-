@@ -55,7 +55,10 @@ public final class Phantom implements Listener {
 
     private void log(String m) { if (pl.getConfig().getBoolean("phantom.debug", false)) pl.getLogger().info("[Phantom] " + m); }
 
-    public static boolean es(Entity e) { return e != null && e.getScoreboardTags().contains(ETIQUETA); }
+    /** Los que tiran screamer tambien hacen esto (aunque en su yml no tengan tod4_phantom). */
+    public static boolean es(Entity e) {
+        return e != null && (e.getScoreboardTags().contains(ETIQUETA) || e.getScoreboardTags().contains(ar.tod4.video.Screamer.ETIQUETA_MOB));
+    }
 
     private static boolean jugable(Player p) {
         return p.isOnline() && !p.isDead() && (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE);

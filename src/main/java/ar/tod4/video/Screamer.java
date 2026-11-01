@@ -36,7 +36,7 @@ import ar.tod4.TOD4;
  *  - Los cuadros son un item de Oraxen/pack con un modelo por cuadro (custom_model_data 1..N), igual que los videos.
  *  - Solo lo ve ese jugador. Mientras dura, el cuadro lo sigue a donde vaya.
  * Uso: /tod4:video <jugador> screamer   (config.yml -> videos.screamer; si no esta, usa lo del pack)
- * Cualquier mob con la etiqueta "tod4_screamer" se lo tira al pegar (con espera entre uno y otro: screamer_espera_seg).
+ * Cualquier mob con la etiqueta "tod4_screamer" se lo tira al pegar (en cada golpe; screamer_espera_seg pone una espera).
  */
 public final class Screamer implements Listener {
 
@@ -159,7 +159,7 @@ public final class Screamer implements Listener {
         Entity d = e.getDamager();
         if (d instanceof Projectile pr && pr.getShooter() instanceof Entity sh) d = sh;
         if (!d.getScoreboardTags().contains(ETIQUETA_MOB)) return;
-        long espera = pl.getConfig().getLong("screamer_espera_seg", 20) * 1000L;
+        long espera = pl.getConfig().getLong("screamer_espera_seg", 0) * 1000L;
         Long u = ultimo.get(p.getUniqueId());
         if (u != null && System.currentTimeMillis() - u < espera) return;
         tirar(p);

@@ -30,7 +30,7 @@ jobs:
       - name: Probar el screamer con un jugador
         run: |
           cd srv
-          (sleep 90; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_phantom\",\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 25; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          (sleep 90; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 25; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
           (cd ../bot && timeout 90 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true
@@ -38,6 +38,7 @@ jobs:
           grep -iE "tester|screamer|Exception|error" log.txt | head -40
           grep -E "\[Phantom\]" log.txt | head -10
           grep -q "\[Phantom\] le pego a tester" log.txt || { echo "::error::El Phantom no pego"; exit 1; }
+          N=$(grep -c '"type":69' bot.txt); echo "imagenes de screamer: $N"; [ "$N" -ge 3 ] || { echo "::error::El screamer no salio en cada golpe"; exit 1; }
           grep -q "27 cuadros, modelo tod4:screamer, sonido tod4_screamer:screamer" log.txt || { echo "::error::El screamer no salio con los valores del pack"; exit 1; }
       - name: Guardar el log en la rama ci-logs
         if: always()
