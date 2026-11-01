@@ -14,12 +14,20 @@ command /probarnuclear:
 		execute console command "execute at %{_id}% run playsound tod4:creeper.nuclear.count1 hostile @a ~ ~ ~ 5 1"
 		execute console command "bossbar list"
 		execute console command "bossbar remove %{_bar}%"
+		set {_antes} to 0
+		loop blocks in radius 6 of {_l}:
+			if loop-block is air:
+				add 1 to {_antes}
 		explotarNuclear({_l}, {_p})
 		wait 3 seconds
 		set {_aire} to 0
 		loop blocks in radius 6 of {_l}:
 			if loop-block is air:
 				add 1 to {_aire}
+		if {_aire} is {_antes}:
+			broadcast "NUCLEAR_PRUEBA no rompio nada"
+		else:
+			broadcast "NUCLEAR_PRUEBA ROMPIO BLOQUES"
 		set {_vivo} to "no"
 		if {_p} is alive:
 			set {_vivo} to "si"
