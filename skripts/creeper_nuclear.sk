@@ -2,9 +2,22 @@
 #
 # CLICK DERECHO RAPIDO sobre el Creeper Nuclear  = montarse. Conduces con WASD hacia donde MIRAS; Shift para bajarte.
 # MANTENER click derecho 5 s sobre el Creeper    = arma la bomba -> cuenta atras -> explosion.
-# La cuenta dura 1 minuto: la barra de arriba con el tiempo y los sonidos tod4:creeper.nuclear los ven y escuchan TODOS los jugadores.
+# Al armarla, a todos: "BOMBA PLANTADA" / "¡Corran al búnker!". La cuenta dura 1 minuto y medio: la barra de arriba con el
+# tiempo y los sonidos tod4:creeper.nuclear los ven y escuchan TODOS los jugadores.
 # La explosion NO rompe nada: mata a todos los jugadores (supervivencia/aventura) que esten a 500 bloques o menos EN ESE MUNDO
-# (el Nether y el End no cuentan: el portal no la deja pasar), mata a los mobs de al lado y deja el hongo de humo.
+# (el Nether y el End no cuentan: el portal no la deja pasar), menos a los que esten en una ZONA SEGURA (el bunker).
+# Tambien mata a los mobs de al lado y deja el hongo de humo.
+#
+# /nuclear                  te da las dos herramientas:
+#   Selector Nuclear  (vara)  click derecho a un bloque = lo agrega o lo saca de los bloques que desaparecen
+#   Zona Segura       (pala)  click izquierdo = esquina 1, click derecho = esquina 2 -> se guarda la zona
+# /nuclear bloque           agrega o saca el bloque que estas mirando (hasta 100 bloques)
+# /nuclear ver              muestra 10 s los bloques elegidos (verde) y las esquinas de las zonas seguras (llamas)
+# /nuclear lista            cuantos bloques y zonas hay
+# /nuclear restaurar        vuelven los bloques que desaparecieron
+# /nuclear borrar bloques   /nuclear borrar zonas
+# Los bloques elegidos desaparecen cuando a la cuenta le quedan "bloques-desaparecen" segundos (se guardan para restaurarlos).
+# Durante la cuenta, al entrar a una zona segura te sale (solo a vos): "✔ Estás seguro."
 # Es inmortal: no le entra ningun dano y queda despues de explotar (se puede volver a armar).
 # Si sueltas despues de ~1 s y antes de los 5 s, se cancela el armado.
 # Requiere Skript 2.10+ y Minecraft 1.21.2+ (teclas WASD) y NO depende de ModelEngine/BetterModel para montar.
@@ -13,7 +26,9 @@ options:
 	nombre: Creeper Nuclear
 	tiempo-mantener: 5
 	# segundos de la cuenta regresiva (la barra de arriba) hasta que explota
-	cuenta: 60
+	cuenta: 90
+	# cuando a la cuenta le quedan estos segundos, desaparecen los bloques elegidos con el Selector Nuclear
+	bloques-desaparecen: 30
 	# mueren todos los jugadores a esta distancia o menos (solo en el mismo mundo)
 	radio-muerte: 500
 	# los mobs de al lado tambien mueren
@@ -165,6 +180,8 @@ on right click on pig:
 	execute console command "bossbar set %{_bar}% max {@cuenta}"
 	play sound "entity.creeper.primed" with volume 3 and pitch 0.5 at {_pig}
 	play sound "block.beacon.activate" with volume 4 and pitch 0.6 at {_pig}
+	send title "&c&lBOMBA PLANTADA" with subtitle "&e¡Corran al búnker!" to all players for 4 seconds
+	delete {-cnr_seguro::*}
 	loop {@cuenta} times:
 		set {_n} to {@cuenta} - loop-number + 1
 		execute console command "bossbar set %{_bar}% name {""text"":""☢ CREEPER NUCLEAR ☢  %{_n}%s"",""color"":""yellow"",""bold"":true}"
@@ -180,7 +197,13 @@ on right click on pig:
 			set {_snd} to "count4"
 		# lo escuchan todos los jugadores del server, igual de fuerte, esten donde esten
 		execute console command "execute as @a at @s run playsound tod4:creeper.nuclear.%{_snd}% hostile @s ~ ~ ~ 1 1"
-		wait 1 second
+		if {_n} is {@bloques-desaparecen}:
+			desaparecerBloques()
+		# el aviso de la zona segura se revisa dos veces por segundo
+		zonasAviso()
+		wait 10 ticks
+		zonasAviso()
+		wait 10 ticks
 	execute console command "bossbar remove %{_bar}%"
 	explotarNuclear(location of {_pig}, {_pig})
 	# cuando ya exploto, se puede volver a armar
@@ -204,11 +227,14 @@ function explotarNuclear(l: location, causa: entity):
 	execute console command "execute as @a at @s run playsound minecraft:entity.generic.explode hostile @s ~ ~ ~ 1 0.5"
 	execute console command "execute as @a at @s run playsound minecraft:entity.lightning_bolt.thunder hostile @s ~ ~ ~ 1 0.6"
 	# mueren todos los jugadores (supervivencia/aventura) del mismo mundo hasta radio-muerte (el Nether/End no: es otro mundo)
+	# (menos los que estan en una zona segura)
 	loop all players:
 		if world of loop-player is world of {_l}:
 			if gamemode of loop-player is survival or adventure:
 				if distance between loop-player and {_l} <= {@radio-muerte}:
-					kill loop-player
+					if enZonaSegura(location of loop-player) is false:
+						kill loop-player
+	delete {-cnr_seguro::*}
 	# los mobs de al lado mueren
 	loop all living entities in radius {@radio-mobs} of {_l}:
 		if loop-entity is not a player:
@@ -240,3 +266,176 @@ function hongo(l: location):
 			if mod({_t}, 5) is 0:
 				force draw 1 explosion emitter particle at {_l} ~ vector(0, {_h}, 0)
 		wait 2 ticks
+
+# ===================================================================== zonas seguras y bloques que desaparecen
+
+# true = esa ubicacion esta adentro de alguna zona segura (las esquinas cuentan como bloques enteros)
+function enZonaSegura(l: location) :: boolean:
+	loop {cnr.z1::*}:
+		set {_a} to loop-value
+		set {_b} to {cnr.z2::%loop-index%}
+		if {_b} is set:
+			if world of {_a} is world of {_l}:
+				set {_x} to x-coordinate of {_l}
+				set {_y} to y-coordinate of {_l}
+				set {_z} to z-coordinate of {_l}
+				if {_x} >= min(x-coordinate of {_a}, x-coordinate of {_b}):
+					if {_x} < max(x-coordinate of {_a}, x-coordinate of {_b}) + 1:
+						if {_y} >= min(y-coordinate of {_a}, y-coordinate of {_b}):
+							if {_y} < max(y-coordinate of {_a}, y-coordinate of {_b}) + 1:
+								if {_z} >= min(z-coordinate of {_a}, z-coordinate of {_b}):
+									if {_z} < max(z-coordinate of {_a}, z-coordinate of {_b}) + 1:
+										return true
+	return false
+
+# durante la cuenta: al entrar a una zona segura, el aviso (solo a ese jugador)
+function zonasAviso():
+	loop all players:
+		set {_u} to uuid of loop-player
+		if enZonaSegura(location of loop-player) is true:
+			if {-cnr_seguro::%{_u}%} is not set:
+				set {-cnr_seguro::%{_u}%} to true
+				send "&a&l✔ &aEstás seguro." to loop-player
+				play sound "block.note_block.chime" with volume 1 and pitch 1.5 to loop-player
+		else:
+			delete {-cnr_seguro::%{_u}%}
+
+# los bloques elegidos desaparecen (se guarda como eran, para /nuclear restaurar)
+function desaparecerBloques():
+	loop {cnr.bloques::*}:
+		set {_b} to block at loop-value
+		if {_b} is not air:
+			set {cnr.guardado::%loop-index%} to "%block data of {_b}%"
+			set {_c} to loop-value
+			add vector(0.5, 0.5, 0.5) to {_c}
+			force draw 6 large smoke particles at {_c}
+			set block at loop-value to air
+
+function restaurarBloques() :: number:
+	set {_n} to 0
+	loop {cnr.guardado::*}:
+		set {_l} to {cnr.bloques::%loop-index%}
+		if {_l} is set:
+			set {_bd} to loop-value parsed as block data
+			if {_bd} is set:
+				set block data of block at {_l} to {_bd}
+				add 1 to {_n}
+	delete {cnr.guardado::*}
+	return {_n}
+
+function toggleBloque(p: player, l: location):
+	if {cnr.bloques::*} contains {_l}:
+		remove {_l} from {cnr.bloques::*}
+		send "&c- &7Bloque sacado. Quedan &f%size of {cnr.bloques::*}% &7bloques que desaparecen." to {_p}
+	else:
+		add {_l} to {cnr.bloques::*}
+		send "&a+ &7Bloque agregado. Hay &f%size of {cnr.bloques::*}% &7bloques que desaparecen (a los {@bloques-desaparecen} s del final)." to {_p}
+		set {_c} to {_l}
+		add vector(0.5, 0.5, 0.5) to {_c}
+		force draw 8 happy villager particles at {_c}
+
+function guardarZona(p: player):
+	set {_u} to uuid of {_p}
+	if {cnr.p1::%{_u}%} is not set:
+		send "&7Esquina 2 marcada. Falta la esquina 1 (click izquierdo con la Zona Segura)." to {_p}
+		stop
+	if {cnr.p2::%{_u}%} is not set:
+		send "&7Esquina 1 marcada. Falta la esquina 2 (click derecho con la Zona Segura)." to {_p}
+		stop
+	set {_a} to {cnr.p1::%{_u}%}
+	set {_b} to {cnr.p2::%{_u}%}
+	if world of {_a} is not world of {_b}:
+		send "&c✖ Las dos esquinas tienen que estar en el mismo mundo." to {_p}
+		stop
+	add 1 to {cnr.zonas_n}
+	set {cnr.z1::%{cnr.zonas_n}%} to {_a}
+	set {cnr.z2::%{cnr.zonas_n}%} to {_b}
+	delete {cnr.p1::%{_u}%}
+	delete {cnr.p2::%{_u}%}
+	set {_dx} to abs(x-coordinate of {_a} - x-coordinate of {_b}) + 1
+	set {_dy} to abs(y-coordinate of {_a} - y-coordinate of {_b}) + 1
+	set {_dz} to abs(z-coordinate of {_a} - z-coordinate of {_b}) + 1
+	send "&a✔ Zona segura #%{cnr.zonas_n}% guardada &7(%{_dx}% x %{_dy}% x %{_dz}% bloques). Hay &f%size of {cnr.z1::*}% &7zona(s)." to {_p}
+
+on right click:
+	if name of player's tool is "&e&lSelector Nuclear":
+		player has permission "tod4.admin"
+		cancel event
+		if event-block is set:
+			toggleBloque(player, location of event-block)
+		stop
+	if name of player's tool is "&a&lZona Segura":
+		player has permission "tod4.admin"
+		cancel event
+		if event-block is set:
+			set {cnr.p2::%uuid of player%} to location of event-block
+			guardarZona(player)
+
+on left click:
+	if name of player's tool is "&e&lSelector Nuclear":
+		cancel event
+		stop
+	if name of player's tool is "&a&lZona Segura":
+		player has permission "tod4.admin"
+		cancel event
+		if event-block is set:
+			set {cnr.p1::%uuid of player%} to location of event-block
+			guardarZona(player)
+
+command /nuclear [<text>] [<text>]:
+	permission: tod4.admin
+	permission message: &c✖ No tienes permiso.
+	trigger:
+		if arg-1 is not set:
+			give player blaze rod named "&e&lSelector Nuclear" with lore "&7Click derecho a un bloque: lo agrega o lo saca" and "&7de los que desaparecen (a los {@bloques-desaparecen} s del final)."
+			give player golden shovel named "&a&lZona Segura" with lore "&7Click izquierdo: esquina 1" and "&7Click derecho: esquina 2 (se guarda la zona)"
+			send "&e☢ &7Herramientas del Creeper Nuclear. Mas: &f/nuclear bloque | ver | lista | restaurar | borrar bloques | borrar zonas" to player
+			stop
+		if arg-1 is "bloque":
+			set {_t} to target block of player
+			if {_t} is not set:
+				send "&c✖ No estas mirando ningun bloque." to player
+				stop
+			if {_t} is air:
+				send "&c✖ No estas mirando ningun bloque." to player
+				stop
+			toggleBloque(player, location of {_t})
+			stop
+		if arg-1 is "lista":
+			send "&e☢ &7Bloques que desaparecen: &f%size of {cnr.bloques::*}% &7| guardados para restaurar: &f%size of {cnr.guardado::*}% &7| zonas seguras: &f%size of {cnr.z1::*}%" to player
+			stop
+		if arg-1 is "restaurar":
+			set {_n} to restaurarBloques()
+			send "&a✔ Volvieron &f%{_n}% &abloques." to player
+			stop
+		if arg-1 is "borrar":
+			if arg-2 is "bloques":
+				delete {cnr.bloques::*}
+				delete {cnr.guardado::*}
+				send "&a✔ Se borraron los bloques elegidos." to player
+			else if arg-2 is "zonas":
+				delete {cnr.z1::*}
+				delete {cnr.z2::*}
+				send "&a✔ Se borraron las zonas seguras." to player
+			else:
+				send "&7Uso: &f/nuclear borrar bloques &7o &f/nuclear borrar zonas" to player
+			stop
+		if arg-1 is "ver":
+			send "&e☢ &7Mostrando 10 s: bloques elegidos (verde) y esquinas de las zonas seguras (llamas)." to player
+			loop 20 times:
+				loop {cnr.bloques::*}:
+					set {_c} to loop-value-2
+					add vector(0.5, 0.5, 0.5) to {_c}
+					force draw 3 happy villager particles at {_c}
+				loop {cnr.z1::*}:
+					set {_c} to loop-value-2
+					add vector(0.5, 0.5, 0.5) to {_c}
+					force draw 4 flame particles at {_c}
+					set {_d} to {cnr.z2::%loop-index-2%}
+					if {_d} is set:
+						set {_d2} to {_d}
+						add vector(0.5, 0.5, 0.5) to {_d2}
+						force draw 4 flame particles at {_d2}
+				wait 10 ticks
+			stop
+		send "&7Uso: &f/nuclear [bloque | ver | lista | restaurar | borrar bloques | borrar zonas]" to player

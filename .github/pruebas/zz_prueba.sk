@@ -35,3 +35,36 @@ command /probarnuclear:
 
 on death of pig:
 	broadcast "NUCLEAR_PRUEBA murio el chancho: %damage cause% | nombre: %name of victim%"
+
+# solo para el CI: bloques que desaparecen y vuelven, y la zona segura
+command /probarbloques:
+	trigger:
+		set {_l} to location(5, -60, 5, world "world")
+		execute console command "setblock 5 -60 5 minecraft:oak_stairs[facing=east,half=top]"
+		wait 2 ticks
+		set {_antes} to "%block data of block at {_l}%"
+		delete {cnr.bloques::*}
+		delete {cnr.guardado::*}
+		add {_l} to {cnr.bloques::*}
+		desaparecerBloques()
+		set {_medio} to "%type of block at {_l}%"
+		set {_n} to restaurarBloques()
+		set {_despues} to "%block data of block at {_l}%"
+		broadcast "BLOQUES_PRUEBA antes=%{_antes}% | medio=%{_medio}% | despues=%{_despues}% | n=%{_n}%"
+		if {_antes} is {_despues}:
+			broadcast "BLOQUES_PRUEBA OK"
+		delete {cnr.bloques::*}
+		delete {cnr.z1::*}
+		delete {cnr.z2::*}
+		set {cnr.z1::1} to location(0, -61, 0, world "world")
+		set {cnr.z2::1} to location(3, -58, 3, world "world")
+		set {_a} to enZonaSegura(location(2.5, -60, 2.5, world "world"))
+		set {_b} to enZonaSegura(location(10, -60, 10, world "world"))
+		set {_c} to enZonaSegura(location(3.9, -60, 3.9, world "world"))
+		broadcast "ZONA_PRUEBA adentro=%{_a}% | afuera=%{_b}% | borde=%{_c}%"
+		if {_a} is true:
+			if {_b} is false:
+				if {_c} is true:
+					broadcast "ZONA_PRUEBA OK"
+		delete {cnr.z1::*}
+		delete {cnr.z2::*}
