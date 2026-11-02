@@ -950,6 +950,20 @@ final class Agujero implements Listener {
 
     // ================================================================= ni perlas ni cargas de viento
 
+    /**
+     * Ninguna perla te saca del Agujero ni te mete (las camaras de stasis de afuera teletransportan desde cualquier
+     * distancia, incluso de otra dimension). Afuera las perlas siguen como siempre.
+     */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void perlaTp(org.bukkit.event.player.PlayerTeleportEvent e) {
+        if (e.getCause() != org.bukkit.event.player.PlayerTeleportEvent.TeleportCause.ENDER_PEARL || mundo == null) return;
+        boolean desde = e.getFrom().getWorld() != null && e.getFrom().getWorld().equals(mundo);
+        boolean hacia = e.getTo() != null && e.getTo().getWorld() != null && e.getTo().getWorld().equals(mundo);
+        if (!desde && !hacia) return;
+        e.setCancelled(true);
+        e.getPlayer().sendActionBar(c("&cLas perlas no funcionan en el Agujero del Infierno."));
+    }
+
     private static boolean prohibido(ItemStack it) {
         return it != null && (it.getType() == Material.ENDER_PEARL || it.getType() == Material.WIND_CHARGE);
     }
