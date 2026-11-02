@@ -68,3 +68,29 @@ command /probarbloques:
 					broadcast "ZONA_PRUEBA OK"
 		delete {cnr.z1::*}
 		delete {cnr.z2::*}
+
+# solo para el CI: /nuclear ver no puede mover lo guardado
+command /probarver:
+	trigger:
+		delete {cnr.bloques::*}
+		delete {cnr.z1::*}
+		delete {cnr.z2::*}
+		add location(5, -60, 5, world "world") to {cnr.bloques::*}
+		set {cnr.z1::1} to location(0, -61, 0, world "world")
+		set {cnr.z2::1} to location(3, -58, 3, world "world")
+		loop 5 times:
+			verMarcas()
+		set {_b} to first element of {cnr.bloques::*}
+		broadcast "VER_PRUEBA bloque=%x-coordinate of {_b}% %y-coordinate of {_b}% %z-coordinate of {_b}% | z2=%x-coordinate of {cnr.z2::1}%"
+		if x-coordinate of {_b} is 5:
+			if x-coordinate of {cnr.z2::1} is 3:
+				broadcast "VER_PRUEBA OK"
+		# asi era antes (sumarle a la ubicacion de la lista): ¿la movia?
+		set {_lista::1} to location(5, -60, 5, world "world")
+		loop {_lista::*}:
+			set {_c} to loop-value
+			add vector(0.5, 0.5, 0.5) to {_c}
+		broadcast "VER_ANTES la de la lista quedo en x=%x-coordinate of {_lista::1}%"
+		delete {cnr.bloques::*}
+		delete {cnr.z1::*}
+		delete {cnr.z2::*}

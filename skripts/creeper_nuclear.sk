@@ -14,6 +14,8 @@
 # /nuclear bloque           agrega o saca el bloque que estas mirando (hasta 100 bloques)
 # /nuclear ver              muestra 10 s los bloques elegidos (verde) y las esquinas de las zonas seguras (llamas)
 # /nuclear lista            cuantos bloques y zonas hay
+# /nuclear prueba [seg]     la cuenta SOLO PARA VOS (titulo, barra, sonidos, aviso de la zona y los bloques que desaparecen
+#                           solo en tu pantalla). Nadie muere ni se entera; al final te dice si te salvabas. Sin seg: la cuenta entera.
 # /nuclear restaurar        vuelven los bloques que desaparecieron
 # /nuclear borrar bloques   /nuclear borrar zonas
 # Los bloques elegidos desaparecen cuando a la cuenta le quedan "bloques-desaparecen" segundos (se guardan para restaurarlos).
@@ -28,7 +30,7 @@ options:
 	# segundos de la cuenta regresiva (la barra de arriba) hasta que explota
 	cuenta: 90
 	# cuando a la cuenta le quedan estos segundos, desaparecen los bloques elegidos con el Selector Nuclear
-	bloques-desaparecen: 30
+	bloques-desaparecen: 60
 	# mueren todos los jugadores a esta distancia o menos (solo en el mismo mundo)
 	radio-muerte: 500
 	# los mobs de al lado tambien mueren
@@ -291,14 +293,75 @@ function enZonaSegura(l: location) :: boolean:
 # durante la cuenta: al entrar a una zona segura, el aviso (solo a ese jugador)
 function zonasAviso():
 	loop all players:
-		set {_u} to uuid of loop-player
-		if enZonaSegura(location of loop-player) is true:
-			if {-cnr_seguro::%{_u}%} is not set:
-				set {-cnr_seguro::%{_u}%} to true
-				send "&a&l✔ &aEstás seguro." to loop-player
-				play sound "block.note_block.chime" with volume 1 and pitch 1.5 to loop-player
+		avisoZona(loop-player)
+
+function avisoZona(p: player):
+	set {_u} to uuid of {_p}
+	if enZonaSegura(location of {_p}) is true:
+		if {-cnr_seguro::%{_u}%} is not set:
+			set {-cnr_seguro::%{_u}%} to true
+			send "&a&l✔ &aEstás seguro." to {_p}
+			play sound "block.note_block.chime" with volume 1 and pitch 1.5 to {_p}
+	else:
+		delete {-cnr_seguro::%{_u}%}
+
+# ---------------------------------------------------------------- /nuclear prueba: todo solo para el que la usa
+# El titulo, la barra, los sonidos y el aviso de la zona segura le llegan solo a el. Los bloques elegidos desaparecen
+# solo en SU pantalla (para los demas siguen ahi) y al final vuelven. Nadie muere: le dice si se salvaba o no.
+function pruebaNuclear(p: player, seg: number):
+	set {_u} to uuid of {_p}
+	set {-cnr_prueba::%{_u}%} to true
+	delete {-cnr_seguro::%{_u}%}
+	set {_nom} to name of {_p}
+	send title "&c&lBOMBA PLANTADA" with subtitle "&e¡Corran al búnker!" to {_p} for 4 seconds
+	set {_bar} to "tod4:cnrp_%{_u}%"
+	execute console command "bossbar add %{_bar}% {""text"":""☢ PRUEBA ☢"",""color"":""yellow"",""bold"":true}"
+	execute console command "bossbar set %{_bar}% color yellow"
+	execute console command "bossbar set %{_bar}% style notched_12"
+	execute console command "bossbar set %{_bar}% max %{_seg}%"
+	execute console command "bossbar set %{_bar}% players %{_nom}%"
+	set {_ocultos} to false
+	loop {_seg} times:
+		if {_p} is not online:
+			execute console command "bossbar remove %{_bar}%"
+			delete {-cnr_prueba::%{_u}%}
+			stop
+		set {_n} to {_seg} - loop-number + 1
+		execute console command "bossbar set %{_bar}% name {""text"":""☢ PRUEBA ☢  %{_n}%s"",""color"":""yellow"",""bold"":true}"
+		execute console command "bossbar set %{_bar}% value %{_n}%"
+		if {_n} > {_seg} * 0.6:
+			set {_snd} to "count1"
+		else if {_n} > {_seg} * 0.2:
+			set {_snd} to "count2"
 		else:
-			delete {-cnr_seguro::%{_u}%}
+			set {_snd} to "count4"
+		execute console command "execute as %{_nom}% at @s run playsound tod4:creeper.nuclear.%{_snd}% hostile @s ~ ~ ~ 1 1"
+		if {_n} is {@bloques-desaparecen}:
+			set {_ocultos} to true
+			loop {cnr.bloques::*}:
+				make {_p} see block at loop-value-2 as air
+		avisoZona({_p})
+		wait 10 ticks
+		if {_p} is online:
+			avisoZona({_p})
+		wait 10 ticks
+	execute console command "bossbar remove %{_bar}%"
+	delete {-cnr_prueba::%{_u}%}
+	delete {-cnr_seguro::%{_u}%}
+	if {_p} is not online:
+		stop
+	execute console command "execute as %{_nom}% at @s run playsound minecraft:entity.generic.explode hostile @s ~ ~ ~ 1 0.5"
+	if enZonaSegura(location of {_p}) is true:
+		send "&a&l✔ &a(Prueba) Te salvabas: estabas en una zona segura." to {_p}
+	else:
+		send "&c&l✖ &c(Prueba) Te morías: no estabas en una zona segura." to {_p}
+	if {_ocultos} is false:
+		send "&7(Prueba) Los bloques no llegaron a desaparecer: la prueba duró menos de {@bloques-desaparecen} s." to {_p}
+	wait 3 seconds
+	# los bloques vuelven a verse como son
+	if {_p} is online:
+		loop {cnr.bloques::*}:
+			make {_p} see block at loop-value as block data of block at loop-value
 
 # los bloques elegidos desaparecen (se guarda como eran, para /nuclear restaurar)
 function desaparecerBloques():
@@ -306,9 +369,7 @@ function desaparecerBloques():
 		set {_b} to block at loop-value
 		if {_b} is not air:
 			set {cnr.guardado::%loop-index%} to "%block data of {_b}%"
-			set {_c} to loop-value
-			add vector(0.5, 0.5, 0.5) to {_c}
-			force draw 6 large smoke particles at {_c}
+			force draw 6 large smoke particles at centro(loop-value)
 			set block at loop-value to air
 
 function restaurarBloques() :: number:
@@ -323,20 +384,19 @@ function restaurarBloques() :: number:
 	delete {cnr.guardado::*}
 	return {_n}
 
+# el centro del bloque de esa ubicacion, como una ubicacion NUEVA (sumarle algo a la guardada la movia)
+function centro(l: location) :: location:
+	return location((floor(x-coordinate of {_l})) + 0.5, (floor(y-coordinate of {_l})) + 0.5, (floor(z-coordinate of {_l})) + 0.5, world of {_l})
+
 # las particulas de /nuclear ver (una vez)
 function verMarcas():
 	loop {cnr.bloques::*}:
-		set {_c} to loop-value
-		add vector(0.5, 0.5, 0.5) to {_c}
-		force draw 3 happy villager particles at {_c}
+		force draw 3 happy villager particles at centro(loop-value)
 	loop {cnr.z1::*}:
-		set {_c} to loop-value
-		add vector(0.5, 0.5, 0.5) to {_c}
-		force draw 4 flame particles at {_c}
+		force draw 4 flame particles at centro(loop-value)
 		set {_d} to {cnr.z2::%loop-index%}
 		if {_d} is set:
-			add vector(0.5, 0.5, 0.5) to {_d}
-			force draw 4 flame particles at {_d}
+			force draw 4 flame particles at centro({_d})
 
 function toggleBloque(p: player, l: location):
 	if {cnr.bloques::*} contains {_l}:
@@ -345,9 +405,7 @@ function toggleBloque(p: player, l: location):
 	else:
 		add {_l} to {cnr.bloques::*}
 		send "&a+ &7Bloque agregado. Hay &f%size of {cnr.bloques::*}% &7bloques que desaparecen (a los {@bloques-desaparecen} s del final)." to {_p}
-		set {_c} to {_l}
-		add vector(0.5, 0.5, 0.5) to {_c}
-		force draw 8 happy villager particles at {_c}
+		force draw 8 happy villager particles at centro({_l})
 
 function guardarZona(p: player):
 	set {_u} to uuid of {_p}
@@ -404,7 +462,7 @@ command /nuclear [<text>] [<text>]:
 		if arg-1 is not set:
 			give player blaze rod named "&e&lSelector Nuclear" with lore "&7Click derecho a un bloque: lo agrega o lo saca" and "&7de los que desaparecen (a los {@bloques-desaparecen} s del final)."
 			give player golden shovel named "&a&lZona Segura" with lore "&7Click izquierdo: esquina 1" and "&7Click derecho: esquina 2 (se guarda la zona)"
-			send "&e☢ &7Herramientas del Creeper Nuclear. Mas: &f/nuclear bloque | ver | lista | restaurar | borrar bloques | borrar zonas" to player
+			send "&e☢ &7Herramientas del Creeper Nuclear. Mas: &f/nuclear prueba [segundos] | bloque | ver | lista | restaurar | borrar bloques | borrar zonas" to player
 			stop
 		if arg-1 is "bloque":
 			set {_t} to target block of player
@@ -415,6 +473,19 @@ command /nuclear [<text>] [<text>]:
 				send "&c✖ No estas mirando ningun bloque." to player
 				stop
 			toggleBloque(player, location of {_t})
+			stop
+		if arg-1 is "prueba":
+			if {-cnr_prueba::%uuid of player%} is set:
+				send "&c✖ Ya tienes una prueba corriendo." to player
+				stop
+			set {_seg} to {@cuenta}
+			if arg-2 is set:
+				set {_x} to arg-2 parsed as integer
+				if {_x} is set:
+					if {_x} >= 5:
+						set {_seg} to {_x}
+			send "&e☢ &7Prueba de &f%{_seg}% s&7: solo la ves vos y nadie muere." to player
+			pruebaNuclear(player, {_seg})
 			stop
 		if arg-1 is "lista":
 			send "&e☢ &7Bloques que desaparecen: &f%size of {cnr.bloques::*}% &7| guardados para restaurar: &f%size of {cnr.guardado::*}% &7| zonas seguras: &f%size of {cnr.z1::*}%" to player
@@ -441,4 +512,4 @@ command /nuclear [<text>] [<text>]:
 				verMarcas()
 				wait 10 ticks
 			stop
-		send "&7Uso: &f/nuclear [bloque | ver | lista | restaurar | borrar bloques | borrar zonas]" to player
+		send "&7Uso: &f/nuclear [prueba [segundos] | bloque | ver | lista | restaurar | borrar bloques | borrar zonas]" to player
