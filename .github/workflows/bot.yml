@@ -30,7 +30,7 @@ jobs:
       - name: Probar el screamer con un jugador
         run: |
           cd srv
-          (sleep 90; echo "gamerule doMobSpawning false"; echo "kill @e[type=!player]"; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 12; echo "kill @e[type=enderman]"; sleep 1; echo "effect give tester instant_health 1 5"; echo "tod4 murcielago 1 tester"; sleep 4; echo "kill @e[type=bat]"; sleep 3; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          (sleep 90; echo "gamerule doMobSpawning false"; echo "kill @e[type=!player]"; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 12; echo "kill @e[type=enderman]"; sleep 1; echo "effect give tester instant_health 1 5"; echo "time set night"; echo "tod4 murcielago 1 tester"; sleep 4; echo "kill @e[type=bat]"; sleep 3; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
           (cd ../bot && timeout 90 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true

@@ -17,6 +17,13 @@ final class AvisosCambios {
     private static final String DIF = "⚠ CAMBIO DE DIFICULTAD ⚠";
     private static final String AVI = "✦ AVISO ✦";
     private static final String DUN = "✦ NUEVA DUNGEON ✦";
+    private static final String MOBS = "⚠ ALERTA: NUEVOS MOBS ⚠";
+    /** Nuevos mobs del dia 11: {nombre, descripcion}. Sale "☠ *Nombre*:" y abajo la descripcion. */
+    private static final String[][] MOBS_D11 = {
+        {"Papu", "Vive en el *Agujero del Infierno*. Si te golpea, durante *30 segundos* no vas a poder confiar en lo que ves: tu *vida*, tu *hambre*, el *tabulador* y el *tiempo* se vuelven locos."},
+        {"Clones", "Unos *clones violetas* repiten tus movimientos con atraso. Si uno te toca, te quita *3 corazones* que nada puede frenar."},
+        {"Murciélago Vampiro", "Reemplaza a los murciélagos comunes: aparece en las *cuevas oscuras* y, *de noche*, cerca tuyo. Vuela directo hacia ti y cada mordida te *roba un corazón*. Si te quedas sin corazones, mueres. *El sol lo quema*."},
+    };
     private static final String PODER_1 = "Los encantamientos *Poder* e *Infinidad* ahora también se pueden usar en la *ballesta*.";
     private static final String PODER_2 = "*Poder* aumenta su daño e *Infinidad* hace que no gaste *flechas comunes*. Algunos mobs con ballesta pueden tener Poder.";
     /** El texto que tenia antes (sin Infinidad): si nadie lo edito, se cambia por el nuevo. */
@@ -180,6 +187,14 @@ final class AvisosCambios {
                 if (!m[1].isEmpty()) cb.vincular(m[1], m[0]);
             }
         }
+        // nuevos mobs (dia 11): como un cambio de dificultad (naranja, con ruleta); cada mob: "☠ *Nombre*:" y su descripcion
+        List<String> mobs = new ArrayList<>();
+        for (String[] mob : MOBS_D11) {
+            if (!mobs.isEmpty()) mobs.add(".");
+            mobs.add("☠ *" + mob[0] + "*:");
+            mobs.addAll(envolver(mob[1], max));
+        }
+        if (pl.avisos().sembrar("aviso_nuevos_mobs_d11", 2, MOBS, 4, 11, mobs)) nuevo = true;
         if (nuevo) pl.getLogger().info("Mensajes de los cambios cargados (nombres cambio_* y aviso_*).");
         pl.avisos().cambiarDia("cambio_warden", 4, 1);   // el Warden vuelve al dia 1
         pl.avisos().cambiarDia("aviso_mesa", 4, 1);      // la mesa de encantamientos pasa al dia 1

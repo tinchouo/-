@@ -29,7 +29,9 @@ import ar.tod4.util.Style;
 import ar.tod4.util.Txt;
 
 /**
- * Murcielago Vampiro: aparece en el overworld (de noche, o de dia en lugares oscuros como cuevas) y vuela RECTO hacia
+ * Murcielago Vampiro: reemplaza a TODOS los murcielagos comunes del overworld (aparecen donde aparecian ellos: cuevas
+ * oscuras) y ademas, de noche, pueden aparecer cerca de los jugadores. Nunca aparece arriba de agua o lava, ni en el aire
+ * sin piso abajo, ni donde hay luz de antorchas. Si les da el sol, se queman. Vuela RECTO hacia
  * un jugador, esquivando paredes. Si esta pegado, cada medio segundo le roba un corazon de la vida maxima (primero los
  * rojos; los amarillos no protegen). Si no le queda ninguno, muere. Lo robado vuelve al morir o con el Corazon Morado.
  * Se mata normal (poca vida). Se va solo si pasa mucho tiempo o no hay nadie cerca.
@@ -57,6 +59,7 @@ public final class Murcielagos implements Listener {
         Bukkit.getPluginManager().registerEvents(this, pl);
         Bukkit.getScheduler().runTaskTimer(pl, this::mover, 1L, 1L);
         Bukkit.getScheduler().runTaskTimer(pl, this::aparecer, 200L, 20L);
+        Bukkit.getScheduler().runTaskTimer(pl, this::sol, 20L, 20L);
         // los que quedaron de antes de reiniciar (no se guardan, pero por las dudas)
         Bukkit.getScheduler().runTask(pl, () -> {
             for (World w : Bukkit.getWorlds()) for (Bat b : w.getEntitiesByClass(Bat.class))
@@ -77,24 +80,81 @@ public final class Murcielagos implements Listener {
 
     private int segundos;
 
+    private boolean activo() {
+        return pl.getConfig().getBoolean("murcielagos.activo", true) && pl.dia() >= pl.getConfig().getInt("murcielagos.desde_dia", 11);
+    }
+
+    private static boolean esDeDia(World w) {
+        long t = w.getTime();
+        return t < 12300 || t > 23850;
+    }
+
     private void aparecer() {
-        if (!pl.getConfig().getBoolean("murcielagos.activo", true)) return;
-        if (pl.dia() < pl.getConfig().getInt("murcielagos.desde_dia", 1)) return;
+        if (!activo()) return;
         segundos++;
         if (segundos < Math.max(1, (int) d("cada_seg", 20))) return;
         segundos = 0;
         World w = overworld();
-        boolean noche = w.getTime() >= 13000 && w.getTime() <= 23000;
+        // los murcielagos comunes que hayan quedado (de antes, o de chunks que se cargaron) se van
+        for (Bat b : w.getEntitiesByClass(Bat.class)) if (!b.getScoreboardTags().contains(ETIQUETA)) b.remove();
+        if (esDeDia(w)) return;   // de dia solo los que reemplazan a los comunes (en las cuevas)
         int max = (int) d("max_por_jugador", 2);
         for (Player p : w.getPlayers()) {
             if (!jugable(p)) continue;
-            // de noche en cualquier lado; de dia solo en lo oscuro (cuevas)
-            boolean oscuro = p.getLocation().getBlock().getLightFromSky() <= 4 && p.getLocation().getBlock().getLightLevel() <= 7;
-            if (!noche && !oscuro) continue;
             if (cuantosDe(p) >= max) continue;
             if (rnd.nextDouble() >= d("probabilidad", 0.25)) continue;
             Location l = lugar(p.getLocation(), d("distancia_min", 16), d("distancia_max", 28));
             if (l != null) crear(l, p);
+        }
+    }
+
+    /** Los murcielagos comunes del overworld no aparecen mas: en su lugar (si se puede) aparece uno vampiro. */
+    @EventHandler(ignoreCancelled = true)
+    public void comun(org.bukkit.event.entity.CreatureSpawnEvent e) {
+        if (!(e.getEntity() instanceof Bat) || e.getEntity().getScoreboardTags().contains(ETIQUETA)) return;
+        if (!e.getEntity().getWorld().equals(overworld())) return;
+        if (e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CUSTOM
+                || e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.COMMAND) return;   // los de comandos/plugins, no
+        if (!pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true)) return;
+        e.setCancelled(true);
+        if (!activo()) return;
+        Location l = e.getLocation();
+        Player p = cercano(l, 40);
+        if (p == null || cuantosDe(p) >= (int) d("max_por_jugador", 2)) return;
+        if (!puedeAparecer(l)) return;
+        Bukkit.getScheduler().runTask(pl, () -> { if (p.isOnline()) crear(l, p); });
+    }
+
+    /**
+     * Donde puede aparecer: aire, sin luz de antorchas, y abajo (lo primero que no es aire) un bloque solido: nada de
+     * agua ni lava ni caer al vacio. De dia, solo donde no llega el sol.
+     */
+    private boolean puedeAparecer(Location l) {
+        Block b = l.getBlock();
+        World w = l.getWorld();
+        if (!b.isPassable() || b.isLiquid()) return false;
+        if (b.getLightFromBlocks() > (int) d("luz_maxima", 7)) return false;
+        if (esDeDia(w) && b.getLightFromSky() >= 15) return false;
+        for (int i = 1; i <= 24; i++) {
+            Block a = b.getRelative(0, -i, 0);
+            if (a.getY() <= w.getMinHeight()) return false;
+            if (a.isLiquid()) return false;
+            if (!a.isPassable()) return a.getType().isSolid();
+        }
+        return false;   // mas de 24 bloques de aire abajo
+    }
+
+    /** Si les da el sol (de dia, sin lluvia, cielo abierto), se queman. */
+    private void sol() {
+        if (bichos.isEmpty()) return;
+        for (UUID u : new java.util.ArrayList<>(bichos.keySet())) {
+            Entity ent = Bukkit.getEntity(u);
+            if (!(ent instanceof Bat b) || !b.isValid()) continue;
+            World w = b.getWorld();
+            if (!esDeDia(w) || w.hasStorm()) continue;
+            if (b.getLocation().getBlock().getLightFromSky() < 15) continue;
+            b.setFireTicks(Math.max(b.getFireTicks(), 60));
+            b.damage(d("dano_sol", 3));
         }
     }
 
@@ -133,8 +193,9 @@ public final class Murcielagos implements Listener {
             for (int k = 0; k < 8; k++, y--) {
                 if (y <= w.getMinHeight() + 1 || y + 2 >= w.getMaxHeight()) continue;
                 Block b = w.getBlockAt(x, y, z);
-                if (b.isPassable() && !b.isLiquid() && b.getRelative(0, 1, 0).isPassable() && !b.getRelative(0, 1, 0).isLiquid())
-                    return new Location(w, x + 0.5, y + 0.2, z + 0.5);
+                if (!b.getRelative(0, 1, 0).isPassable() || b.getRelative(0, 1, 0).isLiquid()) continue;
+                Location l = new Location(w, x + 0.5, y + 0.2, z + 0.5);
+                if (puedeAparecer(l)) return l;
             }
         }
         return null;
@@ -209,12 +270,14 @@ public final class Murcielagos implements Listener {
         return b.isPassable() && !b.isLiquid() && a.isPassable() && !a.isLiquid();
     }
 
-    private Player cercano(Bat b) {
+    private Player cercano(Bat b) { return cercano(b.getLocation(), 40); }
+
+    private Player cercano(Location l, double r) {
         Player mejor = null;
-        double md = 40 * 40;
-        for (Player p : b.getWorld().getPlayers()) {
+        double md = r * r;
+        for (Player p : l.getWorld().getPlayers()) {
             if (!jugable(p)) continue;
-            double dd = p.getLocation().distanceSquared(b.getLocation());
+            double dd = p.getLocation().distanceSquared(l);
             if (dd < md) { md = dd; mejor = p; }
         }
         return mejor;

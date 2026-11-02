@@ -833,8 +833,8 @@ public final class Momentos implements Listener {
                 out.add(" &8| &c" + pl.getConfig().getString("momentos.simbolo_tiempo", "⌚") + " " + String.format("%d:%02d", r / 60, r % 60));
             }
         }
-        if (activos.isEmpty()) out.add("&4■ &c&lEsperando el siguiente paso...");
-        out.add(sep);
+        // sin pasos activos (entre un paso y otro) no se muestra nada de mas
+        if (!activos.isEmpty() || out.size() == 1) out.add(sep);
         if (!participa(p)) {
             out.add("&e■ &eNo participas");
             out.add(sep);

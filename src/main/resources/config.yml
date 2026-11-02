@@ -315,13 +315,17 @@ phantom:
   busca_radio: 30         # de que tan lejos te ve
   debug: false            # true = escribe en la consola lo que hace
 
-# Murcielagos Vampiro: en el overworld, de noche (o de dia en lo oscuro, como cuevas). Vuelan recto hacia vos y, pegados,
+# Murcielagos Vampiro: reemplazan a los murcielagos comunes del overworld (cuevas oscuras) y, de noche, aparecen cerca de
+# los jugadores. Nunca arriba de agua/lava, sin piso abajo o con luz de antorchas. Al sol se queman. Vuelan recto hacia vos y, pegados,
 # te roban un corazon de la vida maxima cada medio segundo (primero los rojos; los amarillos no protegen; sin corazones, moris).
 # Lo robado vuelve al morir o con el Corazon Morado. Para probar: /tod4 murcielago [cantidad]
 murcielagos:
   activo: true
-  desde_dia: 1
-  cada_seg: 20            # cada cuanto se tira la moneda para cada jugador
+  desde_dia: 11
+  reemplazar_comunes: true  # los murcielagos comunes del overworld no aparecen mas (en su lugar, uno vampiro)
+  luz_maxima: 7           # no aparecen donde la luz de antorchas/lamparas es mayor a esto
+  dano_sol: 3             # dano por segundo al sol (vida 10: dura ~3 s)
+  cada_seg: 20            # de noche: cada cuanto se tira la moneda para cada jugador
   probabilidad: 0.25      # chance de que aparezca uno en cada tirada
   max_por_jugador: 2
   distancia_min: 16       # a cuantos bloques aparece
