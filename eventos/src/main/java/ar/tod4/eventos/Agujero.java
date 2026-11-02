@@ -1693,6 +1693,13 @@ final class Agujero implements Listener {
                 if (mundo != null) pared();
                 TOD4Eventos.ok(s, "Cerrada (con la pared) por &f" + mmss(cerradoHasta - System.currentTimeMillis()) + "&a.");
             }
+            case "limpiar" -> {
+                // saca (sin que suelten nada) todos los mobs que haya en la cueva; los carteles y jugadores no se tocan
+                if (mundo == null) { TOD4Eventos.err(s, "La cueva no está creada."); return; }
+                int n = 0;
+                for (Entity en : mundo.getEntities()) if (en instanceof org.bukkit.entity.Mob) { en.remove(); n++; }
+                TOD4Eventos.ok(s, "Saqué &f" + n + " &amobs de la cueva.");
+            }
             case "terminar" -> {
                 if (estado != Estado.CORRIENDO && estado != Estado.TERMINANDO) { TOD4Eventos.err(s, "No hay ninguna corrida."); return; }
                 inicio = System.currentTimeMillis() - (long) (duracion() * 1000) - 10000;
@@ -1755,7 +1762,7 @@ final class Agujero implements Listener {
     }
 
     List<String> tab(String[] a) {
-        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "item", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "cofre", "quitarcofre", "espera", "recargar", "estado");
+        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "item", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "limpiar", "cofre", "quitarcofre", "espera", "recargar", "estado");
         if (a.length == 2 && a[0].equalsIgnoreCase("cofre")) return List.of("facil", "dificil");
         if (a.length == 2 && (a[0].equalsIgnoreCase("entrada") || a[0].equalsIgnoreCase("bloquesalida"))) return List.of("1", "2");
         if (a.length == 2 && a[0].equalsIgnoreCase("espera")) { List<String> l = new ArrayList<>(); for (Player p : Bukkit.getOnlinePlayers()) l.add(p.getName()); return l; }

@@ -104,7 +104,20 @@ public final class Alucinacion implements Listener {
                 f = new float[]{vida, hambre};
                 falso.put(u, f);
             }
-            // se manda seguido: si el server manda la vida de verdad (al pegarle o curarse), enseguida se tapa
+        }
+    }
+
+    /**
+     * Al final de cada tick (despues de que el server mando lo suyo): asi lo ultimo que le llega es lo falso, aunque
+     * el server u otro plugin le manden la vida de verdad en ese mismo tick.
+     */
+    @EventHandler
+    public void finTick(com.destroystokyo.paper.event.server.ServerTickEndEvent e) {
+        if (HASTA.isEmpty()) return;
+        for (Map.Entry<UUID, float[]> en : falso.entrySet()) {
+            Player p = Bukkit.getPlayer(en.getKey());
+            if (p == null || p.isDead() || !activa(en.getKey())) continue;
+            float[] f = en.getValue();
             p.sendHealthUpdate(f[0], (int) f[1], 0f);
         }
     }

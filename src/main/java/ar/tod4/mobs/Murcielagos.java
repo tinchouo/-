@@ -115,9 +115,8 @@ public final class Murcielagos implements Listener {
         if (!e.getEntity().getWorld().equals(overworld())) return;
         if (e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CUSTOM
                 || e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.COMMAND) return;   // los de comandos/plugins, no
-        if (!pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true)) return;
+        if (!pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true) || !activo()) return;   // antes del dia: comunes
         e.setCancelled(true);
-        if (!activo()) return;
         Location l = e.getLocation();
         Player p = cercano(l, 40);
         if (p == null || cuantosDe(p) >= (int) d("max_por_jugador", 2)) return;
