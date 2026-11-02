@@ -44,6 +44,9 @@ public final class Murcielagos implements Listener {
     private final TOD4 pl;
     private final Random rnd = new Random();
     private final Map<UUID, Estado> bichos = new HashMap<>();
+    /** Por jugador: cuando le aparecio el ultimo (como mucho uno cada tanto) y el tick de la ultima mordida (de cualquiera). */
+    private final Map<UUID, Long> ultimoNace = new HashMap<>();
+    private final Map<UUID, Integer> ultimaMordida = new HashMap<>();
     private int tick;
 
     private static final class Estado {
@@ -105,10 +108,10 @@ public final class Murcielagos implements Listener {
         int max = (int) d("max_por_jugador", 2);
         for (Player p : w.getPlayers()) {
             if (!jugable(p)) continue;
-            if (cuantosDe(p) >= max) continue;
+            if (cuantosDe(p) >= max || !leToca(p)) continue;
             if (rnd.nextDouble() >= d("probabilidad", 0.25)) continue;
             Location l = lugar(p.getLocation(), d("distancia_min", 16), d("distancia_max", 28));
-            if (l != null) crear(l, p);
+            if (l != null) { ultimoNace.put(p.getUniqueId(), System.currentTimeMillis()); crear(l, p); }
         }
     }
 
@@ -125,8 +128,9 @@ public final class Murcielagos implements Listener {
         if (rnd.nextDouble() * 100 >= d("chance_reemplazo", 15)) return;
         Location l = e.getLocation();
         Player p = cercano(l, 40);
-        if (p == null || cuantosDe(p) >= (int) d("max_por_jugador", 2)) return;
+        if (p == null || cuantosDe(p) >= (int) d("max_por_jugador", 2) || !leToca(p)) return;
         if (!puedeAparecer(l)) return;
+        ultimoNace.put(p.getUniqueId(), System.currentTimeMillis());
         Bukkit.getScheduler().runTask(pl, () -> { if (p.isOnline()) crear(l, p); });
     }
 
@@ -161,6 +165,12 @@ public final class Murcielagos implements Listener {
             b.setFireTicks(Math.max(b.getFireTicks(), 60));
             b.damage(d("dano_sol", 3));
         }
+    }
+
+    /** Como mucho uno cada "minutos_entre" minutos para cada jugador. */
+    private boolean leToca(Player p) {
+        Long u = ultimoNace.get(p.getUniqueId());
+        return u == null || System.currentTimeMillis() - u >= (long) (d("minutos_entre", 5) * 60000);
     }
 
     private int cuantosDe(Player p) {
@@ -247,8 +257,10 @@ public final class Murcielagos implements Listener {
             }
             if (tick % 40 == 0 && rnd.nextInt(3) == 0) b.getWorld().playSound(bl, Sound.ENTITY_BAT_AMBIENT, SoundCategory.HOSTILE, 0.8f, 0.6f);
             // muerde
-            if (dist < d("alcance", 1.4) && tick - st.ultimoGolpe >= cada) {
-                st.ultimoGolpe = tick;
+            // el tiempo entre mordidas es por jugador: aunque haya varios encima, de a una
+            int ult = ultimaMordida.getOrDefault(p.getUniqueId(), -100000);
+            if (dist < d("alcance", 1.4) && tick - ult >= cada) {
+                ultimaMordida.put(p.getUniqueId(), tick);
                 morder(b, p);
             }
         }

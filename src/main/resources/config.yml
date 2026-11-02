@@ -324,6 +324,7 @@ murcielagos:
   desde_dia: 11
   reemplazar_comunes: true  # los murcielagos comunes del overworld no aparecen mas
   chance_reemplazo: 15    # % de los murcielagos comunes que aparecen como vampiros (el resto no aparece)
+  minutos_entre: 5        # a cada jugador le aparece como mucho uno cada estos minutos
   luz_maxima: 7           # no aparecen donde la luz de antorchas/lamparas es mayor a esto
   dano_sol: 3             # dano por segundo al sol (vida 10: dura ~3 s)
   de_noche_cerca: false   # true = ademas, de noche, aparecen cerca de los jugadores (con lo de abajo)
@@ -333,7 +334,7 @@ murcielagos:
   distancia_min: 16       # a cuantos bloques aparece
   distancia_max: 28
   velocidad: 0.3          # bloques por tick (0.3 = 6 por segundo; correr es 5,6)
-  muerde_cada_ticks: 10   # 10 = medio segundo
+  muerde_cada_ticks: 10   # 10 = medio segundo (por jugador: aunque haya varios encima, muerden de a uno)
   alcance: 1.4
   vida: 1                 # 1 = muere de un golpe
   dura_seg: 90            # despues se va
