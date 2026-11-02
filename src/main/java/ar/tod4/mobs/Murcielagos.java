@@ -30,7 +30,7 @@ import ar.tod4.util.Txt;
 
 /**
  * Murcielago Vampiro: reemplaza a TODOS los murcielagos comunes del overworld (aparecen donde aparecian ellos: cuevas
- * oscuras) y ademas, de noche, pueden aparecer cerca de los jugadores. Nunca aparece arriba de agua o lava, ni en el aire
+ * oscuras). No persiguen a los cuyes. Nunca aparece arriba de agua o lava, ni en el aire
  * sin piso abajo, ni donde hay luz de antorchas. Si les da el sol, se queman. Vuela RECTO hacia
  * un jugador, esquivando paredes. Si esta pegado, cada medio segundo le roba un corazon de la vida maxima (primero los
  * rojos; los amarillos no protegen). Si no le queda ninguno, muere. Lo robado vuelve al morir o con el Corazon Morado.
@@ -69,8 +69,10 @@ public final class Murcielagos implements Listener {
 
     private double d(String k, double def) { return pl.getConfig().getDouble("murcielagos." + k, def); }
 
+    /** A quien persiguen: jugadores en supervivencia/aventura, menos los cuyes (que no pueden morir). */
     private static boolean jugable(Player p) {
-        return p.isOnline() && !p.isDead() && (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE);
+        return p.isOnline() && !p.isDead() && (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
+                && !ar.tod4.hook.Cuyes.activo(p);
     }
 
     /** El overworld principal (no el Agujero ni los Backrooms, que tambien son "normales"). */
@@ -97,7 +99,9 @@ public final class Murcielagos implements Listener {
         World w = overworld();
         // los murcielagos comunes que hayan quedado (de antes, o de chunks que se cargaron) se van
         for (Bat b : w.getEntitiesByClass(Bat.class)) if (!b.getScoreboardTags().contains(ETIQUETA)) b.remove();
-        if (esDeDia(w)) return;   // de dia solo los que reemplazan a los comunes (en las cuevas)
+        // aparecer cerca de los jugadores de noche: apagado (solo salen donde salian los murcielagos comunes)
+        if (!pl.getConfig().getBoolean("murcielagos.de_noche_cerca", false)) return;
+        if (esDeDia(w)) return;
         int max = (int) d("max_por_jugador", 2);
         for (Player p : w.getPlayers()) {
             if (!jugable(p)) continue;
@@ -285,7 +289,7 @@ public final class Murcielagos implements Listener {
     }
 
     private void morder(Bat b, Player p) {
-        if (pl.corazon() == null) return;
+        if (pl.corazon() == null || !jugable(p)) return;
         Location l = p.getLocation().add(0, 1.2, 0);
         p.getWorld().playSound(l, Sound.ENTITY_PHANTOM_BITE, SoundCategory.HOSTILE, 1f, 1.4f);
         p.getWorld().spawnParticle(Particle.DAMAGE_INDICATOR, l, 4, 0.2, 0.3, 0.2, 0.05);
