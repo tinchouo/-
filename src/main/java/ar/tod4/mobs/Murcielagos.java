@@ -182,8 +182,10 @@ public final class Murcielagos implements Listener {
         return b;
     }
 
-    /** Un lugar con aire (2 de alto) entre dmin y dmax del jugador, cerca de su altura. */
-    private Location lugar(Location c, double dmin, double dmax) {
+    /** Un lugar con aire (2 de alto) entre dmin y dmax del jugador, cerca de su altura, donde puede aparecer. */
+    private Location lugar(Location c, double dmin, double dmax) { return lugar(c, dmin, dmax, true); }
+
+    private Location lugar(Location c, double dmin, double dmax, boolean reglas) {
         World w = c.getWorld();
         for (int i = 0; i < 40; i++) {
             double ang = rnd.nextDouble() * Math.PI * 2, dist = dmin + rnd.nextDouble() * Math.max(0, dmax - dmin);
@@ -193,9 +195,9 @@ public final class Murcielagos implements Listener {
             for (int k = 0; k < 8; k++, y--) {
                 if (y <= w.getMinHeight() + 1 || y + 2 >= w.getMaxHeight()) continue;
                 Block b = w.getBlockAt(x, y, z);
-                if (!b.getRelative(0, 1, 0).isPassable() || b.getRelative(0, 1, 0).isLiquid()) continue;
+                if (!b.isPassable() || b.isLiquid() || !b.getRelative(0, 1, 0).isPassable() || b.getRelative(0, 1, 0).isLiquid()) continue;
                 Location l = new Location(w, x + 0.5, y + 0.2, z + 0.5);
-                if (puedeAparecer(l)) return l;
+                if (!reglas || puedeAparecer(l)) return l;
             }
         }
         return null;
@@ -316,7 +318,7 @@ public final class Murcielagos implements Listener {
         if (a.length > 1) try { n = Math.max(1, Math.min(10, Integer.parseInt(a[1]))); } catch (NumberFormatException ignored) { }
         int hechos = 0;
         for (int i = 0; i < n; i++) {
-            Location l = lugar(p.getLocation(), 6, 10);
+            Location l = lugar(p.getLocation(), 6, 10, false);   // para probar: aparece aunque sea de dia al aire libre
             if (l != null) { crear(l, p); hechos++; }
         }
         Style.ok(s, hechos + " murciélago(s) vampiro persiguen a " + p.getName() + ".");
