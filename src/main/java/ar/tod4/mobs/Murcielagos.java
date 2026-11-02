@@ -121,6 +121,8 @@ public final class Murcielagos implements Listener {
                 || e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.COMMAND) return;   // los de comandos/plugins, no
         if (!pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true) || !activo()) return;   // antes del dia: comunes
         e.setCancelled(true);
+        // solo algunos de los comunes pasan a ser vampiros (el resto, nada)
+        if (rnd.nextDouble() * 100 >= d("chance_reemplazo", 15)) return;
         Location l = e.getLocation();
         Player p = cercano(l, 40);
         if (p == null || cuantosDe(p) >= (int) d("max_por_jugador", 2)) return;
@@ -176,8 +178,8 @@ public final class Murcielagos implements Listener {
             x.customName(Txt.c("&4Murciélago Vampiro"));
             x.setCustomNameVisible(false);
             var hp = x.getAttribute(Attribute.MAX_HEALTH);
-            if (hp != null) hp.setBaseValue(d("vida", 10));
-            x.setHealth(d("vida", 10));
+            if (hp != null) hp.setBaseValue(Math.max(1, d("vida", 1)));   // 1 = muere de un golpe
+            x.setHealth(Math.max(1, d("vida", 1)));
             x.addScoreboardTag(ETIQUETA);
         });
         bichos.put(b.getUniqueId(), new Estado(objetivo == null ? null : objetivo.getUniqueId()));
