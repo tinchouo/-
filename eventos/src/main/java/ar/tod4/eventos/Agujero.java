@@ -1404,19 +1404,6 @@ final class Agujero implements Listener {
         if (!(e.getDamager() instanceof Player p) || !editor(p)) e.setCancelled(true);
     }
 
-    /** Las explosiones no rompen la sala de entrada (ahi estan los carteles). El resto se arregla al reconstruir. */
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void explota(org.bukkit.event.entity.EntityExplodeEvent e) {
-        if (mundo == null || !e.getLocation().getWorld().equals(mundo)) return;
-        e.blockList().removeIf(b -> enSala(b.getLocation()));
-    }
-
-    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
-    public void explotaBloque(org.bukkit.event.block.BlockExplodeEvent e) {
-        if (mundo == null || !e.getBlock().getWorld().equals(mundo)) return;
-        e.blockList().removeIf(b -> enSala(b.getLocation()));
-    }
-
     /** Saca el lugar de cofre que este en ese bloque. Devuelve su tipo o null. */
     private String quitarLugar(Block b) {
         String pre = b.getX() + "," + b.getY() + "," + b.getZ();
