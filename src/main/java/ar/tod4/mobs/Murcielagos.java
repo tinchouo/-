@@ -75,7 +75,29 @@ public final class Murcielagos implements Listener {
     /** A quien persiguen: jugadores en supervivencia/aventura, menos los cuyes (que no pueden morir). */
     private static boolean jugable(Player p) {
         return p.isOnline() && !p.isDead() && (p.getGameMode() == GameMode.SURVIVAL || p.getGameMode() == GameMode.ADVENTURE)
-                && !ar.tod4.hook.Cuyes.activo(p);
+                && !ar.tod4.hook.Cuyes.activo(p) && !enLogin(p);
+    }
+
+    private static java.lang.reflect.Method authmeOk;
+    private static Object authmeApi;
+
+    /**
+     * Todavia no se logueo: con AuthMe se le pregunta a AuthMe; si no, el que tiene Resistencia muy alta (la que da el
+     * login mientras escribe la contrasena) cuenta como que esta en el login.
+     */
+    static boolean enLogin(Player p) {
+        if (Bukkit.getPluginManager().getPlugin("AuthMe") != null) {
+            try {
+                if (authmeOk == null) {
+                    Class<?> k = Class.forName("fr.xephi.authme.api.v3.AuthMeApi");
+                    authmeApi = k.getMethod("getInstance").invoke(null);
+                    authmeOk = k.getMethod("isAuthenticated", Player.class);
+                }
+                return !(Boolean) authmeOk.invoke(authmeApi, p);
+            } catch (Throwable ignored) { }
+        }
+        org.bukkit.potion.PotionEffect r = p.getPotionEffect(org.bukkit.potion.PotionEffectType.RESISTANCE);
+        return r != null && r.getAmplifier() >= 4;
     }
 
     /** El overworld principal (no el Agujero ni los Backrooms, que tambien son "normales"). */
