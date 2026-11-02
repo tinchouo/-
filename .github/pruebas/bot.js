@@ -2,7 +2,7 @@
 const mc = require('minecraft-protocol')
 const c = mc.createClient({ host: '127.0.0.1', port: 25565, username: 'tester', version: '1.21.4' })
 const ver = new Set(['spawn_entity', 'entity_metadata', 'sound_effect', 'entity_sound_effect', 'entity_teleport',
-  'remove_entities', 'system_chat', 'player_chat', 'profileless_chat', 'sync_entity_position', 'entity_position_sync', 'teleport_entity'])
+  'remove_entities', 'system_chat', 'player_chat', 'profileless_chat', 'update_health', 'sync_entity_position', 'entity_position_sync', 'teleport_entity'])
 let t0 = Date.now()
 c.on('packet', (data, meta) => {
   if (!ver.has(meta.name)) return
