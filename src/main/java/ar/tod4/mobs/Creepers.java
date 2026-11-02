@@ -409,7 +409,8 @@ public final class Creepers implements Listener {
     // ----------------------------------------------------------------- flash
 
     /** Categorias que se callan mientras estas aturdido (el zumbido va por VOICE, que no se toca). */
-    private static final SoundCategory[] CALLAR = {SoundCategory.MASTER, SoundCategory.MUSIC, SoundCategory.RECORDS, SoundCategory.WEATHER,
+    // la musica y los discos no se cortan (la cancion del Agujero suena como disco)
+    private static final SoundCategory[] CALLAR = {SoundCategory.MASTER, SoundCategory.WEATHER,
             SoundCategory.BLOCKS, SoundCategory.HOSTILE, SoundCategory.NEUTRAL, SoundCategory.PLAYERS, SoundCategory.AMBIENT};
     private final Map<UUID, Integer> aturdidos = new HashMap<>();
 
@@ -545,7 +546,8 @@ public final class Creepers implements Listener {
         double mortal = cfg.getDouble("nuclear.radio_mortal", 22), dano = cfg.getDouble("nuclear.radio_dano", 40);
         double max = cfg.getDouble("nuclear.dano_centro", 800), min = cfg.getDouble("nuclear.dano_borde_mortal", 400);
         int veneno = cfg.getInt("nuclear.veneno_seg", 10);
-        boolean sinBloques = causa != null && causa.getScoreboardTags().contains("creeper_tumba");   // el que sale donde murio alguien
+        // el que sale donde murio alguien, o los del Agujero del Infierno (ahi no se rompe nada)
+        boolean sinBloques = causa != null && (causa.getScoreboardTags().contains("creeper_tumba") || causa.getScoreboardTags().contains("tod4_sin_bloques"));
         w.createExplosion(l, 6f, false, !sinBloques);
         w.playSound(l, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.HOSTILE, 16f, 0.5f);
         w.playSound(l, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, SoundCategory.HOSTILE, 16f, 0.6f);

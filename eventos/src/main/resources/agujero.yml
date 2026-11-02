@@ -15,7 +15,7 @@
 #  Otros: abrir (reconstruye y abre ya), cerrar [min], terminar (corta la corrida), espera <jugador>, estado
 #  Los jugadores no pueden romper ni poner nada, ni usar perlas ni cargas de viento.
 # =====================================================================
-version: 3
+version: 4
 
 mundo: agujero_infierno
 # la forma de la cueva sale de esta semilla (cambiarla despues de crearla cambia solo lo que se genere de nuevo)
@@ -58,46 +58,59 @@ derrumbe:
   punta_chance: 30
 
 # los cofres van en los lugares que pusiste vos (en creativo: cofre = facil, cofre trampa = dificil).
+# En cada reconstruccion sale este % de los lugares de cada tipo (siempre esa cantidad, en lugares al azar):
+# por ejemplo con 10 lugares dificiles y 70, salen 7.
 # generados: true = ademas usa lugares de la cueva generada, y entonces pone esta cantidad de cada tipo, al azar.
 cofres:
+  salen_facil: 70
+  salen_dificil: 70
   generados: false
   facil: 8
   dificil: 5
 
 # lo que tiene cada cofre:  "<item> <cantidad> [chance%]"   cantidad: 3  |  2-5  |  1:45,2:35,3:12 (1 con peso 45, 2 con 35...)
-#   item: minecraft:x, oraxen:x, o un nombre guardado (chip, tinchoin...)
+#   item: minecraft:x, oraxen:x, o un nombre guardado. Cada renglon sale o no por su cuenta (como un cofre comun:
+#   con lugares vacios). Monedas: Trucoin (oraxen:moneda) vale 1, Frackoin (oraxen:moneda_roja) 10, Tinchoin (oraxen:moneda_morada) 100.
 loot:
-  # los cofres "petes": chips, comida y cosas de decoracion
+  # los cofres "petes": unas pocas monedas, resina, engranajes, comida y cosas de decoracion
   facil:
-    - "chip 7-15"
-    - "minecraft:apple 2-5"
-    - "minecraft:bread 2-6 60%"
-    - "minecraft:baked_potato 2-5 40%"
-    - "minecraft:torch 4-12 50%"
-    - "minecraft:arrow 6-16 40%"
-    - "minecraft:coal 4-10 50%"
-    - "minecraft:iron_nugget 5-15 40%"
-    - "minecraft:experience_bottle 3-8 50%"
-    - "minecraft:candle 1-3 30%"
-    - "minecraft:lantern 1-2 25%"
-    - "minecraft:pointed_dripstone 2-4 30%"
-    - "minecraft:glow_lichen 2-6 30%"
-    - "minecraft:bone 2-6 40%"
-    - "minecraft:cobweb 1-3 20%"
-  # los cofres buenos (escondidos):
-  #   fracoin: siempre, de 1 a 5 (casi siempre 1 o 2)
-  #   notch: rara (con 8 cofres buenos, ~1 por ronda)
-  #   tinchoin: rarisima (1 de cada 100 cofres)
+    - "oraxen:moneda 0:1,1:1,2:1"          # 0, 1 o 2 Trucoin (igual de probable)
+    - "minecraft:resin_clump 2-4"
+    - "oraxen:totem_cuy 1:1,2:1 20%"       # lo mejor del cofre facil: 20%, y la mitad de las veces salen 2
+    - "oraxen:iron_cog 1-3 40%"
+    - "oraxen:gold_cog 1 20%"
+    - "minecraft:apple 1-3 50%"
+    - "minecraft:bread 2-5 35%"
+    - "minecraft:baked_potato 2-4 25%"
+    - "minecraft:torch 4-10 35%"
+    - "minecraft:arrow 6-14 30%"
+    - "minecraft:coal 3-8 30%"
+    - "minecraft:iron_nugget 4-12 25%"
+    - "minecraft:experience_bottle 2-6 30%"
+    - "minecraft:candle 1-2 15%"
+    - "minecraft:lantern 1 10%"
+    - "minecraft:pointed_dripstone 2-4 15%"
+    - "minecraft:glow_lichen 2-5 15%"
+    - "minecraft:bone 2-5 25%"
+    - "minecraft:cobweb 1-2 10%"
+  # los cofres buenos (escondidos)
   dificil:
-    - "fracoin 1:45,2:35,3:12,4:6,5:2"
-    - "minecraft:enchanted_golden_apple 1 12%"
-    - "tinchoin 1 1%"
+    - "oraxen:moneda 2:40,3:30,4:15,5:8"   # siempre 2 Trucoin o mas (mas, menos probable)
+    - "oraxen:moneda_roja 1 7%"            # a veces ademas una Frackoin
+    - "oraxen:moneda_morada 1 1%"          # Tinchoin: rarisima
+    - "minecraft:echo_shard 1-3 60%"
+    - "minecraft:enchanted_golden_apple 1 50%"
+    - "minecraft:diamond 3:25,4:50,5:25 60%"   # cuando hay, unos 4
+    - "minecraft:netherite_ingot 1 15%"
+    - "oraxen:mineral_truco 1 15%"         # Mineral de Tioduro
+    - "oraxen:totem_golem 1 10%"
+    - "oraxen:totem_tod4 1 8%"             # TODtem
 
 # mobs que aparecen cuando empieza a derrumbarse
 #   mm:<nombre de MythicMobs>   creeper:<random|mini|calamar|void|nuclear|flash> (los de TOD4)   minecraft:<mob>
 # "cantidad" repartidos por toda la cueva (tuneles y salas), y aparte los de cada zona.
 mobs:
-  cantidad: 70
+  cantidad: 58
   tipos:
     "creeper:random": 6
     "creeper:calamar": 6
@@ -111,23 +124,26 @@ mobs:
     "minecraft:silverfish": 3
   # zonas: entrada, cruce, columnas (la de estalactitas), lago (el de lava), isla (el medio del lago), catedral, pozo, galeria
   zonas:
-    columnas:        # la sala de las estalactitas: solo aca hay Flash Creepers
-      cantidad: 4
+    columnas:        # la sala de las estalactitas: solo aca hay Flash Creepers (uno, y la mitad de las veces)
+      cantidad: 1
+      probabilidad: 50
       tipos:
         "creeper:flash": 1
     lago:            # solo aca hay blazes (te tiran y te podes caer a la lava)
       cantidad: 6
       tipos:
         "minecraft:blaze": 1
-    isla:            # el creeper nuclear, en el medio del lago de lava
-      cantidad: 1
-      tipos:
-        "creeper:nuclear": 1
 
-# el Zombi Alucinado (zombie_alucinado): si MythicMobs tiene este mob, sale ese (ahi va el disguise);
-# si no, sale un zombi comun con estos valores. Los segundos de la alucinacion van en el config.yml de TOD4.
+# el Creeper Nuclear: uno solo por corrida, en el medio de una de estas salas (al azar)
+nuclear:
+  probabilidad: 100
+  lugares: [lago, columnas]
+
+# el Papu (zombie_alucinado): si MythicMobs tiene alguno de estos mobs, sale ese; si no, un zombi comun con estos valores.
+# disfraz: el disfraz guardado de LibsDisguises (/savedisguise papu ...). Los segundos de la alucinacion van en el config.yml de TOD4.
 zombie_alucinado:
-  mythicmobs: "ZombieAlucinado"
+  mythicmobs: ["Papu", "ZombieAlucinado"]
+  disfraz: "papu"
   vida: 40
   danio: 5
   velocidad: 0.28

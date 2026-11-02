@@ -83,7 +83,7 @@ import net.kyori.adventure.title.Title;
 final class Agujero implements Listener {
 
     private static final String MOB = "agujero_mob", CARTEL = "agujero_cartel", PERM = "tod4eventos.admin";
-    private static final int VERSION_CFG = 3;
+    private static final int VERSION_CFG = 4;
 
     private final TOD4Eventos pl;
     private final Random rnd = new Random();
@@ -160,17 +160,6 @@ final class Agujero implements Listener {
             if (y.isConfigurationSection("mobs.tipos") && !y.contains("mobs.tipos.zombie_alucinado")) {
                 y.set("mobs.tipos.zombie_alucinado", 4);
                 try { y.save(f); pl.getLogger().info("[Agujero] Agregué zombie_alucinado (4) a mobs.tipos de agujero.yml"); } catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar agujero.yml: " + ex); }
-            }
-        }
-        // mas mobs (pedido despues del primer evento): una sola vez, sube la cantidad y el Papu (zombie_alucinado)
-        if (!d.y().getBoolean("mobs_v2", false)) {
-            d.set("mobs_v2", true);
-            boolean cambio = false;
-            if (y.getInt("mobs.cantidad", 45) < 70) { y.set("mobs.cantidad", 70); cambio = true; }
-            if (y.isConfigurationSection("mobs.tipos") && y.getDouble("mobs.tipos.zombie_alucinado", 0) < 7) { y.set("mobs.tipos.zombie_alucinado", 7); cambio = true; }
-            if (cambio) {
-                try { y.save(f); pl.getLogger().info("[Agujero] Mas mobs: mobs.cantidad 70 y zombie_alucinado 7 en agujero.yml"); }
-                catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar agujero.yml: " + ex); }
             }
         }
         linea = null;
@@ -730,6 +719,7 @@ final class Agujero implements Listener {
                 if (l != null) mob(tipo, l);
             }
         }
+        nuclear();
         ConfigurationSection zs = y.getConfigurationSection("mobs.zonas");
         if (zs == null) return;
         for (String zona : zs.getKeys(false)) {
@@ -739,6 +729,7 @@ final class Agujero implements Listener {
             ConfigurationSection tz = zs.getConfigurationSection(zona + ".tipos");
             if (sala == null || tz == null) { pl.getLogger().warning("[Agujero] Zona de mobs rara: " + zona); continue; }
             int n = zs.getInt(zona + ".cantidad", 0);
+            if (rnd.nextDouble() * 100 >= zs.getDouble(zona + ".probabilidad", 100)) n = 0;   // esta corrida no salen
             for (int i = 0; i < n; i++) {
                 String tipo = sortear(tz);
                 if (tipo == null) continue;
@@ -747,6 +738,32 @@ final class Agujero implements Listener {
                 if (l != null) mob(tipo, l);
             }
         }
+    }
+
+    /** El Creeper Nuclear: uno solo por corrida, en el medio de una de las salas de nuclear.lugares (al azar). */
+    private void nuclear() {
+        if (rnd.nextDouble() * 100 >= y.getDouble("nuclear.probabilidad", 100)) return;
+        List<String> lugares = y.getStringList("nuclear.lugares");
+        if (lugares.isEmpty()) return;
+        String zona = lugares.get(rnd.nextInt(lugares.size()));
+        CuevaGen.Sala sala = null;
+        for (CuevaGen.Sala sl : gen.salas()) if (sl.tipo.equalsIgnoreCase(zona)) sala = sl;
+        if (sala == null) { pl.getLogger().warning("[Agujero] Sala rara para el nuclear: " + zona); return; }
+        Location l = sala.tipo.equals("lago")
+                ? piso(new Location(mundo, sala.x + 0.5, gen.nivelLava() + 1, sala.z + 0.5))   // la isla del medio de la lava
+                : piso(new Location(mundo, sala.x + 0.5, sala.piso, sala.z + 0.5));
+        // si justo en el medio hay una columna (o no hay piso), lo mas cerca del medio que se pueda
+        for (int k = 1; l == null && k <= 6; k++) {
+            for (int t = 0; t < 8 && l == null; t++) {
+                double ang = t * Math.PI / 4;
+                double yy = sala.tipo.equals("lago") ? gen.nivelLava() + 1 : sala.piso;
+                Location c = piso(new Location(mundo, sala.x + 0.5 + Math.cos(ang) * k, yy, sala.z + 0.5 + Math.sin(ang) * k));
+                if (c != null && !c.getBlock().getRelative(BlockFace.DOWN).isLiquid()) l = c;
+            }
+        }
+        if (l == null) { pl.getLogger().warning("[Agujero] No encontre lugar para el nuclear en " + zona); return; }
+        mob("creeper:nuclear", l);
+        pl.getLogger().info("[Agujero] Creeper Nuclear en " + zona + ".");
     }
 
     private String sortear(ConfigurationSection cs) {
@@ -812,9 +829,11 @@ final class Agujero implements Listener {
         } else {
             EntityType t = org.bukkit.Registry.ENTITY_TYPE.get(org.bukkit.NamespacedKey.fromString(tipo.contains(":") ? tipo : "minecraft:" + tipo));
             if (t == null || !t.isSpawnable()) { pl.getLogger().warning("[Agujero] No existe el mob " + tipo); return; }
-            en = mundo.spawnEntity(l, t);
+            // como si aparecieran solos: asi les tocan los cambios de dificultad (zombies y esqueletos armados, ballesteros...)
+            en = mundo.spawnEntity(l, t, org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL);
         }
         en.addScoreboardTag(MOB);
+        en.addScoreboardTag("tod4_sin_bloques");   // el Creeper Nuclear de aca no hace crater
         if (tipo.equalsIgnoreCase("mm:BreezeOld")) en.addScoreboardTag("breeze_old");
         if (en instanceof LivingEntity le) le.setRemoveWhenFarAway(false);
     }
@@ -825,7 +844,10 @@ final class Agujero implements Listener {
      * Los dos llevan la etiqueta tod4_alucina, que es lo que mira TOD4.
      */
     private Entity alucinado(Location l) {
-        Entity en = mm(y.getString("zombie_alucinado.mythicmobs", "ZombieAlucinado"), l);
+        Entity en = null;
+        List<String> ids = y.isList("zombie_alucinado.mythicmobs") ? y.getStringList("zombie_alucinado.mythicmobs")
+                : List.of(y.getString("zombie_alucinado.mythicmobs", "ZombieAlucinado"));
+        for (String id : ids) { if (en == null) en = mm(id, l); }
         if (en == null) {
             en = mundo.spawn(l, org.bukkit.entity.Zombie.class, z -> {
                 z.setAdult();
@@ -844,7 +866,28 @@ final class Agujero implements Listener {
             });
         }
         en.addScoreboardTag("tod4_alucina");
+        disfrazar(en, y.getString("zombie_alucinado.disfraz", "papu"));
         return en;
+    }
+
+    private boolean avisoDisfraz;
+
+    /** El disfraz guardado de LibsDisguises (/savedisguise <nombre> ...), si esta. Sin LibsDisguises o sin ese disfraz, nada. */
+    private void disfrazar(Entity en, String nombre) {
+        if (nombre == null || nombre.isBlank() || Bukkit.getPluginManager().getPlugin("LibsDisguises") == null) return;
+        try {
+            Class<?> api = Class.forName("me.libraryaddict.disguise.DisguiseAPI");
+            Class<?> dc = Class.forName("me.libraryaddict.disguise.disguisetypes.Disguise");
+            Object d = api.getMethod("getCustomDisguise", String.class).invoke(null, nombre);
+            if (d == null) {
+                if (!avisoDisfraz) { avisoDisfraz = true; pl.getLogger().warning("[Agujero] No existe el disfraz guardado '" + nombre + "' de LibsDisguises: el Papu sale sin disfraz."); }
+                return;
+            }
+            try { d = d.getClass().getMethod("clone").invoke(d); } catch (Exception ignored) { }
+            api.getMethod("disguiseToAll", Entity.class, dc).invoke(null, en, d);
+        } catch (Throwable t) {
+            if (!avisoDisfraz) { avisoDisfraz = true; pl.getLogger().warning("[Agujero] No pude ponerle el disfraz al Papu: " + t); }
+        }
     }
 
     /**
@@ -891,6 +934,18 @@ final class Agujero implements Listener {
             }
             z.setShouldBurnInDay(false);
         });
+    }
+
+    // ================================================================= las explosiones no rompen nada
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void explota(org.bukkit.event.entity.EntityExplodeEvent e) {
+        if (mundo != null && e.getLocation().getWorld() != null && e.getLocation().getWorld().equals(mundo)) e.blockList().clear();
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void explotaBloque(org.bukkit.event.block.BlockExplodeEvent e) {
+        if (mundo != null && e.getBlock().getWorld().equals(mundo)) e.blockList().clear();
     }
 
     // ================================================================= ni perlas ni cargas de viento
@@ -1388,7 +1443,10 @@ final class Agujero implements Listener {
         for (String tipo : new String[]{"facil", "dificil"}) {
             List<String[]> pts = new ArrayList<>();
             for (String l : d.y().getStringList("cofres_extra." + tipo)) pts.add(l.split(","));
-            int cant = pts.size();
+            // sale este % de los lugares (siempre esa cantidad, en lugares al azar)
+            Collections.shuffle(pts, rnd);
+            double pct = Math.max(0, Math.min(100, y.getDouble("cofres.salen_" + tipo, 100)));
+            int cant = pts.isEmpty() ? 0 : Math.max(pct > 0 ? 1 : 0, (int) Math.round(pts.size() * pct / 100.0));
             if (generados) {
                 for (CuevaGen.Punto p : gen.puntos()) if (p.tipo.equals(tipo)) pts.add(new String[]{"" + p.x, "" + p.y, "" + p.z});
                 Collections.shuffle(pts, rnd);
