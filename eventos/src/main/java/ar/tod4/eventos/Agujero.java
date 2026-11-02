@@ -1475,18 +1475,30 @@ final class Agujero implements Listener {
 
     /** Arriba de la entrada: el titulo y, si esta derrumbada, otro cartel con "Reconstruyendo" y el tiempo. */
     private void cartel() {
-        int[] z = zona("entrada");
-        if (z == null) {
-            if (cartel != null) { cartel.remove(); cartel = null; }
-            if (cartel2 != null) { cartel2.remove(); cartel2 = null; }
-            return;
+        // donde va: el lugar que eligio un admin (/agujero cartel) o, si no eligio, arriba de la entrada
+        Location propio = bloque("cartel_pos");
+        Location b;
+        double alto1, alto2;
+        if (propio != null) {
+            b = propio.clone().add(-0.5, 0, -0.5);   // abajo se le suma 0.5: queda en el medio del bloque donde estaba parado
+            alto1 = 2.5; alto2 = 1.6;
+        } else {
+            int[] z = zona("entrada");
+            if (z == null) {
+                if (cartel != null) { cartel.remove(); cartel = null; }
+                if (cartel2 != null) { cartel2.remove(); cartel2 = null; }
+                return;
+            }
+            b = new Location(bloque("entrada").getWorld(), (z[0] + z[3]) / 2.0, z[4], (z[2] + z[5]) / 2.0);   // + 0.5 = el centro de la zona
+            alto1 = 3.0; alto2 = 2.1;
         }
-        Location b = new Location(bloque("entrada").getWorld(), (z[0] + z[3]) / 2.0, z[4], (z[2] + z[5]) / 2.0);   // + 0.5 = el centro de la zona
         if (!b.getWorld().isChunkLoaded(b.getBlockX() >> 4, b.getBlockZ() >> 4)) return;
         if (cartel == null || !cartel.isValid() || cartel2 == null || !cartel2.isValid()) {
+            if (cartel != null) cartel.remove();
+            if (cartel2 != null) cartel2.remove();
             for (Entity en : b.getWorld().getNearbyEntities(b, 3, 5, 3)) if (en.getScoreboardTags().contains(CARTEL)) en.remove();
-            cartel = holo(b.clone().add(0.5, 3.0, 0.5), 1.4f);
-            cartel2 = holo(b.clone().add(0.5, 2.1, 0.5), 1.0f);
+            cartel = holo(b.clone().add(0.5, alto1, 0.5), 1.4f);
+            cartel2 = holo(b.clone().add(0.5, alto2, 0.5), 1.0f);
             cartel.text(c("&4&lAGUJERO DEL INFIERNO 2.0"));
         }
         long ahora = System.currentTimeMillis();
@@ -1693,6 +1705,21 @@ final class Agujero implements Listener {
                 if (mundo != null) pared();
                 TOD4Eventos.ok(s, "Cerrada (con la pared) por &f" + mmss(cerradoHasta - System.currentTimeMillis()) + "&a.");
             }
+            case "cartel" -> {
+                // el cartel "AGUJERO DEL INFIERNO 2.0" con el tiempo: donde estas parado, o "arriba" = arriba de la entrada
+                if (a.length > 1 && a[1].equalsIgnoreCase("arriba")) {
+                    d.set("cartel_pos", null);
+                    TOD4Eventos.ok(s, "El cartel vuelve arriba de la entrada.");
+                } else {
+                    if (p == null) { TOD4Eventos.err(s, "Usalo en el juego, parado donde querés el cartel."); return; }
+                    Location l = p.getLocation().getBlock().getLocation().add(0.5, 0, 0.5);
+                    d.set("cartel_pos", l);
+                    TOD4Eventos.ok(s, "El cartel ahora va acá (a la altura de tu cabeza). &7Para volver arriba de la entrada: &f/tod4eventos:agujero cartel arriba");
+                }
+                if (cartel != null) { cartel.remove(); cartel = null; }
+                if (cartel2 != null) { cartel2.remove(); cartel2 = null; }
+                cartel();
+            }
             case "limpiar" -> {
                 // saca (sin que suelten nada) todos los mobs que haya en la cueva; los carteles y jugadores no se tocan
                 if (mundo == null) { TOD4Eventos.err(s, "La cueva no está creada."); return; }
@@ -1762,7 +1789,7 @@ final class Agujero implements Listener {
     }
 
     List<String> tab(String[] a) {
-        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "item", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "limpiar", "cofre", "quitarcofre", "espera", "recargar", "estado");
+        if (a.length == 1) return List.of("crear", "tp", "entrada", "bloquesalida", "ver", "item", "salida", "llegada", "foto", "abrir", "cerrar", "terminar", "limpiar", "cartel", "cofre", "quitarcofre", "espera", "recargar", "estado");
         if (a.length == 2 && a[0].equalsIgnoreCase("cofre")) return List.of("facil", "dificil");
         if (a.length == 2 && (a[0].equalsIgnoreCase("entrada") || a[0].equalsIgnoreCase("bloquesalida"))) return List.of("1", "2");
         if (a.length == 2 && a[0].equalsIgnoreCase("espera")) { List<String> l = new ArrayList<>(); for (Player p : Bukkit.getOnlinePlayers()) l.add(p.getName()); return l; }
