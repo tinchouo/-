@@ -162,6 +162,17 @@ final class Agujero implements Listener {
                 try { y.save(f); pl.getLogger().info("[Agujero] Agregué zombie_alucinado (4) a mobs.tipos de agujero.yml"); } catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar agujero.yml: " + ex); }
             }
         }
+        // mas mobs (pedido despues del primer evento): una sola vez, sube la cantidad y el Papu (zombie_alucinado)
+        if (!d.y().getBoolean("mobs_v2", false)) {
+            d.set("mobs_v2", true);
+            boolean cambio = false;
+            if (y.getInt("mobs.cantidad", 45) < 70) { y.set("mobs.cantidad", 70); cambio = true; }
+            if (y.isConfigurationSection("mobs.tipos") && y.getDouble("mobs.tipos.zombie_alucinado", 0) < 7) { y.set("mobs.tipos.zombie_alucinado", 7); cambio = true; }
+            if (cambio) {
+                try { y.save(f); pl.getLogger().info("[Agujero] Mas mobs: mobs.cantidad 70 y zombie_alucinado 7 en agujero.yml"); }
+                catch (IOException ex) { pl.getLogger().warning("[Agujero] No pude guardar agujero.yml: " + ex); }
+            }
+        }
         linea = null;
         long s = y.getLong("semilla", 2026);
         if (gen == null || s != semillaGen) {
@@ -609,31 +620,75 @@ final class Agujero implements Listener {
     private void pared() {
         CuevaGen.Sala e = gen.entrada;
         double r0 = radioLinea(), r1 = r0 + 2.5;
-        Material[] esc = {Material.COBBLED_DEEPSLATE, Material.COBBLED_DEEPSLATE, Material.TUFF, Material.COBBLESTONE, Material.ANDESITE};
-        int R = (int) Math.ceil(r1) + 1;
+        int ex = (int) Math.floor(e.x), ey = (int) Math.floor(e.piso), ez = (int) Math.floor(e.z);
+        CuevaGen g = gen;
+        World w = mundo;
+        mundo.playSound(sala(mundo), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 2f, 0.4f);
+        mundo.spawnParticle(Particle.EXPLOSION, sala(mundo).add(0, 2, 6), 6, 2, 2, 2);
+        // la cuenta se hace aparte (no traba el server) y la pared se pone enseguida
+        Bukkit.getScheduler().runTaskAsynchronously(pl, () -> {
+            List<int[]> tapar = paredLugares(g, ex, ey, ez, r0, r1);
+            Bukkit.getScheduler().runTask(pl, () -> {
+                if (mundo == null || !mundo.equals(w)) return;
+                Material[] esc = {Material.COBBLED_DEEPSLATE, Material.COBBLED_DEEPSLATE, Material.TUFF, Material.COBBLESTONE, Material.ANDESITE};
+                int n = 0;
+                for (int[] t : tapar) {
+                    Block b = mundo.getBlockAt(t[0], t[1], t[2]);
+                    if (b.isPassable() && !protegido(b)) { b.setType(esc[rnd.nextInt(esc.length)], false); n++; }
+                }
+                pl.getLogger().info("[Agujero] Pared: " + n + " bloques (solo en los tuneles que siguen hacia la cueva).");
+            });
+        });
+    }
+
+    /**
+     * Donde va la pared: los huecos de la linea (el anillo alrededor de la sala de entrada) que siguen hasta lejos por la
+     * cueva generada. Los que no siguen (bordes de la sala, pasillos sin salida, la subida que cavaste a mano) no se tapan.
+     * Se busca desde lejos (40 bloques afuera) hacia la sala, solo por los huecos de la cueva generada.
+     */
+    static List<int[]> paredLugares(CuevaGen g, int ex, int ey, int ez, double r0, double r1) {
+        int R = (int) Math.ceil(r1) + 40, Y0 = -12, Y1 = 24;
+        int nx = 2 * R + 1, ny = Y1 - Y0 + 1;
+        boolean[] visto = new boolean[nx * nx * ny];
+        java.util.ArrayDeque<int[]> cola = new java.util.ArrayDeque<>();
         Map<Long, short[]> forma = new HashMap<>();
         for (int dx = -R; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
             double h = Math.hypot(dx + 0.5, dz + 0.5);
-            if (h < r0 || h > r1) continue;
-            for (int dy = -3; dy <= 12; dy++) {
-                int x = (int) Math.floor(e.x) + dx, yy = (int) Math.floor(e.piso) + dy, z = (int) Math.floor(e.z) + dz;
-                if (!huecoGenerado(forma, x, yy, z)) continue;
-                Block b = mundo.getBlockAt(x, yy, z);
-                if (b.isPassable() && !protegido(b)) b.setType(esc[rnd.nextInt(esc.length)], false);
+            if (h <= R - 2 || h > R) continue;
+            for (int dy = Y0; dy <= Y1; dy++) {
+                if (!huecoGenerado(g, forma, ex + dx, ey + dy, ez + dz)) continue;
+                visto[((dx + R) * nx + (dz + R)) * ny + (dy - Y0)] = true;
+                cola.add(new int[]{dx, dy, dz});
             }
         }
-        mundo.playSound(sala(mundo), Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 2f, 0.4f);
-        mundo.spawnParticle(Particle.EXPLOSION, sala(mundo).add(0, 2, 6), 6, 2, 2, 2);
+        int[][] vec = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
+        List<int[]> tapar = new ArrayList<>();
+        while (!cola.isEmpty()) {
+            int[] c = cola.poll();
+            for (int[] v : vec) {
+                int dx = c[0] + v[0], dy = c[1] + v[1], dz = c[2] + v[2];
+                if (dx < -R || dx > R || dz < -R || dz > R || dy < Y0 || dy > Y1) continue;
+                double h = Math.hypot(dx + 0.5, dz + 0.5);
+                if (h < r0) continue;   // a la sala no se entra
+                int i = ((dx + R) * nx + (dz + R)) * ny + (dy - Y0);
+                if (visto[i] || !huecoGenerado(g, forma, ex + dx, ey + dy, ez + dz)) continue;
+                visto[i] = true;
+                cola.add(new int[]{dx, dy, dz});
+                if (h <= r1) tapar.add(new int[]{ex + dx, ey + dy, ez + dz});
+            }
+        }
+        return tapar;
     }
 
     /** true = en la cueva generada (sin lo que se edito a mano) ese bloque es hueco. */
-    private boolean huecoGenerado(Map<Long, short[]> cache, int x, int yy, int z) {
+    static boolean huecoGenerado(CuevaGen g, Map<Long, short[]> cache, int x, int yy, int z) {
         if (yy < CuevaGen.MIN_Y || yy > CuevaGen.MAX_Y) return false;
         int cx = x >> 4, cz = z >> 4;
-        short[] c = cache.computeIfAbsent(((long) cx << 32) ^ (cz & 0xffffffffL), k -> gen.chunk(cx, cz));
+        short[] c = cache.computeIfAbsent(((long) cx << 32) ^ (cz & 0xffffffffL), k -> g.chunk(cx, cz));
         short v = c[(yy - CuevaGen.MIN_Y) * 256 + (z & 15) * 16 + (x & 15)];
         return v == CuevaGen.AIRE || v >= CuevaGen.PUNTA_ABAJO;
     }
+
 
     // ================================================================= mobs
 
@@ -665,10 +720,13 @@ final class Agujero implements Listener {
             List<CuevaGen.Punto> pts = new ArrayList<>();
             for (CuevaGen.Punto p : gen.puntos()) if (p.tipo.equals("mob")) pts.add(p);
             Collections.shuffle(pts, rnd);
-            for (int i = 0; i < cant && i < pts.size(); i++) {
+            for (int i = 0; i < cant && !pts.isEmpty(); i++) {
                 String tipo = sortear(cs);
                 if (tipo == null) continue;
-                Location l = piso(new Location(mundo, pts.get(i).x + 0.5, pts.get(i).y, pts.get(i).z + 0.5));
+                // si hay mas mobs que lugares, los lugares se repiten (un poco corridos)
+                CuevaGen.Punto pt = pts.get(i % pts.size());
+                double ox = i < pts.size() ? 0 : rnd.nextDouble() * 4 - 2, oz = i < pts.size() ? 0 : rnd.nextDouble() * 4 - 2;
+                Location l = piso(new Location(mundo, pt.x + 0.5 + ox, pt.y, pt.z + 0.5 + oz));
                 if (l != null) mob(tipo, l);
             }
         }

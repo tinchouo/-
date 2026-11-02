@@ -23,7 +23,8 @@ import ar.tod4.TOD4;
 
 /**
  * Alucinacion: por un rato, el jugador ve todo cambiado (solo el, los demas lo ven normal).
- *  - La vida y el hambre que ve saltan al azar cada segundo (de medio corazon a la vida llena; el hambre de 0 a llena).
+ *  - La vida y el hambre que ve saltan al azar cada segundo (de medio corazon a la vida llena). El hambre salta
+ *    sin cruzar los 3 muslitos (con 3 o menos el juego no deja correr): correr sigue igual que con el hambre de verdad.
  *    Es solo lo que se ve: la vida y el hambre de verdad no se tocan.
  *  - En su tab, la vida de todos cambia al azar (la Sidebar lo pregunta con activa()).
  *  - En el Agujero del Infierno, el tiempo de arriba tambien (TOD4Eventos mira la marca "tod4_alucina").
@@ -91,8 +92,15 @@ public final class Alucinacion implements Listener {
                 int medios = (int) Math.max(1, Math.round(max));
                 float vida = 1 + rnd.nextInt(medios);
                 if (rnd.nextInt(5) == 0) vida = rnd.nextBoolean() ? 1 : (float) max;   // a veces los extremos
-                int hambre = rnd.nextInt(21);
-                if (rnd.nextInt(5) == 0) hambre = rnd.nextBoolean() ? 0 : 20;
+                // con 6 o menos de hambre (3 muslitos) el juego no deja correr: el hambre falsa queda del mismo lado que la
+                // de verdad (si podias correr, seguis pudiendo; si no podias, seguis sin poder)
+                int hambre;
+                if (p.getFoodLevel() > 6) {
+                    hambre = 7 + rnd.nextInt(14);
+                    if (rnd.nextInt(5) == 0) hambre = rnd.nextBoolean() ? 7 : 20;
+                } else {
+                    hambre = rnd.nextInt(7);
+                }
                 f = new float[]{vida, hambre};
                 falso.put(u, f);
             }

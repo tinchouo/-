@@ -48,7 +48,7 @@ public final class Phantom implements Listener {
     public Phantom(TOD4 pl) {
         this.pl = pl;
         Bukkit.getPluginManager().registerEvents(this, pl);
-        Bukkit.getScheduler().runTaskTimer(pl, this::buscar, 40L, 40L);
+        Bukkit.getScheduler().runTaskTimer(pl, this::buscar, 20L, 20L);
     }
 
     private double d(String k, double def) { return pl.getConfig().getDouble("phantom." + k, def); }
@@ -72,7 +72,7 @@ public final class Phantom implements Listener {
         long ahora = System.currentTimeMillis();
         Long h = sinPegarHasta.get(m.getUniqueId());
         if (h != null && ahora < h) { e.setCancelled(true); return; }   // no te pega dos veces seguidas
-        sinPegarHasta.put(m.getUniqueId(), ahora + (long) (d("sin_pegar_seg", 5) * 1000));
+        sinPegarHasta.put(m.getUniqueId(), ahora + (long) (d("sin_pegar_seg", 3) * 1000));
         Bukkit.getScheduler().runTask(pl, () -> {
             if (!m.isValid()) return;
             // el empujon
@@ -83,18 +83,18 @@ public final class Phantom implements Listener {
             }
             // se va lejos
             Location lejos = lugar(m.getLocation(), d("lejos_min", 18), d("lejos_max", 26), p.getLocation());
+            if (lejos == null) lejos = lugar(m.getLocation(), 10, d("lejos_min", 18), p.getLocation());   // en la cueva a veces no hay lugar tan lejos
             m.setTarget(null);
             // se queda quieto donde se fue hasta que le toque volver (si no, vuelve caminando enseguida)
             m.getPathfinder().stopPathfinding();
             m.setAI(false);          // sin IA no se mueve nada (con setAware seguia el impulso de cuando corria)
             quieto(m, true);
-            if (m instanceof Enderman en) en.setScreaming(false);
             if (lejos != null) mover(m, lejos);
             m.setVelocity(new Vector());
             if (lejos != null && m.getLocation().distanceSquared(lejos) > 1) log("el teletransporte no se hizo (quedo en " + m.getLocation().toVector() + ")");
             log("le pego a " + p.getName() + (lejos == null ? " (no encontre lugar para irse)" : " y se fue a " + lejos.getBlockX() + " " + lejos.getBlockY() + " " + lejos.getBlockZ()));
             // y vuelve
-            Bukkit.getScheduler().runTaskLater(pl, () -> volver(m, p), Math.max(1L, (long) (d("vuelve_seg", 4) * 20)));
+            Bukkit.getScheduler().runTaskLater(pl, () -> volver(m, p), Math.max(1L, (long) (d("vuelve_seg", 3) * 20)));
         });
     }
 
@@ -121,6 +121,7 @@ public final class Phantom implements Listener {
         for (World w : Bukkit.getWorlds()) {
             for (LivingEntity le : w.getLivingEntities()) {
                 if (!(le instanceof Mob m) || !es(m)) continue;
+                if (m instanceof Enderman en0 && m.hasAI()) en0.setScreaming(true);   // siempre enojado
                 if (m.getTarget() instanceof Player t && jugable(t) && t.getWorld().equals(m.getWorld())) continue;
                 Long h = sinPegarHasta.get(m.getUniqueId());
                 if (h != null && System.currentTimeMillis() < h) continue;   // se esta yendo
@@ -168,12 +169,12 @@ public final class Phantom implements Listener {
     private Location lugar(Location c, double dmin, double dmax, Location mira) {
         World w = c.getWorld();
         dmin = Math.max(1, dmin);
-        for (int i = 0; i < 60; i++) {
+        for (int i = 0; i < 200; i++) {
             double ang = rnd.nextDouble() * Math.PI * 2, dist = dmin + rnd.nextDouble() * Math.max(0, dmax - dmin);
             int x = (int) Math.floor(c.getX() + Math.cos(ang) * dist), z = (int) Math.floor(c.getZ() + Math.sin(ang) * dist);
             if (!w.isChunkLoaded(x >> 4, z >> 4)) continue;
             int y0 = c.getBlockY();
-            for (int k = 0; k <= 16; k++) {
+            for (int k = 0; k <= 24; k++) {
                 int y = y0 + ((k & 1) == 0 ? k / 2 : -(k + 1) / 2);   // 0, -1, 1, -2, 2...
                 if (y <= w.getMinHeight() || y + 3 >= w.getMaxHeight()) continue;
                 if (!libre(w, x, y, z)) continue;
