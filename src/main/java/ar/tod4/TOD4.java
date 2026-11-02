@@ -46,6 +46,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private Palo palo;
     private ar.tod4.video.Video video;
     private ar.tod4.video.Screamer screamer;
+    private ar.tod4.mobs.Murcielagos murcielagos;
     private ar.tod4.alucina.Alucinacion alucinacion;
     private ar.tod4.equipos.Equipos equipos;
     private ar.tod4.mobs.Creepers creepers;
@@ -75,6 +76,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         alucinacion = new ar.tod4.alucina.Alucinacion(this);
         new ar.tod4.mobs.Mobs(this);
         new ar.tod4.mobs.Phantom(this);
+        murcielagos = new ar.tod4.mobs.Murcielagos(this);
         creepers = new ar.tod4.mobs.Creepers(this);
         equipos = new ar.tod4.equipos.Equipos(this);
         new ar.tod4.core.Chat(this);
@@ -321,6 +323,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "discord": discord.cmd(s, a); return true;
             case "subasta": subasta.cmd(s, a); return true;
             case "corazon": corazon.cmd(s, a); return true;
+            case "murcielago": murcielagos.cmd(s, a); return true;
             case "ballestero": {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
@@ -371,7 +374,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "murcielago", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
                 case "video": case "alucinar": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

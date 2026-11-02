@@ -315,6 +315,23 @@ phantom:
   busca_radio: 30         # de que tan lejos te ve
   debug: false            # true = escribe en la consola lo que hace
 
+# Murcielagos Vampiro: en el overworld, de noche (o de dia en lo oscuro, como cuevas). Vuelan recto hacia vos y, pegados,
+# te roban un corazon de la vida maxima cada medio segundo (primero los rojos; los amarillos no protegen; sin corazones, moris).
+# Lo robado vuelve al morir o con el Corazon Morado. Para probar: /tod4 murcielago [cantidad]
+murcielagos:
+  activo: true
+  desde_dia: 1
+  cada_seg: 20            # cada cuanto se tira la moneda para cada jugador
+  probabilidad: 0.25      # chance de que aparezca uno en cada tirada
+  max_por_jugador: 2
+  distancia_min: 16       # a cuantos bloques aparece
+  distancia_max: 28
+  velocidad: 0.3          # bloques por tick (0.3 = 6 por segundo; correr es 5,6)
+  muerde_cada_ticks: 10   # 10 = medio segundo
+  alcance: 1.4
+  vida: 10
+  dura_seg: 90            # despues se va
+
 # Alucinacion (Zombi Alucinado del Agujero, mobs con la etiqueta tod4_alucina, /tod4:alucinar):
 # el que la tiene ve la vida, el hambre y el tab cambiando al azar (es solo lo que ve).
 alucinacion:

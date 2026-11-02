@@ -23,19 +23,21 @@ jobs:
           curl -sL -o paper.jar "$URL"
           cp ../target/TOD4.jar plugins/
           # como en el server de verdad: un config.yml que no tiene la parte del screamer
-          mkdir -p plugins/TOD4 && printf 'config_version: 12\nphantom:\n  debug: true\n' > plugins/TOD4/config.yml
+          mkdir -p plugins/TOD4 && printf 'config_version: 12\nphantom:\n  debug: true\nmurcielagos:\n  debug: true\n' > plugins/TOD4/config.yml
           echo "eula=true" > eula.txt
           printf "online-mode=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\n" > server.properties
           cd .. && mkdir bot && cd bot && npm init -y > /dev/null && npm i minecraft-protocol@latest > /dev/null && cp ../.github/pruebas/bot.js .
       - name: Probar el screamer con un jugador
         run: |
           cd srv
-          (sleep 90; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 25; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          (sleep 90; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "tod4 murcielago 1 tester"; sleep 4; echo "kill @e[type=bat]"; sleep 1; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 25; echo stop) | timeout 240 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
           (cd ../bot && timeout 90 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true
           cat bot.txt | head -150
           grep -iE "tester|screamer|Exception|error" log.txt | head -40
+          grep -E "\[Murcielago\]" log.txt | head -10
+          grep -q "\[Murcielago\] mordio a tester" log.txt || { echo "::error::El murcielago no mordio"; exit 1; }
           grep -E "\[Phantom\]" log.txt | head -10
           grep -q "\[Phantom\] le pego a tester" log.txt || { echo "::error::El Phantom no pego"; exit 1; }
           N=$(grep -c '"type":69' bot.txt); echo "imagenes de screamer: $N"; [ "$N" -ge 3 ] || { echo "::error::El screamer no salio en cada golpe"; exit 1; }

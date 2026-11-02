@@ -41,7 +41,7 @@ import net.kyori.adventure.text.format.TextDecoration;
  */
 public final class Corazon implements Listener {
     private final TOD4 pl;
-    private final NamespacedKey kItem, kCuenta, kMod, kAmarillo, kMorado, kAmarillos, kModAbs;
+    private final NamespacedKey kItem, kCuenta, kMod, kAmarillo, kMorado, kAmarillos, kModAbs, kRobados, kModRobo;
 
     public enum Tipo { ROJO, AMARILLO, MORADO }
 
@@ -54,6 +54,8 @@ public final class Corazon implements Listener {
         this.kMorado = new NamespacedKey(pl, "corazon_morado");
         this.kAmarillos = new NamespacedKey(pl, "corazones_amarillos");
         this.kModAbs = new NamespacedKey(pl, "corazones_amarillos");
+        this.kRobados = new NamespacedKey(pl, "corazones_robados");
+        this.kModRobo = new NamespacedKey(pl, "corazones_robados");
         Bukkit.getPluginManager().registerEvents(this, pl);
     }
 
@@ -205,12 +207,57 @@ public final class Corazon implements Listener {
         });
     }
 
+    // ================================================================= corazones robados (murcielagos, etc.)
+
+    /** Cuantos corazones normales (de los 10) le robaron. Vuelven al morir o con el Corazon Morado. */
+    public int robados(Player p) { return p.getPersistentDataContainer().getOrDefault(kRobados, PersistentDataType.INTEGER, 0); }
+
+    private void aplicarRobo(Player p) {
+        AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
+        if (ai == null) return;
+        int n = robados(p);
+        AttributeModifier ya = ai.getModifier(kModRobo);
+        if (ya != null && ya.getAmount() == -n * 2.0) return;
+        if (ya != null) ai.removeModifier(kModRobo);
+        if (n > 0) ai.addModifier(new AttributeModifier(kModRobo, -n * 2.0, AttributeModifier.Operation.ADD_NUMBER, EquipmentSlotGroup.ANY));
+        if (p.getHealth() > ai.getValue()) p.setHealth(Math.max(0.5, ai.getValue()));
+    }
+
+    /**
+     * Le roba corazones de la vida maxima (no de la vida): primero los rojos, despues los normales.
+     * Los amarillos no lo protegen. Si no le queda ninguno, muere (causa = el mensaje de muerte).
+     * @return true si murio
+     */
+    public boolean robar(Player p, int cuantos, net.kyori.adventure.text.Component causa) {
+        for (int i = 0; i < cuantos; i++) {
+            AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
+            double max = ai == null ? 20 : ai.getValue();
+            if (max <= 2.0001) {   // era el ultimo corazon
+                if (causa != null) ar.tod4.core.Causas.anotar(p.getUniqueId(), causa);
+                p.setHealth(0);
+                return true;
+            }
+            if (!bloqueado(p) && extra(p) > 0) {
+                int n = extra(p) - 1;
+                if (n <= 0) p.getPersistentDataContainer().remove(kCuenta);
+                else p.getPersistentDataContainer().set(kCuenta, PersistentDataType.INTEGER, n);
+                aplicar(p);
+            } else {
+                p.getPersistentDataContainer().set(kRobados, PersistentDataType.INTEGER, robados(p) + 1);
+                aplicarRobo(p);
+            }
+        }
+        return false;
+    }
+
     // ================================================================= morado
 
     /** Vida maxima en 10 corazones (sin rojos, sin lo que le hayan sacado) y la vida llena. */
     public void morado(Player p) {
         p.getPersistentDataContainer().remove(kCuenta);
+        p.getPersistentDataContainer().remove(kRobados);
         aplicar(p);
+        aplicarRobo(p);
         if (pl.momentos() != null) pl.momentos().olvidarQuitados(p.getUniqueId());
         AttributeInstance ai = p.getAttribute(Attribute.MAX_HEALTH);
         if (ai == null) return;
@@ -223,16 +270,17 @@ public final class Corazon implements Listener {
     public void muere(PlayerDeathEvent e) {
         Player p = e.getEntity();
         if (amarillos(p) > 0) { p.getPersistentDataContainer().remove(kAmarillos); aplicarAmarillos(p); }
+        if (robados(p) > 0) { p.getPersistentDataContainer().remove(kRobados); aplicarRobo(p); }
         if (extra(p) == 0) return;
         p.getPersistentDataContainer().remove(kCuenta);
         aplicar(p);
     }
 
     @EventHandler
-    public void entra(PlayerJoinEvent e) { aplicar(e.getPlayer()); aplicarAmarillos(e.getPlayer()); }
+    public void entra(PlayerJoinEvent e) { aplicar(e.getPlayer()); aplicarAmarillos(e.getPlayer()); aplicarRobo(e.getPlayer()); }
 
     @EventHandler
-    public void reaparece(PlayerRespawnEvent e) { Bukkit.getScheduler().runTask(pl, () -> { aplicar(e.getPlayer()); aplicarAmarillos(e.getPlayer()); }); }
+    public void reaparece(PlayerRespawnEvent e) { Bukkit.getScheduler().runTask(pl, () -> { aplicar(e.getPlayer()); aplicarAmarillos(e.getPlayer()); aplicarRobo(e.getPlayer()); }); }
 
     /** /tod4 corazon [rojo|amarillo|morado] [jugador] [cantidad] */
     public void cmd(CommandSender s, String[] a) {
