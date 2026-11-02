@@ -323,6 +323,21 @@ function restaurarBloques() :: number:
 	delete {cnr.guardado::*}
 	return {_n}
 
+# las particulas de /nuclear ver (una vez)
+function verMarcas():
+	loop {cnr.bloques::*}:
+		set {_c} to loop-value
+		add vector(0.5, 0.5, 0.5) to {_c}
+		force draw 3 happy villager particles at {_c}
+	loop {cnr.z1::*}:
+		set {_c} to loop-value
+		add vector(0.5, 0.5, 0.5) to {_c}
+		force draw 4 flame particles at {_c}
+		set {_d} to {cnr.z2::%loop-index%}
+		if {_d} is set:
+			add vector(0.5, 0.5, 0.5) to {_d}
+			force draw 4 flame particles at {_d}
+
 function toggleBloque(p: player, l: location):
 	if {cnr.bloques::*} contains {_l}:
 		remove {_l} from {cnr.bloques::*}
@@ -423,19 +438,7 @@ command /nuclear [<text>] [<text>]:
 		if arg-1 is "ver":
 			send "&e☢ &7Mostrando 10 s: bloques elegidos (verde) y esquinas de las zonas seguras (llamas)." to player
 			loop 20 times:
-				loop {cnr.bloques::*}:
-					set {_c} to loop-value-2
-					add vector(0.5, 0.5, 0.5) to {_c}
-					force draw 3 happy villager particles at {_c}
-				loop {cnr.z1::*}:
-					set {_c} to loop-value-2
-					add vector(0.5, 0.5, 0.5) to {_c}
-					force draw 4 flame particles at {_c}
-					set {_d} to {cnr.z2::%loop-index-2%}
-					if {_d} is set:
-						set {_d2} to {_d}
-						add vector(0.5, 0.5, 0.5) to {_d2}
-						force draw 4 flame particles at {_d2}
+				verMarcas()
 				wait 10 ticks
 			stop
 		send "&7Uso: &f/nuclear [bloque | ver | lista | restaurar | borrar bloques | borrar zonas]" to player
