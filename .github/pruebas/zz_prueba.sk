@@ -78,8 +78,9 @@ command /probarver:
 		add location(5, -60, 5, world "world") to {cnr.bloques::*}
 		set {cnr.z1::1} to location(0, -61, 0, world "world")
 		set {cnr.z2::1} to location(3, -58, 3, world "world")
-		loop 5 times:
-			verMarcas()
+		loop all players:
+			loop 5 times:
+				verMarcas(loop-player)
 		set {_b} to first element of {cnr.bloques::*}
 		broadcast "VER_PRUEBA bloque=%x-coordinate of {_b}% %y-coordinate of {_b}% %z-coordinate of {_b}% | z2=%x-coordinate of {cnr.z2::1}%"
 		if x-coordinate of {_b} is 5:

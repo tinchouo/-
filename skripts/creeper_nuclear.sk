@@ -388,15 +388,21 @@ function restaurarBloques() :: number:
 function centro(l: location) :: location:
 	return location((floor(x-coordinate of {_l})) + 0.5, (floor(y-coordinate of {_l})) + 0.5, (floor(z-coordinate of {_l})) + 0.5, world of {_l})
 
-# las particulas de /nuclear ver (una vez)
-function verMarcas():
+# una particula que ve SOLO ese jugador (en su mundo)
+function particulaPara(p: player, tipo: text, l: location, n: number):
+	if world of {_l} is not world of {_p}:
+		stop
+	execute console command "execute as %name of {_p}% at @s run particle minecraft:%{_tipo}% %x-coordinate of {_l}% %y-coordinate of {_l}% %z-coordinate of {_l}% 0.15 0.15 0.15 0 %{_n}% force @s"
+
+# las particulas de /nuclear ver (una vez), solo para el que lo usa
+function verMarcas(p: player):
 	loop {cnr.bloques::*}:
-		force draw 3 happy villager particles at centro(loop-value)
+		particulaPara({_p}, "happy_villager", centro(loop-value), 4)
 	loop {cnr.z1::*}:
-		force draw 4 flame particles at centro(loop-value)
+		particulaPara({_p}, "flame", centro(loop-value), 4)
 		set {_d} to {cnr.z2::%loop-index%}
 		if {_d} is set:
-			force draw 4 flame particles at centro({_d})
+			particulaPara({_p}, "flame", centro({_d}), 4)
 
 function toggleBloque(p: player, l: location):
 	if {cnr.bloques::*} contains {_l}:
@@ -405,7 +411,7 @@ function toggleBloque(p: player, l: location):
 	else:
 		add {_l} to {cnr.bloques::*}
 		send "&a+ &7Bloque agregado. Hay &f%size of {cnr.bloques::*}% &7bloques que desaparecen (a los {@bloques-desaparecen} s del final)." to {_p}
-		force draw 8 happy villager particles at centro({_l})
+		particulaPara({_p}, "happy_villager", centro({_l}), 8)
 
 function guardarZona(p: player):
 	set {_u} to uuid of {_p}
@@ -509,7 +515,7 @@ command /nuclear [<text>] [<text>]:
 		if arg-1 is "ver":
 			send "&e☢ &7Mostrando 10 s: bloques elegidos (verde) y esquinas de las zonas seguras (llamas)." to player
 			loop 20 times:
-				verMarcas()
+				verMarcas(player)
 				wait 10 ticks
 			stop
 		send "&7Uso: &f/nuclear [prueba [segundos] | bloque | ver | lista | restaurar | borrar bloques | borrar zonas]" to player
