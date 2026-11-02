@@ -29,8 +29,8 @@ import ar.tod4.util.Style;
 import ar.tod4.util.Txt;
 
 /**
- * Murcielago Vampiro: reemplaza a TODOS los murcielagos comunes del overworld (aparecen donde aparecian ellos: cuevas
- * oscuras). No persiguen a los cuyes. Nunca aparece arriba de agua o lava, ni en el aire
+ * Murcielago Vampiro: aparecen en manadas de 3 a 5, como un mob hostil mas del overworld (donde y cuando aparecen los
+ * zombies), lejos de los jugadores. Los murcielagos comunes ya no aparecen. No persiguen a los cuyes. Nunca aparece arriba de agua o lava, ni en el aire
  * sin piso abajo, ni donde hay luz de antorchas. Si les da el sol, se queman. Vuela RECTO hacia
  * un jugador, esquivando paredes. Si esta pegado, cada medio segundo le roba un corazon de la vida maxima (primero los
  * rojos; los amarillos no protegen). Si no le queda ninguno, muere. Lo robado vuelve al morir o con el Corazon Morado.
@@ -115,23 +115,41 @@ public final class Murcielagos implements Listener {
         }
     }
 
-    /** Los murcielagos comunes del overworld no aparecen mas: en su lugar (si se puede) aparece uno vampiro. */
-    @EventHandler(ignoreCancelled = true)
-    public void comun(org.bukkit.event.entity.CreatureSpawnEvent e) {
-        if (!(e.getEntity() instanceof Bat) || e.getEntity().getScoreboardTags().contains(ETIQUETA)) return;
-        if (!e.getEntity().getWorld().equals(overworld())) return;
-        if (e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CUSTOM
-                || e.getSpawnReason() == org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.COMMAND) return;   // los de comandos/plugins, no
-        if (!pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true) || !activo()) return;   // antes del dia: comunes
-        e.setCancelled(true);
-        // solo algunos de los comunes pasan a ser vampiros (el resto, nada)
-        if (rnd.nextDouble() * 100 >= d("chance_reemplazo", 15)) return;
-        Location l = e.getLocation();
-        Player p = cercano(l, 40);
+    /**
+     * Aparecen como un mob hostil mas: cuando el juego hace aparecer un mob hostil de forma natural en el overworld
+     * (o un murcielago comun, que ya no aparecen), a veces en ese lugar sale una manada de 3 a 5 vampiros. El juego hace
+     * aparecer los mobs lejos de los jugadores (24 bloques o mas), asi que salen lejos y vienen volando.
+     * A cada jugador, como mucho una manada cada "minutos_entre" minutos.
+     */
+    @EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+    public void natural(org.bukkit.event.entity.CreatureSpawnEvent e) {
+        Entity ent = e.getEntity();
+        if (ent.getScoreboardTags().contains(ETIQUETA) || !ent.getWorld().equals(overworld())) return;
+        org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason r = e.getSpawnReason();
+        if (r != org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        boolean murcielago = ent instanceof Bat;
+        if (murcielago) {
+            if (!pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true) || !activo()) return;   // antes del dia: comunes
+            e.setCancelled(true);
+        } else if (!(ent instanceof org.bukkit.entity.Monster) || e.isCancelled()) return;
+        if (!activo()) return;
+        if (rnd.nextDouble() * 100 >= (murcielago ? d("chance_reemplazo", 15) : d("chance_manada", 1))) return;
+        Location l = e.getLocation().clone().add(0, murcielago ? 0 : 1.5, 0);
+        Player p = cercano(l, 64);
         if (p == null || cuantosDe(p) >= (int) d("max_por_jugador", 2) || !leToca(p)) return;
+        if (p.getLocation().distance(l) < d("distancia_min", 24)) return;   // lejos del jugador
         if (!puedeAparecer(l)) return;
         ultimoNace.put(p.getUniqueId(), System.currentTimeMillis());
-        Bukkit.getScheduler().runTask(pl, () -> { if (p.isOnline()) crear(l, p); });
+        int min = (int) d("manada_min", 3), max = Math.max(min, (int) d("manada_max", 5));
+        int n = min + rnd.nextInt(max - min + 1);
+        Bukkit.getScheduler().runTask(pl, () -> {
+            if (!p.isOnline()) return;
+            crear(l, p);
+            for (int i = 1; i < n; i++) {
+                Location c = l.clone().add(rnd.nextDouble() * 3 - 1.5, rnd.nextDouble() * 1.5, rnd.nextDouble() * 3 - 1.5);
+                crear(libre(c) ? c : l, p);
+            }
+        });
     }
 
     /**
@@ -223,8 +241,8 @@ public final class Murcielagos implements Listener {
     private void mover() {
         tick++;
         if (bichos.isEmpty()) return;
-        double vel = d("velocidad", 0.3);
-        int cada = Math.max(1, (int) d("muerde_cada_ticks", 10));
+        double vel = d("velocidad", 0.25);
+        int cada = Math.max(1, (int) d("muerde_cada_ticks", 15));
         long vida = (long) (d("dura_seg", 90) * 1000);
         for (Iterator<Map.Entry<UUID, Estado>> it = bichos.entrySet().iterator(); it.hasNext(); ) {
             Map.Entry<UUID, Estado> en = it.next();
@@ -313,7 +331,6 @@ public final class Murcielagos implements Listener {
             var mx = p.getAttribute(Attribute.MAX_HEALTH);
             pl.getLogger().info("[Murcielago] mordio a " + p.getName() + ": vida maxima " + (mx == null ? "?" : mx.getValue()) + (murio ? " (murio)" : ""));
         }
-        if (!murio) p.sendActionBar(Txt.c("&4❤ &c-1 &7¡Un murciélago vampiro te robó un corazón!"));
     }
 
     private void irse(Bat b) {

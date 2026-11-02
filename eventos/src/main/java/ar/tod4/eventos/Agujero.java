@@ -83,7 +83,7 @@ import net.kyori.adventure.title.Title;
 final class Agujero implements Listener {
 
     private static final String MOB = "agujero_mob", CARTEL = "agujero_cartel", PERM = "tod4eventos.admin";
-    private static final int VERSION_CFG = 4;
+    private static final int VERSION_CFG = 5;
 
     private final TOD4Eventos pl;
     private final Random rnd = new Random();

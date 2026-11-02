@@ -15,7 +15,7 @@
 #  Otros: abrir (reconstruye y abre ya), cerrar [min], terminar (corta la corrida), espera <jugador>, estado
 #  Los jugadores no pueden romper ni poner nada, ni usar perlas ni cargas de viento.
 # =====================================================================
-version: 4
+version: 5
 
 mundo: agujero_infierno
 # la forma de la cueva sale de esta semilla (cambiarla despues de crearla cambia solo lo que se genere de nuevo)
@@ -35,8 +35,8 @@ dano: 3.0
 # cuando ya no queda nadie pasando la linea aparece una pared en la linea y queda derrumbada esto (minutos);
 # mientras, no se puede bajar ("La cueva está derrumbada."). Despues se reconstruye sola y se avisa en el chat.
 cerrado_min: 30
-# cada jugador puede bajar una vez cada tanto (minutos). Los admins no tienen espera.
-espera_jugador_min: 60
+# cada jugador puede bajar una vez cada tanto (minutos). 0 = sin espera (puede bajar siempre que este abierta).
+espera_jugador_min: 0
 
 # la musica (sonido del pack) y su volumen. La escuchan todos los que estan en el mundo de la cueva.
 musica: "tod4:agujero"
@@ -62,8 +62,8 @@ derrumbe:
 # por ejemplo con 10 lugares dificiles y 70, salen 7.
 # generados: true = ademas usa lugares de la cueva generada, y entonces pone esta cantidad de cada tipo, al azar.
 cofres:
-  salen_facil: 70
-  salen_dificil: 70
+  salen_facil: 50
+  salen_dificil: 50
   generados: false
   facil: 8
   dificil: 5
@@ -76,56 +76,63 @@ loot:
   facil:
     - "oraxen:moneda 0:1,1:1,2:1"          # 0, 1 o 2 Trucoin (igual de probable)
     - "minecraft:resin_clump 2-4"
-    - "oraxen:totem_cuy 1:1,2:1 20%"       # lo mejor del cofre facil: 20%, y la mitad de las veces salen 2
-    - "oraxen:iron_cog 1-3 40%"
-    - "oraxen:gold_cog 1 20%"
-    - "minecraft:apple 1-3 50%"
-    - "minecraft:bread 2-5 35%"
-    - "minecraft:baked_potato 2-4 25%"
-    - "minecraft:torch 4-10 35%"
-    - "minecraft:arrow 6-14 30%"
-    - "minecraft:coal 3-8 30%"
-    - "minecraft:iron_nugget 4-12 25%"
-    - "minecraft:experience_bottle 2-6 30%"
-    - "minecraft:candle 1-2 15%"
-    - "minecraft:lantern 1 10%"
-    - "minecraft:pointed_dripstone 2-4 15%"
-    - "minecraft:glow_lichen 2-5 15%"
-    - "minecraft:bone 2-5 25%"
-    - "minecraft:cobweb 1-2 10%"
+    - "oraxen:totem_cuy 1:1,2:1 30%"       # lo mejor del cofre facil: 30%, y la mitad de las veces salen 2
+    - "oraxen:iron_cog 1-3 60%"
+    - "oraxen:gold_cog 1 30%"
+    - "minecraft:apple 1-3 70%"
+    - "minecraft:bread 2-5 55%"
+    - "minecraft:baked_potato 2-4 45%"
+    - "minecraft:torch 4-10 55%"
+    - "minecraft:arrow 6-14 50%"
+    - "minecraft:coal 3-8 50%"
+    - "minecraft:iron_nugget 4-12 45%"
+    - "minecraft:experience_bottle 2-6 50%"
+    - "minecraft:candle 1-2 25%"
+    - "minecraft:lantern 1 20%"
+    - "minecraft:pointed_dripstone 2-4 25%"
+    - "minecraft:glow_lichen 2-5 25%"
+    - "minecraft:bone 2-5 40%"
+    - "minecraft:cobweb 1-2 20%"
+    - "corazon_amarillo 1 6%"
+    - "corazon_morado 1 4%"
   # los cofres buenos (escondidos)
   dificil:
     - "oraxen:moneda 2:40,3:30,4:15,5:8"   # siempre 2 Trucoin o mas (mas, menos probable)
     - "oraxen:moneda_roja 1 7%"            # a veces ademas una Frackoin
     - "oraxen:moneda_morada 1 1%"          # Tinchoin: rarisima
-    - "minecraft:echo_shard 1-3 60%"
-    - "minecraft:enchanted_golden_apple 1 50%"
-    - "minecraft:diamond 3:25,4:50,5:25 60%"   # cuando hay, unos 4
-    - "minecraft:netherite_ingot 1 15%"
-    - "oraxen:mineral_truco 1 15%"         # Mineral de Tioduro
-    - "oraxen:totem_golem 1 10%"
+    - "minecraft:echo_shard 1-3 80%"
+    - "minecraft:enchanted_golden_apple 1 65%"
+    - "minecraft:diamond 3:25,4:50,5:25 75%"   # cuando hay, unos 4
+    - "minecraft:experience_bottle 4-10 70%"
+    - "minecraft:netherite_ingot 1 20%"
+    - "oraxen:mineral_truco 1 20%"         # Mineral de Tioduro
+    - "oraxen:totem_golem 1 20%"
+    - "oraxen:totem_cuy 1:1,2:1 50%"
     - "oraxen:totem_tod4 1 8%"             # TODtem
+    - "corazon_rojo 1:2,2:1 30%"           # 30% de que salga, y a veces 2
+    - "corazon_amarillo 1-2 20%"
+    - "corazon_morado 1 10%"
 
 # mobs que aparecen cuando empieza a derrumbarse
 #   mm:<nombre de MythicMobs>   creeper:<random|mini|calamar|void|nuclear|flash> (los de TOD4)   minecraft:<mob>
 # "cantidad" repartidos por toda la cueva (tuneles y salas), y aparte los de cada zona.
 mobs:
-  cantidad: 58
+  cantidad: 60
   tipos:
-    "creeper:random": 6
-    "creeper:calamar": 6
+    "creeper:random": 10
+    "creeper:calamar": 10
     "mm:enderzombie": 5
-    "zombie_tanque": 4          # zombi con mucha vida y armadura de hierro (para tanquear)
-    "zombie_alucinado": 7       # al pegarte, por 30 s ves la vida, el hambre, el tab y el tiempo cambiados
-    "minecraft:zombie": 3
-    "minecraft:skeleton": 6
-    "mm:BreezeOld": 3
-    "mm:BombaVoladora": 3
-    "minecraft:silverfish": 3
+    "zombie_tanque": 0          # zombi con mucha vida y armadura de hierro (para tanquear)
+    "zombie_alucinado": 4       # al pegarte, por 30 s ves la vida, el hambre, el tab y el tiempo cambiados
+    "minecraft:zombie": 15
+    "minecraft:skeleton": 17
+    "mm:BreezeOld": 15
+    "mm:BombaVoladora": 20
+    "minecraft:silverfish": 2
   # zonas: entrada, cruce, columnas (la de estalactitas), lago (el de lava), isla (el medio del lago), catedral, pozo, galeria
   zonas:
     columnas:        # la sala de las estalactitas: solo aca hay Flash Creepers (uno, y la mitad de las veces)
-      cantidad: 1
+      cantidad: 2
       probabilidad: 50
       tipos:
         "creeper:flash": 1
