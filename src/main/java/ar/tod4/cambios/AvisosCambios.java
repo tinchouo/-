@@ -161,12 +161,6 @@ final class AvisosCambios {
             TOTEM},
         {"cambio_bedrock", "d6.bedrock", "6", "d",
             "Tocar *bedrock* te da *Wither III* y *desgasta la armadura*."},
-        {"aviso_agujero", "", "11", "n",
-            "Se abrió el *Agujero del Infierno*: una cueva enorme y oscura con *cofres* escondidos llenos de monedas, tótems y mucho más.",
-            "Cuando alguien sale de la sala de entrada, empieza la música y la cueva *se empieza a derrumbar*. Tienes *3 minutos* para volver a la entrada: no te va a alcanzar el tiempo para abrir todo.",
-            "Si cuando termina la música sigues adentro, *mueres aplastado*.",
-            "Adentro te esperan *zombis y esqueletos armados*, *creepers* de todo tipo, *blazes* en el lago de lava, el *Papu* y hasta un *Creeper Nuclear*. No se puede romper ni poner nada, ni usar *perlas* o *cargas de viento*.",
-            "Después de cada derrumbe la cueva queda cerrada un rato y se reconstruye sola, con cofres nuevos. Cada jugador puede bajar *una vez por hora*."},
     };
 
     private static List<String> armar(String[] parrafos, int desde, int max) {
