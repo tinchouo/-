@@ -335,7 +335,7 @@ murcielagos:
   manada_max: 5
   max_por_jugador: 5      # si ya tiene estos, no le aparece otra manada
   distancia_min: 24       # que tan lejos del jugador aparecen
-  distancia_max: 40
+  distancia_max: 64       # y hasta que tan lejos (si el mob aparece mas lejos de todos, no traen manada)
   reemplazar_comunes: true
   luz_maxima: 7           # no aparecen donde la luz de antorchas/lamparas es mayor a esto
   dano_sol: 3             # dano por segundo al sol

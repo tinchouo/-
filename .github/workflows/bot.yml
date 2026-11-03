@@ -44,6 +44,7 @@ jobs:
           sed -n '/PRUEBA_PARED/,$p' log.txt | grep -q "\[Murcielago\] mordio a tester" || { echo "::error::El murcielago no encontro la puerta de la caja"; exit 1; }
           sed -n '/PRUEBA_SPAWN/,$p' log.txt | grep -E "Murcielago" | head -8
           sed -n '/PRUEBA_SPAWN/,$p' log.txt | grep -q "aparecio una manada de .* con un" || { echo "::error::Los murcielagos no aparecieron con los mobs"; exit 1; }
+          N=$(sed -n '/PRUEBA_SPAWN/,$p' log.txt | grep -c "aparecio una manada"); echo "manadas: $N"; [ "$N" -le 2 ] || { echo "::error::Aparecieron mas de las que permite max_por_jugador"; exit 1; }
           grep -E "Meteorito|☄" log.txt | head -10
           grep -q "\[Meteorito\] #1 en .*: [48] menas, .*cofre true" log.txt || { echo "::error::El meteorito no armo el crater"; exit 1; }
           grep -E "\[Phantom\]" log.txt | head -10

@@ -138,6 +138,7 @@ public final class Murcielagos implements Listener {
     // ================================================================= aparecer
 
     private int segLimpiar, segSpawn;
+    private final Map<UUID, Integer> pendientes = new HashMap<>();
 
     private boolean activo() {
         return pl.getConfig().getBoolean("murcielagos.activo", true) && pl.dia() >= pl.getConfig().getInt("murcielagos.desde_dia", 11);
@@ -190,17 +191,20 @@ public final class Murcielagos implements Listener {
         if (!pl.getConfig().getBoolean("murcielagos.spawn_por_mobs", true) || !ent.getWorld().equals(overworld()) || !activo()) return;
         if (rnd.nextDouble() * 100 >= d("chance_por_mob", 1)) return;
         Location l = e.getLocation().clone().add(0, 1, 0);
-        log("salio un " + ent.getType() + " en " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ() + ": probando una manada");
-        Player p = cercano(l, 128);
-        if (p == null) { log("salio un " + ent.getType() + " pero no hay nadie jugando cerca"); return; }
+        Player p = cercano(l, d("distancia_max", 64));
+        if (p == null) { log("salio un " + ent.getType() + " pero no hay nadie jugando a menos de " + (int) d("distancia_max", 64) + " bloques"); return; }
+        if (p.getLocation().distance(l) < d("distancia_min", 24)) return;
         int max = (int) d("max_por_jugador", 5);
-        if (cuantosDe(p) >= max || !leToca(p)) return;
+        int ya = cuantosDe(p) + pendientes.getOrDefault(p.getUniqueId(), 0);
+        if (ya >= max || !leToca(p)) { log("salio un " + ent.getType() + " pero " + p.getName() + " ya tiene " + ya + " murcielagos"); return; }
         if (!libre(l) || !puedeAparecer(l)) { log("salio un " + ent.getType() + " pero ahi no puede aparecer (luz, agua o sin piso)"); return; }
         ultimoNace.put(p.getUniqueId(), System.currentTimeMillis());
         int min = (int) d("manada_min", 3), mx = Math.max(min, (int) d("manada_max", 5));
-        int n = Math.min(min + rnd.nextInt(mx - min + 1), Math.max(1, max - cuantosDe(p)));
+        int n = Math.min(min + rnd.nextInt(mx - min + 1), max - ya);
+        pendientes.merge(p.getUniqueId(), n, Integer::sum);
         // un tick despues: no se mete con el mob que esta apareciendo (ni con otros plugins que lo cambian)
         Bukkit.getScheduler().runTask(pl, () -> {
+            pendientes.computeIfPresent(p.getUniqueId(), (k, v) -> v - n <= 0 ? null : v - n);
             if (!p.isOnline()) return;
             for (int i = 0; i < n; i++) {
                 Location c = i == 0 ? l : l.clone().add(rnd.nextDouble() * 3 - 1.5, rnd.nextDouble() * 1.5, rnd.nextDouble() * 3 - 1.5);
