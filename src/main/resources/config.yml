@@ -322,10 +322,15 @@ phantom:
 murcielagos:
   activo: true
   desde_dia: 11
-  # Aparecen solo en el overworld principal (cualquier bioma; no en el Agujero ni en otras dimensiones)
-  spawn_cada_seg: 30      # cada cuantos segundos se prueba si a cada jugador le sale una manada
-  spawn_chance: 15        # % de que salga cada vez que se prueba (si al jugador le toca)
-  minutos_entre: 5        # a cada jugador le aparece como mucho una manada cada estos minutos
+  # Aparecen solo en el overworld principal (no en el Agujero ni en otras dimensiones), con los mobs hostiles:
+  # cada mob que aparece solo (zombie, creeper, esqueleto...; los phantoms no) tiene esta chance de traer una manada
+  spawn_por_mobs: true
+  chance_por_mob: 1       # % por cada mob hostil que aparece
+  # Ademas (apagado): cada tantos segundos, a cada jugador, esta chance de que le salga una manada lejos
+  spawn_por_tiempo: false
+  spawn_cada_seg: 30
+  spawn_chance: 15
+  minutos_entre: 0        # 0 = sin espera (si no, como mucho una manada cada estos minutos por jugador)
   manada_min: 3
   manada_max: 5
   max_por_jugador: 5      # si ya tiene estos, no le aparece otra manada

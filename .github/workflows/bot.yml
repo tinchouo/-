@@ -23,16 +23,16 @@ jobs:
           curl -sL -o paper.jar "$URL"
           cp ../target/TOD4.jar plugins/
           # como en el server de verdad: un config.yml que no tiene la parte del screamer
-          mkdir -p plugins/TOD4 && printf 'config_version: 12\nphantom:\n  debug: true\nmurcielagos:\n  debug: true\nmeteorito:\n  debug: true\n' > plugins/TOD4/config.yml
+          mkdir -p plugins/TOD4 && printf 'config_version: 12\nphantom:\n  debug: true\nmurcielagos:\n  debug: true\n  chance_por_mob: 100\nmeteorito:\n  debug: true\n' > plugins/TOD4/config.yml
           echo "eula=true" > eula.txt
           printf "online-mode=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\n" > server.properties
           cd .. && mkdir bot && cd bot && npm init -y > /dev/null && npm i minecraft-protocol@latest > /dev/null && cp ../.github/pruebas/bot.js .
       - name: Probar el screamer con un jugador
         run: |
           cd srv
-          (sleep 90; echo "gamerule doMobSpawning false"; echo "kill @e[type=!player]"; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 12; echo "kill @e[type=enderman]"; sleep 1; echo "effect give tester instant_health 1 5"; echo "time set night"; echo "tod4 murcielago 1 tester"; sleep 4; echo "kill @e[type=bat]"; sleep 1; echo "time set day"; echo "say PRUEBA_SOL"; echo "tod4 murcielago 1 tester"; sleep 6; echo "kill @e[type=bat]"; echo "time set night"; echo "say PRUEBA_PARED"; echo "execute at tester run fill ~-4 ~-1 ~-4 ~4 ~3 ~4 stone hollow"; echo "execute at tester run fill ~4 ~ ~ ~4 ~1 ~ air"; sleep 1; echo "tod4 murcielago 2 tester"; sleep 16; echo "tod4 meteorito 20 -60 20"; sleep 6; echo "tod4 meteorito lista"; sleep 1; echo stop) | timeout 270 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          (sleep 90; echo "gamerule doMobSpawning false"; echo "kill @e[type=!player]"; echo "op tester"; sleep 3; echo "tod4:video tester screamer"; sleep 1; echo "tp tester ~ ~ ~ 90 30"; sleep 4; echo "playsound tod4_screamer:screamer master tester"; sleep 4; echo "tod4:alucinar tester 3"; sleep 4; echo "gamemode survival tester"; echo "summon enderman 0 -60 3 {Tags:[\"tod4_screamer\"],PersistenceRequired:1b}"; sleep 12; echo "kill @e[type=enderman]"; sleep 1; echo "effect give tester instant_health 1 5"; echo "time set night"; echo "tod4 murcielago 1 tester"; sleep 4; echo "kill @e[type=bat]"; sleep 1; echo "time set day"; echo "say PRUEBA_SOL"; echo "tod4 murcielago 1 tester"; sleep 6; echo "kill @e[type=bat]"; echo "time set night"; echo "say PRUEBA_PARED"; echo "execute at tester run fill ~-4 ~-1 ~-4 ~4 ~3 ~4 stone hollow"; echo "execute at tester run fill ~4 ~ ~ ~4 ~1 ~ air"; sleep 1; echo "tod4 murcielago 2 tester"; sleep 16; echo "tod4 meteorito 20 -60 20"; sleep 6; echo "tod4 meteorito lista"; sleep 1; echo "say PRUEBA_SPAWN"; echo "time set midnight"; echo "gamerule doMobSpawning true"; sleep 15; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
-          (cd ../bot && timeout 120 node bot.js > ../srv/bot.txt 2>&1) || true
+          (cd ../bot && timeout 150 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true
           cat bot.txt | head -150
           grep -iE "tester|screamer|Exception|error" log.txt | head -40
@@ -42,6 +42,8 @@ jobs:
           grep -q "\[Murcielago\] mordio a tester" log.txt || { echo "::error::El murcielago no mordio"; exit 1; }
           sed -n '/PRUEBA_PARED/,$p' log.txt | grep -E "Murcielago|Exception" | head -15
           sed -n '/PRUEBA_PARED/,$p' log.txt | grep -q "\[Murcielago\] mordio a tester" || { echo "::error::El murcielago no encontro la puerta de la caja"; exit 1; }
+          sed -n '/PRUEBA_SPAWN/,$p' log.txt | grep -E "Murcielago" | head -8
+          sed -n '/PRUEBA_SPAWN/,$p' log.txt | grep -q "aparecio una manada de .* con un" || { echo "::error::Los murcielagos no aparecieron con los mobs"; exit 1; }
           grep -E "Meteorito|☄" log.txt | head -10
           grep -q "\[Meteorito\] #1 en .*: [48] menas, .*cofre true" log.txt || { echo "::error::El meteorito no armo el crater"; exit 1; }
           grep -E "\[Phantom\]" log.txt | head -10

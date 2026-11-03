@@ -157,6 +157,7 @@ public final class Murcielagos implements Listener {
             if (pl.getConfig().getBoolean("murcielagos.reemplazar_comunes", true))
                 for (Bat b : w.getEntitiesByClass(Bat.class)) if (!b.getScoreboardTags().contains(ETIQUETA)) b.remove();
         }
+        if (!pl.getConfig().getBoolean("murcielagos.spawn_por_tiempo", false)) return;
         if (++segSpawn < Math.max(1, (int) d("spawn_cada_seg", 30))) return;
         segSpawn = 0;
         int max = (int) d("max_por_jugador", 5);
@@ -174,6 +175,38 @@ public final class Murcielagos implements Listener {
             }
             log("aparecio una manada de " + n + " a " + Math.round(l.distance(p.getLocation())) + " bloques de " + p.getName());
         }
+    }
+
+    /**
+     * Aparecen con los mobs: cada vez que el juego hace aparecer solo un mob hostil en el overworld (zombie, creeper,
+     * esqueleto...; los phantoms no, que salen muy alto), hay "chance_por_mob" % de que ahi mismo salga una manada.
+     * El mob aparece igual (no se toca). La manada es del jugador mas cercano (en supervivencia/aventura, a 128 bloques).
+     */
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void conMobs(CreatureSpawnEvent e) {
+        if (e.getSpawnReason() != CreatureSpawnEvent.SpawnReason.NATURAL) return;
+        Entity ent = e.getEntity();
+        if (!(ent instanceof org.bukkit.entity.Monster) || ent instanceof org.bukkit.entity.Phantom) return;
+        if (!pl.getConfig().getBoolean("murcielagos.spawn_por_mobs", true) || !ent.getWorld().equals(overworld()) || !activo()) return;
+        if (rnd.nextDouble() * 100 >= d("chance_por_mob", 1)) return;
+        Location l = e.getLocation().clone().add(0, 1, 0);
+        Player p = cercano(l, 128);
+        if (p == null) { log("salio un " + ent.getType() + " pero no hay nadie jugando cerca"); return; }
+        int max = (int) d("max_por_jugador", 5);
+        if (cuantosDe(p) >= max || !leToca(p)) return;
+        if (!libre(l) || !puedeAparecer(l)) { log("salio un " + ent.getType() + " pero ahi no puede aparecer (luz, agua o sin piso)"); return; }
+        ultimoNace.put(p.getUniqueId(), System.currentTimeMillis());
+        int min = (int) d("manada_min", 3), mx = Math.max(min, (int) d("manada_max", 5));
+        int n = Math.min(min + rnd.nextInt(mx - min + 1), Math.max(1, max - cuantosDe(p)));
+        // un tick despues: no se mete con el mob que esta apareciendo (ni con otros plugins que lo cambian)
+        Bukkit.getScheduler().runTask(pl, () -> {
+            if (!p.isOnline()) return;
+            for (int i = 0; i < n; i++) {
+                Location c = i == 0 ? l : l.clone().add(rnd.nextDouble() * 3 - 1.5, rnd.nextDouble() * 1.5, rnd.nextDouble() * 3 - 1.5);
+                crear(libre(c) ? c : l, p, false);
+            }
+            log("aparecio una manada de " + n + " con un " + ent.getType() + " a " + Math.round(l.distance(p.getLocation())) + " bloques de " + p.getName());
+        });
     }
 
     /** Los murcielagos comunes ya no aparecen (en el overworld, desde el dia de los vampiros). */
@@ -220,7 +253,7 @@ public final class Murcielagos implements Listener {
     /** Como mucho una manada cada "minutos_entre" minutos para cada jugador. */
     private boolean leToca(Player p) {
         Long u = ultimoNace.get(p.getUniqueId());
-        return u == null || System.currentTimeMillis() - u >= (long) (d("minutos_entre", 5) * 60000);
+        return u == null || System.currentTimeMillis() - u >= (long) (d("minutos_entre", 0) * 60000);
     }
 
     private int cuantosDe(Player p) {
