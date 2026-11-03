@@ -11,6 +11,8 @@ c.on('packet', (data, meta) => {
   console.log('PAQUETE', ((Date.now() - t0) / 1000).toFixed(2), meta.name, s)
 })
 c.on('login', () => { console.log('BOT entro'); setTimeout(() => { try { c.chat(':GENIO: probando'); console.log('BOT mando :GENIO:') } catch (e) { console.log('BOT chat error', e.message) } }, 15000) })
+// si muere, reaparece (como apretar "Reaparecer")
+c.on('update_health', d => { if (d.health <= 0) setTimeout(() => { try { c.write('client_command', { actionId: 0 }); console.log('BOT reaparecio') } catch (e) { console.log('BOT respawn error', e.message) } }, 500) })
 c.on('error', e => console.log('BOT error', e.message))
 c.on('end', r => console.log('BOT salio', r))
 setTimeout(() => process.exit(0), 140000)
