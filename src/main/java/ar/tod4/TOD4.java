@@ -48,6 +48,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
     private ar.tod4.video.Screamer screamer;
     private ar.tod4.mobs.Murcielagos murcielagos;
     private ar.tod4.vibranium.Vibranium vibranium;
+    private ar.tod4.items.Granada granada;
     private ar.tod4.vibranium.Meteorito meteorito;
     private ar.tod4.alucina.Alucinacion alucinacion;
     private ar.tod4.equipos.Equipos equipos;
@@ -88,6 +89,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         subasta = new ar.tod4.subasta.Subasta(this);
         corazon = new ar.tod4.items.Corazon(this);
         vibranium = new ar.tod4.vibranium.Vibranium(this);
+        granada = new ar.tod4.items.Granada(this);
         meteorito = new ar.tod4.vibranium.Meteorito(this, vibranium);
         new ar.tod4.items.SoloOraxen(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
@@ -303,6 +305,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             Style.raw(s, "&e/tod4:totems &8- &7tótems sin ceguera y tótems que pueden fallar (día 14)");
             Style.raw(s, "&e/tod4 meteorito [x y z|lista|borrar <n>] &8- &7cae un meteorito de vibranium donde estás");
             Style.raw(s, "&e/tod4 vibranium <mena|barra|lingote|mejora|piedra> [cant] [jugador] &8- &7dar items de vibranium");
+            Style.raw(s, "&e/tod4 granada [cant] [jugador] &8- &7dar granadas de impulso");
             Style.raw(s, "&e/tod4 backrooms &8- &7donde caen los que sueñan con las backrooms (día 13)");
             Style.raw(s, "&e/tod4:alma <give|remove> <jugador> &8- &7dar o quitar un alma");
             Style.raw(s, "&e/tod4:revivir <jugador> &8- &7revivir a alguien sin ritual");
@@ -332,6 +335,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
             case "murcielago": murcielagos.cmd(s, a); return true;
             case "meteorito": meteorito.cmd(s, a); return true;
             case "vibranium": vibranium.cmd(s, a); return true;
+            case "granada": granada.cmd(s, a); return true;
             case "ballestero": {
                 if (!(s instanceof Player pj)) return true;
                 String t = a.length > 1 ? a[1].toLowerCase() : "rojo";
@@ -384,7 +388,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         }
         if (a.length == 1) {
             switch (c) {
-                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "murcielago", "meteorito", "vibranium", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
+                case "tod4": out.addAll(List.of("help", "dia", "muertes", "donde", "holo", "discord", "subasta", "corazon", "murcielago", "meteorito", "vibranium", "granada", "ballestero", "minero", "esqueleto", "backrooms", "recargar")); break;
                 case "video": case "alucinar": for (Player p : Bukkit.getOnlinePlayers()) out.add(p.getName()); break;
                 case "altar": out.addAll(List.of("agregar", "quitar", "gulag", "bloquear", "desbloquear", "limpiar")); break;
                 case "alma": out.addAll(List.of("give", "remove")); break;

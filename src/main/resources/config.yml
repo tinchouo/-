@@ -398,6 +398,21 @@ meteorito:
   respaldo_mena: AMETHYST_BLOCK
   respaldo_piedra: BLACKSTONE
 
+
+# Granada de Impulso: /tod4 granada [cantidad] [jugador] (para la tienda: por consola).
+# Se tira, queda en el piso pitando y explota: empuja a todos para AFUERA (arriba si estas encima, al costado si estas al lado).
+# No rompe nada ni hace dano; la caida si. Todo se cambia con /tod4 recargar.
+granada_impulso:
+  activa: true
+  nombre: "<#7FE7FF>Granada de Impulso"
+  espera_seg: 0.75         # cuanto queda en el piso antes de explotar
+  radio: 4                 # bloques
+  altura_bloques: 5.5      # cuanto sube el que esta justo encima
+  empuje_bloques: 6        # cuanto vuela para el costado el que esta al lado
+  minimo_arriba: 0.4       # 0 a 1: el saltito que da aunque estes al costado
+  afecta_mobs: true
+  mundos_bloqueados: [agujero_infierno]   # donde no funciona (el Agujero y los eventos)
+
 # Alucinacion (Zombi Alucinado del Agujero, mobs con la etiqueta tod4_alucina, /tod4:alucinar):
 # el que la tiene ve la vida, el hambre y el tab cambiando al azar (es solo lo que ve).
 alucinacion:
