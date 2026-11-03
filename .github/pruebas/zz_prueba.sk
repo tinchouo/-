@@ -95,3 +95,15 @@ command /probarver:
 		delete {cnr.bloques::*}
 		delete {cnr.z1::*}
 		delete {cnr.z2::*}
+
+# ---- blackjack: la suma de las cartas y el mazo
+command /probarbj:
+    trigger:
+        set {_a::*} to "A|♥" and "K|♠"
+        set {_b::*} to "A|♥", "A|♦" and "9|♣"
+        set {_c::*} to "10|♥", "9|♠" and "5|♣"
+        set {_d::*} to "A|♥", "5|♦", "A|♠" and "9|♣"
+        broadcast "BJ_PRUEBA totales %bj_total({_a::*})% %bj_total({_b::*})% %bj_total({_c::*})% %bj_total({_d::*})%"
+        set {_q} to item amount of bj_carta("Q|♦")
+        set {_s} to item amount of bj_carta("7|♣")
+        broadcast "BJ_PRUEBA cartas %{_q}% %{_s}%"

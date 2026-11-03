@@ -36,7 +36,7 @@ jobs:
       - name: Arrancar y cargar los scripts
         run: |
           cd srv
-          (sleep 120; echo "gulag llaves 5"; sleep 2; echo "gulag estado"; sleep 2; echo "gulag puertas"; sleep 2; echo "gulag lista"; sleep 3; echo "probarnuclear"; sleep 8; echo "probarbloques"; sleep 6; echo "probarver"; sleep 6; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
+          (sleep 120; echo "gulag llaves 5"; sleep 2; echo "gulag estado"; sleep 2; echo "gulag puertas"; sleep 2; echo "gulag lista"; sleep 3; echo "probarnuclear"; sleep 8; echo "probarbloques"; sleep 6; echo "probarver"; sleep 6; echo "probarbj"; sleep 2; echo stop) | timeout 300 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 || true
           # todo lo de Skript sale como aviso para poder leerlo desde afuera
           # todos los problemas de Skript juntos en un solo aviso (GitHub corta a 10 avisos por paso)
           M=$( { grep -A2 "\.sk)" log.txt | grep -vE "^--$" | sed -E 's/^\[[0-9:]+ INFO\]: +//' | grep -vE "^Line: " | tr '\n' ' ' | sed 's/\[Skript\]/\n/g' | head -c 60000 | tr '\n' '#'; } || true)
@@ -51,4 +51,7 @@ jobs:
           grep -q "ZONA_PRUEBA OK" log.txt || { echo "::error::La zona segura no anda"; exit 1; }
           grep -q "NUCLEAR_PRUEBA no rompio nada" log.txt || { echo "::error::La explosion del Creeper Nuclear rompio bloques (o no corrio la prueba)"; exit 1; }
           grep -E "GULAG|gulag" log.txt | grep -vE "\.sk|Loading|Line" | tail -8 | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
+          grep -E "BJ_PRUEBA" log.txt | while IFS= read -r l; do echo "::notice::${l//%/%25}"; done
+          grep -q "BJ_PRUEBA totales 21 21 24 16" log.txt || { echo "::error::El blackjack suma mal"; exit 1; }
+          grep -q "BJ_PRUEBA cartas 10 7" log.txt || { echo "::error::Las cartas del blackjack no tienen la cantidad bien"; exit 1; }
           echo "::notice::Scripts sin errores"
