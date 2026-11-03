@@ -355,6 +355,15 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 return true;
             }
             case "recargar":
+                // si el config.yml tiene un error (una sangria mal, comillas...), Bukkit lo ignora callado: lo avisamos
+                try {
+                    new org.bukkit.configuration.file.YamlConfiguration().load(new File(getDataFolder(), "config.yml"));
+                } catch (Exception ex) {
+                    String m = String.valueOf(ex.getMessage());
+                    Style.err(s, "&lEl config.yml tiene un error y NO se cargó&c (se siguen usando los valores de antes):");
+                    for (String l : m.split("\n")) if (!l.isBlank()) Style.raw(s, "&7" + l);
+                    return true;
+                }
                 reloadConfig();
                 mesa.recargar();
                 creepers.recargar();

@@ -133,8 +133,8 @@ public final class Granada implements Listener {
         w.spawnParticle(Particle.ELECTRIC_SPARK, l, 40, r * 0.3, r * 0.3, r * 0.3, 0.3);
         w.playSound(l, Sound.ENTITY_WIND_CHARGE_WIND_BURST, SoundCategory.PLAYERS, 1.5f, 0.8f);
         w.playSound(l, Sound.ENTITY_BREEZE_WIND_BURST, SoundCategory.PLAYERS, 1.2f, 1.2f);
-        double vyMax = velocidadParaAltura(d("altura_bloques", 5.5));
-        double vhMax = d("empuje_bloques", 6) * (1 - 0.91);   // en el aire se frena un 9% por tick
+        double vyMax = velocidadParaAltura(d("altura_bloques", 6));
+        double vhMax = d("empuje_bloques", 8) * (1 - 0.91) * 1.4;   // en el aire se frena un 9% por tick (y al caer, el piso)
         boolean mobs = pl.getConfig().getBoolean("granada_impulso.afecta_mobs", true);
         int n = 0;
         for (Entity e : w.getNearbyEntities(l, r, r, r)) {
@@ -146,12 +146,14 @@ public final class Granada implements Listener {
             double dist = dir.length();
             if (dist > r) continue;
             if (dist < 1e-3) dir = new Vector(0, 1, 0); else dir.multiply(1 / dist);
-            double fuerza = 1 - (dist / r) * 0.6;            // al borde, 40% de la fuerza
+            double fuerza = 1 - (dist / r) * d("perdida_al_borde", 0.3);   // al borde, 70% de la fuerza
             Vector h = dir.clone().setY(0);
             double hl = h.length();
             // arriba: si estas encima, todo; al costado, un saltito igual (si no, se arrastra por el piso)
-            double arriba = Math.max(dir.getY(), d("minimo_arriba", 0.4));
-            Vector v = (hl > 1e-3 ? h.multiply(1 / hl).multiply(vhMax * hl) : new Vector()).add(new Vector(0, vyMax * arriba, 0)).multiply(fuerza);
+            // siempre te levanta bastante (para que vueles y no te arrastres), y si estas al costado ademas te tira para afuera
+            double arriba = Math.max(dir.getY(), d("minimo_arriba", 0.7));
+            double costado = Math.min(1, hl * 2);   // casi encima: casi nada al costado
+            Vector v = (hl > 1e-3 ? h.multiply(1 / hl).multiply(vhMax * costado) : new Vector()).add(new Vector(0, vyMax * arriba, 0)).multiply(fuerza);
             le.setVelocity(v);
             n++;
             if (pl.getConfig().getBoolean("granada_impulso.debug", false))
@@ -171,8 +173,18 @@ public final class Granada implements Listener {
         return hi;
     }
 
-    /** /tod4 granada [cantidad] [jugador] */
+    /** /tod4 granada [cantidad] [jugador]  |  /tod4 granada ver (los valores que esta usando) */
     public void cmd(CommandSender s, String[] a) {
+        if (a.length > 1 && a[1].equalsIgnoreCase("ver")) {
+            boolean hay = pl.getConfig().isConfigurationSection("granada_impulso");
+            Style.info(s, "Granada de Impulso " + (hay ? "&a(leída de tu config.yml)" : "&e(tu config.yml no tiene la parte granada_impulso: valores de fábrica)"));
+            for (String[] k : new String[][]{{"espera_seg", "0.75"}, {"radio", "4"}, {"altura_bloques", "6"}, {"empuje_bloques", "8"},
+                    {"minimo_arriba", "0.7"}, {"perdida_al_borde", "0.3"}})
+                Style.raw(s, "&7  " + k[0] + ": &f" + d(k[0], Double.parseDouble(k[1])));
+            Style.raw(s, "&7  afecta_mobs: &f" + pl.getConfig().getBoolean("granada_impulso.afecta_mobs", true)
+                    + "&7, mundos_bloqueados: &f" + pl.getConfig().getStringList("granada_impulso.mundos_bloqueados"));
+            return;
+        }
         int n = 1;
         if (a.length > 1) try { n = Math.max(1, Math.min(64, Integer.parseInt(a[1]))); } catch (NumberFormatException ignored) { }
         Player p = a.length > 2 ? Bukkit.getPlayerExact(a[2]) : (s instanceof Player pp ? pp : null);

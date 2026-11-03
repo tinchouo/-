@@ -407,9 +407,10 @@ granada_impulso:
   nombre: "<#7FE7FF>Granada de Impulso"
   espera_seg: 0.75         # cuanto queda en el piso antes de explotar
   radio: 4                 # bloques
-  altura_bloques: 5.5      # cuanto sube el que esta justo encima
-  empuje_bloques: 6        # cuanto vuela para el costado el que esta al lado
-  minimo_arriba: 0.4       # 0 a 1: el saltito que da aunque estes al costado
+  altura_bloques: 6        # cuanto sube el que esta justo encima
+  empuje_bloques: 8        # cuanto vuela para el costado el que esta al lado
+  minimo_arriba: 0.7       # 0 a 1: cuanto te levanta aunque estes al costado (1 = igual que encima)
+  perdida_al_borde: 0.3    # 0 a 1: cuanta fuerza pierde en el borde del radio (0 = igual en todos lados)
   afecta_mobs: true
   mundos_bloqueados: [agujero_infierno]   # donde no funciona (el Agujero y los eventos)
 
