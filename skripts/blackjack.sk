@@ -1,0 +1,394 @@
+# ==========================================================
+#  BLACKJACK (va al lado de casino.sk; no lo toca)
+# ==========================================================
+#  Admin:  /blackjack            -> menú: el Palo de Blackjack (marca/desmarca mesas) y las monedas que se pueden apostar
+#          /blackjack max <n>    -> apuesta máxima por mano (por defecto 64)
+#  Jugador: click derecho en una mesa -> elige moneda y cuánto apuesta -> Repartir -> Pedir carta / Plantarse.
+#  Cartas: cada carta es un bloque y la CANTIDAD es lo que vale (un 7 es una pila de 7; J, Q y K valen 10; el As 1 u 11).
+#  Paga: ganas = el doble; Blackjack (21 con las 2 primeras) = 2,5 veces; empate = te devuelve la apuesta.
+#  La banca pide hasta tener 17 o más. Si cierras la mesa en medio de una mano, pierdes la apuesta.
+
+on load:
+    delete {bj.uso::*}
+    delete {bj.estado::*}
+    if {bj.max} is not set:
+        set {bj.max} to 64
+
+# ---------------------------------------------------------
+# ADMIN
+# ---------------------------------------------------------
+command /blackjack [<text>] [<integer>]:
+    permission: casino.admin
+    permission message: &cNo tienes permisos.
+    trigger:
+        if arg-1 is "max":
+            if arg-2 is set:
+                set {bj.max} to max(1, arg-2)
+            send "&a[Blackjack] Apuesta máxima por mano: &f%{bj.max}%" to player
+            stop
+        set {_m} to chest inventory with 3 rows named "&8Admin Blackjack"
+        loop 27 times:
+            set slot loop-number - 1 of {_m} to black stained glass pane named " "
+        set slot 4 of {_m} to stick named "&aPalo de Blackjack" with lore "&7Click derecho en un bloque para" and "&7marcarlo o desmarcarlo como mesa."
+        loop 9 times:
+            set slot 8 + loop-number of {_m} to air
+        set {_i} to 9
+        loop {bj.monedas::*}:
+            if {_i} <= 17:
+                set slot {_i} of {_m} to loop-value
+                add 1 to {_i}
+        set slot 22 of {_m} to paper named "&eMonedas para apostar" with lore "&7Pon en la fila del medio las monedas" and "&7que se pueden apostar (una de cada una)." and "&7Se guardan al cerrar." and "" and "&7Apuesta máxima: &f%{bj.max}% &8(/blackjack max <n>)"
+        open {_m} to player
+
+on inventory click:
+    if name of player's current inventory is "&8Admin Blackjack":
+        if holder of clicked inventory is player:
+            stop
+        if clicked slot is between 9 and 17:
+            stop
+        cancel event
+        if clicked slot is 4:
+            give stick named "&aPalo de Blackjack" with lore "&7Click derecho en un bloque para" and "&7marcarlo o desmarcarlo como mesa." to player
+
+on inventory close:
+    if name of event-inventory is "&8Admin Blackjack":
+        delete {bj.monedas::*}
+        loop 9 times:
+            set {_it} to slot 8 + loop-number of event-inventory
+            if {_it} is not air:
+                add 1 of {_it} to {bj.monedas::*}
+        send "&a[Blackjack] Monedas para apostar: &f%size of {bj.monedas::*}%" to player
+
+# ---------------------------------------------------------
+# MESAS
+# ---------------------------------------------------------
+on break:
+    if {bj.mesas::*} contains location of event-block:
+        cancel event
+        send "&c[Blackjack] Este bloque es una mesa de blackjack. Desmárcala con el Palo de Blackjack." to player
+
+on right click:
+    if name of player's tool is "&aPalo de Blackjack":
+        cancel event
+        if event-block is set:
+            if {bj.mesas::*} contains location of event-block:
+                remove location of event-block from {bj.mesas::*}
+                send "&c[Blackjack] Ya no es una mesa." to player
+            else:
+                add location of event-block to {bj.mesas::*}
+                send "&a[Blackjack] Mesa de blackjack agregada." to player
+        stop
+    if event-block is not set:
+        stop
+    if {bj.mesas::*} contains location of event-block:
+        cancel event
+        set {_id} to "%x-coordinate of event-block%_%y-coordinate of event-block%_%z-coordinate of event-block%_%world of event-block%"
+        if {bj.uso::%{_id}%} is set:
+            send "&cYa hay alguien jugando en esta mesa." to player
+            stop
+        if size of {bj.monedas::*} is 0:
+            send "&cLa mesa está cerrada: todavía no hay monedas para apostar." to player
+            stop
+        set {bj.uso::%{_id}%} to player
+        set {bj.mesa::%player%} to {_id}
+        if {bj.sel::%player%} is not set:
+            set {bj.sel::%player%} to 1
+        if {bj.sel::%player%} > size of {bj.monedas::*}:
+            set {bj.sel::%player%} to 1
+        if {bj.cant::%player%} is not set:
+            set {bj.cant::%player%} to 1
+        set {bj.estado::%player%} to "apuesta"
+        delete {bj.j::%player%::*}
+        delete {bj.b::%player%::*}
+        set {_inv} to chest inventory with 6 rows named "&8Blackjack"
+        bj_dibujar(player, {_inv}, "")
+        open {_inv} to player
+        play sound "block.wood.place" to player
+
+# ---------------------------------------------------------
+# EL JUEGO
+# ---------------------------------------------------------
+on inventory click:
+    if name of player's current inventory is not "&8Blackjack":
+        stop
+    cancel event
+    if name of clicked inventory is not "&8Blackjack":
+        stop
+    set {_s} to clicked slot
+    set {_e} to {bj.estado::%player%}
+    if {_s} is 45:
+        close player's inventory
+        stop
+    if {_e} is "apuesta" or "fin":
+        # elegir moneda
+        if {_s} is between 37 and 43:
+            set {_k} to {_s} - 36
+            if {bj.monedas::%{_k}%} is set:
+                set {bj.sel::%player%} to {_k}
+                play sound "ui.button.click" to player
+                bj_dibujar(player, player's current inventory, "")
+            stop
+        # cuánto apuesta
+        set {_d} to 0
+        if {_s} is 46:
+            set {_d} to -10
+        if {_s} is 47:
+            set {_d} to -1
+        if {_s} is 51:
+            set {_d} to 1
+        if {_s} is 52:
+            set {_d} to 10
+        if {_d} is not 0:
+            set {bj.cant::%player%} to min({bj.max}, max(1, {bj.cant::%player%} + {_d}))
+            play sound "ui.button.click" to player
+            bj_dibujar(player, player's current inventory, "")
+            stop
+        if {_s} is 53:
+            bj_repartir(player)
+        stop
+    if {_e} is "juego":
+        if {_s} is 47:
+            bj_pedir(player)
+        if {_s} is 51:
+            bj_plantarse(player)
+
+on inventory close:
+    if name of event-inventory is "&8Blackjack":
+        if {bj.estado::%player%} is "juego" or "banca":
+            send "&cCerraste la mesa en medio de la mano: perdiste la apuesta." to player
+        bj_liberar(player)
+
+on quit:
+    bj_liberar(player)
+
+function bj_liberar(p: player):
+    if {bj.mesa::%{_p}%} is set:
+        delete {bj.uso::%{bj.mesa::%{_p}%}%}
+    delete {bj.mesa::%{_p}%}
+    delete {bj.estado::%{_p}%}
+    delete {bj.j::%{_p}%::*}
+    delete {bj.b::%{_p}%::*}
+    delete {bj.mazo::%{_p}%::*}
+
+# ----- cartas: "valor|palo" (valor: A 2..10 J Q K)
+function bj_puntos(v: string) :: number:
+    if {_v} is "A":
+        return 1
+    if {_v} is "J" or "Q" or "K":
+        return 10
+    return {_v} parsed as integer
+
+function bj_total(c: strings) :: number:
+    set {_t} to 0
+    set {_ases} to 0
+    loop {_c::*}:
+        set {_p::*} to loop-value split at "|"
+        add bj_puntos({_p::1}) to {_t}
+        if {_p::1} is "A":
+            add 1 to {_ases}
+    if {_ases} > 0:
+        if {_t} + 10 <= 21:
+            add 10 to {_t}
+    return {_t}
+
+function bj_carta(c: string) :: item:
+    set {_p::*} to {_c} split at "|"
+    set {_n} to bj_puntos({_p::1})
+    set {_nombre} to "&f&l%{_p::1}% &0%{_p::2}%"
+    if {_p::2} is "♥" or "♦":
+        set {_nombre} to "&f&l%{_p::1}% &c%{_p::2}%"
+        set {_i} to {_n} of red concrete named {_nombre}
+    else:
+        set {_i} to {_n} of black concrete named {_nombre}
+    if {_p::1} is "A":
+        set lore of {_i} to "&7Vale 1 u 11"
+    else:
+        set lore of {_i} to "&7Vale %{_n}%"
+    return {_i}
+
+function bj_sacar(p: player) :: string:
+    if size of {bj.mazo::%{_p}%::*} is 0:
+        loop "♥", "♦", "♠" and "♣":
+            loop "A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q" and "K":
+                add "%loop-value-2%|%loop-value-1%" to {bj.mazo::%{_p}%::*}
+    set {_k} to random element out of indices of {bj.mazo::%{_p}%::*}
+    set {_c} to {bj.mazo::%{_p}%::%{_k}%}
+    delete {bj.mazo::%{_p}%::%{_k}%}
+    return {_c}
+
+# ----- cuántas monedas de esa tiene
+function bj_tiene(p: player, m: item) :: number:
+    set {_n} to 0
+    set {_base} to 1 of {_m}
+    loop all items in {_p}'s inventory:
+        set {_x} to 1 of loop-item
+        if {_x} is {_base}:
+            add item amount of loop-item to {_n}
+    return {_n}
+
+function bj_repartir(p: player):
+    set {_m} to {bj.monedas::%{bj.sel::%{_p}%}%}
+    if {_m} is not set:
+        send "&cElige una moneda para apostar." to {_p}
+        stop
+    set {_c} to {bj.cant::%{_p}%}
+    if bj_tiene({_p}, {_m}) < {_c}:
+        send "&cNo tienes suficientes monedas para esa apuesta." to {_p}
+        play sound "entity.villager.no" to {_p}
+        stop
+    remove {_c} of {_m} from {_p}'s inventory
+    set {bj.apuesta::%{_p}%} to {_m}
+    set {bj.apostado::%{_p}%} to {_c}
+    delete {bj.j::%{_p}%::*}
+    delete {bj.b::%{_p}%::*}
+    delete {bj.mazo::%{_p}%::*}
+    add bj_sacar({_p}) to {bj.j::%{_p}%::*}
+    add bj_sacar({_p}) to {bj.b::%{_p}%::*}
+    add bj_sacar({_p}) to {bj.j::%{_p}%::*}
+    add bj_sacar({_p}) to {bj.b::%{_p}%::*}
+    set {bj.estado::%{_p}%} to "juego"
+    play sound "item.book.page_turn" to {_p}
+    if bj_total({bj.j::%{_p}%::*}) is 21:
+        # Blackjack de entrada
+        if bj_total({bj.b::%{_p}%::*}) is 21:
+            bj_fin({_p}, "&e&lEMPATE &7(los dos con Blackjack)", 1)
+        else:
+            bj_fin({_p}, "&6&l¡BLACKJACK!", 2.5)
+        stop
+    bj_dibujar({_p}, {_p}'s current inventory, "")
+
+function bj_pedir(p: player):
+    add bj_sacar({_p}) to {bj.j::%{_p}%::*}
+    play sound "item.book.page_turn" to {_p}
+    set {_t} to bj_total({bj.j::%{_p}%::*})
+    if {_t} > 21:
+        bj_fin({_p}, "&c&lTE PASASTE &7(%{_t}%)", 0)
+        stop
+    if {_t} is 21:
+        bj_plantarse({_p})
+        stop
+    bj_dibujar({_p}, {_p}'s current inventory, "")
+
+function bj_plantarse(p: player):
+    set {bj.estado::%{_p}%} to "banca"
+    bj_dibujar({_p}, {_p}'s current inventory, "")
+    # la banca da vuelta su carta y pide hasta tener 17 o más
+    while bj_total({bj.b::%{_p}%::*}) < 17:
+        wait 12 ticks
+        if {bj.estado::%{_p}%} is not "banca":
+            stop
+        add bj_sacar({_p}) to {bj.b::%{_p}%::*}
+        play sound "item.book.page_turn" to {_p}
+        bj_dibujar({_p}, {_p}'s current inventory, "")
+    wait 12 ticks
+    if {bj.estado::%{_p}%} is not "banca":
+        stop
+    set {_j} to bj_total({bj.j::%{_p}%::*})
+    set {_b} to bj_total({bj.b::%{_p}%::*})
+    if {_b} > 21:
+        bj_fin({_p}, "&a&l¡GANASTE! &7(la banca se pasó)", 2)
+    else if {_j} > {_b}:
+        bj_fin({_p}, "&a&l¡GANASTE! &7(%{_j}% a %{_b}%)", 2)
+    else if {_j} is {_b}:
+        bj_fin({_p}, "&e&lEMPATE &7(%{_j}% a %{_b}%)", 1)
+    else:
+        bj_fin({_p}, "&c&lPERDISTE &7(%{_j}% a %{_b}%)", 0)
+
+# mult: 0 = pierde, 1 = devuelve, 2 = el doble, 2.5 = blackjack
+function bj_fin(p: player, txt: string, mult: number):
+    set {bj.estado::%{_p}%} to "fin"
+    set {_m} to {bj.apuesta::%{_p}%}
+    set {_paga} to floor({bj.apostado::%{_p}%} * {_mult})
+    if {_paga} > 0:
+        give {_paga} of {_m} to {_p}
+    if {_mult} > 1:
+        play sound "entity.player.levelup" to {_p}
+        send "%{_txt}% &a+%{_paga}% &7moneda(s)" to {_p}
+    else if {_mult} is 1:
+        play sound "block.note_block.pling" to {_p}
+        send "%{_txt}% &7te devolvemos la apuesta" to {_p}
+    else:
+        play sound "entity.villager.no" to {_p}
+        send "%{_txt}%" to {_p}
+    bj_dibujar({_p}, {_p}'s current inventory, {_txt})
+    delete {bj.apuesta::%{_p}%}
+    delete {bj.apostado::%{_p}%}
+
+# ----- dibuja la mesa
+function bj_dibujar(p: player, inv: inventory, resultado: string):
+    if name of {_inv} is not "&8Blackjack":
+        stop
+    set {_e} to {bj.estado::%{_p}%}
+    loop 54 times:
+        set slot loop-number - 1 of {_inv} to black stained glass pane named " "
+    # la banca (arriba): mientras juegas, su segunda carta está tapada
+    set {_i} to 1
+    loop {bj.b::%{_p}%::*}:
+        if {_i} <= 8:
+            if {_i} is 2:
+                if {_e} is "juego":
+                    set slot {_i} of {_inv} to gray concrete named "&8Carta tapada"
+                else:
+                    set slot {_i} of {_inv} to bj_carta(loop-value)
+            else:
+                set slot {_i} of {_inv} to bj_carta(loop-value)
+        add 1 to {_i}
+    if size of {bj.b::%{_p}%::*} > 0:
+        if {_e} is "juego":
+            set {_bb::1} to {bj.b::%{_p}%::1}
+            set slot 0 of {_inv} to skeleton skull named "&cBanca &7(%bj_total({_bb::*})% + ?)"
+        else:
+            set slot 0 of {_inv} to skeleton skull named "&cBanca &7(%bj_total({bj.b::%{_p}%::*})%)"
+    else:
+        set slot 0 of {_inv} to skeleton skull named "&cBanca"
+    # el jugador (abajo)
+    set {_i} to 28
+    loop {bj.j::%{_p}%::*}:
+        if {_i} <= 35:
+            set slot {_i} of {_inv} to bj_carta(loop-value)
+        add 1 to {_i}
+    if size of {bj.j::%{_p}%::*} > 0:
+        set slot 27 of {_inv} to skull of {_p} named "&aTú &7(%bj_total({bj.j::%{_p}%::*})%)"
+    else:
+        set slot 27 of {_inv} to skull of {_p} named "&aTú"
+    # el resultado en el medio
+    if {_resultado} is not "":
+        set slot 22 of {_inv} to gold block named {_resultado}
+    set slot 45 of {_inv} to barrier named "&cSalir" with lore "&7Si sales en medio de una mano," and "&cpierdes la apuesta."
+    set {_m} to {bj.monedas::%{bj.sel::%{_p}%}%}
+    if {_e} is "juego":
+        set slot 47 of {_inv} to lime concrete named "&a&lPedir carta"
+        set slot 51 of {_inv} to red concrete named "&c&lPlantarse"
+        if {_m} is set:
+            set {_x} to {bj.apuesta::%{_p}%}
+            set item amount of {_x} to min(64, {bj.apostado::%{_p}%})
+            set lore of {_x} to "&7Apostaste: &e%{bj.apostado::%{_p}%}%"
+            set slot 49 of {_inv} to {_x}
+        stop
+    if {_e} is "banca":
+        set slot 49 of {_inv} to clock named "&7La banca está jugando..."
+        stop
+    # apostando (o después de una mano): elegir moneda y cuánto
+    set {_k} to 1
+    loop {bj.monedas::*}:
+        if {_k} <= 7:
+            set {_x} to loop-value
+            if {_k} is {bj.sel::%{_p}%}:
+                set lore of {_x} to "&a✔ Elegida" and "&7Tienes: &f%bj_tiene({_p}, loop-value)%"
+            else:
+                set lore of {_x} to "&eClick para apostar esta" and "&7Tienes: &f%bj_tiene({_p}, loop-value)%"
+            set slot 36 + {_k} of {_inv} to {_x}
+        add 1 to {_k}
+    set slot 46 of {_inv} to red stained glass pane named "&c-10"
+    set slot 47 of {_inv} to red stained glass pane named "&c-1"
+    set slot 51 of {_inv} to lime stained glass pane named "&a+1"
+    set slot 52 of {_inv} to lime stained glass pane named "&a+10"
+    if {_m} is set:
+        set {_x} to {_m}
+        set item amount of {_x} to min(64, {bj.cant::%{_p}%})
+        set lore of {_x} to "&7Apuesta: &e%{bj.cant::%{_p}%}%" and "&7Máximo: &f%{bj.max}%"
+        set slot 49 of {_inv} to {_x}
+    if {_e} is "fin":
+        set slot 53 of {_inv} to emerald block named "&a&lOtra mano" with lore "&7Ganas: el doble" and "&6Blackjack: 2,5 veces" and "&eEmpate: te devolvemos la apuesta"
+    else:
+        set slot 53 of {_inv} to emerald block named "&a&lRepartir" with lore "&7Ganas: el doble" and "&6Blackjack: 2,5 veces" and "&eEmpate: te devolvemos la apuesta"
