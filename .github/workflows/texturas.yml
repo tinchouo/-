@@ -1,5 +1,8 @@
 name: Sacar texturas de Minecraft
-on: workflow_dispatch
+on:
+  push:
+    paths: ['.github/workflows/texturas.yml']
+  workflow_dispatch:
 permissions:
   contents: write
 jobs:
