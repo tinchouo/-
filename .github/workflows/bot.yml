@@ -23,7 +23,7 @@ jobs:
           curl -sL -o paper.jar "$URL"
           cp ../target/TOD4.jar plugins/
           # como en el server de verdad: un config.yml que no tiene la parte del screamer
-          mkdir -p plugins/TOD4 && printf 'config_version: 12\nphantom:\n  debug: true\nmurcielagos:\n  debug: true\n  chance_por_mob: 100\nmeteorito:\n  debug: true\n' > plugins/TOD4/config.yml
+          mkdir -p plugins/TOD4 && printf 'config_version: 12\nphantom:\n  debug: true\nmurcielagos:\n  debug: true\n  chance_por_mob: 100\n  desde_dia: 0\nmeteorito:\n  debug: true\n' > plugins/TOD4/config.yml
           echo "eula=true" > eula.txt
           printf "online-mode=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\n" > server.properties
           cd .. && mkdir bot && cd bot && npm init -y > /dev/null && npm i minecraft-protocol@latest > /dev/null && cp ../.github/pruebas/bot.js .
