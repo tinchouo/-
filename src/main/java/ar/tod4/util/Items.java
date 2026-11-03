@@ -79,8 +79,14 @@ public final class Items {
         if (it == null || !it.hasItemMeta()) return null;
         ItemMeta meta = it.getItemMeta();
         if (meta == null) return null;
-        return meta.getPersistentDataContainer().get(ORAXEN_ID, PersistentDataType.STRING);
+        String ox = meta.getPersistentDataContainer().get(ORAXEN_ID, PersistentDataType.STRING);
+        if (ox != null) return ox;
+        // los items de vibranium del plugin cuentan como si fueran de Oraxen (para misiones y demas)
+        String v = meta.getPersistentDataContainer().get(VIBRANIUM, PersistentDataType.STRING);
+        return v == null ? null : ar.tod4.vibranium.Vibranium.idDe(v);
     }
+
+    private static final NamespacedKey VIBRANIUM = new NamespacedKey("tod4", "vibranium");
 
     /** Mismo "tipo" de item: si es de Oraxen compara el ID de Oraxen, si no el material. */
     public static boolean sameKind(ItemStack a, ItemStack b) {

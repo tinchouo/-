@@ -108,6 +108,7 @@ public final class Ext {
 
     /** Item de Oraxen por ID (para mostrar su nombre), o null. */
     public static ItemStack oraxenItem(String id) {
+        if (id != null && id.startsWith("tod4_")) return ar.tod4.vibranium.Vibranium.porId(id);
         try {
             Class<?> c = Class.forName("io.th0rgal.oraxen.api.OraxenItems");
             Object builder = c.getMethod("getItemById", String.class).invoke(null, id);

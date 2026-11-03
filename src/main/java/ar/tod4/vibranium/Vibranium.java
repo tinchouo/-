@@ -32,7 +32,7 @@ import net.kyori.adventure.text.format.TextDecoration;
  *  - Mena de Vibranium: sale de los meteoritos (solo con Toque de Seda).
  *  - Vibranium (barra): la mena en un ALTO HORNO, con BALDE DE LAVA de combustible (nada mas), 1 minuto cada una.
  *    Un balde alcanza para "barras_por_balde" barras. En el horno comun no se puede.
- *  - Lingote de Vibranium: 4 barras + 4 diamantes + Piedra de Meteorito en el medio (mesa de crafteo).
+ *  - Lingote de Vibranium: 4 barras + 4 bloques de diamante, en cualquier orden (como el de netherite).
  *  - Mejora de Vibranium: sale en el cofre de cada meteorito. Se duplica con 7 lingotes de netherite y una Piedra de Meteorito.
  *  - Piedra de Meteorito: el borde del crater.
  * Las texturas van en el pack (tod4:mena_vibranium, tod4:vibranium, ...). config.yml -> vibranium.
@@ -47,7 +47,29 @@ public final class Vibranium implements Listener {
     /** Altos hornos prendidos con lava (los demas no cocinan vibranium). */
     private final Map<Location, Boolean> conLava = new HashMap<>();
 
+    private static Vibranium INST;
+
+    /** Para misiones, subastas, etc.: cada item de vibranium tiene un id como si fuera de Oraxen ("tod4_lingote_vibranium"). */
+    public static String idDe(String tipo) {
+        return switch (tipo) {
+            case "MENA" -> "tod4_mena_vibranium";
+            case "BARRA" -> "tod4_vibranium";
+            case "LINGOTE" -> "tod4_lingote_vibranium";
+            case "MEJORA" -> "tod4_mejora_vibranium";
+            case "PIEDRA" -> "tod4_piedra_meteorito";
+            default -> null;
+        };
+    }
+
+    /** El item de ese id (o null si no es de vibranium). */
+    public static ItemStack porId(String id) {
+        if (INST == null || id == null) return null;
+        for (Tipo t : Tipo.values()) if (id.equals(idDe(t.name()))) return INST.item(t, 1);
+        return null;
+    }
+
     public Vibranium(TOD4 pl) {
+        INST = this;
         this.pl = pl;
         this.kTipo = new NamespacedKey(pl, "vibranium");
         this.rBarra = new NamespacedKey(pl, "vibranium_barra");
@@ -75,7 +97,7 @@ public final class Vibranium implements Listener {
             }
             case BARRA -> {
                 nombre = "Vibranium"; modelo = "vibranium";
-                lore = List.of("&7Junta &f4 &7con &f4 diamantes &7y una", "&fPiedra de Meteorito &7para un lingote.");
+                lore = List.of("&7Junta &f4 &7con &f4 bloques de diamante", "&7para un lingote.");
             }
             case LINGOTE -> {
                 nombre = "Lingote de Vibranium"; modelo = "lingote_vibranium";
@@ -116,11 +138,11 @@ public final class Vibranium implements Listener {
         Bukkit.addRecipe(new BlastingRecipe(rBarra, item(Tipo.BARRA, 1), new RecipeChoice.ExactChoice(item(Tipo.MENA, 1)),
                 (float) d("experiencia", 1.0), coccion));
 
-        ShapedRecipe lingote = new ShapedRecipe(rLingote, item(Tipo.LINGOTE, 1));
-        lingote.shape("BDB", "DPD", "BDB");
-        lingote.setIngredient('B', new RecipeChoice.ExactChoice(item(Tipo.BARRA, 1)));
-        lingote.setIngredient('D', Material.DIAMOND);
-        lingote.setIngredient('P', new RecipeChoice.ExactChoice(item(Tipo.PIEDRA, 1)));
+        // como el lingote de netherite: en cualquier orden
+        org.bukkit.inventory.ShapelessRecipe lingote = new org.bukkit.inventory.ShapelessRecipe(rLingote, item(Tipo.LINGOTE, 1));
+        RecipeChoice barra = new RecipeChoice.ExactChoice(item(Tipo.BARRA, 1));
+        for (int i = 0; i < 4; i++) lingote.addIngredient(barra);
+        lingote.addIngredient(4, Material.DIAMOND_BLOCK);
         Bukkit.addRecipe(lingote);
 
         ShapedRecipe mejora = new ShapedRecipe(rMejora, item(Tipo.MEJORA, 2));
