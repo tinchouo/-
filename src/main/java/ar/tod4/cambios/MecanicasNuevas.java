@@ -82,7 +82,7 @@ import ar.tod4.TOD4;
  *  - d12.noches_peligrosas: de noche, en el Overworld, los mobs hostiles pegan el doble.
  *  - d14.totem:   cuando el totem te salva, 3 segundos de ceguera.
  */
-final class MecanicasNuevas implements Listener {
+public final class MecanicasNuevas implements Listener {
     private final TOD4 pl;
     private final Cambios cb;
     private int tick;
