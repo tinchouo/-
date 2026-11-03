@@ -445,6 +445,16 @@ final class Agujero implements Listener {
     /** Los que alucinan (TOD4 les pone la marca tod4_alucina) ven su propia barra con el tiempo saltando al azar. */
     private final Map<UUID, BossBar> barrasLocas = new HashMap<>();
 
+    /** El tiempo lo ven todos los que estan en la cueva (tambien los de la sala de entrada y los que bajan despues). */
+    private void barraParaTodos() {
+        if (barra == null || mundo == null) return;
+        for (Player p : new ArrayList<>(barra.getPlayers())) if (!p.getWorld().equals(mundo)) barra.removePlayer(p);
+        for (Player p : mundo.getPlayers()) {
+            if (barrasLocas.containsKey(p.getUniqueId())) continue;   // el que alucina ve la suya
+            if (!barra.getPlayers().contains(p)) barra.addPlayer(p);
+        }
+    }
+
     private void barrasLocas() {
         for (UUID u : new ArrayList<>(barrasLocas.keySet())) {
             Player p = Bukkit.getPlayer(u);
@@ -475,6 +485,7 @@ final class Agujero implements Listener {
     private void cada() {
         tick++;
         barrasLocas();
+        barraParaTodos();
         cartel();
         dibujarLinea();
         guardarFotoSiHace();
