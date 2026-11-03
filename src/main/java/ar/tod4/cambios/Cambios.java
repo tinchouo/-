@@ -119,6 +119,7 @@ public final class Cambios {
 
     private MecanicasTarde tarde;
     private MecanicasNuevas nuevas;
+    public MecanicasNuevas nuevas() { return nuevas; }
     private Sueno sueno;
 
     /** Al apagar: el ciclo del dia vuelve a la normalidad (noches el triple). */

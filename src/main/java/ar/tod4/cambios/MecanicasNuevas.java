@@ -667,12 +667,16 @@ final class MecanicasNuevas implements Listener {
     /** Romper un bloque de pico o de hacha con otra cosa que no sea el TOD Pickaxe o el TOD Axe: medio corazon fijo. */
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void herramientas(org.bukkit.event.block.BlockBreakEvent e) {
-        if (!cb.on("d8.herramientas")) return;
-        Player p = e.getPlayer();
-        if (!jugando(p) || ar.tod4.hook.Cuyes.activo(p)) return;
         Material m = e.getBlock().getType();
         if (m.getHardness() <= 0) return;   // los que se rompen al toque no cuentan
         if (!org.bukkit.Tag.MINEABLE_PICKAXE.isTagged(m) && !org.bukkit.Tag.MINEABLE_AXE.isTagged(m)) return;
+        castigoHerramienta(e.getPlayer());
+    }
+
+    /** El castigo de d8.herramientas si no tiene una herramienta TOD en la mano (tambien lo usan los bloques del meteorito). */
+    public void castigoHerramienta(Player p) {
+        if (!cb.on("d8.herramientas")) return;
+        if (!jugando(p) || ar.tod4.hook.Cuyes.activo(p)) return;
         ItemStack mano = p.getInventory().getItemInMainHand();
         String ox = mano.hasItemMeta() ? mano.getItemMeta().getPersistentDataContainer().get(ORAXEN_ID, org.bukkit.persistence.PersistentDataType.STRING) : null;
         List<String> ok = c().getStringList("cambios.herramientas.permitidas");

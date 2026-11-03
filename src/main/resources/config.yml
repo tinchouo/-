@@ -345,6 +345,40 @@ murcielagos:
   vida: 1                 # 1 = muere de un golpe
   dura_seg: 90            # despues se van (si estan persiguiendo a alguien, el doble)
 
+
+# Vibranium (items y recetas). Los cambios se aplican con /tod4 recargar.
+#   Mena -> alto horno SOLO con balde de lava -> Vibranium (barra)
+#   Lingote: 4 barras + 4 diamantes + Piedra de Meteorito en el medio
+#   Mejora de Vibranium (sale en el cofre del meteorito): se duplica con 7 lingotes de netherite + Piedra de Meteorito
+vibranium:
+  coccion_seg: 60          # cuanto tarda cada barra en el alto horno
+  barras_por_balde: 4      # cuantas barras cocina un balde de lava
+  experiencia: 1.0
+
+# Meteorito: /tod4 meteorito  -> cae DONDE ESTAS (o /tod4 meteorito x y z). Nunca al azar.
+meteorito:
+  radio: 4                 # tamano del crater
+  profundidad: 0.6         # que tan hondo (0.6 = con radio 4, unos 2-3 bloques)
+  menas: 4                 # menas de vibranium en la roca del medio
+  menas_suerte: 8          # con suerte, estas
+  chance_suerte: 15        # % de que salga con suerte
+  chance_piedra: 60        # % del fondo que es Piedra de Meteorito (el resto, de la mezcla)
+  borde_mezcla: [BLACKSTONE, MAGMA_BLOCK, TUFF]
+  mejoras_en_cofre: 1
+  mobs_al_caer: 3
+  mobs_por_mena: 2         # salen cada vez que alguien saca una mena
+  mobs: [ZOMBIE, SKELETON, SPIDER]   # o "mm:NombreDeMythicMobs"
+  caida_seg: 3
+  altura_caida: 70
+  humo_seg: 60
+  aviso_a_todos: true      # todos escuchan el trueno y ven el mensaje (SIN coordenadas)
+  mensaje: "&8[&6Mini evento&8] &7¡Algo cayó del cielo!"
+  # Bloques de Oraxen (si no estan en Oraxen, se usan los de respaldo)
+  oraxen_mena: mena_vibranium
+  oraxen_piedra: piedra_meteorito
+  respaldo_mena: AMETHYST_BLOCK
+  respaldo_piedra: BLACKSTONE
+
 # Alucinacion (Zombi Alucinado del Agujero, mobs con la etiqueta tod4_alucina, /tod4:alucinar):
 # el que la tiene ve la vida, el hambre y el tab cambiando al azar (es solo lo que ve).
 alucinacion:
