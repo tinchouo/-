@@ -357,22 +357,30 @@ vibranium:
 
 # Meteorito: /tod4 meteorito  -> cae DONDE ESTAS (o /tod4 meteorito x y z). Nunca al azar.
 meteorito:
-  radio: 4                 # tamano del crater
-  profundidad: 0.6         # que tan hondo (0.6 = con radio 4, unos 2-3 bloques)
-  menas: 4                 # menas de vibranium en la roca del medio
+  radio: 15                # tamano del crater (como el del creeper nuclear)
+  profundidad: 0.45        # que tan hondo (0.45 = con radio 15, unos 7 bloques)
+  meteorito_radio: 4       # la roca del medio (el cofre va escondido adentro)
+  menas: 4                 # menas de vibranium en la roca
   menas_suerte: 8          # con suerte, estas
   chance_suerte: 15        # % de que salga con suerte
-  chance_piedra: 60        # % del fondo que es Piedra de Meteorito (el resto, de la mezcla)
-  borde_mezcla: [BLACKSTONE, MAGMA_BLOCK, TUFF]
+  chance_quemado: 70       # % del fondo que queda quemado (de la mezcla)
+  borde_mezcla: [BLACKSTONE, MAGMA_BLOCK, TUFF, BASALT]
   mejoras_en_cofre: 1
-  mobs_al_caer: 3
-  mobs_por_mena: 2         # salen cada vez que alguien saca una mena
-  mobs: [ZOMBIE, SKELETON, SPIDER]   # o "mm:NombreDeMythicMobs"
+  # mobs al caer (de MythicMobs o de Minecraft): nombre -> cantidad (con "variacion" de mas o menos si son 3 o mas)
+  mobs_al_caer:
+    AlienSoldado: 5
+    AlienVolador: 3
+    AlienCentinela: 1
+  mobs_extra:              # % de que salga uno mas
+    AlienCentinela: 35
+  variacion: 1
+  mobs_por_mena: 0         # mobs extra cada vez que alguien saca una mena
+  mobs: [ZOMBIE, SKELETON, SPIDER]   # cuales salen por mena ("mm:Nombre" para MythicMobs)
   caida_seg: 3
   altura_caida: 70
   humo_seg: 60
   aviso_a_todos: true      # todos escuchan el trueno y ven el mensaje (SIN coordenadas)
-  mensaje: "&8[&6Mini evento&8] &7¡Algo cayó del cielo!"
+  mensaje: "&9¡Cayó un meteorito!"
   # Bloques de Oraxen (si no estan en Oraxen, se usan los de respaldo)
   oraxen_mena: mena_vibranium
   oraxen_piedra: piedra_meteorito

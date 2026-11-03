@@ -132,17 +132,11 @@ public final class Meteorito implements Listener {
         BlockDisplay roca = w.spawn(ini, BlockDisplay.class, x -> {
             x.setBlock(Material.MAGMA_BLOCK.createBlockData());
             x.setPersistent(false);
-            x.setTransformation(new Transformation(new Vector3f(-1.25f, -1.25f, -1.25f), new AxisAngle4f(), new Vector3f(2.5f, 2.5f, 2.5f), new AxisAngle4f()));
+            float t = (float) Math.max(2, d("meteorito_radio", 4) * 2);
+            x.setTransformation(new Transformation(new Vector3f(-t / 2, -t / 2, -t / 2), new AxisAngle4f(), new Vector3f(t, t, t), new AxisAngle4f()));
             x.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
             x.setTeleportDuration(2);
         });
-        // todos escuchan que algo viene del cielo
-        if (pl.getConfig().getBoolean("meteorito.aviso_a_todos", true)) {
-            for (Player p : w.getPlayers()) {
-                p.playSound(p.getLocation(), Sound.ITEM_TRIDENT_THUNDER, SoundCategory.AMBIENT, 0.8f, 0.5f);
-                p.sendMessage(Txt.c(s("mensaje", "&8[&6Mini evento&8] &7¡Algo cayó del cielo!")));
-            }
-        }
         Bukkit.getScheduler().runTaskTimer(pl, new java.util.function.Consumer<org.bukkit.scheduler.BukkitTask>() {
             int t = 0;
             @Override public void accept(org.bukkit.scheduler.BukkitTask task) {
@@ -165,17 +159,25 @@ public final class Meteorito implements Listener {
 
     private void impacto(Block suelo, int n) {
         World w = suelo.getWorld();
+        // todos lo escuchan y ven el mensaje (sin coordenadas)
+        if (pl.getConfig().getBoolean("meteorito.aviso_a_todos", true)) {
+            for (Player p : w.getPlayers()) {
+                p.playSound(p.getLocation(), Sound.ITEM_TRIDENT_THUNDER, SoundCategory.AMBIENT, 0.8f, 0.5f);
+                p.sendMessage(Txt.c(s("mensaje", "&9¡Cayó un meteorito!")));
+            }
+        }
         Location c = suelo.getLocation().add(0.5, 1, 0.5);
         w.spawnParticle(Particle.EXPLOSION_EMITTER, c, 3, 1, 0.5, 1, 0, null, true);
         w.spawnParticle(Particle.LAVA, c, 60, 2, 1, 2, 0, null, true);
         w.playSound(c, Sound.ENTITY_GENERIC_EXPLODE, SoundCategory.AMBIENT, 8f, 0.6f);
         w.playSound(c, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, SoundCategory.AMBIENT, 6f, 0.5f);
         // empuja a los que estaban muy cerca (no lastima)
-        for (Entity e : w.getNearbyEntities(c, 6, 4, 6)) {
+        double rr = Math.max(6, d("radio", 15));
+        for (Entity e : w.getNearbyEntities(c, rr, 8, rr)) {
             if (!(e instanceof Player p)) continue;
             org.bukkit.util.Vector v = p.getLocation().toVector().subtract(c.toVector()).setY(0);
             if (v.lengthSquared() < 1e-3) v = new org.bukkit.util.Vector(1, 0, 0);
-            p.setVelocity(v.normalize().multiply(1.2).setY(0.6));
+            p.setVelocity(v.normalize().multiply(1.6).setY(0.7));
         }
         crater(suelo, n);
         // humo un rato
@@ -184,8 +186,6 @@ public final class Meteorito implements Listener {
             if (System.currentTimeMillis() > hasta) { task.cancel(); return; }
             w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, c, 3, 1, 0.3, 1, 0.01, null, true);
         }, 10L, 10L);
-        int mobs = (int) d("mobs_al_caer", 3);
-        if (mobs > 0) Bukkit.getScheduler().runTaskLater(pl, () -> mobs(c, mobs), 40L);
     }
 
     /** Un bloque se puede pisar si no es cofre/horno/etc., ni bedrock, ni irrompible. */
@@ -195,70 +195,106 @@ public final class Meteorito implements Listener {
         return !(b.getState() instanceof TileState);
     }
 
+    /**
+     * El crater: un pozo grande e irregular (como el del creeper nuclear), el fondo quemado, y en el medio el meteorito
+     * (una roca redonda de Piedra de Meteorito, medio enterrada) con las menas a la vista y el cofre escondido adentro.
+     * Se cava de a capas para no trabar el server.
+     */
     private void crater(Block suelo, int n) {
         World w = suelo.getWorld();
-        int r = Math.max(2, (int) d("radio", 4));
-        double prof = d("profundidad", 0.6);
+        int R = Math.max(4, (int) d("radio", 15));
+        int abajo = Math.max(2, (int) Math.round(R * d("profundidad", 0.45))), arriba = Math.max(2, (int) Math.round(R * 0.4));
+        double f1 = rnd.nextDouble() * 6.28, f2 = rnd.nextDouble() * 6.28, f3 = rnd.nextDouble() * 6.28;
         int cx = suelo.getX(), cy = suelo.getY(), cz = suelo.getZ();
-        List<String> mezcla = pl.getConfig().getStringList("meteorito.borde_mezcla");
-        if (mezcla.isEmpty()) mezcla = List.of("BLACKSTONE", "MAGMA_BLOCK", "TUFF");
-        double chancePiedra = d("chance_piedra", 60);
-        int fondo = cy - (int) Math.round(r * prof);
-        // el pozo: aire arriba, el fondo con Piedra de Meteorito (y algo de piedra negra, magma...)
-        for (int dx = -r; dx <= r; dx++) for (int dz = -r; dz <= r; dz++) {
-            double dist = Math.sqrt(dx * dx + dz * dz);
-            if (dist > r + 0.4) continue;
-            int hondo = cy - (int) Math.round((r - dist) * prof);
-            for (int y = hondo + 1; y <= cy + 3; y++) {
-                Block b = w.getBlockAt(cx + dx, y, cz + dz);
-                if (!b.getType().isAir() && tocable(b)) b.setType(Material.AIR, false);
+        new org.bukkit.scheduler.BukkitRunnable() {
+            int dy = arriba;
+            @Override
+            public void run() {
+                for (int k = 0; k < 2 && dy >= -abajo; k++, dy--) {
+                    double ry = dy >= 0 ? arriba : abajo;
+                    for (int dx = -R; dx <= R; dx++) for (int dz = -R; dz <= R; dz++) {
+                        double a = Math.atan2(dz, dx);
+                        double borde = 0.85 + 0.08 * Math.sin(a * 3 + f1) + 0.05 * Math.sin(a * 7 + f2) + 0.03 * Math.sin(dy * 0.7 + f3);
+                        double q = (dx * dx + dz * dz) / (double) (R * R) + (dy * dy) / (ry * ry);
+                        if (q > borde * borde) continue;
+                        int y = cy + dy;
+                        if (y <= w.getMinHeight() || y >= w.getMaxHeight()) continue;
+                        Block b = w.getBlockAt(cx + dx, y, cz + dz);
+                        if (b.getType().isAir() || b.isLiquid() || !tocable(b)) continue;
+                        b.setType(Material.AIR, false);
+                    }
+                }
+                if (dy < -abajo) {
+                    cancel();
+                    fondo(w, cx, cy, cz, R, abajo);
+                    // el piso de verdad en el medio (si abajo hay roca madre, queda mas arriba)
+                    int piso = cy - abajo;
+                    for (int y = cy; y >= cy - abajo - 3 && y > w.getMinHeight(); y--)
+                        if (!w.getBlockAt(cx, y, cz).getType().isAir()) { piso = y; break; }
+                    meteoro(w, cx, Math.max(piso, w.getMinHeight() + 1), cz, n);
+                }
             }
-            Block piso = w.getBlockAt(cx + dx, hondo, cz + dz);
-            if (!tocable(piso)) continue;
-            if (rnd.nextDouble() * 100 < chancePiedra) poner(piso, false, n);
-            else {
-                Material m = Material.matchMaterial(mezcla.get(rnd.nextInt(mezcla.size())));
-                piso.setType(m == null ? Material.BLACKSTONE : m, false);
+        }.runTaskTimer(pl, 1L, 1L);
+    }
+
+    private boolean tocableAca(Block b) {
+        return tocable(b) && (pl.revivir() == null || !pl.revivir().protegido(b));
+    }
+
+    /** El fondo del pozo, quemado: piedra negra, magma, toba (y algo de Piedra de Meteorito). */
+    private void fondo(World w, int cx, int cy, int cz, int R, int abajo) {
+        List<String> mezcla = pl.getConfig().getStringList("meteorito.borde_mezcla");
+        if (mezcla.isEmpty()) mezcla = List.of("BLACKSTONE", "MAGMA_BLOCK", "TUFF", "BASALT");
+        double quemado = d("chance_quemado", 70);
+        for (int dx = -R - 1; dx <= R + 1; dx++) for (int dz = -R - 1; dz <= R + 1; dz++) {
+            double dist = Math.sqrt(dx * dx + dz * dz);
+            if (dist > R + 1) continue;
+            // el primer bloque solido de arriba para abajo en esa columna (dentro del pozo)
+            for (int y = cy + (int) Math.round(R * 0.4); y >= cy - abajo - 2; y--) {
+                Block b = w.getBlockAt(cx + dx, y, cz + dz);
+                if (b.getType().isAir()) continue;
+                if (b.isLiquid() || !tocableAca(b)) break;
+                if (rnd.nextDouble() * 100 < quemado * (1 - dist / (R + 2) * 0.6)) {
+                    Material m = Material.matchMaterial(mezcla.get(rnd.nextInt(mezcla.size())));
+                    b.setType(m == null ? Material.BLACKSTONE : m, false);
+                }
+                break;
             }
         }
-        // la roca del medio: piedra con las menas
-        Block centro = w.getBlockAt(cx, Math.min(cy, fondo + 1), cz);
+    }
+
+    /** La roca del medio (medio enterrada), con las menas a la vista y el cofre escondido en el centro. */
+    private void meteoro(World w, int cx, int piso, int cz, int n) {
+        int M = Math.max(2, (int) d("meteorito_radio", 4));
+        int my = piso + M - 1;   // el centro: queda un poco enterrado
         List<Block> roca = new ArrayList<>();
-        for (int dx = -2; dx <= 2; dx++) for (int dy = -1; dy <= 2; dy++) for (int dz = -2; dz <= 2; dz++) {
-            double dd = dx * dx + dy * dy * 1.3 + dz * dz;
-            if (dd > 3.2) continue;
-            Block b = centro.getRelative(dx, dy, dz);
-            if (!tocable(b)) continue;
+        for (int dx = -M; dx <= M; dx++) for (int dy = -M; dy <= M; dy++) for (int dz = -M; dz <= M; dz++) {
+            double q = dx * dx + dy * dy * 1.15 + dz * dz;
+            if (q > (M + 0.4) * (M + 0.4) - rnd.nextDouble() * 1.2) continue;
+            Block b = w.getBlockAt(cx + dx, my + dy, cz + dz);
+            if (!tocableAca(b)) continue;
             roca.add(b);
         }
-        Collections.shuffle(roca, rnd);
-        // las menas, primero las que se ven (tienen aire al lado)
-        roca.sort((x, y) -> Boolean.compare(!expuesto(x, roca), !expuesto(y, roca)));
+        Block cofre = w.getBlockAt(cx, my, cz);
+        roca.remove(cofre);
+        for (Block b : roca) b.setType(Material.STONE, false);   // primero todo solido, para saber cuales quedan a la vista
+        // las menas: en la superficie (con aire al lado), repartidas
+        List<Block> afuera = new ArrayList<>();
+        for (Block b : roca) if (aLaVista(b)) afuera.add(b);
+        Collections.shuffle(afuera, rnd);
         int menas = (int) d("menas", 4);
         if (rnd.nextDouble() * 100 < d("chance_suerte", 15)) menas = (int) d("menas_suerte", 8);
-        int puestas = 0;
-        for (Block b : roca) {
-            boolean mena = puestas < menas && expuesto(b, roca);
-            poner(b, mena, n);
-            if (mena) puestas++;
+        List<Block> elegidas = new ArrayList<>();
+        for (Block b : afuera) {
+            if (elegidas.size() >= menas) break;
+            boolean lejos = true;
+            for (Block o : elegidas) if (o.getLocation().distanceSquared(b.getLocation()) < 9) { lejos = false; break; }
+            if (lejos) elegidas.add(b);
         }
-        for (Iterator<Block> it = roca.iterator(); puestas < menas && it.hasNext(); ) {   // si no hubo suficientes a la vista
-            Block b = it.next();
-            if (!esMena(b)) { poner(b, true, n); puestas++; }
-        }
-        // el cofre con la Mejora de Vibranium
-        Block cofre = null;
-        for (int i = 0; i < 30 && cofre == null; i++) {
-            int dx = rnd.nextInt(5) - 2, dz = rnd.nextInt(5) - 2;
-            if (Math.abs(dx) < 2 && Math.abs(dz) < 2) continue;
-            Block b = w.getHighestBlockAt(cx + dx, cz + dz);
-            for (int y = cy + 3; y > fondo - 1; y--) {
-                Block bb = w.getBlockAt(cx + dx, y, cz + dz);
-                if (bb.getType().isAir() && bb.getRelative(BlockFace.DOWN).getType().isSolid() && !bloques.containsKey(clave(bb))) { b = bb; break; }
-            }
-            if (b.getType().isAir()) cofre = b;
-        }
-        if (cofre != null) {
+        for (Block b : afuera) { if (elegidas.size() >= menas) break; if (!elegidas.contains(b)) elegidas.add(b); }
+        for (Block b : roca) poner(b, elegidas.contains(b), n);
+        // el cofre, escondido en el medio
+        if (tocableAca(cofre)) {
             cofre.setType(Material.CHEST, false);
             if (cofre.getState() instanceof Chest ch) {
                 ch.customName(Txt.c("<#9B7BFF>Cofre del Meteorito"));
@@ -270,7 +306,51 @@ public final class Meteorito implements Listener {
         }
         guardar();
         if (pl.getConfig().getBoolean("meteorito.debug", false))
-            pl.getLogger().info("[Meteorito] #" + n + " en " + cx + " " + cy + " " + cz + ": " + puestas + " menas, cofre " + (cofre != null));
+            pl.getLogger().info("[Meteorito] #" + n + " en " + cx + " " + my + " " + cz + ": " + elegidas.size() + " menas, " + (roca.size() - elegidas.size())
+                    + " piedras, cofre " + (cofre.getType() == Material.CHEST));
+        Location centro = new Location(w, cx + 0.5, piso + 1, cz + 0.5);
+        Bukkit.getScheduler().runTaskLater(pl, () -> mobsAlCaer(centro), 20L);
+    }
+
+    private static boolean aLaVista(Block b) {
+        for (BlockFace f : new BlockFace[]{BlockFace.UP, BlockFace.NORTH, BlockFace.SOUTH, BlockFace.EAST, BlockFace.WEST, BlockFace.DOWN})
+            if (b.getRelative(f).getType().isAir()) return true;
+        return false;
+    }
+
+    /**
+     * Los mobs del meteorito (config meteorito.mobs_al_caer: nombre -> cantidad; con "variacion" de mas o menos, y
+     * meteorito.mobs_extra: nombre -> % de que salga uno mas). El nombre es de MythicMobs o de Minecraft.
+     */
+    private void mobsAlCaer(Location c) {
+        org.bukkit.configuration.ConfigurationSection cs = pl.getConfig().getConfigurationSection("meteorito.mobs_al_caer");
+        Map<String, Integer> cant = new java.util.LinkedHashMap<>();
+        if (cs != null && !cs.getKeys(false).isEmpty()) for (String k : cs.getKeys(false)) cant.put(k, cs.getInt(k));
+        else { cant.put("AlienSoldado", 5); cant.put("AlienVolador", 3); cant.put("AlienCentinela", 1); }
+        org.bukkit.configuration.ConfigurationSection ex = pl.getConfig().getConfigurationSection("meteorito.mobs_extra");
+        int var = (int) d("variacion", 1);
+        for (Map.Entry<String, Integer> e : cant.entrySet()) {
+            int n = e.getValue();
+            if (n >= 3 && var > 0) n += rnd.nextInt(var * 2 + 1) - var;   // "mas o menos"
+            double extra = ex != null ? ex.getDouble(e.getKey(), 0) : (e.getKey().equals("AlienCentinela") && cs == null ? 35 : 0);
+            if (rnd.nextDouble() * 100 < extra) n++;
+            for (int i = 0; i < n; i++) mob(e.getKey(), c, (int) d("radio", 15));
+        }
+    }
+
+    private void mob(String tipo, Location c, int r) {
+        Location l = lugarMob(c, Math.max(4, r - 3));
+        if (l == null) return;
+        Entity e = ar.tod4.hook.Ext.mythicSpawn(tipo, l);
+        if (e == null) {
+            try {
+                e = l.getWorld().spawnEntity(l, EntityType.valueOf(tipo.toUpperCase()), org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.CUSTOM);
+            } catch (IllegalArgumentException ex) {
+                pl.getLogger().warning("[Meteorito] No existe el mob \"" + tipo + "\" (ni en MythicMobs ni en Minecraft).");
+                return;
+            }
+        }
+        l.getWorld().spawnParticle(Particle.LARGE_SMOKE, l.clone().add(0, 1, 0), 15, 0.3, 0.5, 0.3, 0.02);
     }
 
     private boolean esMena(Block b) { String v = bloques.get(clave(b)); return v != null && v.startsWith("M"); }
@@ -353,7 +433,7 @@ public final class Meteorito implements Listener {
         }
         ItemStack mano = p.getInventory().getItemInMainHand();
         if (mena && !mano.containsEnchantment(Enchantment.SILK_TOUCH)) {
-            p.sendActionBar(Txt.c("&cNecesitas un pico con &fToque de Seda &cpara sacar el vibranium."));
+            p.sendActionBar(Txt.c("&cNecesitas Toque de Seda"));
             p.playSound(b.getLocation(), Sound.BLOCK_ANVIL_LAND, SoundCategory.BLOCKS, 0.4f, 1.6f);
             return;
         }
@@ -373,7 +453,7 @@ public final class Meteorito implements Listener {
         if (pl.getConfig().getBoolean("meteorito.debug", false))
             pl.getLogger().info("[Meteorito] " + p.getName() + " saco " + (mena ? "una mena" : "una piedra") + " del meteorito " + v.substring(1));
         if (mena) {
-            int m = (int) d("mobs_por_mena", 2);
+            int m = (int) d("mobs_por_mena", 0);
             if (m > 0) mobs(c, m);
         }
     }
@@ -398,11 +478,14 @@ public final class Meteorito implements Listener {
         }
     }
 
-    private Location lugarMob(Location c) {
+    private Location lugarMob(Location c) { return lugarMob(c, 4); }
+
+    private Location lugarMob(Location c, int r) {
         World w = c.getWorld();
-        for (int i = 0; i < 30; i++) {
-            int x = c.getBlockX() + rnd.nextInt(9) - 4, z = c.getBlockZ() + rnd.nextInt(9) - 4;
-            for (int y = c.getBlockY() + 4; y > c.getBlockY() - 6; y--) {
+        for (int i = 0; i < 40; i++) {
+            int x = c.getBlockX() + rnd.nextInt(r * 2 + 1) - r, z = c.getBlockZ() + rnd.nextInt(r * 2 + 1) - r;
+            if (Math.abs(x - c.getBlockX()) <= 4 && Math.abs(z - c.getBlockZ()) <= 4) continue;   // arriba de la roca no
+            for (int y = c.getBlockY() + r; y > c.getBlockY() - 6; y--) {
                 Block b = w.getBlockAt(x, y, z);
                 if (b.getType().isAir() && b.getRelative(BlockFace.UP).getType().isAir() && b.getRelative(BlockFace.DOWN).getType().isSolid())
                     return b.getLocation().add(0.5, 0, 0.5);
