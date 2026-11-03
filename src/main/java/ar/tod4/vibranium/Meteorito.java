@@ -111,7 +111,7 @@ public final class Meteorito implements Listener {
         int n = ++ultimo;
         guardar();
         Style.ok(s, "&6☄ Meteorito #" + n + " cayendo en &f" + suelo.getX() + " " + suelo.getY() + " " + suelo.getZ()
-                + " &7(" + suelo.getWorld().getName() + ")&a. Las coordenadas solo las ves vos.");
+                + " &7(" + suelo.getWorld().getName() + ")&a.");
         caer(suelo, n);
     }
 
@@ -163,7 +163,8 @@ public final class Meteorito implements Listener {
         if (pl.getConfig().getBoolean("meteorito.aviso_a_todos", true)) {
             for (Player p : w.getPlayers()) {
                 p.playSound(p.getLocation(), Sound.ITEM_TRIDENT_THUNDER, SoundCategory.AMBIENT, 0.8f, 0.5f);
-                p.sendMessage(Txt.c(s("mensaje", "&9¡Cayó un meteorito!")));
+                p.sendMessage(Txt.c(s("mensaje", "&9✦ ¡Cayó un meteorito en &f{x} {y} {z}&9!")
+                        .replace("{x}", String.valueOf(suelo.getX())).replace("{y}", String.valueOf(suelo.getY())).replace("{z}", String.valueOf(suelo.getZ()))));
             }
         }
         Location c = suelo.getLocation().add(0.5, 1, 0.5);

@@ -379,8 +379,8 @@ meteorito:
   caida_seg: 3
   altura_caida: 70
   humo_seg: 60
-  aviso_a_todos: true      # todos escuchan el trueno y ven el mensaje (SIN coordenadas)
-  mensaje: "&9¡Cayó un meteorito!"
+  aviso_a_todos: true      # todos escuchan el trueno y ven el mensaje
+  mensaje: "&9✦ ¡Cayó un meteorito en &f{x} {y} {z}&9!"   # {x} {y} {z} = donde cayo
   # Bloques de Oraxen (si no estan en Oraxen, se usan los de respaldo)
   oraxen_mena: mena_vibranium
   oraxen_piedra: piedra_meteorito
