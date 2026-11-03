@@ -190,6 +190,7 @@ public final class Murcielagos implements Listener {
         if (!pl.getConfig().getBoolean("murcielagos.spawn_por_mobs", true) || !ent.getWorld().equals(overworld()) || !activo()) return;
         if (rnd.nextDouble() * 100 >= d("chance_por_mob", 1)) return;
         Location l = e.getLocation().clone().add(0, 1, 0);
+        log("salio un " + ent.getType() + " en " + l.getBlockX() + " " + l.getBlockY() + " " + l.getBlockZ() + ": probando una manada");
         Player p = cercano(l, 128);
         if (p == null) { log("salio un " + ent.getType() + " pero no hay nadie jugando cerca"); return; }
         int max = (int) d("max_por_jugador", 5);
