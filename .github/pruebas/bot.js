@@ -13,4 +13,4 @@ c.on('packet', (data, meta) => {
 c.on('login', () => { console.log('BOT entro'); setTimeout(() => { try { c.chat(':GENIO: probando'); console.log('BOT mando :GENIO:') } catch (e) { console.log('BOT chat error', e.message) } }, 15000) })
 c.on('error', e => console.log('BOT error', e.message))
 c.on('end', r => console.log('BOT salio', r))
-setTimeout(() => process.exit(0), 90000)
+setTimeout(() => process.exit(0), 110000)

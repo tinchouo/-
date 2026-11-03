@@ -322,24 +322,28 @@ phantom:
 murcielagos:
   activo: true
   desde_dia: 11
+  # Aparecen solo en el overworld principal (cualquier bioma; no en el Agujero ni en otras dimensiones)
+  spawn_cada_seg: 30      # cada cuantos segundos se prueba si a cada jugador le sale una manada
+  spawn_chance: 15        # % de que salga cada vez que se prueba (si al jugador le toca)
   minutos_entre: 5        # a cada jugador le aparece como mucho una manada cada estos minutos
-  chance_manada: 1        # % de cada mob hostil que aparece solo en el overworld de traer una manada (si al jugador le toca)
-  chance_reemplazo: 15    # % de los murcielagos comunes que traen una manada (los comunes ya no aparecen)
   manada_min: 3
   manada_max: 5
-  max_por_jugador: 5      # si ya lo persiguen estos, no le aparece otra manada
+  max_por_jugador: 5      # si ya tiene estos, no le aparece otra manada
   distancia_min: 24       # que tan lejos del jugador aparecen
+  distancia_max: 40
   reemplazar_comunes: true
   luz_maxima: 7           # no aparecen donde la luz de antorchas/lamparas es mayor a esto
   dano_sol: 3             # dano por segundo al sol
-  velocidad: 0.25         # bloques por tick (0.25 = 5 por segundo; correr es 5,6)
-  muerde_cada_ticks: 15   # 15 = 0,75 s, por jugador: aunque haya varios encima, muerden de a uno
+  # IA: dan vueltas hasta que ven a alguien (sin paredes en el medio); ahi lo persiguen buscando el camino
+  vision: 20              # a cuantos bloques ven a un jugador
+  olvida_seg: 5           # si no lo ven durante estos segundos, se olvidan y vuelven a dar vueltas
+  velocidad: 0.25         # persiguiendo, bloques por tick (0.25 = 5 por segundo; correr es 5,6)
+  velocidad_paseo: 0.12   # dando vueltas
+  paseo_hacia_gente: 0.35 # 0 a 1: que tanto dan vueltas para el lado donde hay jugadores
+  muerde_cada_ticks: 20   # 20 = 1 s, por jugador: aunque haya varios encima, muerden de a uno
   alcance: 1.4
   vida: 1                 # 1 = muere de un golpe
-  dura_seg: 90            # despues se va
-  de_noche_cerca: false   # true = ademas, de noche, aparecen cerca de los jugadores (con los dos de abajo)
-  cada_seg: 20
-  probabilidad: 0.25
+  dura_seg: 90            # despues se van (si estan persiguiendo a alguien, el doble)
 
 # Alucinacion (Zombi Alucinado del Agujero, mobs con la etiqueta tod4_alucina, /tod4:alucinar):
 # el que la tiene ve la vida, el hambre y el tab cambiando al azar (es solo lo que ve).
