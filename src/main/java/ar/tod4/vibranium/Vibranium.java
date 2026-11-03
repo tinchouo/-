@@ -92,24 +92,24 @@ public final class Vibranium implements Listener {
         List<String> lore;
         switch (t) {
             case MENA -> {
-                nombre = "Mena de Vibranium"; modelo = "mena_vibranium";
+                nombre = nombre("mena", "Mena de Vibranio"); modelo = "mena_vibranium";
                 lore = List.of("&7Fúndela en un &falto horno&7.", "&7Solo funciona con &6balde de lava&7.");
             }
             case BARRA -> {
-                nombre = "Vibranium"; modelo = "vibranium";
+                nombre = nombre("barra", "Vibranio"); modelo = "vibranium";
                 lore = List.of("&7Junta &f4 &7con &f4 bloques de diamante", "&7para un lingote.");
             }
             case LINGOTE -> {
-                nombre = "Lingote de Vibranium"; modelo = "lingote_vibranium";
+                nombre = nombre("lingote", "Lingote de Vibranio"); modelo = "lingote_vibranium";
                 lore = List.of("&7El metal más resistente que existe.");
             }
             case MEJORA -> {
-                nombre = "Mejora de Vibranium"; modelo = "mejora_vibranium";
+                nombre = nombre("mejora", "Mejora de Vibranio"); modelo = "mejora_vibranium";
                 lore = List.of("&7Plantilla de herrería.", "&7Se duplica con &f7 lingotes de netherite",
                         "&7y una &fPiedra de Meteorito&7.");
             }
             default -> {
-                nombre = "Piedra de Meteorito"; modelo = "piedra_meteorito";
+                nombre = nombre("piedra", "Piedra de Meteorito"); modelo = "piedra_meteorito";
                 lore = List.of("&7Roca que cayó del cielo.");
             }
         }
@@ -121,6 +121,8 @@ public final class Vibranium implements Listener {
         it.setItemMeta(m);
         return it;
     }
+
+    private String nombre(String k, String def) { return pl.getConfig().getString("vibranium.nombres." + k, def); }
 
     public Tipo tipo(ItemStack it) {
         if (it == null || !it.hasItemMeta()) return null;
@@ -155,7 +157,48 @@ public final class Vibranium implements Listener {
     }
 
     @EventHandler
-    public void entra(org.bukkit.event.player.PlayerJoinEvent e) { e.getPlayer().discoverRecipes(List.of(rLingote, rMejora)); }
+    public void entra(org.bukkit.event.player.PlayerJoinEvent e) {
+        e.getPlayer().discoverRecipes(List.of(rLingote, rMejora));
+        actualizar(e.getPlayer().getInventory());
+    }
+
+    // ================================================================= items viejos
+
+    /**
+     * Si se cambio un nombre en el config (o el plugin cambio algo del item), los items que ya tiene la gente se ponen
+     * al dia, asi las recetas los siguen aceptando. Se hace al entrar, al abrir un cofre/horno y al agarrar del piso.
+     */
+    public void actualizar(org.bukkit.inventory.Inventory inv) {
+        if (inv == null) return;
+        ItemStack[] cont = inv.getContents();
+        for (int i = 0; i < cont.length; i++) {
+            ItemStack nuevo = alDia(cont[i]);
+            if (nuevo != null) inv.setItem(i, nuevo);
+        }
+    }
+
+    /** El item como tiene que ser ahora, o null si ya esta bien (o no es de vibranio). */
+    private ItemStack alDia(ItemStack it) {
+        Tipo t = tipo(it);
+        if (t == null) return null;
+        ItemStack bien = item(t, it.getAmount());
+        return bien.isSimilar(it) ? null : bien;
+    }
+
+    /** Despues de /tod4 recargar: los de todos los que estan conectados. */
+    public void actualizarTodos() { for (org.bukkit.entity.Player p : Bukkit.getOnlinePlayers()) actualizar(p.getInventory()); }
+
+    @EventHandler
+    public void abre(org.bukkit.event.inventory.InventoryOpenEvent e) {
+        actualizar(e.getInventory());
+        actualizar(e.getPlayer().getInventory());
+    }
+
+    @EventHandler(ignoreCancelled = true)
+    public void agarra(org.bukkit.event.entity.EntityPickupItemEvent e) {
+        ItemStack nuevo = alDia(e.getItem().getItemStack());
+        if (nuevo != null) e.getItem().setItemStack(nuevo);
+    }
 
     // ================================================================= alto horno: solo con lava
 

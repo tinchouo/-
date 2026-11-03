@@ -354,6 +354,12 @@ vibranium:
   coccion_seg: 60          # cuanto tarda cada barra en el alto horno
   barras_por_balde: 4      # cuantas barras cocina un balde de lava
   experiencia: 1.0
+  nombres:                 # si los cambias, los items que ya tiene la gente se actualizan solos
+    mena: "Mena de Vibranio"
+    barra: "Vibranio"
+    lingote: "Lingote de Vibranio"
+    mejora: "Mejora de Vibranio"
+    piedra: "Piedra de Meteorito"
 
 # Meteorito: /tod4 meteorito  -> cae DONDE ESTAS (o /tod4 meteorito x y z). Nunca al azar.
 meteorito:

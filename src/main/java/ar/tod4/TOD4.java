@@ -355,6 +355,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
                 mesa.recargar();
                 creepers.recargar();
                 vibranium.recetas();
+                vibranium.actualizarTodos();
                 Style.ok(s, "Config recargada.");
                 return true;
             default:
