@@ -34,7 +34,7 @@ recetas:
       V: minecraft:breeze_rod
     resultado: oraxen:rosarioxsespada
     cantidad: 1
-  # La espada (todo de Oraxen menos la obsidiana llorosa). Despues: hoja arriba y empunadura abajo en la mesa normal.
+  # La espada (de Oraxen menos la obsidiana llorosa). Despues: hoja arriba y mango abajo en la mesa normal.
   hoja_espada:
     forma:
       - "..FF.."
@@ -49,13 +49,13 @@ recetas:
       O: minecraft:crying_obsidian
     resultado: oraxen:hoja_espada
     cantidad: 1
-  empunadura_espada:
+  mango_espada:
     forma:
-      - "MMRRMM"
-      - "..MM.."
-      - "..MM.."
+      - "BBRRBB"
+      - "..BB.."
+      - "..BB.."
     ingredientes:
-      M: oraxen:mango_breeze       # 8 mangos = 64 varas de breeze
+      B: oraxen:breeze_reforzado   # 8 bloques = 64 varas de breeze
       R: oraxen:mineral_truco      # Mineral de Tioduro
-    resultado: oraxen:empunadura_espada
+    resultado: oraxen:mango_espada
     cantidad: 1
