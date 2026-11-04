@@ -316,8 +316,6 @@ function bj_fin(p: player, txt: string, mult: number):
 
 # ----- dibuja la mesa
 function bj_dibujar(p: player, inv: inventory, resultado: string):
-    if name of {_inv} is not "&8Blackjack":
-        stop
     set {_e} to {bj.estado::%{_p}%}
     loop 54 times:
         set slot loop-number - 1 of {_inv} to black stained glass pane named " "
