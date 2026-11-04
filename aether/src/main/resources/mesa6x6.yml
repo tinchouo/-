@@ -45,7 +45,7 @@ recetas:
       - "..OO.."
     ingredientes:
       F: oraxen:aro_montapuercos   # Aro Nasal del Montapuercos
-      S: oraxen:bloque_tioduro     # el bloque de Tioduro (si en Oraxen tiene otro id, cambialo aca)
+      S: oraxen:mineral_truco_block   # Bloque de Tioduro
       O: minecraft:crying_obsidian
     resultado: oraxen:hoja_espada
     cantidad: 1
