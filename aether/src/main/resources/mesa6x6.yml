@@ -44,7 +44,7 @@ recetas:
       - "..SS.."
       - "..OO.."
     ingredientes:
-      F: oraxen:filo_abisal        # lo suelta un mob
+      F: oraxen:aro_montapuercos   # Aro Nasal del Montapuercos
       S: oraxen:bloque_tioduro     # el bloque de Tioduro (si en Oraxen tiene otro id, cambialo aca)
       O: minecraft:crying_obsidian
     resultado: oraxen:hoja_espada
