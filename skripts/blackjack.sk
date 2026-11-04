@@ -114,7 +114,7 @@ on inventory click:
     cancel event
     if name of clicked inventory is not "&8Blackjack":
         stop
-    set {_s} to clicked slot
+    set {_s} to index of clicked slot
     set {_e} to {bj.estado::%player%}
     if {_s} is 45:
         close player's inventory
