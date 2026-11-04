@@ -34,3 +34,25 @@ recetas:
       V: minecraft:breeze_rod
     resultado: oraxen:rosarioxsespada
     cantidad: 1
+  filo_abisal:
+    forma:
+      - "..EE"
+      - ".ENE"
+      - "ENE."
+      - "EE.."
+    ingredientes:
+      E: minecraft:echo_shard
+      N: minecraft:netherite_scrap
+    resultado: oraxen:filo_abisal
+    cantidad: 1
+  mango_breeze:
+    forma:
+      - ".BB."
+      - "BCCB"
+      - "BCCB"
+      - ".BB."
+    ingredientes:
+      B: minecraft:breeze_rod
+      C: minecraft:black_concrete
+    resultado: oraxen:mango_breeze
+    cantidad: 1
