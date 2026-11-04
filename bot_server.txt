@@ -1,0 +1,278 @@
+Downloading mojang_1.21.4.jar
+Applying patches
+Starting org.bukkit.craftbukkit.Main
+*** Warning, you've not updated in a while! ***
+*** Please download a new build from https://papermc.io/downloads/paper ***
+2026-11-04T18:16:05.666301609Z ServerMain WARN Advanced terminal features are not available in this environment
+[18:16:05 INFO]: [bootstrap] Running Java 21 (OpenJDK 64-Bit Server VM 21.0.13+9-LTS; Eclipse Adoptium Temurin-21.0.13+9) on Linux 7.0.0-1017-azure (amd64)
+[18:16:05 INFO]: [bootstrap] Loading Paper 1.21.4-232-ver/1.21.4@12d8fe0 (2025-06-09T10:15:42Z) for Minecraft 1.21.4
+[18:16:06 INFO]: [PluginInitializerManager] Initializing plugins...
+[18:16:07 INFO]: [ReobfServer] Remapping server...
+[18:16:14 INFO]: [ReobfServer] Done remapping server in 7037ms.
+[18:16:14 INFO]: [PluginRemapper] Remapping plugin 'plugins/TOD4.jar'...
+[18:16:15 INFO]: [PluginRemapper] Done remapping plugin 'plugins/TOD4.jar' in 272ms.
+[18:16:15 INFO]: [PluginInitializerManager] Initialized 1 plugin
+[18:16:15 INFO]: [PluginInitializerManager] Bukkit plugins (1):
+ - TOD4 (2.0.0)
+[18:16:20 INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[18:16:20 INFO]: Found new data pack file/bukkit, loading it automatically
+[18:16:20 INFO]: Found new data pack paper, loading it automatically
+[18:16:21 INFO]: No existing world data, creating new world
+[18:16:21 ERROR]: No key layers in MapLike[{}]
+[18:16:22 INFO]: Loaded 1370 recipes
+[18:16:22 INFO]: Loaded 1481 advancements
+[18:16:22 INFO]: [MCTypeRegistry] Initialising converters for DataConverter...
+[18:16:22 INFO]: [MCTypeRegistry] Finished initialising converters for DataConverter in 206.9ms
+[18:16:22 INFO]: Starting minecraft server version 1.21.4
+[18:16:22 INFO]: Loading properties
+[18:16:22 INFO]: This server is running Paper version 1.21.4-232-ver/1.21.4@12d8fe0 (2025-06-09T10:15:42Z) (Implementing API version 1.21.4-R0.1-SNAPSHOT)
+[18:16:22 INFO]: [spark] This server bundles the spark profiler. For more information please visit https://docs.papermc.io/paper/profiling
+[18:16:22 INFO]: Server Ping Player Sample Count: 12
+[18:16:22 INFO]: Using 4 threads for Netty based IO
+[18:16:23 INFO]: [MoonriseCommon] Paper is using 1 worker threads, 1 I/O threads
+[18:16:23 INFO]: [ChunkTaskScheduler] Chunk system is using population gen parallelism: true
+[18:16:24 INFO]: Default game type: SURVIVAL
+[18:16:24 INFO]: Generating keypair
+[18:16:24 INFO]: Starting Minecraft server on *:25565
+[18:16:24 INFO]: Using epoll channel type
+[18:16:24 INFO]: Paper: Using libdeflate (Linux x86_64) compression from Velocity.
+[18:16:24 INFO]: Paper: Using OpenSSL 3.x.x (Linux x86_64) cipher from Velocity.
+[18:16:24 INFO]: [TOD4] Loading server plugin TOD4 v2.0.0
+[18:16:24 WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[18:16:24 WARN]: The server will make no attempt to authenticate usernames. Beware.
+[18:16:24 WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[18:16:24 WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[18:16:24 INFO]: Preparing level "world"
+[18:16:24 ERROR]: No key layers in MapLike[{}]
+[18:16:25 ERROR]: No key layers in MapLike[{}]
+[18:16:26 ERROR]: No key layers in MapLike[{}]
+[18:16:27 INFO]: Preparing start region for dimension minecraft:overworld
+[18:16:27 INFO]: Preparing spawn area: 2%
+[18:16:27 INFO]: Time elapsed: 332 ms
+[18:16:27 INFO]: Preparing start region for dimension minecraft:the_nether
+[18:16:27 INFO]: Preparing spawn area: 2%
+[18:16:28 INFO]: Preparing spawn area: 2%
+[18:16:28 INFO]: Preparing spawn area: 4%
+[18:16:29 INFO]: Preparing spawn area: 18%
+[18:16:29 INFO]: Preparing spawn area: 26%
+[18:16:30 INFO]: Preparing spawn area: 40%
+[18:16:30 INFO]: Preparing spawn area: 79%
+[18:16:30 INFO]: Time elapsed: 3136 ms
+[18:16:30 INFO]: Preparing start region for dimension minecraft:the_end
+[18:16:30 INFO]: Preparing spawn area: 2%
+[18:16:31 INFO]: Preparing spawn area: 24%
+[18:16:31 INFO]: Time elapsed: 896 ms
+[18:16:31 INFO]: [TOD4] Enabling TOD4 v2.0.0
+[18:16:32 INFO]: [TOD4] Mensajes de los cambios cargados (nombres cambio_* y aviso_*).
+[18:16:32 INFO]: [TOD4] Avisos: se borraron 26 mensajes de los dias 1 a 6 (copia en avisos.yml, seccion borrados).
+[18:16:32 INFO]: [TOD4] TOD4 listo. Dia actual: 1
+[18:16:32 INFO]: [spark] Starting background profiler...
+[18:16:33 INFO]: Done preparing level "world" (9.307s)
+[18:16:33 INFO]: Running delayed init tasks
+[18:16:33 INFO]: Done (28.716s)! For help, type "help"
+[18:16:33 INFO]: *************************************************************************************
+[18:16:33 INFO]: This is the first time you're starting this server.
+[18:16:33 INFO]: It's recommended you read our 'Getting Started' documentation for guidance.
+[18:16:33 INFO]: View this and more helpful information here: https://docs.papermc.io/paper/next-steps
+[18:16:33 INFO]: *************************************************************************************
+[18:17:11 INFO]: UUID of player tester is dd823a0c-b94a-369f-acd6-ddd287e3180e
+[18:17:12 INFO]: tester joined the game
+[18:17:12 INFO]: tester[/127.0.0.1:54668] logged in with entity id 31 at ([world]3.5, -60.0, -7.5)
+[18:17:27 INFO]: [Not Secure] tester:  probando
+
+
+[18:17:31 INFO]: Gamerule doMobSpawning is now set to: false
+[18:17:31 INFO]: Villager Villager['Villager'/74, uuid='4a67465f-0967-4667-a85c-2dff3c7eba7e', l='ServerLevel[world]', x=158.38, y=-58.44, z=-26.29, cpos=[9, -2], tl=299, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/83, uuid='e528fda3-1dba-4107-af5e-69ead27123e0', l='ServerLevel[world]', x=167.50, y=-60.00, z=38.46, cpos=[10, 2], tl=287, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Mason'/39, uuid='26102b11-ad92-4820-86d5-3a848dced052', l='ServerLevel[world]', x=104.75, y=-60.00, z=2.54, cpos=[6, 0], tl=324, v=true] died, message: 'Mason was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/80, uuid='98867ccc-2ea7-4717-b320-44e14b9604c5', l='ServerLevel[world]', x=153.81, y=-60.00, z=3.64, cpos=[9, 0], tl=287, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/84, uuid='7d9950d3-6979-426e-9cd3-722a06a61975', l='ServerLevel[world]', x=151.41, y=-60.00, z=5.67, cpos=[9, 0], tl=287, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/97, uuid='be057dec-ab9d-4ff9-9e73-decb61794a85', l='ServerLevel[world]', x=199.72, y=-58.00, z=-28.37, cpos=[12, -2], tl=0, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Nitwit'/79, uuid='5955cc48-535d-44b2-a397-4cfc9cc5d2fd', l='ServerLevel[world]', x=167.50, y=-60.06, z=35.52, cpos=[10, 2], tl=287, v=true] died, message: 'Nitwit was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/66, uuid='228b3f9b-2499-4364-a13a-468acdaa98c0', l='ServerLevel[world]', x=172.48, y=-58.00, z=-6.77, cpos=[10, -1], tl=304, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/82, uuid='7b2698a0-7153-4885-a327-4ec9114106bf', l='ServerLevel[world]', x=150.38, y=-59.50, z=35.80, cpos=[9, 2], tl=287, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Villager Villager['Villager'/73, uuid='ab703650-9bdb-4658-b05b-c3823e9af84c', l='ServerLevel[world]', x=145.19, y=-59.00, z=3.54, cpos=[9, 0], tl=299, v=true] died, message: 'Villager was killed'
+[18:17:31 INFO]: Killed 114 entities
+[18:17:31 INFO]: Made tester a server operator
+[18:17:34 INFO]: ✔ Screamer a tester: imagen creada (entidad 348), 27 cuadros, modelo tod4:screamer, sonido tod4_screamer:screamer.
+[18:17:35 INFO]: Teleported tester to 0.000000, -60.000000, 0.000000
+[18:17:39 INFO]: Played sound tod4_screamer:screamer to tester
+[18:17:43 INFO]: ✔ tester alucina por 3 s.
+[18:17:47 INFO]: Summoned new Enderman
+[18:17:48 INFO]: [TOD4] [Phantom] le pego a tester y se fue a 4 -60 -18
+[18:17:51 INFO]: [TOD4] [Phantom] vuelve: esta a 18 bloques de tester
+[18:17:51 INFO]: [TOD4] [Phantom] volvio cerca de tester
+[18:17:53 INFO]: [TOD4] [Phantom] le pego a tester y se fue a 14 -60 12
+[18:17:56 INFO]: [TOD4] [Phantom] vuelve: esta a 19 bloques de tester
+[18:17:56 INFO]: [TOD4] [Phantom] volvio cerca de tester
+[18:17:58 INFO]: [TOD4] [Phantom] le pego a tester y se fue a -17 -60 -12
+[18:17:59 INFO]: Killed Enderman
+[18:18:00 INFO]: Applied effect Instant Health to tester
+[18:18:00 INFO]: Set the time to 13000
+[18:18:00 INFO]: ✔ 1 murciélago(s) vampiro persiguen a tester.
+[18:18:01 INFO]: [TOD4] [Phantom] no vuelve (mob valido false, jugador tester jugable true)
+[18:18:02 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 18.0
+[18:18:03 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 16.0
+[18:18:04 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 14.0
+[18:18:04 INFO]: Named entity Bat['Murciélago Vampiro'/354, uuid='c1481c31-5078-4d9f-a394-076779c970bc', l='ServerLevel[world]', x=0.03, y=-58.77, z=0.58, cpos=[0, 0], tl=80, v=true] died: Murciélago Vampiro was killed
+[18:18:04 INFO]: Killed Murciélago Vampiro
+[18:18:05 INFO]: Set the time to 1000
+[18:18:05 INFO]: ✔ 1 murciélago(s) vampiro persiguen a tester.
+[18:18:05 INFO]: [Not Secure] [Server] PRUEBA_SOL
+[18:18:05 INFO]: Named entity Bat['Murciélago Vampiro'/355, uuid='24e8a0d6-9534-4ab4-a231-8aff63fa8a02', l='ServerLevel[world]', x=-3.63, y=-56.00, z=3.15, cpos=[-1, 0], tl=3, v=true] died: Murciélago Vampiro died
+[18:18:11 INFO]: No entity was found
+[18:18:11 INFO]: Set the time to 13000
+[18:18:11 INFO]: Successfully filled 258 block(s)
+[18:18:11 INFO]: Successfully filled 2 block(s)
+[18:18:11 INFO]: [Not Secure] [Server] PRUEBA_PARED
+[18:18:12 INFO]: ✔ 2 murciélago(s) vampiro persiguen a tester.
+[18:18:14 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 12.0
+[18:18:15 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 10.0
+[18:18:16 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 8.0
+[18:18:17 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 6.0
+[18:18:18 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 4.0
+[18:18:19 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 2.0
+[18:18:20 INFO]: Unknown or incomplete command, see below for error
+animation false 1 0 147<--[HERE]
+[18:18:20 INFO]: ☠ tester fue desangrado por un Murciélago Vampiro
+[18:18:20 INFO]: [TOD4] [Murcielago] mordio a tester: vida maxima 20.0 (murio)
+[18:18:20 INFO]: [TOD4] [Murcielago] vio a tester a 1 bloques
+[18:18:28 INFO]: ✔ ☄ Meteorito #1 cayendo en 20 -61 20 (world).
+[18:18:31 INFO]: [TOD4] [Meteorito] #1 en 20 -60 20: 4 menas, 308 piedras, cofre true
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienSoldado" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienSoldado" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienSoldado" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienSoldado" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienVolador" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienVolador" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienVolador" (ni en MythicMobs ni en Minecraft).
+[18:18:32 WARN]: [TOD4] [Meteorito] No existe el mob "AlienCentinela" (ni en MythicMobs ni en Minecraft).
+[18:18:34 INFO]: ☄ #1 en world 22 -63 22: 4 menas, 308 piedras
+[18:18:35 INFO]: Named entity Bat['Murciélago Vampiro'/356, uuid='d4acac53-1300-4e8b-b1b9-98b6e92f9f9a', l='ServerLevel[world]', x=-1.49, y=-58.11, z=-1.73, cpos=[-1, -1], tl=460, v=true] died: Murciélago Vampiro was killed
+[18:18:35 INFO]: Named entity Bat['Murciélago Vampiro'/357, uuid='784e1a4d-8b22-4ec9-ac72-d33325d2c5d3', l='ServerLevel[world]', x=2.89, y=-59.80, z=-2.48, cpos=[0, -1], tl=460, v=true] died: Murciélago Vampiro was killed
+[18:18:35 INFO]: Killed 2 entities
+[18:18:35 INFO]: Teleported tester to 60.500000, -60.000000, 60.500000
+[18:18:35 INFO]: Set tester's game mode to Survival Mode
+[18:18:35 INFO]: Applied effect Instant Health to tester
+[18:18:35 INFO]: Applied effect Resistance to tester
+[18:18:35 INFO]: Summoned new Snowball
+[18:18:35 INFO]: [Not Secure] [Server] PRUEBA_GRANADA
+[18:18:36 INFO]: [TOD4] [Granada] empujo a tester (a 1.2 bloques): -0.91 0.64 0.00
+[18:18:37 INFO]: tester has the following entity data: [60.5d, -60.0d, 60.5d]
+[18:18:40 INFO]: Set the time to 18000
+[18:18:40 INFO]: Gamerule doMobSpawning is now set to: true
+[18:18:40 INFO]: [Not Secure] [Server] PRUEBA_SPAWN
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SKELETON pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero no hay nadie jugando a menos de 64 bloques
+[18:18:40 INFO]: [TOD4] [Murcielago] salio un ZOMBIE pero tester ya tiene 5 murcielagos
+[18:18:40 INFO]: [TOD4] [Murcielago] aparecio una manada de 3 con un SPIDER a 62 bloques de tester
+[18:18:40 INFO]: [TOD4] [Murcielago] aparecio una manada de 2 con un SKELETON a 62 bloques de tester
+[18:18:45 INFO]: [TOD4] [Murcielago] salio un SPIDER pero no hay nadie jugando a menos de 64 bloques
+[18:18:46 INFO]: [TOD4] [Murcielago] salio un CREEPER pero no hay nadie jugando a menos de 64 bloques
+[18:19:00 INFO]: Test passed, count: 14
+[18:19:00 INFO]: Test passed, count: 12
+[18:19:00 INFO]: Test passed, count: 4
+[18:19:00 INFO]: Test passed, count: 1
+[18:19:00 INFO]: tester has the following entity data: [60.5d, -60.0d, 60.5d]
+[18:19:00 INFO]: tester has the following entity data: 20.0f
+[18:19:00 INFO]: Stopping the server
+[18:19:00 INFO]: Stopping server
+[18:19:00 INFO]: [TOD4] Disabling TOD4 v2.0.0
+[18:19:00 INFO]: Saving players
+[18:19:00 INFO]: tester lost connection: Server closed
+[18:19:00 INFO]: tester left the game
+[18:19:00 INFO]: Saving worlds
+[18:19:00 INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[18:19:00 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world'
+[18:19:00 INFO]: [ChunkHolderManager] Halted chunk system for world 'world'
+[18:19:00 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world'
+[18:19:02 INFO]: [ChunkHolderManager] Saved 2206 block chunks, 791 entity chunks, 14 poi chunks in world 'world' in 1.74s
+[18:19:02 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world'
+[18:19:02 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world'
+[18:19:02 INFO]: Saving chunks for level 'ServerLevel[world_nether]'/minecraft:the_nether
+[18:19:02 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world_nether'
+[18:19:02 INFO]: [ChunkHolderManager] Halted chunk system for world 'world_nether'
+[18:19:02 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world_nether'
+[18:19:03 INFO]: [ChunkHolderManager] Saved 841 block chunks, 49 entity chunks, 0 poi chunks in world 'world_nether' in 0.77s
+[18:19:03 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world_nether'
+[18:19:03 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world_nether'
+[18:19:03 INFO]: Saving chunks for level 'ServerLevel[world_the_end]'/minecraft:the_end
+[18:19:03 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world_the_end'
+[18:19:03 INFO]: [ChunkHolderManager] Halted chunk system for world 'world_the_end'
+[18:19:03 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world_the_end'
+[18:19:03 INFO]: [ChunkHolderManager] Saved 841 block chunks, 49 entity chunks, 0 poi chunks in world 'world_the_end' in 0.26s
+[18:19:03 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world_the_end'
+[18:19:03 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world_the_end'
+[18:19:03 INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[18:19:03 INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[18:19:03 INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[18:19:03 INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[18:19:03 INFO]: Waiting for I/O tasks to complete...
+[18:19:03 INFO]: All I/O tasks to complete
+[18:19:03 INFO]: [MoonriseCommon] Awaiting termination of worker pool for up to 60s...
+[18:19:03 INFO]: [MoonriseCommon] Awaiting termination of I/O pool for up to 60s...
