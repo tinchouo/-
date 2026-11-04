@@ -55,7 +55,7 @@ recetas:
       - "..BB.."
       - "..BB.."
     ingredientes:
-      B: oraxen:breeze_reforzado   # 8 bloques = 64 varas de breeze
+      B: oraxen:breeze_reforzado   # Obsidiana Llorosa Aireada (8 bloques = 64 varas de breeze)
       R: oraxen:mineral_truco      # Mineral de Tioduro
     resultado: oraxen:mango_espada
     cantidad: 1
