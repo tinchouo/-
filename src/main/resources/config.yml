@@ -399,6 +399,19 @@ meteorito:
   respaldo_piedra: BLACKSTONE
 
 
+
+# La espada: en la mesa de herreria, Mejora de Vibranio + Espada Apagada + Lingote de Vibranio -> la espada activa.
+# El dano y la velocidad se ven como en cualquier espada ("10 de dano", "1,6 de velocidad"). Con /tod4 recargar.
+espada:
+  oraxen_base: espada_apagada      # la que se pone en el medio (de Oraxen)
+  oraxen_resultado: todsword       # la que sale (de Oraxen)
+  dano: 10
+  velocidad: 1.6                   # 1.6 = la de una espada normal
+  encantamientos:
+    sharpness: 5                   # Filo
+    smite: 5                       # Castigo
+    bane_of_arthropods: 5          # Perdicion de los artropodos
+
 # Granada de Impulso: /tod4 granada [cantidad] [jugador] (para la tienda: por consola).
 # Se tira, queda en el piso pitando y explota: empuja a todos para AFUERA (arriba si estas encima, al costado si estas al lado).
 # No rompe nada ni hace dano; la caida si. Todo se cambia con /tod4 recargar.

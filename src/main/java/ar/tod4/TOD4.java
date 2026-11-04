@@ -90,6 +90,7 @@ public final class TOD4 extends JavaPlugin implements TabCompleter {
         corazon = new ar.tod4.items.Corazon(this);
         vibranium = new ar.tod4.vibranium.Vibranium(this);
         granada = new ar.tod4.items.Granada(this);
+        new ar.tod4.vibranium.Espada(this);
         meteorito = new ar.tod4.vibranium.Meteorito(this, vibranium);
         new ar.tod4.items.SoloOraxen(this);
         Bukkit.getPluginManager().registerEvents(new ar.tod4.hook.GulagTab(), this);
