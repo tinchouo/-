@@ -34,25 +34,28 @@ recetas:
       V: minecraft:breeze_rod
     resultado: oraxen:rosarioxsespada
     cantidad: 1
-  filo_abisal:
+  # La espada (todo de Oraxen menos la obsidiana llorosa). Despues: hoja arriba y empunadura abajo en la mesa normal.
+  hoja_espada:
     forma:
-      - "..EE"
-      - ".ENE"
-      - "ENE."
-      - "EE.."
+      - "..FF.."
+      - "..SS.."
+      - "S.SS.S"
+      - ".OSSO."
+      - "..SS.."
+      - "..OO.."
     ingredientes:
-      E: minecraft:echo_shard
-      N: minecraft:netherite_scrap
-    resultado: oraxen:filo_abisal
+      F: oraxen:filo_abisal        # lo suelta un mob
+      S: oraxen:bloque_tioduro     # el bloque de Tioduro (si en Oraxen tiene otro id, cambialo aca)
+      O: minecraft:crying_obsidian
+    resultado: oraxen:hoja_espada
     cantidad: 1
-  mango_breeze:
+  empunadura_espada:
     forma:
-      - ".BB."
-      - "BCCB"
-      - "BCCB"
-      - ".BB."
+      - "MMRRMM"
+      - "..MM.."
+      - "..MM.."
     ingredientes:
-      B: minecraft:breeze_rod
-      C: minecraft:black_concrete
-    resultado: oraxen:mango_breeze
+      M: oraxen:mango_breeze       # 8 mangos = 64 varas de breeze
+      R: oraxen:mineral_truco      # Mineral de Tioduro
+    resultado: oraxen:empunadura_espada
     cantidad: 1
