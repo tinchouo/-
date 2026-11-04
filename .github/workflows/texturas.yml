@@ -15,7 +15,7 @@ jobs:
           C=$(curl -s "$V" | jq -r '.downloads.client.url')
           curl -sL -o client.jar "$C"
           mkdir -p out && cd out
-          unzip -q -o ../client.jar 'assets/minecraft/textures/item/*' 'assets/minecraft/textures/block/deepslate*' 'assets/minecraft/textures/block/tuff*' 'assets/minecraft/textures/block/blackstone*' 'assets/minecraft/textures/block/stone.png' 'assets/minecraft/textures/block/*_ore.png' 'assets/minecraft/textures/block/diamond_block.png' 'assets/minecraft/textures/block/blast_furnace*' 'assets/minecraft/textures/block/crafting_table*' 'assets/minecraft/textures/block/smithing_table*' 'assets/minecraft/textures/font/*' 'assets/minecraft/font/*' 'assets/minecraft/textures/gui/sprites/container/*' 'assets/minecraft/textures/gui/container/*'
+          unzip -q -o ../client.jar 'assets/minecraft/textures/item/*' 'assets/minecraft/textures/block/deepslate*' 'assets/minecraft/textures/block/tuff*' 'assets/minecraft/textures/block/blackstone*' 'assets/minecraft/textures/block/stone.png' 'assets/minecraft/textures/block/*_ore.png' 'assets/minecraft/textures/block/diamond_block.png' 'assets/minecraft/textures/block/crying_obsidian.png' 'assets/minecraft/textures/gui/sprites/container/smithing/*' 'assets/minecraft/textures/block/blast_furnace*' 'assets/minecraft/textures/block/crafting_table*' 'assets/minecraft/textures/block/smithing_table*' 'assets/minecraft/textures/font/*' 'assets/minecraft/font/*' 'assets/minecraft/textures/gui/sprites/container/*' 'assets/minecraft/textures/gui/container/*'
           git init -q && git checkout -q -b ci-texturas
           git config user.name ci && git config user.email ci@local
           git add . && git commit -q -m texturas
