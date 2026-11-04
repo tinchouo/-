@@ -47,10 +47,22 @@ public final class Espada implements Listener {
         Bukkit.getPluginManager().registerEvents(this, pl);
         // los tres son de papel (los items de Oraxen y los del vibranio): la receta acepta papel y en
         // PrepareSmithingEvent se mira que sean justo esos tres
-        Bukkit.removeRecipe(receta);
-        RecipeChoice papel = new RecipeChoice.MaterialChoice(Material.PAPER);
-        Bukkit.addRecipe(new SmithingTransformRecipe(receta, new ItemStack(Material.DIAMOND_SWORD), papel, papel, papel, false));
+        registrar();
+        // cuando el server termino de cargar, de nuevo (asi la mesa de herreria deja poner los items de papel)
+        Bukkit.getScheduler().runTask(pl, this::registrar);
     }
+
+    /**
+     * Desde 1.21.2 la mesa de herreria solo deja poner en cada lugar los items que alguna receta usa ahi, y esa lista
+     * se arma al cargar el server: con "true" se vuelve a armar y se les manda a los jugadores.
+     */
+    private void registrar() {
+        Bukkit.removeRecipe(receta, false);
+        RecipeChoice papel = new RecipeChoice.MaterialChoice(Material.PAPER);
+        Bukkit.addRecipe(new SmithingTransformRecipe(receta, new ItemStack(Material.DIAMOND_SWORD), papel, papel, papel, false), true);
+    }
+
+    private void log(String m) { if (pl.getConfig().getBoolean("espada.debug", false)) pl.getLogger().info("[Espada] " + m); }
 
     private String s(String k, String def) { return pl.getConfig().getString("espada." + k, def); }
 
@@ -66,9 +78,12 @@ public final class Espada implements Listener {
                 && s("oraxen_base", "espada_apagada").equals(Items.oraxenId(base))
                 && "tod4_lingote_vibranium".equals(Items.oraxenId(extra));
         if (!ok) {
+            if (plantilla != null || base != null || extra != null)
+                log("herreria: plantilla=" + Items.oraxenId(plantilla) + " base=" + Items.oraxenId(base) + " mineral=" + Items.oraxenId(extra) + " (no es la receta)");
             if (nuestra) e.setResult(null);   // papeles cualquiera: nada
             return;
         }
+        log("herreria: receta de la espada, armando el resultado");
         ItemStack r = ar.tod4.hook.Ext.oraxenItem(s("oraxen_resultado", "todsword"));
         if (r == null) {
             pl.getLogger().warning("[Espada] Oraxen no tiene el item \"" + s("oraxen_resultado", "todsword") + "\" (config.yml -> espada.oraxen_resultado).");
