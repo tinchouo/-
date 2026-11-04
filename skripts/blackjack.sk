@@ -44,10 +44,10 @@ on inventory click:
     if name of player's current inventory is "&8Admin Blackjack":
         if holder of clicked inventory is player:
             stop
-        if clicked slot is between 9 and 17:
+        if index of clicked slot is between 9 and 17:
             stop
         cancel event
-        if clicked slot is 4:
+        if index of clicked slot is 4:
             give stick named "&aPalo de Blackjack" with lore "&7Click derecho en un bloque para" and "&7marcarlo o desmarcarlo como mesa." to player
 
 on inventory close:
