@@ -5,7 +5,7 @@
 #          /blackjack max <n>    -> apuesta máxima por mano (por defecto 64)
 #  Jugador: click derecho en una mesa -> elige moneda y cuánto apuesta -> Repartir -> Pedir carta / Plantarse.
 #  Cartas: cada carta es un bloque y la CANTIDAD es lo que vale (un 7 es una pila de 7; J, Q y K valen 10; el As 1 u 11).
-#  Paga: ganas = el doble; Blackjack (21 con las 2 primeras) = 2,5 veces; empate = te devuelve la apuesta.
+#  Paga: ganar x2; Blackjack (21 con las 2 primeras) x2,5 (redondeado para arriba: 1 moneda -> 3); empatar x1.
 #  La banca pide hasta tener 17 o más. Si cierras la mesa en medio de una mano, pierdes la apuesta.
 
 on load:
@@ -100,7 +100,12 @@ on right click:
         set {bj.estado::%player%} to "apuesta"
         delete {bj.j::%player%::*}
         delete {bj.b::%player%::*}
-        set {_inv} to chest inventory with 6 rows named "&8Blackjack"
+        set {_l} to location of event-block
+        add 0.5 to x-coordinate of {_l}
+        add 0.5 to y-coordinate of {_l}
+        add 0.5 to z-coordinate of {_l}
+        set {bj.loc::%player%} to {_l}
+        set {_inv} to chest inventory with 5 rows named "&8Blackjack"
         bj_dibujar(player, {_inv}, "")
         open {_inv} to player
         play sound "block.wood.place" to player
@@ -116,13 +121,13 @@ on inventory click:
         stop
     set {_s} to index of clicked slot
     set {_e} to {bj.estado::%player%}
-    if {_s} is 45:
+    if {_s} is 36:
         close player's inventory
         stop
     if {_e} is "apuesta" or "fin":
         # elegir moneda
-        if {_s} is between 37 and 43:
-            set {_k} to {_s} - 36
+        if {_s} is between 28 and 34:
+            set {_k} to {_s} - 27
             if {bj.monedas::%{_k}%} is set:
                 set {bj.sel::%player%} to {_k}
                 play sound "ui.button.click" to player
@@ -130,26 +135,26 @@ on inventory click:
             stop
         # cuánto apuesta
         set {_d} to 0
-        if {_s} is 46:
+        if {_s} is 37:
             set {_d} to -10
-        if {_s} is 47:
+        if {_s} is 38:
             set {_d} to -1
-        if {_s} is 51:
+        if {_s} is 42:
             set {_d} to 1
-        if {_s} is 52:
+        if {_s} is 43:
             set {_d} to 10
         if {_d} is not 0:
             set {bj.cant::%player%} to min({bj.max}, max(1, {bj.cant::%player%} + {_d}))
             play sound "ui.button.click" to player
             bj_dibujar(player, player's current inventory, "")
             stop
-        if {_s} is 53:
+        if {_s} is 44:
             bj_repartir(player)
         stop
     if {_e} is "juego":
-        if {_s} is 47:
+        if {_s} is 38:
             bj_pedir(player)
-        if {_s} is 51:
+        if {_s} is 42:
             bj_plantarse(player)
 
 on inventory close:
@@ -169,6 +174,7 @@ function bj_liberar(p: player):
     delete {bj.j::%{_p}%::*}
     delete {bj.b::%{_p}%::*}
     delete {bj.mazo::%{_p}%::*}
+    delete {bj.loc::%{_p}%}
 
 # ----- cartas: "valor|palo" (valor: A 2..10 J Q K)
 function bj_puntos(v: string) :: number:
@@ -294,32 +300,57 @@ function bj_plantarse(p: player):
     else:
         bj_fin({_p}, "&c&lPERDISTE &7(%{_j}% a %{_b}%)", 0)
 
-# mult: 0 = pierde, 1 = devuelve, 2 = el doble, 2.5 = blackjack
+# mult: 0 = pierde, 1 = devuelve, 2 = el doble, 2.5 = blackjack (redondeado para arriba)
 function bj_fin(p: player, txt: string, mult: number):
     set {bj.estado::%{_p}%} to "fin"
     set {_m} to {bj.apuesta::%{_p}%}
-    set {_paga} to floor({bj.apostado::%{_p}%} * {_mult})
+    set {_paga} to ceil({bj.apostado::%{_p}%} * {_mult})
+    set {_loc} to {bj.loc::%{_p}%}
+    if {_loc} is not set:
+        set {_loc} to {_p}'s location
+    set {_premio} to barrier named "&c&lPerdiste"
     if {_paga} > 0:
-        give {_paga} of {_m} to {_p}
-    if {_mult} > 1:
-        play sound "entity.player.levelup" to {_p}
-        send "%{_txt}% &a+%{_paga}% &7moneda(s)" to {_p}
+        set {_premio} to {_m}
+        set item amount of {_premio} to min(64, {_paga})
+        set name of {_premio} to "%{_txt}% &f+%{_paga}%"
+        set {_entrega} to {_m}
+        set item amount of {_entrega} to {_paga}
+        if {_p} has enough space for {_entrega}:
+            give {_entrega} to {_p}
+        else:
+            drop {_entrega} at {_p}
+            send "&e[Blackjack] Tu inventario está lleno: el premio quedó en el piso." to {_p}
+    # los mismos sonidos que el casino
+    if {_mult} > 2:
+        play sound "entity.player.levelup" with volume 1 and pitch 1 at {_loc}
+        play sound "ui.toast.challenge_complete" with volume 1 and pitch 1 at {_loc}
+        set {_fx} to {_p}'s location
+        add 3 to y-coordinate of {_fx}
+        launch ball large coloured red, yellow and light green fading to white at {_fx} timed 2
+        send title "&6&l¡BLACKJACK!" with subtitle "&a+%{_paga}% &7moneda(s)" to {_p} for 2 seconds
+    else if {_mult} is 2:
+        play sound "entity.experience_orb.pickup" with volume 1 and pitch 1 at {_loc}
+        play sound "entity.player.levelup" with volume 0.6 and pitch 1.4 at {_loc}
+        send title "&a&l¡GANASTE!" with subtitle "&a+%{_paga}% &7moneda(s)" to {_p} for 2 seconds
     else if {_mult} is 1:
-        play sound "block.note_block.pling" to {_p}
-        send "%{_txt}% &7te devolvemos la apuesta" to {_p}
+        play sound "block.note_block.pling" with volume 1 and pitch 1 at {_loc}
+        send title "&e&lEMPATE" with subtitle "&7Te devolvemos la apuesta" to {_p} for 2 seconds
     else:
-        play sound "entity.villager.no" to {_p}
-        send "%{_txt}%" to {_p}
-    bj_dibujar({_p}, {_p}'s current inventory, {_txt})
+        play sound "block.note_block.didgeridoo" with volume 1 and pitch 1 at {_loc}
+        send title "&c&lPERDISTE" with subtitle "" to {_p} for 2 seconds
+    send "&8[&6Blackjack&8] %{_txt}%" to {_p}
+    bj_dibujar({_p}, {_p}'s current inventory, "")
+    set slot 13 of {_p}'s current inventory to {_premio}
     delete {bj.apuesta::%{_p}%}
     delete {bj.apostado::%{_p}%}
 
-# ----- dibuja la mesa
+# ----- dibuja la mesa (5 filas)
+#  fila 1: la banca | fila 2: vacia (el resultado al final) | fila 3: vos | fila 4: monedas | fila 5: botones
 function bj_dibujar(p: player, inv: inventory, resultado: string):
     set {_e} to {bj.estado::%{_p}%}
-    loop 54 times:
+    loop 45 times:
         set slot loop-number - 1 of {_inv} to black stained glass pane named " "
-    # la banca (arriba): mientras juegas, su segunda carta está tapada
+    # la banca: mientras juegas, su segunda carta esta tapada
     set {_i} to 1
     loop {bj.b::%{_p}%::*}:
         if {_i} <= 8:
@@ -339,34 +370,31 @@ function bj_dibujar(p: player, inv: inventory, resultado: string):
             set slot 0 of {_inv} to skeleton skull named "&cBanca &7(%bj_total({bj.b::%{_p}%::*})%)"
     else:
         set slot 0 of {_inv} to skeleton skull named "&cBanca"
-    # el jugador (abajo)
-    set {_i} to 28
+    # vos
+    set {_i} to 19
     loop {bj.j::%{_p}%::*}:
-        if {_i} <= 35:
+        if {_i} <= 26:
             set slot {_i} of {_inv} to bj_carta(loop-value)
         add 1 to {_i}
     if size of {bj.j::%{_p}%::*} > 0:
-        set slot 27 of {_inv} to skull of {_p} named "&aTú &7(%bj_total({bj.j::%{_p}%::*})%)"
+        set slot 18 of {_inv} to skull of {_p} named "&aTú &7(%bj_total({bj.j::%{_p}%::*})%)"
     else:
-        set slot 27 of {_inv} to skull of {_p} named "&aTú"
-    # el resultado en el medio
-    if {_resultado} is not "":
-        set slot 22 of {_inv} to gold block named {_resultado}
-    set slot 45 of {_inv} to barrier named "&cSalir" with lore "&7Si sales en medio de una mano," and "&cpierdes la apuesta."
+        set slot 18 of {_inv} to skull of {_p} named "&aTú"
+    set slot 36 of {_inv} to barrier named "&cSalir" with lore "&7Si sales en medio de una mano," and "&cpierdes la apuesta."
     set {_m} to {bj.monedas::%{bj.sel::%{_p}%}%}
     if {_e} is "juego":
-        set slot 47 of {_inv} to lime concrete named "&a&lPedir carta"
-        set slot 51 of {_inv} to red concrete named "&c&lPlantarse"
+        set slot 38 of {_inv} to lime concrete named "&a&lPedir carta"
+        set slot 42 of {_inv} to red concrete named "&c&lPlantarse"
         if {_m} is set:
             set {_x} to {bj.apuesta::%{_p}%}
             set item amount of {_x} to min(64, {bj.apostado::%{_p}%})
             set lore of {_x} to "&7Apostaste: &e%{bj.apostado::%{_p}%}%"
-            set slot 49 of {_inv} to {_x}
+            set slot 40 of {_inv} to {_x}
         stop
     if {_e} is "banca":
-        set slot 49 of {_inv} to clock named "&7La banca está jugando..."
+        set slot 40 of {_inv} to clock named "&7La banca está jugando..."
         stop
-    # apostando (o después de una mano): elegir moneda y cuánto
+    # apostando (o despues de una mano): elegir moneda y cuanto
     set {_k} to 1
     loop {bj.monedas::*}:
         if {_k} <= 7:
@@ -375,18 +403,15 @@ function bj_dibujar(p: player, inv: inventory, resultado: string):
                 set lore of {_x} to "&a✔ Elegida" and "&7Tienes: &f%bj_tiene({_p}, loop-value)%"
             else:
                 set lore of {_x} to "&eClick para apostar esta" and "&7Tienes: &f%bj_tiene({_p}, loop-value)%"
-            set slot 36 + {_k} of {_inv} to {_x}
+            set slot 27 + {_k} of {_inv} to {_x}
         add 1 to {_k}
-    set slot 46 of {_inv} to red stained glass pane named "&c-10"
-    set slot 47 of {_inv} to red stained glass pane named "&c-1"
-    set slot 51 of {_inv} to lime stained glass pane named "&a+1"
-    set slot 52 of {_inv} to lime stained glass pane named "&a+10"
+    set slot 37 of {_inv} to red stained glass pane named "&c-10"
+    set slot 38 of {_inv} to red stained glass pane named "&c-1"
+    set slot 42 of {_inv} to lime stained glass pane named "&a+1"
+    set slot 43 of {_inv} to lime stained glass pane named "&a+10"
     if {_m} is set:
         set {_x} to {_m}
         set item amount of {_x} to min(64, {bj.cant::%{_p}%})
         set lore of {_x} to "&7Apuesta: &e%{bj.cant::%{_p}%}%" and "&7Máximo: &f%{bj.max}%"
-        set slot 49 of {_inv} to {_x}
-    if {_e} is "fin":
-        set slot 53 of {_inv} to emerald block named "&a&lOtra mano" with lore "&7Ganas: el doble" and "&6Blackjack: 2,5 veces" and "&eEmpate: te devolvemos la apuesta"
-    else:
-        set slot 53 of {_inv} to emerald block named "&a&lRepartir" with lore "&7Ganas: el doble" and "&6Blackjack: 2,5 veces" and "&eEmpate: te devolvemos la apuesta"
+        set slot 40 of {_inv} to {_x}
+    set slot 44 of {_inv} to emerald block named "&a&lJugar" with lore "&6Blackjack: &fx2,5" and "&aGanar: &fx2" and "&eEmpatar: &fx1"
