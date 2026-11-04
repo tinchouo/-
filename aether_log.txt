@@ -1,0 +1,189 @@
+Downloading mojang_1.21.4.jar
+Applying patches
+Starting org.bukkit.craftbukkit.Main
+*** Warning, you've not updated in a while! ***
+*** Please download a new build from https://papermc.io/downloads/paper ***
+2026-11-04T18:16:09.583827305Z ServerMain WARN Advanced terminal features are not available in this environment
+[18:16:09 INFO]: [bootstrap] Running Java 21 (OpenJDK 64-Bit Server VM 21.0.13+9-LTS; Eclipse Adoptium Temurin-21.0.13+9) on Linux 7.0.0-1017-azure (amd64)
+[18:16:09 INFO]: [bootstrap] Loading Paper 1.21.4-232-ver/1.21.4@12d8fe0 (2025-06-09T10:15:42Z) for Minecraft 1.21.4
+[18:16:10 INFO]: [PluginInitializerManager] Initializing plugins...
+[18:16:11 INFO]: [ReobfServer] Remapping server...
+[18:16:19 INFO]: [ReobfServer] Done remapping server in 8324ms.
+[18:16:19 INFO]: [PluginRemapper] Remapping plugin 'plugins/TOD4Eventos.jar'...
+[18:16:19 INFO]: [PluginRemapper] Remapping plugin 'plugins/TOD4Aether.jar'...
+[18:16:19 INFO]: [PluginRemapper] Remapping plugin 'plugins/TOD4.jar'...
+[18:16:19 INFO]: [PluginRemapper] Done remapping plugin 'plugins/TOD4Eventos.jar' in 291ms.
+[18:16:19 INFO]: [PluginRemapper] Done remapping plugin 'plugins/TOD4Aether.jar' in 324ms.
+[18:16:19 INFO]: [PluginRemapper] Done remapping plugin 'plugins/TOD4.jar' in 399ms.
+[18:16:20 INFO]: [PluginInitializerManager] Initialized 3 plugins
+[18:16:20 INFO]: [PluginInitializerManager] Bukkit plugins (3):
+ - TOD4 (2.0.0), TOD4Aether (1.0.0), TOD4Eventos (1.0.0)
+[18:16:24 INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, name=PROD]
+[18:16:25 INFO]: Found new data pack file/bukkit, loading it automatically
+[18:16:25 INFO]: Found new data pack paper, loading it automatically
+[18:16:26 INFO]: No existing world data, creating new world
+[18:16:27 INFO]: Loaded 1370 recipes
+[18:16:27 INFO]: Loaded 1481 advancements
+[18:16:27 INFO]: [MCTypeRegistry] Initialising converters for DataConverter...
+[18:16:27 INFO]: [MCTypeRegistry] Finished initialising converters for DataConverter in 240.5ms
+[18:16:27 INFO]: Starting minecraft server version 1.21.4
+[18:16:27 INFO]: Loading properties
+[18:16:27 INFO]: This server is running Paper version 1.21.4-232-ver/1.21.4@12d8fe0 (2025-06-09T10:15:42Z) (Implementing API version 1.21.4-R0.1-SNAPSHOT)
+[18:16:27 INFO]: [spark] This server bundles the spark profiler. For more information please visit https://docs.papermc.io/paper/profiling
+[18:16:27 INFO]: Server Ping Player Sample Count: 12
+[18:16:27 INFO]: Using 4 threads for Netty based IO
+[18:16:28 INFO]: [MoonriseCommon] Paper is using 1 worker threads, 1 I/O threads
+[18:16:28 INFO]: [ChunkTaskScheduler] Chunk system is using population gen parallelism: true
+[18:16:29 INFO]: Default game type: SURVIVAL
+[18:16:29 INFO]: Generating keypair
+[18:16:29 INFO]: Starting Minecraft server on *:25565
+[18:16:29 INFO]: Using epoll channel type
+[18:16:29 INFO]: Paper: Using libdeflate (Linux x86_64) compression from Velocity.
+[18:16:29 INFO]: Paper: Using OpenSSL 3.x.x (Linux x86_64) cipher from Velocity.
+[18:16:29 INFO]: [TOD4] Loading server plugin TOD4 v2.0.0
+[18:16:29 INFO]: [TOD4Eventos] Loading server plugin TOD4Eventos v1.0.0
+[18:16:29 INFO]: [TOD4Aether] Loading server plugin TOD4Aether v1.0.0
+[18:16:29 WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[18:16:29 WARN]: The server will make no attempt to authenticate usernames. Beware.
+[18:16:29 WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[18:16:29 WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[18:16:29 INFO]: Preparing level "world"
+[18:16:43 INFO]: Preparing start region for dimension minecraft:overworld
+[18:16:43 INFO]: Preparing spawn area: 2%
+[18:16:44 INFO]: Preparing spawn area: 2%
+[18:16:44 INFO]: Preparing spawn area: 2%
+[18:16:45 INFO]: Preparing spawn area: 2%
+[18:16:45 INFO]: Preparing spawn area: 2%
+[18:16:46 INFO]: Preparing spawn area: 6%
+[18:16:46 INFO]: Preparing spawn area: 18%
+[18:16:47 INFO]: Preparing spawn area: 18%
+[18:16:47 INFO]: Preparing spawn area: 18%
+[18:16:48 INFO]: Preparing spawn area: 48%
+[18:16:48 INFO]: Preparing spawn area: 51%
+[18:16:49 INFO]: Preparing spawn area: 51%
+[18:16:49 INFO]: Preparing spawn area: 59%
+[18:16:50 INFO]: Preparing spawn area: 71%
+[18:16:50 INFO]: Preparing spawn area: 89%
+[18:16:50 INFO]: Time elapsed: 7132 ms
+[18:16:50 INFO]: Preparing start region for dimension minecraft:the_nether
+[18:16:50 INFO]: Preparing spawn area: 2%
+[18:16:51 INFO]: Preparing spawn area: 2%
+[18:16:51 INFO]: Preparing spawn area: 22%
+[18:16:52 INFO]: Preparing spawn area: 34%
+[18:16:52 INFO]: Preparing spawn area: 67%
+[18:16:52 INFO]: Time elapsed: 2104 ms
+[18:16:52 INFO]: Preparing start region for dimension minecraft:the_end
+[18:16:52 INFO]: Preparing spawn area: 2%
+[18:16:53 INFO]: Preparing spawn area: 34%
+[18:16:53 INFO]: Time elapsed: 621 ms
+[18:16:53 INFO]: [TOD4] Enabling TOD4 v2.0.0
+[18:16:53 INFO]: [TOD4] Mensajes de los cambios cargados (nombres cambio_* y aviso_*).
+[18:16:53 INFO]: [TOD4] Avisos: se borraron 26 mensajes de los dias 1 a 6 (copia en avisos.yml, seccion borrados).
+[18:16:53 INFO]: [TOD4] Misiones: la opcional op7 pasó a la lista de opcionales (con el progreso de cada uno).
+[18:16:54 INFO]: [TOD4] TOD4 listo. Dia actual: 1
+[18:16:54 INFO]: [TOD4Eventos] Enabling TOD4Eventos v1.0.0
+[18:16:54 INFO]: [TOD4Aether] Enabling TOD4Aether v1.0.0
+[18:16:54 INFO]: [TOD4Aether] Copiado aether.yml desde plugins/TOD4 (el mapa del Aether sigue igual).
+[18:16:54 INFO]: [TOD4Aether] TOD4Aether listo.
+[18:16:54 INFO]: [spark] Starting background profiler...
+[18:16:56 INFO]: Done preparing level "world" (26.878s)
+[18:16:56 INFO]: Running delayed init tasks
+[18:16:56 INFO]: Done (47.964s)! For help, type "help"
+[18:16:56 INFO]: *************************************************************************************
+[18:16:56 INFO]: This is the first time you're starting this server.
+[18:16:56 INFO]: It's recommended you read our 'Getting Started' documentation for guidance.
+[18:16:56 INFO]: View this and more helpful information here: https://docs.papermc.io/paper/next-steps
+[18:16:56 INFO]: *************************************************************************************
+[18:17:44 INFO]: ▶ Uso: /tod4:aether_mesa dar [jugador] | abrir | resultado <receta>. Recetas en mesa6x6.yml.
+[18:17:46 INFO]: ▶ Mobs del Aether: prendidos | vivos: 0 {}
+[18:17:46 INFO]: ▶ /tod4:aether_mobs on|off|lugares - opciones en plugins/TOD4Aether/mobs.yml
+[18:17:48 INFO]: ▶ Aire del Aether: apagado (se prende con el cambio d7.aire en /tod4:cambios)
+[18:17:48 INFO]: ▶ /tod4:aether_casco [jugador] | /tod4:aether_aire vaciar|llenar (prueba, con o sin casco puesto)
+[18:17:50 INFO]: ▶ No hay punto de caída: se cae sobre el spawn del Overworld. Ponerlo: /tod4:aether_caida poner [altura]
+[18:17:52 INFO]: tier4:
+[18:17:52 INFO]:  - minecraft:experience_bottle 64-100
+[18:17:52 INFO]:  - minecraft:netherite_ingot 0:25,1:50,2:25
+[18:17:52 INFO]:  - minecraft:emerald_block 5-16
+[18:17:52 INFO]:  - minecraft:netherite_scrap 1-3
+[18:17:52 INFO]:  - minecraft:emerald 20-48
+[18:17:52 INFO]:  - minecraft:diamond_block 0:25,1:50,2:25
+[18:17:52 INFO]:  - minecraft:enchanted_golden_apple 1 50%
+[18:17:52 INFO]:  - oraxen:moneda_roja 3-5
+[18:17:52 INFO]:  - oraxen:totem_cuy 1-5
+[18:17:52 INFO]:  - oraxen:totem_golem 1 75%
+[18:17:54 INFO]: ✔ Aether recargado (aether.yml, loot.yml, mobs.yml y aire.yml).
+[18:17:56 INFO]: ✔ Config recargada.
+[18:18:00 INFO]: Set the time to 13000
+[18:18:02 INFO]: Mundo: - | iniciado: false | borrando: false
+[18:18:02 INFO]: Puertos abiertos: 0 | cola: 0 | piezas pegadas: 0
+[18:18:02 INFO]: Caminos: 4 (4 principales + 0 azules)
+[18:18:04 INFO]: [TOD4 Eventos] Creando el mundo de la cueva...
+[18:18:04 INFO]: Preparing start region for dimension minecraft:agujero_infierno
+[18:18:04 INFO]: Time elapsed: 1 ms
+[18:18:04 INFO]: [TOD4 Eventos] Cueva creada en el mundo agujero_infierno. Andá con /tod4eventos:agujero tp.
+[18:18:08 WARN]: Can't keep up! Is the server overloaded? Running 3341ms or 66 ticks behind
+[18:18:16 INFO]: [TOD4 Eventos] Agujero del Infierno 2.0: RECONSTRUYENDO | mundo: agujero_infierno | foto: no (la cueva generada)
+[18:18:16 INFO]: [TOD4 Eventos] Entrada: sin poner | salida de la cueva: sin poner | salida: sin poner (spawn)
+[18:18:16 INFO]: [TOD4 Eventos] /tod4eventos:agujero crear|tp|entrada [1|2]|bloquesalida [1|2]|ver|salida|llegada|foto|abrir|cerrar [min]|terminar|cofre <facil|dificil>|quitarcofre|espera <jugador>|recargar
+[18:18:18 INFO]: [TOD4 Eventos] Reconstruyendo...
+[18:18:38 INFO]: [TOD4 Eventos] Agujero del Infierno reconstruido (0 bloques, 0 cofres). Está abierto.
+[18:18:40 INFO]: [TOD4 Eventos] Sacando la foto de la cueva (unos segundos)...
+[18:18:54 INFO]: [TOD4 Eventos] Foto guardada (21 tipos de bloque). Cada reconstrucción deja la cueva así.
+[18:19:02 INFO]: [TOD4 Eventos] Cerrada (con la pared) por 1:00.
+[18:19:03 INFO]: [TOD4Eventos] [Agujero] Pared: 222 bloques (solo en los tuneles que siguen hacia la cueva).
+[18:19:04 INFO]: [TOD4 Eventos] Saqué 0 mobs de la cueva.
+[18:19:06 INFO]: [TOD4 Eventos] El cartel vuelve arriba de la entrada.
+[18:19:18 INFO]: ▶ Uso: /tod4:alucinar <jugador> [segundos] (0 = se le pasa)
+[18:19:20 INFO]: ✖ Jugador no encontrado.
+[18:19:22 INFO]: ✖ Jugador no encontrado.
+[18:19:24 INFO]: ✖ No encontré a nadie.
+[18:19:26 INFO]: ✖ Uso: /tod4 corazon [rojo|amarillo|morado] [jugador] [cantidad]
+[18:19:28 INFO]: [TOD4 Eventos] Reconstruyendo...
+[18:19:30 INFO]: [TOD4 Eventos] Agujero del Infierno reconstruido (222 bloques, 0 cofres). Está abierto.
+[18:19:50 INFO]: [TOD4 Eventos] Agujero del Infierno 2.0: ABIERTO | mundo: agujero_infierno | foto: sí
+[18:19:50 INFO]: [TOD4 Eventos] Entrada: sin poner | salida de la cueva: sin poner | salida: sin poner (spawn)
+[18:19:50 INFO]: [TOD4 Eventos] /tod4eventos:agujero crear|tp|entrada [1|2]|bloquesalida [1|2]|ver|salida|llegada|foto|abrir|cerrar [min]|terminar|cofre <facil|dificil>|quitarcofre|espera <jugador>|recargar
+[18:19:52 INFO]: Stopping the server
+[18:19:52 INFO]: Stopping server
+[18:19:52 INFO]: [TOD4Aether] Disabling TOD4Aether v1.0.0
+[18:19:52 INFO]: [TOD4Eventos] Disabling TOD4Eventos v1.0.0
+[18:19:52 INFO]: [TOD4] Disabling TOD4 v2.0.0
+[18:19:52 INFO]: Saving players
+[18:19:52 INFO]: Saving worlds
+[18:19:52 INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[18:19:52 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world'
+[18:19:52 INFO]: [ChunkHolderManager] Halted chunk system for world 'world'
+[18:19:52 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world'
+[18:19:53 INFO]: [ChunkHolderManager] Saved 841 block chunks, 49 entity chunks, 2 poi chunks in world 'world' in 0.90s
+[18:19:53 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world'
+[18:19:53 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world'
+[18:19:53 INFO]: Saving chunks for level 'ServerLevel[world_nether]'/minecraft:the_nether
+[18:19:53 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world_nether'
+[18:19:53 INFO]: [ChunkHolderManager] Halted chunk system for world 'world_nether'
+[18:19:53 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world_nether'
+[18:19:54 INFO]: [ChunkHolderManager] Saved 841 block chunks, 49 entity chunks, 0 poi chunks in world 'world_nether' in 0.41s
+[18:19:54 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world_nether'
+[18:19:54 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world_nether'
+[18:19:54 INFO]: Saving chunks for level 'ServerLevel[world_the_end]'/minecraft:the_end
+[18:19:54 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world_the_end'
+[18:19:54 INFO]: [ChunkHolderManager] Halted chunk system for world 'world_the_end'
+[18:19:54 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world_the_end'
+[18:19:54 INFO]: [ChunkHolderManager] Saved 841 block chunks, 49 entity chunks, 0 poi chunks in world 'world_the_end' in 0.27s
+[18:19:54 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world_the_end'
+[18:19:54 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world_the_end'
+[18:19:54 INFO]: Saving chunks for level 'ServerLevel[agujero_infierno]'/minecraft:agujero_infierno
+[18:19:54 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'agujero_infierno'
+[18:19:54 INFO]: [ChunkHolderManager] Halted chunk system for world 'agujero_infierno'
+[18:19:54 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'agujero_infierno'
+[18:19:54 INFO]: [ChunkHolderManager] Saved 0 block chunks, 0 entity chunks, 0 poi chunks in world 'agujero_infierno' in 0.03s
+[18:19:54 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'agujero_infierno'
+[18:19:54 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'agujero_infierno'
+[18:19:54 INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[18:19:54 INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[18:19:54 INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[18:19:54 INFO]: ThreadedAnvilChunkStorage (agujero_infierno): All chunks are saved
+[18:19:54 INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[18:19:54 INFO]: Waiting for I/O tasks to complete...
+[18:19:54 INFO]: All I/O tasks to complete
+[18:19:54 INFO]: [MoonriseCommon] Awaiting termination of worker pool for up to 60s...
+[18:19:54 INFO]: [MoonriseCommon] Awaiting termination of I/O pool for up to 60s...
