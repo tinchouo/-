@@ -158,7 +158,7 @@ final class Premios implements Listener {
     private org.bukkit.NamespacedKey kFuego;
 
     /**
-     * La entrega: titulo grande con el premio (naranja) y abajo el ganador (amarillo). Si el ganador esta conectado,
+     * La entrega: titulo grande "#1" (naranja) y abajo el ganador (amarillo); el premio va en el chat. Si el ganador esta conectado,
      * le salen fuegos artificiales de donde este (en "probar", de donde estas vos). Los fuegos no lastiman.
      */
     void entregar(CommandSender s, String id, boolean prueba) {
@@ -170,7 +170,7 @@ final class Premios implements Listener {
         if (prueba) { if (s instanceof Player p) ven.add(p); else return; }
         else ven.addAll(Bukkit.getOnlinePlayers());
         String titulo = (String) d[0];
-        Title ti = Title.title(Component.text(titulo, NARANJA).decoration(TextDecoration.BOLD, true), Component.text(g, AMARILLO),
+        Title ti = Title.title(Component.text("#1", NARANJA).decoration(TextDecoration.BOLD, true), Component.text(g, AMARILLO),
                 Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(6000), Duration.ofMillis(1200)));
         for (Player p : ven) {
             p.showTitle(ti);
