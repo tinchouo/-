@@ -2,7 +2,8 @@
 #  TOD4 MEJORAS
 #  Plantillas especiales que se ponen en una pieza de armadura en la mesa de herreria:
 #  mejora a la izquierda, pieza en el medio, la derecha vacia.
-#  - Cada pieza lleva UNA mejora (si le pones otra, reemplaza la anterior).
+#  - Cada pieza lleva UNA mejora (si le pones otra, reemplaza la anterior). La armadura nueva lleva DOS
+#    (si le pones una tercera, se va la mas vieja; la misma dos veces no).
 #  - Los efectos NO se suman: dos piezas con la misma mejora = una sola.
 #  - Si una pocion o un faro te da mas, manda eso mientras dure; despues vuelve el de la mejora.
 #  - Crafteo de todas: plantilla de mejora de netherite en el medio y 8 del ingrediente alrededor.
@@ -146,3 +147,20 @@ nightmare:
   pechera: green_pro_chestplate
   pantalones: green_pro_leggings
   botas: green_pro_boots
+
+# =====================================================================
+#  ARMADURA NUEVA (crafteo en la mesa):
+#     P P P    N = pieza de la armadura Nightmare (de arriba)
+#     P N P    P = piel de conejo: 8 en CADA casilla (64 en total)
+#     P P P
+#  Da esa pieza de la armadura nueva, sin encantamientos ni mejoras. Lleva 2 mejoras.
+#  Aca van los nombres de Oraxen de la armadura nueva.
+# =====================================================================
+armadura_nueva:
+  activada: true
+  material: RABBIT_HIDE
+  cantidad: 8
+  casco: "???"
+  pechera: "???"
+  pantalones: "???"
+  botas: "???"

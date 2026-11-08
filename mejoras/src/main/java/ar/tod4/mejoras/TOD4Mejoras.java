@@ -40,14 +40,17 @@ public final class TOD4Mejoras extends JavaPlugin {
     YamlConfiguration cfg;
     YamlConfiguration estado;
     private File estadoFile;
-    NamespacedKey K_MEJORA;
+    NamespacedKey K_MEJORA, K_MEJORA2;
+    private static final NamespacedKey ORAXEN_ID = new NamespacedKey("oraxen", "id");
     private final List<NamespacedKey> recetas = new ArrayList<>();
     Efectos efectos;
     Nightmare nightmare;
+    Nueva nueva;
 
     @Override
     public void onEnable() {
         K_MEJORA = new NamespacedKey(this, "mejora");
+        K_MEJORA2 = new NamespacedKey(this, "mejora2");
         estadoFile = new File(getDataFolder(), "estado.yml");
         estado = YamlConfiguration.loadConfiguration(estadoFile);
         recargar();
@@ -57,6 +60,8 @@ public final class TOD4Mejoras extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new Menu.Listen(), this);
         nightmare = new Nightmare(this);
         getServer().getPluginManager().registerEvents(nightmare, this);
+        nueva = new Nueva(this);
+        getServer().getPluginManager().registerEvents(nueva, this);
         Bukkit.updateRecipes();
     }
 
@@ -64,7 +69,7 @@ public final class TOD4Mejoras extends JavaPlugin {
     public void onDisable() {
         if (efectos != null) efectos.apagar();
         for (NamespacedKey k : recetas) Bukkit.removeRecipe(k);
-        for (String k : new String[]{"nightmare", "nightmare_sculk", "resina_reforzada"}) Bukkit.removeRecipe(new NamespacedKey(this, k));
+        for (String k : new String[]{"nightmare", "nightmare_sculk", "resina_reforzada", "armadura_nueva"}) Bukkit.removeRecipe(new NamespacedKey(this, k));
     }
 
     // ================================================================= config
@@ -99,6 +104,7 @@ public final class TOD4Mejoras extends JavaPlugin {
             if (Bukkit.addRecipe(r)) recetas.add(k);
         }
         if (nightmare != null) nightmare.registrar();
+        if (nueva != null) nueva.registrar();
         Bukkit.updateRecipes();
         getLogger().info(mejoras.size() + " mejoras cargadas.");
     }
@@ -149,6 +155,26 @@ public final class TOD4Mejoras extends JavaPlugin {
         meta.getPersistentDataContainer().set(K_MEJORA, PersistentDataType.STRING, m.id);
         it.setItemMeta(meta);
         return it;
+    }
+
+    /** Todas las mejoras que tiene puestas la pieza (la armadura nueva puede tener 2). */
+    java.util.List<Mejora> mejorasDe(ItemStack it) {
+        java.util.List<Mejora> l = new java.util.ArrayList<>();
+        if (it == null || it.getType().isAir() || !it.hasItemMeta()) return l;
+        var pdc = it.getItemMeta().getPersistentDataContainer();
+        for (NamespacedKey k : new NamespacedKey[]{K_MEJORA, K_MEJORA2}) {
+            String id = pdc.get(k, PersistentDataType.STRING);
+            Mejora m = id == null ? null : mejoras.get(id);
+            if (m != null && !l.contains(m)) l.add(m);
+        }
+        return l;
+    }
+
+    /** Es una pieza de la armadura nueva (la que lleva 2 mejoras). */
+    boolean esDoble(ItemStack it) {
+        if (it == null || !it.hasItemMeta()) return false;
+        String id = it.getItemMeta().getPersistentDataContainer().get(ORAXEN_ID, PersistentDataType.STRING);
+        return id != null && Nueva.ids(this).contains(id);
     }
 
     /** La mejora de este item (plantilla o pieza de armadura), o null. */

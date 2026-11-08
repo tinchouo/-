@@ -118,7 +118,7 @@ final class Nightmare implements Listener {
         return it.getItemMeta().getPersistentDataContainer().get(ORAXEN, PersistentDataType.STRING);
     }
 
-    private static ItemStack oraxen(String id) {
+    static ItemStack oraxen(String id) {
         try {
             Class<?> k = Class.forName("io.th0rgal.oraxen.api.OraxenItems");
             Object b = k.getMethod("getItemById", String.class).invoke(null, id);

@@ -45,7 +45,8 @@ final class Herreria implements Listener {
     private ItemStack resultado(SmithingInventory inv) {
         ItemStack tpl = inv.getInputTemplate(), base = inv.getInputEquipment(), extra = inv.getInputMineral();
         Mejora m = pl.mejoraDe(tpl);
-        if (m == null || base == null || !pl.piezas.contains(base.getType())) return null;
+        boolean doble = pl.esDoble(base);
+        if (m == null || base == null || !(pl.piezas.contains(base.getType()) || doble)) return null;
         if (extra != null && !extra.getType().isAir()) return null;   // la derecha tiene que ir vacia
         ItemStack out = base.clone();
         out.setAmount(1);
@@ -59,9 +60,25 @@ final class Herreria implements Listener {
             for (Mejora x : pl.mejoras.values()) if (t.equals(x.nombre)) return true;
             return false;
         });
-        lore.add(0, TOD4Mejoras.c(m.nombre, m.color));
+        var pdc = meta.getPersistentDataContainer();
+        if (doble) {
+            // la armadura nueva lleva 2: si ya tiene esa, nada; si tiene 2, se va la mas vieja
+            String a = pdc.get(pl.K_MEJORA, PersistentDataType.STRING), b = pdc.get(pl.K_MEJORA2, PersistentDataType.STRING);
+            if (a != null && !pl.mejoras.containsKey(a)) a = null;
+            if (b != null && !pl.mejoras.containsKey(b)) b = null;
+            if (m.id.equals(a) || m.id.equals(b)) return null;
+            if (a == null) { a = b; b = null; }
+            if (a == null) a = m.id; else if (b == null) b = m.id; else { a = b; b = m.id; }
+            pdc.set(pl.K_MEJORA, PersistentDataType.STRING, a);
+            if (b != null) pdc.set(pl.K_MEJORA2, PersistentDataType.STRING, b); else pdc.remove(pl.K_MEJORA2);
+            Mejora ma = pl.mejoras.get(a), mb = b == null ? null : pl.mejoras.get(b);
+            if (mb != null) lore.add(0, TOD4Mejoras.c(mb.nombre, mb.color));
+            lore.add(0, TOD4Mejoras.c(ma.nombre, ma.color));
+        } else {
+            lore.add(0, TOD4Mejoras.c(m.nombre, m.color));
+            pdc.set(pl.K_MEJORA, PersistentDataType.STRING, m.id);
+        }
         meta.lore(lore);
-        meta.getPersistentDataContainer().set(pl.K_MEJORA, PersistentDataType.STRING, m.id);
         out.setItemMeta(meta);
         return out;
     }

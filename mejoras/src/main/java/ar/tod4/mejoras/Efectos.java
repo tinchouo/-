@@ -87,9 +87,9 @@ final class Efectos implements Listener {
         Estado e = new Estado();
         Set<String> vistas = new HashSet<>();
         for (ItemStack it : p.getInventory().getArmorContents()) {
-            if (it == null || !pl.piezas.contains(it.getType())) continue;
-            Mejora m = pl.mejoraDe(it);
-            if (m == null || !vistas.add(m.id)) continue;      // la misma mejora dos veces no suma
+            if (it == null || !(pl.piezas.contains(it.getType()) || pl.esDoble(it))) continue;
+            for (Mejora m : pl.mejorasDe(it)) {
+            if (!vistas.add(m.id)) continue;      // la misma mejora dos veces no suma
             for (Mejora.Efecto ef : m.efectos.values()) {
                 if (!pl.efectoOn(m, ef)) continue;
                 switch (ef.tipo) {
@@ -101,6 +101,7 @@ final class Efectos implements Listener {
                     case SONAR -> e.sonar = Math.max(e.sonar, ef.valor);
                     case SANADOR -> e.sanador = Math.max(e.sanador, ef.valor);
                 }
+            }
             }
         }
         return e;
