@@ -3,6 +3,7 @@ package ar.tod4.creditos;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -24,27 +25,31 @@ import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
+import io.papermc.paper.entity.TeleportFlag;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.sound.Sound;
 import net.kyori.adventure.sound.SoundStop;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.TextColor;
 import net.kyori.adventure.title.Title;
 
 /**
  * Una pasada de los creditos para un grupo de jugadores (todos, o solo uno para probar).
  *  - Todos quedan en espectador "pegados" a una camara invisible (no se pueden mover ni girar), adentro de una caja
  *    negra (no se ve el mundo).
- *  - Adelante de la camara, en un "plano" a "distancia" bloques, van los textos, el logo y las capturas (TextDisplay;
- *    el logo y las capturas son "letras" del pack).
- *    Todos estan en el mismo punto (justo adelante) y se mueven con la "translation" de su transformacion: asi el
- *    cliente los sube suave solo (interpolacion), sin mandar nada cada tick.
+ *  - Adelante de la camara, a "distancia" bloques, van los textos y el logo (TextDisplay; el logo y las capturas son
+ *    "letras" del pack). Todos van montados en un solo "soporte" invisible que sube un poquito cada tick: asi suben
+ *    todos juntos, parejos, y ninguno puede quedar trabado o saltar.
+ *  - Las capturas quedan quietas a los costados y se van turnando (siempre hay una).
  *  - Las entidades solo las ven los que miran los creditos.
  * Las medidas estan en pixeles de pantalla (1280 x 720) como el video; "k" pasa de pixeles a bloques para el FOV 70.
+ * Los renglones aparecen y se van bastante por fuera de la pantalla, asi tampoco se ve con FOV alto (hasta Quake Pro).
  */
 final class Show {
 
-    private static final double MARGEN = 60;
-    private static final int CW = 352, CH = 198, MARG = 36;
+    /** Pixeles por fuera de la pantalla (FOV 70) donde aparecen/se van los renglones: alcanza para FOV 110. */
+    private static final double MARGEN = 420;
+    private static final int MARG = 28;
 
     private final TOD4Creditos pl;
     final List<Player> viendo;
@@ -55,6 +60,7 @@ final class Show {
     private Location ojo, centro;
     private double k;
     private ArmorStand camara;
+    private TextDisplay soporte;
     private final List<Entity> entidades = new ArrayList<>();
     private BukkitTask tarea;
     private int t;
@@ -65,10 +71,11 @@ final class Show {
     // tiempos en ticks desde que arranca
     private int tMusica, tFlash, tSube, tTermina, tGracias, tColores, tSeVa, tFin;
     private double v;   // pixeles por tick
+    private int cw, ch;  // tamano de las capturas
 
     private final List<Ev> eventos = new ArrayList<>();
     private int ev;
-    private TextDisplay gracias, titulo;
+    private TextDisplay gracias, titulo, proxima;
     private int capturas;
     private final List<Fundido> fundidos = new ArrayList<>();
     private record Fundido(TextDisplay d, int t0, int t1, int anim) { }
@@ -104,10 +111,11 @@ final class Show {
         tSeVa = negro + ticks("se_va", 182.5);
         tFin = negro + ticks("fin", 185.5);
         v = c.alto / Math.max(1, tTermina - tSube);
-
         double dist = pl.getConfig().getDouble("pantalla.distancia", 6);
         double fov = pl.getConfig().getDouble("pantalla.fov", 70);
         k = 2 * dist * Math.tan(Math.toRadians(fov / 2)) / Contenido.H;
+        cw = Contenido.anchoCaptura(pl);
+        ch = cw * 9 / 16;
     }
 
     void empezar() {
@@ -116,6 +124,8 @@ final class Show {
         ojo = lugarCamara();
         Vector f = ojo.getDirection().setY(0).normalize();
         centro = ojo.clone().add(f.clone().multiply(dist));
+        centro.setYaw(0);
+        centro.setPitch(0);
         World w = ojo.getWorld();
         w.getChunkAt(ojo).load();
 
@@ -130,6 +140,13 @@ final class Show {
         });
         mostrar(camara);
         caja();
+        soporte = w.spawn(centro, TextDisplay.class, d -> {
+            d.setVisibleByDefault(false);
+            d.setPersistent(false);
+            d.text(Component.empty());
+            d.setTeleportDuration(1);
+        });
+        mostrar(soporte);
 
         for (Player p : viendo) pl.guardarYPreparar(p, this, ojo);
         for (Player a : viendo) for (Player b : viendo) if (a != b) a.hidePlayer(pl, b);
@@ -137,16 +154,16 @@ final class Show {
         planear();
         t = desde * 20;
         if (desde > 0) t = Math.max(t, tSube);
+        moverSoporte();
         // lo que ya tendria que estar (si se empieza mas adelante para probar)
         while (ev < eventos.size() && eventos.get(ev).tick < t) {
             Ev e = eventos.get(ev++);
             e.a().run();
         }
         tarea = Bukkit.getScheduler().runTaskTimer(pl, this::tick, 1L, 1L);
-        long caps = eventos.stream().filter(e -> e.tick() >= 0).count();
         pl.getLogger().info("[Creditos] empiezan para " + viendo.size() + " jugador(es)" + (prueba ? " (prueba)" : "") + ": "
                 + c.items.size() + " renglones, " + Math.round(v * 20) + " px/s, camara en " + ojo.getWorld().getName() + " "
-                + ojo.getBlockX() + " " + ojo.getBlockY() + " " + ojo.getBlockZ() + ", " + caps + " eventos, " + capturas + " capturas");
+                + ojo.getBlockX() + " " + ojo.getBlockY() + " " + ojo.getBlockZ() + ", " + eventos.size() + " eventos, " + capturas + " capturas");
     }
 
     private Location lugarCamara() {
@@ -181,6 +198,12 @@ final class Show {
         entidades.add(e);
     }
 
+    private void sacar(Entity e) {
+        if (e == null) return;
+        e.remove();
+        entidades.remove(e);
+    }
+
     /** Caja negra alrededor de la camara: 6 paredes finas (de adentro una caja no se ve). */
     private void caja() {
         double r = 18, g = 0.4, lado = 2 * r + 2;
@@ -208,6 +231,9 @@ final class Show {
 
     private double scroll(double tick) { return tick <= tSube ? 0 : v * (tick - tSube); }
 
+    /** El primer tick en que el scroll llega a "s". */
+    private int tickDe(double s) { return s <= 0 ? tSube : tSube + (int) Math.ceil(s / v); }
+
     private void planear() {
         for (Contenido.Item it : c.items) planearItem(it);
         planearCapturas();
@@ -217,36 +243,24 @@ final class Show {
         eventos.add(new Ev(tColores, () -> colores(0xFF5555, 0x781111)));
         eventos.add(new Ev(tColores + 10, () -> colores(0x55AAFF, 0x113388)));
         eventos.add(new Ev(tColores + 20, () -> colores(0x55FF55, 0x117811)));
-        eventos.add(new Ev(tFin, this::terminar));
+        eventos.add(new Ev(tFin, this::fin));
         eventos.sort((a, b) -> Integer.compare(a.tick(), b.tick()));
     }
 
     private void planearItem(Contenido.Item it) {
         double sIn = it.y - Contenido.H - MARGEN, sOut = it.y + it.h + MARGEN;
-        int spawn, mover;
-        double sSpawn;
-        if (sIn <= 0) {
-            spawn = tFlash - 1;
-            mover = tSube;
-            sSpawn = 0;
-        } else {
-            mover = tSube + (int) Math.ceil(sIn / v);
-            spawn = mover - 2;
-            sSpawn = scroll(mover);
-        }
-        int dur = (int) Math.max(1, Math.round((sOut - sSpawn) / v));
-        int quitar = mover + dur + 1;
+        int aparece = sIn <= 0 ? tFlash - 1 : tickDe(sIn) - 1;
+        int seVa = tickDe(sOut);
         Display[] ref = new Display[1];
-        eventos.add(new Ev(spawn, () -> ref[0] = crear(it, sSpawn)));
-        eventos.add(new Ev(mover, () -> { if (ref[0] != null) mover(ref[0], it, sOut, dur); }));
-        eventos.add(new Ev(quitar, () -> { if (ref[0] != null) { ref[0].remove(); entidades.remove(ref[0]); } }));
+        eventos.add(new Ev(aparece, () -> ref[0] = crear(it)));
+        eventos.add(new Ev(seVa, () -> sacar(ref[0])));
     }
 
-    private Vector3f lugar(Contenido.Item it, double s) {
+    /** Lugar del renglon respecto del soporte (el soporte ya lleva el scroll). */
+    private Vector3f lugar(Contenido.Item it) {
         float x = (float) ((it.x - Contenido.W / 2.0) * k);
-        double arriba = it.y - s;
-        float y = it.logo ? (float) ((Contenido.H / 2.0 - (arriba + it.h / 2)) * k)
-                : (float) ((Contenido.H / 2.0 - (arriba + 8 * it.s)) * k);
+        float y = it.logo ? (float) ((Contenido.H / 2.0 - (it.y + it.h / 2)) * k)
+                : (float) ((Contenido.H / 2.0 - (it.y + 8 * it.s)) * k);
         return new Vector3f(x, y, 0);
     }
 
@@ -254,28 +268,19 @@ final class Show {
 
     /** Una imagen del pack: 4 pedazos (la letra de Minecraft no deja glifos de mas de 256) armados con espacios negativos. */
     static Component imagen(String fuente) {
-        return Component.text("\uE001\uF801\uE002\uF802\uE003\uF801\uE004", net.kyori.adventure.text.format.NamedTextColor.WHITE)
-                .font(Key.key(fuente));
+        return Component.text("", TextColor.color(0xFFFFFF)).font(Key.key(fuente));
     }
 
-    private Display crear(Contenido.Item it, double s) {
-        Transformation tr = new Transformation(lugar(it, s), new AxisAngle4f(), new Vector3f(escala(it)), new AxisAngle4f());
-        Display d;
-        if (it.logo) {
-            d = centro.getWorld().spawn(centro, TextDisplay.class, x -> {
-                x.text(imagen(pl.getConfig().getString("logo", "creditos:logo")));
-                texto(x);
-                x.setShadowed(false);
-                base(x, tr);
-            });
-        } else {
-            d = centro.getWorld().spawn(centro, TextDisplay.class, x -> {
-                x.text(it.texto);
-                texto(x);
-                base(x, tr);
-            });
-        }
+    private Display crear(Contenido.Item it) {
+        Transformation tr = new Transformation(lugar(it), new AxisAngle4f(), new Vector3f(escala(it)), new AxisAngle4f());
+        TextDisplay d = soporte.getWorld().spawn(soporte.getLocation(), TextDisplay.class, x -> {
+            x.text(it.logo ? imagen(pl.getConfig().getString("logo", "creditos:logo")) : it.texto);
+            texto(x);
+            if (it.logo) x.setShadowed(false);
+            base(x, tr);
+        });
         mostrar(d);
+        soporte.addPassenger(d);
         return d;
     }
 
@@ -297,64 +302,52 @@ final class Show {
         x.setAlignment(TextDisplay.TextAlignment.CENTER);
     }
 
-    private void mover(Display d, Contenido.Item it, double sOut, int dur) {
-        d.setInterpolationDelay(0);
-        d.setInterpolationDuration(dur);
-        d.setTransformation(new Transformation(lugar(it, sOut), new AxisAngle4f(), new Vector3f(escala(it)), new AxisAngle4f()));
+    /** El soporte (y todos los renglones montados) a la altura del scroll de ahora. */
+    private void moverSoporte() {
+        if (soporte == null || !soporte.isValid()) return;
+        Location l = centro.clone().add(0, scroll(t) * k, 0);
+        if (soporte.getLocation().distanceSquared(l) > 1e-8) soporte.teleport(l, TeleportFlag.EntityState.RETAIN_PASSENGERS);
     }
-
 
     // ------------------------------------------------------------------------------------------------ capturas
 
-    /** Las capturas quedan quietas en la pantalla (al medio, a un costado), aparecen y desaparecen, una de cada lado. */
+    /**
+     * Las capturas quedan quietas en la pantalla (al medio, a un costado) y se van turnando, una de cada lado: mientras
+     * una se va, la otra ya aparece. Desde que el logo deja libre el medio hasta que termina de subir todo.
+     */
     private void planearCapturas() {
         List<String> caps = pl.getConfig().getStringList("capturas");
         if (caps.isEmpty() && pl.getConfig().getDefaults() != null) caps = pl.getConfig().getDefaults().getStringList("capturas");
         if (caps.isEmpty()) return;
-        int vis = (int) Math.round(pl.getConfig().getDouble("capturas_segundos", 5.0) * 20);
-        int anim = 12, total = vis + 2 * anim, hueco = 16;
-        int tt = tSube + 60, n = 0, lado = 0;
-        while (tt + total < tTermina && n < caps.size()) {
-            if (scroll(tt + total) + Contenido.H >= c.inicioJugadores) break;
-            boolean izq = lado % 2 == 0;
-            Boolean donde = libre(tt, tt + total, izq) ? Boolean.valueOf(izq) : libre(tt, tt + total, !izq) ? Boolean.valueOf(!izq) : null;
-            if (donde == null) { tt += 5; continue; }
-            final String fuente = caps.get(n);
-            final boolean iz = donde;
-            final int t0 = tt, t1 = tt + total;
-            float cx = (float) (((iz ? MARG + CW / 2.0 : Contenido.W - MARG - CW / 2.0) - Contenido.W / 2.0) * k);
-            float sc = (float) (CH * k / (288 * 0.025));
+        double yc = (Contenido.H - ch) / 2.0;
+        double logoAbajo = 0;
+        for (Contenido.Item it : c.items) if (it.logo) logoAbajo = it.y + it.h;
+        int ini = tickDe(logoAbajo - yc + 30), fin = tTermina;
+        int anim = 16;
+        int n = caps.size();
+        int cada = (fin - ini) / n;
+        int minimo = (int) Math.round(pl.getConfig().getDouble("capturas_minimo_segundos", 4.0) * 20);
+        if (cada < minimo) { n = Math.max(1, (fin - ini) / minimo); cada = (fin - ini) / n; }
+        for (int i = 0; i < n; i++) {
+            final String fuente = caps.get(i);
+            final boolean iz = i % 2 == 0;
+            final int t0 = ini + i * cada - (i == 0 ? 0 : anim / 2), t1 = ini + (i + 1) * cada + (i == n - 1 ? 0 : anim / 2);
+            float cx = (float) (((iz ? MARG + cw / 2.0 : Contenido.W - MARG - cw / 2.0) - Contenido.W / 2.0) * k);
+            float sc = (float) (ch * k / (288 * 0.025));
+            float cy = (float) ((Contenido.H / 2.0 - (yc + ch / 2.0)) * k);
             eventos.add(new Ev(t0, () -> {
                 TextDisplay x = centro.getWorld().spawn(centro, TextDisplay.class, d -> {
                     d.text(imagen(fuente));
                     texto(d);
                     d.setShadowed(false);
-                    base(d, new Transformation(new Vector3f(cx, 0, 0), new AxisAngle4f(), new Vector3f(sc), new AxisAngle4f()));
+                    base(d, new Transformation(new Vector3f(cx, cy, 0), new AxisAngle4f(), new Vector3f(sc), new AxisAngle4f()));
                     d.setTextOpacity((byte) 26);
                 });
                 mostrar(x);
                 fundidos.add(new Fundido(x, t0, t1, anim));
             }));
-            n++;
             capturas++;
-            lado = iz ? 1 : 0;
-            tt += total + hueco;
         }
-    }
-
-    /** Que el texto no se pise con la captura en todo ese rato. */
-    private boolean libre(int t0, int t1, boolean izq) {
-        double yc = (Contenido.H - CH) / 2.0;
-        for (int tt = t0; tt <= t1; tt += 2) {
-            double s = scroll(tt), a = s + yc - 12, b = s + yc + CH + 12;
-            for (Contenido.Item it : c.items) {
-                if (it.y + it.h < a || it.y > b) continue;
-                double izqX = it.x - it.ancho / 2, derX = it.x + it.ancho / 2;
-                if (izq && izqX <= MARG + CW + 30) return false;
-                if (!izq && derX >= Contenido.W - MARG - CW - 30) return false;
-            }
-        }
-        return true;
     }
 
     // ------------------------------------------------------------------------------------------------ momentos
@@ -376,8 +369,11 @@ final class Show {
     }
 
     private void gracias() {
-        gracias = textoFinal(Component.text("Gracias por jugar", Contenido.BL), 5, Contenido.H / 2.0 - 95);
-        titulo = textoFinal(Contenido.tituloFinal(0x55FF55, 0x117811), 9, Contenido.H / 2.0 - 10);
+        gracias = textoFinal(Component.text("Gracias por jugar", Contenido.BL), 5, Contenido.H / 2.0 - 110);
+        titulo = textoFinal(Contenido.tituloFinal(0x55FF55, 0x117811), 9, Contenido.H / 2.0 - 25);
+        String prox = pl.getConfig().getString("final.proxima", "Nos vemos en una próxima edición...");
+        if (prox != null && !prox.isEmpty())
+            proxima = textoFinal(Component.text(prox, TextColor.color(0xAAAAAA)), 3, Contenido.H / 2.0 + 90);
     }
 
     private TextDisplay textoFinal(Component comp, int s, double arriba) {
@@ -394,6 +390,8 @@ final class Show {
     }
 
     private void colores(int a, int b) { if (titulo != null) titulo.text(Contenido.tituloFinal(a, b)); }
+
+    private static byte opacidad(double a) { return (byte) Math.max(26, Math.min(255, (int) Math.round(26 + 229 * Math.max(0, Math.min(1, a))))); }
 
     private void tick() {
         if (terminado) return;
@@ -414,33 +412,49 @@ final class Show {
                 p.setSpectatorTarget(camara);
             }
         }
-        if (viendo.isEmpty()) { terminar(); return; }
+        if (viendo.isEmpty()) { terminar(false); return; }
         while (ev < eventos.size() && eventos.get(ev).tick <= t) {
             try { eventos.get(ev).a().run(); } catch (Exception e) { pl.getLogger().warning("Creditos: " + e); }
             ev++;
             if (terminado) return;
         }
+        moverSoporte();
         // las capturas: aparecen y se van de a poco
-        for (java.util.Iterator<Fundido> i = fundidos.iterator(); i.hasNext(); ) {
+        for (Iterator<Fundido> i = fundidos.iterator(); i.hasNext(); ) {
             Fundido f = i.next();
-            if (t >= f.t1()) { f.d().remove(); entidades.remove(f.d()); i.remove(); continue; }
-            double a = Math.min(1, Math.min((t - f.t0()) / (double) f.anim(), (f.t1() - t) / (double) f.anim()));
-            f.d().setTextOpacity((byte) Math.max(26, Math.min(255, (int) Math.round(26 + 229 * Math.max(0, a)))));
+            if (t >= f.t1()) { sacar(f.d()); i.remove(); continue; }
+            f.d().setTextOpacity(opacidad(Math.min((t - f.t0()) / (double) f.anim(), (f.t1() - t) / (double) f.anim())));
         }
-        // aparecer / irse de a poco
-        if (gracias != null && titulo != null) {
-            int op = 255;
-            if (t < tGracias + 30) op = 26 + (int) ((255 - 26) * Math.max(0, t - tGracias) / 30.0);
-            else if (t >= tSeVa) op = (int) (255 - (255 - 26) * Math.min(1, (t - tSeVa) / 30.0));
-            byte b = (byte) Math.max(26, Math.min(255, op));
-            gracias.setTextOpacity(b);
-            titulo.setTextOpacity(b);
-            if (t >= tSeVa + 30) { gracias.remove(); titulo.remove(); gracias = null; titulo = null; }
+        // el final: aparece y se va de a poco
+        if (gracias != null) {
+            double a = t < tGracias + 30 ? (t - tGracias) / 30.0 : t >= tSeVa ? 1 - (t - tSeVa) / 30.0 : 1;
+            byte b = opacidad(a);
+            for (TextDisplay d : new TextDisplay[]{gracias, titulo, proxima}) if (d != null) d.setTextOpacity(b);
+            if (t >= tSeVa + 30) { sacar(gracias); sacar(titulo); sacar(proxima); gracias = titulo = proxima = null; }
         }
         t++;
     }
 
-    void terminar() {
+    /** Termino solo (no lo cortaron): ademas, si esta configurado, los saca del server con el mensaje final. */
+    private void fin() {
+        List<Player> lista = new ArrayList<>(viendo);
+        terminar(true);
+        boolean expulsar = pl.getConfig().getBoolean(prueba ? "final.expulsar_en_prueba" : "final.expulsar", true);
+        if (!expulsar) return;
+        Component msg = Component.text("Gracias por jugar\n\n", Contenido.BL)
+                .append(Contenido.tituloFinal(0x55FF55, 0x117811))
+                .append(Component.text("\n\n" + pl.getConfig().getString("final.proxima", "Nos vemos en una próxima edición..."), TextColor.color(0xAAAAAA)));
+        if (!prueba && pl.getConfig().getBoolean("final.cerrar_entrada", false)) {
+            // solo pueden entrar los admins (los op entran igual con la whitelist)
+            Bukkit.setWhitelist(true);
+            pl.getLogger().info("[Creditos] whitelist prendida: ya no puede entrar nadie que no sea op");
+        }
+        for (Player p : lista) if (p.isOnline()) p.kick(msg);
+    }
+
+    void terminar() { terminar(false); }
+
+    private void terminar(boolean solo) {
         if (terminado) return;
         terminado = true;
         soltando = true;
@@ -453,9 +467,10 @@ final class Show {
         }
         for (Player a : viendo) for (Player b : viendo) if (a != b && a.isOnline() && b.isOnline()) a.showPlayer(pl, b);
         for (Player p : viendo) if (p.isOnline()) pl.restaurar(p);
+        if (soporte != null) soporte.eject();
         for (Entity e : entidades) e.remove();
         entidades.clear();
-        pl.getLogger().info("[Creditos] terminaron (tick " + t + ")");
+        pl.getLogger().info("[Creditos] terminaron (tick " + t + ")" + (solo ? "" : " cortados"));
         pl.showTermino(this);
     }
 
@@ -474,5 +489,4 @@ final class Show {
         m.put("puede_volar", p.getAllowFlight());
         return m;
     }
-
 }

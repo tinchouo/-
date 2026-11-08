@@ -26,7 +26,7 @@ final class Contenido {
     static final int W = 1280, H = 720;
     static final TextColor ORO = TextColor.color(0xFFBE3C), ORO2 = TextColor.color(0xFFE18C), BL = TextColor.color(0xFFFFFF),
             GR = TextColor.color(0xBEBEBE), VIO = TextColor.color(0xAF96FF);
-    static final int LOGO_H = 600, COL = 230;
+    static final int LOGO_H = 600;
 
     static final class Item {
         boolean logo;
@@ -41,8 +41,17 @@ final class Contenido {
     double finLogo;
 
     private double y;
+    /** Ancho maximo de un renglon: lo que queda en el medio entre las capturas. */
+    private final double maxAncho;
+
+    /** Ancho de las capturas en pixeles de pantalla (0 si no hay capturas). */
+    static int anchoCaptura(TOD4Creditos pl) {
+        return pl.getConfig().getInt("capturas_ancho", 416);
+    }
 
     Contenido(TOD4Creditos pl, Datos d, YamlConfiguration c, Map<String, String> ganadores, YamlConfiguration premios) {
+        int cw = anchoCaptura(pl);
+        maxAncho = cw <= 0 ? W - 80 : W - 2 * (28 + cw) - 32;
         List<Map<?, ?>> orden = c.getMapList("orden");
         Map<String, String> vals = d.valores();
         for (Map<?, ?> m : orden) {
@@ -147,6 +156,7 @@ final class Contenido {
     private void agregar(Component c, String plano, int s, double x, boolean noAvanzar) {
         Item it = new Item();
         it.texto = c; it.s = s; it.x = x; it.y = y; it.h = 9 * s; it.ancho = ancho(plano) * s;
+        if (it.ancho > maxAncho) { it.s = s * maxAncho / it.ancho; it.ancho = maxAncho; }
         items.add(it);
         if (!noAvanzar) y += 9 * s;
     }
@@ -169,21 +179,12 @@ final class Contenido {
             bloques.add(new Object[]{e.nombre, colorEquipo(e.color), ns});
         }
         bloques.sort(Comparator.comparing(b -> ((String) b[0]).toLowerCase()));
-        for (int i = 0; i < bloques.size(); i += 2) {
-            double y0 = y, maxH = 0;
-            for (int k = 0; k < 2 && i + k < bloques.size(); k++) {
-                Object[] b = bloques.get(i + k);
-                double x = bloques.size() - i == 1 ? W / 2.0 : (k == 0 ? W / 2.0 - COL : W / 2.0 + COL);
-                y = y0;
-                agregar(Component.text((String) b[0], (TextColor) b[1]), (String) b[0], 4, x, true);
-                @SuppressWarnings("unchecked") List<String> ns = (List<String>) b[2];
-                for (int j = 0; j < ns.size(); j++) {
-                    y = y0 + 50 + j * 35;
-                    agregar(Component.text(ns.get(j), BL), ns.get(j), 3, x, true);
-                }
-                maxH = Math.max(maxH, 50 + ns.size() * 35);
-            }
-            y = y0 + maxH + 50;
+        for (Object[] b : bloques) {
+            agregar(Component.text((String) b[0], (TextColor) b[1]), (String) b[0], 4, W / 2.0, false);
+            y += 14;
+            @SuppressWarnings("unchecked") List<String> ns = (List<String>) b[2];
+            for (String n : ns) { agregar(Component.text(n, BL), n, 3, W / 2.0, false); y += 8; }
+            y += 50;
         }
         List<String> solos = new ArrayList<>();
         for (Datos.Jugador j : d.jugadores.values())
@@ -192,14 +193,7 @@ final class Contenido {
         if (!solos.isEmpty()) {
             linea(sinEquipo, VIO, 4, W / 2.0);
             y += 22;
-            for (int i = 0; i < solos.size(); i += 2) {
-                double y0 = y;
-                if (i + 1 < solos.size()) {
-                    agregar(Component.text(solos.get(i), BL), solos.get(i), 3, W / 2.0 - COL, true);
-                    agregar(Component.text(solos.get(i + 1), BL), solos.get(i + 1), 3, W / 2.0 + COL, true);
-                } else agregar(Component.text(solos.get(i), BL), solos.get(i), 3, W / 2.0, true);
-                y = y0 + 27 + 10;
-            }
+            for (String n : solos) { agregar(Component.text(n, BL), n, 3, W / 2.0, false); y += 8; }
         }
     }
 

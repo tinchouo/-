@@ -37,13 +37,13 @@ jobs:
           cd srv
           (sleep 80; echo "op tester"; echo "tp tester 5 -60 7"; echo "gamemode survival tester"; sleep 2
            echo "creditos datos"; sleep 2
-           echo "premios ganador mejor_mob Goku"; echo "premios ganador protagonista Misovia"; echo "premios ver"; sleep 1
-           echo "premios entregar mejor_mob"; sleep 35
+           echo "premios ganador mejor_mob Goku"; echo "premios ganador protagonista tester"; echo "premios ver"; sleep 1
+           echo "premios entregar protagonista"; sleep 6
+           echo "say PRUEBA_PARAR"; echo "creditos empezar"; sleep 10; echo "creditos parar"; sleep 2
+           echo "data get entity tester playerGameType"; echo "data get entity tester Pos"; sleep 1
            echo "say PRUEBA_CREDITOS"; echo "creditos empezar"; sleep 8
            echo "data get entity tester playerGameType"; echo "data get entity tester Pos"; sleep 70
-           echo "say PRUEBA_DESPUES"; echo "data get entity tester playerGameType"; echo "data get entity tester Pos"
-           echo "say PRUEBA_PARAR"; echo "creditos empezar"; sleep 10; echo "creditos parar"; sleep 2
-           echo "data get entity tester playerGameType"; echo "data get entity tester Pos"; echo "creditos datos"; sleep 2; echo stop) | timeout 360 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+           echo "creditos datos"; sleep 2; echo stop) | timeout 360 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
           sleep 70
           (cd ../bot && timeout 280 node bot.js > ../srv/bot.txt 2>&1) || true
           wait || true
@@ -54,10 +54,12 @@ jobs:
           N=$(grep -c "PAQUETE.* camera " bot.txt); echo "paquetes de camara: $N"; [ "$N" -ge 6 ] || { echo "::error::No se reengancho la camara"; exit 1; }
           if grep -E "Exception" log.txt | grep -qiE "creditos"; then echo "::error::Excepcion en TOD4Creditos"; exit 1; fi
           grep -q "\[Creditos\] empiezan para 1 jugador" log.txt || { echo "::error::No empezaron los creditos"; exit 1; }
-          grep -q "\[Creditos\] terminaron" log.txt || { echo "::error::No terminaron"; exit 1; }
-          sed -n '/terminaron (tick 1400)/,/terminaron (tick 200)/p' log.txt | grep -q "entity data: 0$" || { echo "::error::Al terminar no volvio a supervivencia"; exit 1; }
-          sed -n '/terminaron (tick 200)/,$p' log.txt | grep -q "entity data: 0$" || { echo "::error::Al parar no volvio a supervivencia"; exit 1; }
-          sed -n '/terminaron (tick 1400)/,/terminaron (tick 200)/p' log.txt | grep -q "\[5.5d, -60.0d, 7.5d\]" || { echo "::error::Al terminar no volvio a donde estaba"; exit 1; }
+          sed -n '/cortados/,/PRUEBA_CREDITOS/p' log.txt | grep -q "entity data: 0$" || { echo "::error::Al parar no volvio a supervivencia"; exit 1; }
+          sed -n '/cortados/,/PRUEBA_CREDITOS/p' log.txt | grep -q "\[5.5d, -60.0d, 7.5d\]" || { echo "::error::Al parar no volvio a donde estaba"; exit 1; }
+          grep -q "terminaron (tick 1400)$" log.txt || { echo "::error::No terminaron solos"; exit 1; }
+          grep -E "tester lost connection" log.txt | head -3
+          grep -q "tester lost connection: .*Gracias por jugar" log.txt || { echo "::error::Al terminar no lo saco con el mensaje"; exit 1; }
+          grep -E "Firework|fuego" log.txt | head -3
       - name: Guardar el log
         if: always()
         run: |

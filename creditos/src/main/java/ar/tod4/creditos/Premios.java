@@ -8,7 +8,6 @@ import java.util.Map;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.SoundCategory;
 import org.bukkit.command.CommandSender;
@@ -155,67 +154,73 @@ final class Premios implements Listener {
 
     // ------------------------------------------------------------------------------------------------ entrega
 
-    private boolean entregando;
+    private static final TextColor NARANJA = TextColor.color(0xFFAA00), AMARILLO = TextColor.color(0xFFFF55);
+    private org.bukkit.NamespacedKey kFuego;
 
-    @SuppressWarnings("unchecked")
+    /**
+     * La entrega: titulo grande con el premio (naranja) y abajo el ganador (amarillo). Si el ganador esta conectado,
+     * le salen fuegos artificiales de donde este (en "probar", de donde estas vos). Los fuegos no lastiman.
+     */
     void entregar(CommandSender s, String id, boolean prueba) {
         Object[] d = lista().get(id);
         if (d == null) { s.sendMessage(Component.text("No existe el premio \"" + id + "\". Mirá /premios ver", NamedTextColor.RED)); return; }
         String g = ganador(id);
         if (g == null) { s.sendMessage(Component.text("Todavía no elegiste el ganador de " + d[0] + " (/premios).", NamedTextColor.RED)); return; }
-        if (entregando) { s.sendMessage(Component.text("Ya se está entregando un premio.", NamedTextColor.RED)); return; }
         List<Player> ven = new ArrayList<>();
         if (prueba) { if (s instanceof Player p) ven.add(p); else return; }
         else ven.addAll(Bukkit.getOnlinePlayers());
         String titulo = (String) d[0];
-        List<String> noms = (List<String>) d[1];
-        int paso = noms.size() > 10 ? 18 : 26;
-        entregando = true;
+        Title ti = Title.title(Component.text(titulo, NARANJA).decoration(TextDecoration.BOLD, true), Component.text(g, AMARILLO),
+                Title.Times.times(Duration.ofMillis(400), Duration.ofMillis(6000), Duration.ofMillis(1200)));
+        for (Player p : ven) {
+            p.showTitle(ti);
+            p.playSound(p, Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.MASTER, 1f, 1f);
+            p.sendMessage(Component.text("🏆 " + titulo + ": ", NARANJA).append(Component.text(g, AMARILLO).decoration(TextDecoration.BOLD, true)));
+        }
+        Player donde = prueba ? (s instanceof Player p ? p : null) : buscar(g);
+        if (donde != null) {
+            final Player q = donde;
+            for (int i = 0; i < 6; i++) later(i * 8, () -> { if (q.isOnline()) fuego(q.getLocation()); });
+        }
+        if (s instanceof Player p && !ven.contains(p)) s.sendMessage(Component.text("Entregado.", NamedTextColor.GREEN));
+    }
 
-        Component tit = Component.text(titulo, ORO).decoration(TextDecoration.BOLD, true);
-        int t = 0;
-        later(t, () -> {
-            for (Player p : ven) {
-                p.showTitle(Title.title(tit, Component.text("Y los nominados son...", NamedTextColor.GRAY),
-                        Title.Times.times(Duration.ofMillis(500), Duration.ofMillis(2500), Duration.ofMillis(300))));
-                p.playSound(p, Sound.BLOCK_NOTE_BLOCK_BELL, SoundCategory.MASTER, 1f, 1f);
-            }
-        });
-        t += 60;
-        for (int i = 0; i < noms.size(); i++) {
-            String n = noms.get(i);
-            float pitch = 0.8f + 0.8f * i / Math.max(1, noms.size() - 1);
-            later(t, () -> {
-                for (Player p : ven) {
-                    p.showTitle(Title.title(tit, Component.text(n, NamedTextColor.WHITE),
-                            Title.Times.times(Duration.ZERO, Duration.ofMillis(paso * 50L + 200), Duration.ZERO)));
-                    p.playSound(p, Sound.BLOCK_NOTE_BLOCK_PLING, SoundCategory.MASTER, 0.8f, pitch);
-                }
-            });
-            t += paso;
+    /** El jugador conectado que mas se parece al nombre del ganador ("Misovia" -> Misovia_, "iGab" -> iGab_203y). */
+    private static Player buscar(String nombre) {
+        String n = limpio(nombre);
+        if (n.isEmpty()) return null;
+        Player exacto = Bukkit.getPlayerExact(nombre);
+        if (exacto != null) return exacto;
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            String q = limpio(p.getName());
+            if (q.equals(n) || q.startsWith(n) || (n.length() >= 4 && q.contains(n))) return p;
         }
-        later(t, () -> {
-            for (Player p : ven) p.showTitle(Title.title(Component.empty(), Component.text("Y el ganador es...", ORO),
-                    Title.Times.times(Duration.ofMillis(200), Duration.ofMillis(3000), Duration.ZERO)));
+        return null;
+    }
+
+    private static String limpio(String s) { return s.toLowerCase().replaceAll("[^a-z0-9]", ""); }
+
+    private void fuego(org.bukkit.Location l) {
+        if (kFuego == null) kFuego = new org.bukkit.NamespacedKey(pl, "fuego_premio");
+        java.util.Random r = new java.util.Random();
+        org.bukkit.Location at = l.clone().add(r.nextDouble() * 4 - 2, 0.5, r.nextDouble() * 4 - 2);
+        l.getWorld().spawn(at, org.bukkit.entity.Firework.class, f -> {
+            org.bukkit.inventory.meta.FireworkMeta m = f.getFireworkMeta();
+            m.addEffect(org.bukkit.FireworkEffect.builder()
+                    .with(r.nextBoolean() ? org.bukkit.FireworkEffect.Type.BALL_LARGE : org.bukkit.FireworkEffect.Type.STAR)
+                    .withColor(org.bukkit.Color.ORANGE, org.bukkit.Color.YELLOW, org.bukkit.Color.fromRGB(0xFFD700))
+                    .withFade(org.bukkit.Color.WHITE).trail(true).flicker(true).build());
+            m.setPower(1);
+            f.setFireworkMeta(m);
+            f.getPersistentDataContainer().set(kFuego, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
         });
-        for (int r = 0; r < 50; r += 2) {
-            float pitch = 0.6f + r / 50f;
-            later(t + r, () -> { for (Player p : ven) p.playSound(p, Sound.BLOCK_NOTE_BLOCK_SNARE, SoundCategory.MASTER, 1f, pitch); });
-        }
-        t += 60;
-        later(t, () -> {
-            for (Player p : ven) {
-                p.showTitle(Title.title(Component.text(g, ORO).decoration(TextDecoration.BOLD, true), Component.text(titulo, NamedTextColor.WHITE),
-                        Title.Times.times(Duration.ofMillis(250), Duration.ofMillis(5000), Duration.ofMillis(1000))));
-                p.playSound(p, Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.MASTER, 1f, 1f);
-                p.playSound(p, Sound.ENTITY_FIREWORK_ROCKET_BLAST, SoundCategory.MASTER, 1f, 1f);
-                p.playSound(p, Sound.ENTITY_FIREWORK_ROCKET_TWINKLE, SoundCategory.MASTER, 1f, 1f);
-                p.spawnParticle(Particle.TOTEM_OF_UNDYING, p.getLocation().add(0, 1, 0), 120, 0.8, 1, 0.8, 0.5);
-                p.spawnParticle(Particle.FIREWORK, p.getLocation().add(0, 2, 0), 80, 1.5, 1, 1.5, 0.15);
-                p.sendMessage(Component.text("🏆 " + titulo + ": ", ORO).append(Component.text(g, NamedTextColor.WHITE).decoration(TextDecoration.BOLD, true)));
-            }
-        });
-        later(t + 20, () -> entregando = false);
+    }
+
+    /** Los fuegos de los premios no lastiman. */
+    @EventHandler
+    public void noLastima(org.bukkit.event.entity.EntityDamageByEntityEvent e) {
+        if (kFuego != null && e.getDamager() instanceof org.bukkit.entity.Firework f
+                && f.getPersistentDataContainer().has(kFuego, org.bukkit.persistence.PersistentDataType.BYTE)) e.setCancelled(true);
     }
 
     private void later(int ticks, Runnable r) { Bukkit.getScheduler().runTaskLater(pl, r, Math.max(1, ticks)); }

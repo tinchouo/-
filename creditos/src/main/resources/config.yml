@@ -22,9 +22,10 @@ musica: "creditos:musica"
 logo: "creditos:logo"     # fuente del pack con el logo
 flash: "creditos:flash"     # fuente del pack con el cuadro blanco
 
-# Capturas que aparecen a los costados (fuentes del pack, una por captura). Salen en este orden.
-# Si la lista queda vacia se usan las 18 del pack.
-capturas_segundos: 4.0
+# Capturas que aparecen a los costados (fuentes del pack, una por captura). Salen en este orden, turnandose
+# (siempre hay una), desde que se va el logo hasta el final. Si la lista queda vacia se usan las 18 del pack.
+capturas_ancho: 416              # ancho en pixeles de pantalla (la pantalla mide 1280). Lo que no entra en el medio se achica
+capturas_minimo_segundos: 4.0    # si son demasiadas para el tiempo, se usan menos
 capturas:
   - "creditos:cap1"
   - "creditos:cap2"
@@ -53,3 +54,10 @@ jugadores:
   equipos_fuera: [tod]
   # nombres que no van en JUGADORES ni en RECORDS
   nombres_fuera: [Trickkv, tinchooide, zFranck, MrNightMareVXS, MrNightMareVHS, yxmeily, Mintysitaa]
+
+# Al terminar
+final:
+  proxima: "Nos vemos en una próxima edición..."
+  expulsar: true             # al terminar (/creditos empezar) los saca del server con el mensaje final
+  expulsar_en_prueba: true   # con /creditos probar tambien (para probarlo entero)
+  cerrar_entrada: false      # true: al terminar prende la whitelist (despues solo entran los op)
