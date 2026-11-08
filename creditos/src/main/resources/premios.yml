@@ -1,0 +1,37 @@
+# Premios (del formulario). El orden es el de la entrega; El Protagonista va ultimo.
+# Los ganadores se eligen en el juego con /premios (no se escriben aca).
+# Despues de cambiar algo: /creditos recargar
+premios:
+  mejor_mob:
+    titulo: "Mejor Mob"
+    nominados: ["Bombitas del Aether", "Ender Zombie", "Phantom Angelical", "Ravager Old", "Araña Old", "Howler", "Cuyes", "Murciélagos Vampiros", "Allay Angelical", "Montapuercos", "Creeper Void", "Creeper Nuclear", "Mosca", "Bruto Roba Corazones", "Ghaster", "Goku", "Clon del Agujero"]
+  mejor_lugar:
+    titulo: "Mejor Dungeon, Evento o Dimensión"
+    nominados: ["Dungeon de Epstein", "Dungeon de Pepe", "Aether", "Backrooms", "Creeper Nuclear con Ruedas", "Evento del Volcán", "Catedral de los Aliens", "Dungeon de la Zombificación", "Boss MrPigstein", "Agujero del Infierno", "Gulag"]
+  mejor_salvada:
+    titulo: "Mejor Salvada"
+    nominados: ["Osornds", "Nightmare", "Misovia", "Rodryx", "Jabber", "Nixo"]
+  muerte_epica:
+    titulo: "Muerte Más Épica"
+    nominados: ["Misovia", "Serafín", "iGab", "_gabo", "Bruno"]
+  mejor_cambio:
+    titulo: "Mejor Cambio de Dificultad"
+    nominados: ["Sida", "Fallar Tótem Cuy", "Backrooms al Dormir", "Tormentas Gamma", "Noches Peligrosas", "Zombie Minero", "Cambios por no Tener Equipo", "Mejoras de Armadura", "Animales con TNT", "Tocar Bedrock", "Hornos Explosivos", "Mesa de Encantamientos Pro"]
+  mejor_team:
+    titulo: "Mejor Team"
+    nominados: ["PETE PETE CLUB", "TAL", "SARAMAMBICHES", "POLENTA", "NEGROS MC", "GUARDIANS OF CHUÑO", "LOS CHAVALES", "LOS PROSTATAS SMP", "APJ TEAM", "SALCHIPAPA", "LOS PILINES", "ICYSLOW", "LOS JEFRI EINSTEIN", "WARNELO", "ECLIPSE", "MALFRIENDS", "MORADO"]
+  mejor_grupo_mobs:
+    titulo: "Mejor Grupo de Mobs"
+    nominados: ["Aether Mobs", "Agujero Mobs", "Mutados Mobs", "Magma Mobs", "Pepe Mobs", "Goblin Mobs", "Raid Mobs", "Alien Mobs"]
+  mejor_cuy:
+    titulo: "El Mejor Cuy"
+    nominados: ["Cuy Ranita", "Cuy Emo", "Cuy Rosa", "Cuy Minty", "Cuy Chisup", "Cuy Esqueleto", "Cuy Gordito"]
+  muerte_imbecil:
+    titulo: "Muerte Más Imbécil"
+    nominados: ["Tirvi", "Reverse", "Banner", "Mfarv", "Nixo"]
+  clip_del_anio:
+    titulo: "Clip del Año"
+    nominados: ["Ariel", "Misovia", "Mfarv", "Trick", "Minamy", "Prapo", "iGab", "Bruno", "Gabo"]
+  protagonista:
+    titulo: "El Protagonista"
+    nominados: ["Misovia", "Tirvi", "iGab", "Mfarv", "Xionex", "Panda"]

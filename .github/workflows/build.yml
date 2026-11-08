@@ -35,8 +35,17 @@ jobs:
             grep -E "\[ERROR\]" build4.log | head -60 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
             exit 1
           }
+      - name: Compilar TOD4Creditos
+        run: |
+          set -o pipefail
+          mvn -B -f creditos/pom.xml package 2>&1 | tee build5.log || {
+            grep -E "\[ERROR\]" build5.log | head -60 | while IFS= read -r l; do echo "::error::${l//%/%25}"; done
+            exit 1
+          }
       - uses: actions/upload-artifact@v4
         with: { name: TOD4, path: target/TOD4.jar }
+      - uses: actions/upload-artifact@v4
+        with: { name: TOD4Creditos, path: creditos/target/TOD4Creditos.jar }
       - uses: actions/upload-artifact@v4
         with: { name: TOD4Aether, path: aether/target/TOD4Aether.jar }
       - uses: actions/upload-artifact@v4

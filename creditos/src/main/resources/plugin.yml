@@ -1,0 +1,17 @@
+name: TOD4Creditos
+version: 1.0.0
+main: ar.tod4.creditos.TOD4Creditos
+api-version: '1.21'
+author: TrucOfDeath
+description: TrucOfDeath 4 - creditos finales y entrega de premios.
+softdepend: [TOD4]
+permissions:
+  tod4creditos.admin:
+    default: op
+commands:
+  creditos:
+    description: Creditos finales (probar solo vos / empezar para todos / parar)
+    permission: tod4creditos.admin
+  premios:
+    description: Premios (elegir ganadores / entregarlos en pantalla)
+    permission: tod4creditos.admin

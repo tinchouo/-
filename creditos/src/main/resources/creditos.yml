@@ -1,0 +1,82 @@
+# Lo que dicen los creditos, en orden. Despues de cambiar algo: /creditos recargar
+# Tipos de renglon:
+#   espacio: N            espacio vacio (en pixeles de pantalla; la pantalla mide 720 de alto)
+#   logo: true            el logo
+#   texto: "..."          con color: "#RRGGBB" y tam: 3..9 (tamano de letra)
+#   titulo: "..."         titulo dorado grande
+#   persona: "Nombre"     con roles: [...]  (un rol que empieza con # va dorado, como subtitulo)
+#   lista: [...]          una lista (los mobs)
+#   numeros: true         la parte de los numeros (ver "numeros" abajo)
+#   records: true         la parte de los records (ver "records" abajo)
+#   premios: true         los ganadores elegidos con /premios (si no hay ninguno, no aparece)
+#   jugadores: true       todos los jugadores por equipo + sin equipo
+# Si un renglon tiene "???" no aparece (asi se pueden dejar cosas sin completar).
+
+orden:
+  - espacio: 60
+  - logo: true
+  - espacio: 200
+  - texto: "Dirigido por Trick"
+    tam: 5
+  - espacio: 300
+  - titulo: "ADMINISTRACIÓN"
+  - persona: "Trick"
+    roles: ["Ideas y dirección", "Eventos", "Dungeons", "Epstein", "Mobs", "Ítems", "Modelos", "Oraxen"]
+  - persona: "tinchooide"
+    roles: ["Plugin TOD4", "Backrooms", "Aether", "Agujero del Infierno", "Gulag", "Música y sonidos", "Mobs", "Ítems", "Modelos", "Eventos", "Oraxen"]
+  - persona: "Frack"
+    roles: ["Tótems", "Sida", "Mobs", "Ítems", "Modelos", "Eventos", "Oraxen"]
+  - persona: "MrNightMareVXS"
+    roles: ["Evento de Halloween", "Ayuda y asistencia a jugadores", "#Builder de los eventos", "Agujero del Infierno", "Evento del Nether", "El Nether nos invade", "Evento final"]
+  - espacio: 190
+  - titulo: "LOS MOBS"
+  - lista: ["Ender Zombie", "Cuy", "Cuy Acorazado", "Alien Volador", "Alien Soldado", "Alien Centinela", "Arañita", "Guardia", "Epstein", "Pigman Bruto", "Ghaster", "Braze", "Bruto de Magma", "Forjador Ígneo", "Magma Piglin", "Magma Hoglin", "Magma Bomba", "Golem de Lava", "Creeper Flash", "Creeper Calamar", "Mini Creeper", "Creeper Nuclear", "Random Creeper", "Void Creeper", "Creeper Electrónico", "Howler", "Serafín Guerrero", "Fantasma Angelical", "Breeze Old", "Thor", "Sumo Angelical", "Secuestrador Aéreo", "Guardia Angelical", "Bomba Voladora", "Yeti Dorado", "Phantom Musulmán", "Montapuercos", "Mago Invocador", "Ravager Old", "Pillager Plus", "Gladiador", "Bruja", "Esqueleto Ballestero", "Esqueleto Pirotécnico", "Esqueleto Dinamitero", "Bruto Anulador", "Bruto Roba Corazones", "Hoglin Old", "Vex del Nether", "Centinela Calcinado", "Pintamundos 2012", "Goku", "Clones Cósmicos", "Papu", "Phantom Truco", "Doppelganger", "Araña Pepe", "Protector de Pepe", "Esbirro de Pepe", "Pepe"]
+  - espacio: 240
+  - numeros: true
+  - espacio: 240
+  - records: true
+  - espacio: 240
+  - premios: true
+  - espacio: 240
+  - jugadores: true
+
+# Los numeros. Lo que va entre llaves lo calcula el plugin:
+#  {muertes} {totems} {revividos} (los que cuenta TOD4)  {horas} {mobs} (entre todos)
+#  {jugadores} {equipos} {meteoritos} {cambios} (cambios de dificultad activos)
+numeros:
+  titulo: "17 DÍAS DE SERVIDOR"
+  lineas:
+    - "{muertes}  muertes"
+    - "{totems}  tótems usados"
+    - "{revividos}  revividos"
+    - "???  dungeons"
+    - "{cambios}  cambios de dificultad"
+    - "3  sanciones"
+    - "{horas}  horas jugadas entre todos"
+    - "{mobs}  mobs matados entre todos"
+    - "{jugadores}  jugadores"
+    - "{equipos}  equipos"
+    - "{meteoritos}  meteoritos"
+
+# Los records. "stat" lo calcula el plugin con las estadisticas de Minecraft:
+#   muertes, horas, saltos, caminado (km), picado (bloques), totems, kills (mobs matados)
+# "orden: menor" = el que menos. "min_horas" = solo cuentan los que jugaron al menos eso.
+# Los que no tienen stat van a mano: ganador: "Nombre" (con "???" no aparece).
+records:
+  titulo: "RÉCORDS"
+  lista:
+    - {titulo: "El que más murió", stat: muertes}
+    - {titulo: "El que menos murió", stat: muertes, orden: menor, min_horas: 20}
+    - {titulo: "El que más jugó", stat: horas}
+    - {titulo: "El que menos jugó", stat: horas, orden: menor, min_horas: 1}
+    - {titulo: "Más tótems usados", stat: totems}
+    - {titulo: "El que más mobs mató", stat: kills}
+    - {titulo: "El que más saltó", stat: saltos}
+    - {titulo: "El que más caminó", stat: caminado}
+    - {titulo: "El que más picó", stat: picado}
+    - {titulo: "Más tiempo en el Aether", ganador: "???"}
+    - {titulo: "El que más veces entró al Agujero", ganador: "???"}
+
+premios_titulo: "PREMIOS"
+jugadores_titulo: "JUGADORES"
+sin_equipo: "Sin equipo"

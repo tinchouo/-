@@ -1,0 +1,50 @@
+# TOD4Creditos - ajustes. Despues de cambiar algo: /creditos recargar (no hace falta reiniciar)
+
+# Tiempos en segundos desde que arranca la cancion (estan medidos con credits_2 de 3 minutos)
+tiempos:
+  negro_antes: 2.0          # pantalla negra antes de que arranque la musica
+  flash: 0.93               # el platillo: flash blanco + aparece el logo
+  empieza_a_subir: 6.0      # el logo deja de estar quieto y todo empieza a subir
+  termina_de_subir: 170.0   # para aca ya se fue todo para arriba
+  aparece_gracias: 171.5    # "Gracias por jugar / TRUCOFDEATH 4" aparece de a poco
+  colores: 177.0            # rojo medio segundo, azul medio segundo, vuelve a verde
+  se_va: 182.5              # se va de a poco
+  fin: 185.5                # termina y todos vuelven a donde estaban
+
+pantalla:
+  distancia: 6              # a cuantos bloques de la camara esta el texto
+  fov: 70                   # el FOV para el que esta armado (Normal). Con mas FOV se ve mas chico
+  # donde se pone la camara (una caja negra la rodea, no se ve nada del mundo).
+  # "auto" = arriba del spawn del mundo principal, en la altura 330
+  camara: auto
+
+musica: "creditos:musica"
+logo: "creditos:logo"
+flash: "creditos:flash"     # fuente del pack con el cuadro blanco
+
+# Capturas que aparecen a los costados (modelos del pack). Se ponen en orden.
+capturas_segundos: 5.0
+capturas:
+  - "creditos:cap1"
+  - "creditos:cap2"
+  - "creditos:cap3"
+  - "creditos:cap4"
+  - "creditos:cap5"
+  - "creditos:cap6"
+  - "creditos:cap7"
+  - "creditos:cap8"
+  - "creditos:cap9"
+  - "creditos:cap10"
+  - "creditos:cap11"
+  - "creditos:cap12"
+  - "creditos:cap13"
+  - "creditos:cap14"
+  - "creditos:cap15"
+
+# Jugadores
+jugadores:
+  minimo_minutos: 10        # los que jugaron menos que esto no aparecen en la lista de jugadores
+  # equipos que no van en JUGADORES ni en RECORDS (el del staff)
+  equipos_fuera: [tod]
+  # nombres que no van en JUGADORES ni en RECORDS
+  nombres_fuera: [Trickkv, tinchooide, zFranck, MrNightMareVXS, MrNightMareVHS, yxmeily, Mintysitaa]
