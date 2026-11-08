@@ -24,22 +24,7 @@ flash: "creditos:flash"     # fuente del pack con el cuadro blanco
 
 # Capturas que aparecen a los costados (modelos del pack). Se ponen en orden.
 capturas_segundos: 5.0
-capturas:
-  - "creditos:cap1"
-  - "creditos:cap2"
-  - "creditos:cap3"
-  - "creditos:cap4"
-  - "creditos:cap5"
-  - "creditos:cap6"
-  - "creditos:cap7"
-  - "creditos:cap8"
-  - "creditos:cap9"
-  - "creditos:cap10"
-  - "creditos:cap11"
-  - "creditos:cap12"
-  - "creditos:cap13"
-  - "creditos:cap14"
-  - "creditos:cap15"
+capturas: []
 
 # Jugadores
 jugadores:
