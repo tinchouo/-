@@ -1,0 +1,66 @@
+name: Probar creditos
+on:
+  push:
+    paths: ['creditos/**', '.github/workflows/creditos.yml', '.github/pruebas/creditos_bot.js']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  probar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with: { distribution: temurin, java-version: '21', cache: maven }
+      - uses: actions/setup-node@v5
+        with: { node-version: '22' }
+      - name: Compilar y preparar
+        run: |
+          mvn -B -q package
+          mvn -B -q -f creditos/pom.xml package
+          mkdir -p srv/plugins && cd srv
+          J=$(curl -s -H "User-Agent: tod4-ci" https://fill.papermc.io/v3/projects/paper/versions/1.21.4/builds)
+          URL=$(echo "$J" | jq -r 'max_by(.id) | .downloads."server:default".url')
+          curl -sL -o paper.jar "$URL"
+          cp ../target/TOD4.jar ../creditos/target/TOD4Creditos.jar plugins/
+          mkdir -p plugins/TOD4 plugins/TOD4Creditos
+          printf 'config_version: 12\n' > plugins/TOD4/config.yml
+          printf 'dia: 15\nmuertes:\n  "1": 7\n  "2": 25\ntotems:\n  "2": 10\n  "3": 19\nrevividos:\n  "2": 21\n' > plugins/TOD4/datos.yml
+          printf 'ultimo: 82\n' > plugins/TOD4/meteoritos.yml
+          printf 'equipos:\n  rjm:\n    tag: RJM\n    nombre: Rejunte Morado\n    color: dark_purple\n    miembros: [a9d63c52-22e0-3fd4-80f1-a288a5170ea6]\n  tod:\n    tag: TOD\n    nombre: tod4\n    color: red\n    miembros: [84f54551-25c3-350e-9045-f32918f3d314]\n' > plugins/TOD4/equipos.yml
+          printf 'jugadores:\n  minimo_minutos: 0\ntiempos:\n  termina_de_subir: 60\n  aparece_gracias: 61\n  colores: 64\n  se_va: 66\n  fin: 68\n' > plugins/TOD4Creditos/config.yml
+          echo "eula=true" > eula.txt
+          printf "online-mode=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\n" > server.properties
+          cd .. && mkdir bot && cd bot && npm init -y > /dev/null && npm i minecraft-protocol@latest > /dev/null && cp ../.github/pruebas/creditos_bot.js bot.js
+      - name: Pasar los creditos con un jugador
+        run: |
+          cd srv
+          (sleep 80; echo "op tester"; echo "tp tester 5 -60 7"; echo "gamemode survival tester"; sleep 2
+           echo "creditos datos"; sleep 2
+           echo "premios ganador mejor_mob Goku"; echo "premios ganador protagonista Misovia"; echo "premios ver"; sleep 1
+           echo "premios entregar mejor_mob"; sleep 35
+           echo "say PRUEBA_CREDITOS"; echo "creditos empezar"; sleep 8
+           echo "data get entity tester playerGameType"; echo "data get entity tester Pos"; sleep 70
+           echo "say PRUEBA_DESPUES"; echo "data get entity tester playerGameType"; echo "data get entity tester Pos"
+           echo "say PRUEBA_PARAR"; echo "creditos empezar"; sleep 10; echo "creditos parar"; sleep 2
+           echo "data get entity tester playerGameType"; echo "data get entity tester Pos"; echo "creditos datos"; sleep 2; echo stop) | timeout 360 java -Xmx2G -jar paper.jar --nogui > log.txt 2>&1 &
+          sleep 70
+          (cd ../bot && timeout 280 node bot.js > ../srv/bot.txt 2>&1) || true
+          wait || true
+          grep -E "TOD4Creditos|Creditos\]|Exception|ERROR|WARN.*[Cc]redit" log.txt | head -40
+          echo ---- datos; grep -A30 "creditos datos" log.txt | grep -vE "^\s*$" | head -30
+          echo ---- despues; sed -n '/PRUEBA_CREDITOS/,$p' log.txt | grep -E "playerGameType|Pos|Creditos|terminaron" | head -20
+          echo ---- bot; grep -E "CUENTA_FINAL|camera|set_title|sound_effect" bot.txt | cut -c1-300 | head -30
+          if grep -E "Exception" log.txt | grep -qiE "creditos"; then echo "::error::Excepcion en TOD4Creditos"; exit 1; fi
+          grep -q "\[Creditos\] empiezan para 1 jugador" log.txt || { echo "::error::No empezaron los creditos"; exit 1; }
+          grep -q "\[Creditos\] terminaron" log.txt || { echo "::error::No terminaron"; exit 1; }
+          sed -n '/PRUEBA_DESPUES/,/PRUEBA_PARAR/p' log.txt | grep -q "playerGameType.*: 0" || { echo "::error::Al terminar no volvio a supervivencia"; exit 1; }
+          sed -n '/PRUEBA_PARAR/,$p' log.txt | grep -q "playerGameType.*: 0" || { echo "::error::Al parar no volvio a supervivencia"; exit 1; }
+      - name: Guardar el log
+        if: always()
+        run: |
+          mkdir /tmp/l && cp srv/log.txt /tmp/l/creditos_server.txt; cp srv/bot.txt /tmp/l/creditos_bot.txt || true
+          cd /tmp/l && git init -q && git checkout -q -b ci-logs
+          git config user.name ci && git config user.email ci@local
+          git add . && git commit -q -m "creditos $GITHUB_SHA"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ci-logs:ci-logs-creditos

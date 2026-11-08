@@ -227,6 +227,14 @@ public final class TOD4Creditos extends JavaPlugin implements Listener {
                 prem.entregar(s, a[1], a.length > 2 && a[2].equalsIgnoreCase("probar"));
             }
             case "ver" -> prem.ver(s);
+            case "ganador" -> {
+                // por si el menu no anda: /premios ganador <premio> <nombre...>
+                if (a.length < 3 || !prem.lista().containsKey(a[1])) { err(s, "Uso: /premios ganador <premio> <nombre>"); return true; }
+                String n = String.join(" ", java.util.Arrays.copyOfRange(a, 2, a.length));
+                estado.set("ganadores." + a[1], n);
+                guardarEstado();
+                ok(s, a[1] + ": " + n);
+            }
             default -> {
                 if (s instanceof Player p) prem.abrir(p);
                 else prem.ver(s);
@@ -240,9 +248,9 @@ public final class TOD4Creditos extends JavaPlugin implements Listener {
         List<String> out = new ArrayList<>();
         Collection<String> op;
         if (cmd.getName().equalsIgnoreCase("premios")) {
-            if (a.length == 1) op = List.of("entregar", "ver");
-            else if (a.length == 2 && a[0].equalsIgnoreCase("entregar")) op = prem.lista().keySet();
-            else if (a.length == 3) op = List.of("probar");
+            if (a.length == 1) op = List.of("entregar", "ver", "ganador");
+            else if (a.length == 2 && (a[0].equalsIgnoreCase("entregar") || a[0].equalsIgnoreCase("ganador"))) op = prem.lista().keySet();
+            else if (a.length == 3 && a[0].equalsIgnoreCase("entregar")) op = List.of("probar");
             else op = List.of();
         } else op = a.length == 1 ? List.of("probar", "empezar", "parar", "datos", "recargar") : List.of();
         String u = a.length > 0 ? a[a.length - 1].toLowerCase() : "";

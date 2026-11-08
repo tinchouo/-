@@ -70,6 +70,7 @@ final class Show {
     private final List<Ev> eventos = new ArrayList<>();
     private int ev;
     private TextDisplay gracias, titulo;
+    private int capturas;
 
     private interface Accion { void run(); }
     private record Ev(int tick, Accion a) { }
@@ -130,6 +131,10 @@ final class Show {
             e.a().run();
         }
         tarea = Bukkit.getScheduler().runTaskTimer(pl, this::tick, 1L, 1L);
+        long caps = eventos.stream().filter(e -> e.tick() >= 0).count();
+        pl.getLogger().info("[Creditos] empiezan para " + viendo.size() + " jugador(es)" + (prueba ? " (prueba)" : "") + ": "
+                + c.items.size() + " renglones, " + Math.round(v * 20) + " px/s, camara en " + ojo.getWorld().getName() + " "
+                + ojo.getBlockX() + " " + ojo.getBlockY() + " " + ojo.getBlockZ() + ", " + caps + " eventos, " + capturas + " capturas");
     }
 
     private Location lugarCamara() {
@@ -318,6 +323,7 @@ final class Show {
             eventos.add(new Ev(t0 + total - anim, () -> escalar(ref[0], cx, 0.001f, anim)));
             eventos.add(new Ev(t0 + total + 1, () -> { if (ref[0] != null) { ref[0].remove(); entidades.remove(ref[0]); } }));
             n++;
+            capturas++;
             lado = iz ? 1 : 0;
             tt += total + hueco;
         }
@@ -427,6 +433,7 @@ final class Show {
         for (Player p : viendo) if (p.isOnline()) pl.restaurar(p);
         for (Entity e : entidades) e.remove();
         entidades.clear();
+        pl.getLogger().info("[Creditos] terminaron (tick " + t + ")");
         pl.showTermino(this);
     }
 
