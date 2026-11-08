@@ -79,7 +79,7 @@ public final class TOD4Creditos extends JavaPlugin implements Listener {
 
     /** Guarda donde estaba (tambien en el archivo, por si se cae el server) y lo deja listo para mirar. */
     void guardarYPreparar(Player p, Show s, Location ojo) {
-        estado.set("pendientes." + p.getUniqueId(), Show.estado(p));
+        estado.createSection("pendientes." + p.getUniqueId(), Show.estado(p));
         guardarEstado();
         viendo(p, true);
         p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());

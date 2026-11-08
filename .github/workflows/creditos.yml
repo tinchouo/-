@@ -56,6 +56,7 @@ jobs:
           grep -q "\[Creditos\] terminaron" log.txt || { echo "::error::No terminaron"; exit 1; }
           sed -n '/PRUEBA_DESPUES/,/PRUEBA_PARAR/p' log.txt | grep -q "playerGameType.*: 0" || { echo "::error::Al terminar no volvio a supervivencia"; exit 1; }
           sed -n '/PRUEBA_PARAR/,$p' log.txt | grep -q "playerGameType.*: 0" || { echo "::error::Al parar no volvio a supervivencia"; exit 1; }
+          sed -n '/PRUEBA_DESPUES/,/PRUEBA_PARAR/p' log.txt | grep -q "\[5.5d, -60.0d, 7.5d\]" || { echo "::error::Al terminar no volvio a donde estaba"; exit 1; }
       - name: Guardar el log
         if: always()
         run: |
