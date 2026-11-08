@@ -55,7 +55,13 @@ final class Contenido {
         List<Map<?, ?>> orden = c.getMapList("orden");
         Map<String, String> vals = d.valores();
         for (Map<?, ?> m : orden) {
-            if (m.containsKey("espacio")) { y += num(m.get("espacio"), 0); continue; }
+            if (m.containsKey("espacio")) {
+                double e = num(m.get("espacio"), 0);
+                // despues del logo, lo que sigue no tiene que asomarse mientras el logo esta quieto (ni con FOV alto)
+                if (y == finLogo && finLogo > 0) e = Math.max(e, 460);
+                y += e;
+                continue;
+            }
             if (m.containsKey("logo")) {
                 Item it = new Item();
                 it.logo = true; it.y = y; it.h = LOGO_H; it.x = W / 2.0; it.ancho = LOGO_H;

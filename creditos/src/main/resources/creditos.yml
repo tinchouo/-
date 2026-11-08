@@ -15,8 +15,8 @@
 orden:
   - espacio: 60
   - logo: true
-  - espacio: 200
-  - texto: "Dirigido por Trick"
+  - espacio: 460
+  - texto: "Creado por Trick"
     tam: 5
   - espacio: 300
   - titulo: "ADMINISTRACIÓN"

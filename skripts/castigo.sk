@@ -1,95 +1,13 @@
-# Castigo: los mobs les pegan el triple (o lo que diga "mult") a los jugadores de la lista.
-# Solo el dano que viene de un mob (golpes, flechas de mobs, explosiones de creepers, habilidades de MythicMobs).
-# El PvP, la caida, el fuego, la lava, etc. quedan igual.
-#
-#   /castigo                    ver como esta
-#   /castigo on | off           prenderlo / apagarlo
-#   /castigo mult <numero>      cuanto multiplica (3 = triple)
-#   /castigo agregar <jugador>  sumar a alguien
-#   /castigo quitar <jugador>   sacar a alguien
-#   /castigo ver                que te avise en el chat cada golpe multiplicado (para probar)
-#
-# Se recarga sin reiniciar:  /sk reload castigo
-
-options:
-    permiso: tod4.admin
-
-on load:
-    if {castigo::mult} is not set:
-        set {castigo::mult} to 3
-    if {castigo::activo} is not set:
-        set {castigo::activo} to true
-    if {castigo::jugadores::*} is not set:
-        add "misovia_" to {castigo::jugadores::*}
-        add "tirvi" to {castigo::jugadores::*}
+# Castigo: los mobs les pegan el doble a Misovia_ y a Tirvi. Solo a ellos.
+# Solo el dano que viene de un mob (golpes, flechas de mobs, explosiones de creepers, habilidades de MythicMobs);
+# el PvP, la caida, el fuego, la lava, etc. quedan igual. No avisa nada a nadie y no tiene comandos.
+# Para sacarlo: borrar este archivo y /sk reload all (o /sk disable castigo).
 
 # "highest": va despues de los otros scripts que cambian el dano (por ejemplo el Breeze Old), asi multiplica el final
 on damage of player with priority highest:
-    {castigo::activo} is true
     attacker is set
     attacker is a living entity
     attacker is not a player
     set {_n} to name of victim
-    set {_n} to {_n} in lowercase
-    {castigo::jugadores::*} contains {_n}
-    set {_antes} to damage
-    set damage to damage * {castigo::mult}
-    if {castigo::ver} is true:
-        loop all players:
-            loop-player has permission "{@permiso}"
-            send "&8[Castigo] &f%victim% &7recibió &c%{_antes}% &7→ &4%damage% &7de &f%type of attacker%" to loop-player
-
-command /castigo [<text>] [<text>]:
-    permission: {@permiso}
-    permission message: &cNo tenés permiso.
-    trigger:
-        if arg-1 is not set:
-            if {castigo::activo} is true:
-                set {_e} to "&aPRENDIDO"
-            else:
-                set {_e} to "&cAPAGADO"
-            send "&6Castigo: %{_e}% &7| los mobs pegan &fx%{castigo::mult}%"
-            send "&7Jugadores: &f%{castigo::jugadores::*}%"
-            stop
-        if arg-1 is "on":
-            set {castigo::activo} to true
-            send "&aCastigo prendido: los mobs les pegan x%{castigo::mult}% a %{castigo::jugadores::*}%."
-        else if arg-1 is "off":
-            set {castigo::activo} to false
-            send "&cCastigo apagado."
-        else if arg-1 is "mult":
-            set {_m} to arg-2 parsed as number
-            if {_m} is not set:
-                send "&cUso: /castigo mult <numero>  (3 = triple)"
-                stop
-            if {_m} <= 0:
-                send "&cTiene que ser mayor que 0."
-                stop
-            set {castigo::mult} to {_m}
-            send "&aAhora los mobs pegan x%{_m}%."
-        else if arg-1 is "agregar":
-            if arg-2 is not set:
-                send "&cUso: /castigo agregar <jugador>"
-                stop
-            set {_n} to arg-2 in lowercase
-            if {castigo::jugadores::*} contains {_n}:
-                send "&e%arg-2% ya estaba."
-                stop
-            add {_n} to {castigo::jugadores::*}
-            send "&a%arg-2% agregado."
-        else if arg-1 is "quitar":
-            if arg-2 is not set:
-                send "&cUso: /castigo quitar <jugador>"
-                stop
-            set {_n} to arg-2 in lowercase
-            remove {_n} from {castigo::jugadores::*}
-            send "&a%arg-2% sacado."
-        else if arg-1 is "ver":
-            if {castigo::ver} is true:
-                delete {castigo::ver}
-                send "&7Ya no te aviso cada golpe."
-            else:
-                set {castigo::ver} to true
-                send "&7Te aviso en el chat cada golpe multiplicado."
-        else:
-            send "&cUso: /castigo [on|off|mult <n>|agregar <jugador>|quitar <jugador>|ver]"
+    {_n} is "Misovia_" or "Tirvi"
+    set damage to damage * 2

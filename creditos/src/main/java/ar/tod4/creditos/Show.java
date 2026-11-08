@@ -319,10 +319,15 @@ final class Show {
         List<String> caps = pl.getConfig().getStringList("capturas");
         if (caps.isEmpty() && pl.getConfig().getDefaults() != null) caps = pl.getConfig().getDefaults().getStringList("capturas");
         if (caps.isEmpty()) return;
-        double yc = (Contenido.H - ch) / 2.0;
+        // 6 lugares: izquierda/derecha x arriba/medio/abajo, turnandose (siempre de un lado distinto que la anterior)
+        double[] alturas = {40, (Contenido.H - ch) / 2.0, Contenido.H - 40 - ch};
+        int[][] orden = {{0, 2}, {1, 1}, {0, 0}, {1, 2}, {0, 1}, {1, 0}};   // {lado (0 izq), altura (0 arriba)}
         double logoAbajo = 0;
         for (Contenido.Item it : c.items) if (it.logo) logoAbajo = it.y + it.h;
-        int ini = tickDe(logoAbajo - yc + 30), fin = tTermina;
+        // la primera sale abajo: arranca cuando el logo ya dejo libre ese lugar
+        int ini = tickDe(logoAbajo - alturas[2] + 20), fin = tTermina;
+        // un poco mas atras que el texto (asi si se llegan a pisar, el texto queda adelante)
+        double dist = pl.getConfig().getDouble("pantalla.distancia", 6), atras = 0.6, q = (dist + atras) / dist;
         int anim = 16;
         int n = caps.size();
         int cada = (fin - ini) / n;
@@ -330,13 +335,18 @@ final class Show {
         if (cada < minimo) { n = Math.max(1, (fin - ini) / minimo); cada = (fin - ini) / n; }
         for (int i = 0; i < n; i++) {
             final String fuente = caps.get(i);
-            final boolean iz = i % 2 == 0;
+            int[] lugar = orden[i % orden.length];
+            final boolean iz = lugar[0] == 0;
+            final double yc = alturas[lugar[1]];
             final int t0 = ini + i * cada - (i == 0 ? 0 : anim / 2), t1 = ini + (i + 1) * cada + (i == n - 1 ? 0 : anim / 2);
-            float cx = (float) (((iz ? MARG + cw / 2.0 : Contenido.W - MARG - cw / 2.0) - Contenido.W / 2.0) * k);
-            float sc = (float) (ch * k / (288 * 0.025));
-            float cy = (float) ((Contenido.H / 2.0 - (yc + ch / 2.0)) * k);
+            float cx = (float) (((iz ? MARG + cw / 2.0 : Contenido.W - MARG - cw / 2.0) - Contenido.W / 2.0) * k * q);
+            float sc = (float) (ch * k * q / (288 * 0.025));
+            float cy = (float) ((Contenido.H / 2.0 - (yc + ch / 2.0)) * k * q);
             eventos.add(new Ev(t0, () -> {
-                TextDisplay x = centro.getWorld().spawn(centro, TextDisplay.class, d -> {
+                Location detras = ojo.clone().add(centro.clone().subtract(ojo).toVector().multiply(q));
+                detras.setYaw(0);
+                detras.setPitch(0);
+                TextDisplay x = centro.getWorld().spawn(detras, TextDisplay.class, d -> {
                     d.text(imagen(fuente));
                     texto(d);
                     d.setShadowed(false);
@@ -369,11 +379,10 @@ final class Show {
     }
 
     private void gracias() {
+        if (!pl.getConfig().getBoolean("final.gracias_en_pantalla", true)) return;
         gracias = textoFinal(Component.text("Gracias por jugar", Contenido.BL), 5, Contenido.H / 2.0 - 110);
         titulo = textoFinal(Contenido.tituloFinal(0x55FF55, 0x117811), 9, Contenido.H / 2.0 - 25);
-        String prox = pl.getConfig().getString("final.proxima", "Nos vemos en una próxima edición...");
-        if (prox != null && !prox.isEmpty())
-            proxima = textoFinal(Component.text(prox, TextColor.color(0xAAAAAA)), 3, Contenido.H / 2.0 + 90);
+        // "Nos vemos en una proxima edicion..." va solo en la pantalla de cuando los saca del server
     }
 
     private TextDisplay textoFinal(Component comp, int s, double arriba) {

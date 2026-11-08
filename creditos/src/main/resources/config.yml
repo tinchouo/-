@@ -57,7 +57,8 @@ jugadores:
 
 # Al terminar
 final:
-  proxima: "Nos vemos en una próxima edición..."
+  gracias_en_pantalla: true  # "Gracias por jugar / TRUCOFDEATH 4" con los colores, al final de los creditos
+  proxima: "Nos vemos en una próxima edición..."   # solo en la pantalla de cuando los saca del server
   expulsar: true             # al terminar (/creditos empezar) los saca del server con el mensaje final
   expulsar_en_prueba: true   # con /creditos probar tambien (para probarlo entero)
   cerrar_entrada: false      # true: al terminar prende la whitelist (despues solo entran los op)

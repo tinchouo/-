@@ -177,10 +177,12 @@ final class Premios implements Listener {
             p.playSound(p, Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.MASTER, 1f, 1f);
             p.sendMessage(Component.text("🏆 " + titulo + ": ", NARANJA).append(Component.text(g, AMARILLO).decoration(TextDecoration.BOLD, true)));
         }
-        Player donde = prueba ? (s instanceof Player p ? p : null) : buscar(g);
+        // muchos fuegos: del ganador si esta conectado; si no (un mob, un lugar, un equipo...) o en "probar", de quien lo entrega
+        Player ganador = prueba ? null : buscar(g);
+        Player donde = ganador != null ? ganador : (s instanceof Player p ? p : null);
         if (donde != null) {
             final Player q = donde;
-            for (int i = 0; i < 6; i++) later(i * 8, () -> { if (q.isOnline()) fuego(q.getLocation()); });
+            for (int i = 0; i < 18; i++) later(i * 4, () -> { if (q.isOnline()) fuego(q.getLocation()); });
         }
         if (s instanceof Player p && !ven.contains(p)) s.sendMessage(Component.text("Entregado.", NamedTextColor.GREEN));
     }
@@ -203,14 +205,14 @@ final class Premios implements Listener {
     private void fuego(org.bukkit.Location l) {
         if (kFuego == null) kFuego = new org.bukkit.NamespacedKey(pl, "fuego_premio");
         java.util.Random r = new java.util.Random();
-        org.bukkit.Location at = l.clone().add(r.nextDouble() * 4 - 2, 0.5, r.nextDouble() * 4 - 2);
+        org.bukkit.Location at = l.clone().add(r.nextDouble() * 6 - 3, 0.5, r.nextDouble() * 6 - 3);
         l.getWorld().spawn(at, org.bukkit.entity.Firework.class, f -> {
             org.bukkit.inventory.meta.FireworkMeta m = f.getFireworkMeta();
             m.addEffect(org.bukkit.FireworkEffect.builder()
                     .with(r.nextBoolean() ? org.bukkit.FireworkEffect.Type.BALL_LARGE : org.bukkit.FireworkEffect.Type.STAR)
                     .withColor(org.bukkit.Color.ORANGE, org.bukkit.Color.YELLOW, org.bukkit.Color.fromRGB(0xFFD700))
                     .withFade(org.bukkit.Color.WHITE).trail(true).flicker(true).build());
-            m.setPower(1);
+            m.setPower(1 + r.nextInt(2));
             f.setFireworkMeta(m);
             f.getPersistentDataContainer().set(kFuego, org.bukkit.persistence.PersistentDataType.BYTE, (byte) 1);
         });
