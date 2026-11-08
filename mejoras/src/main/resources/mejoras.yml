@@ -160,7 +160,7 @@ armadura_nueva:
   activada: true
   material: RABBIT_HIDE
   cantidad: 8
-  casco: "???"
-  pechera: "???"
-  pantalones: "???"
-  botas: "???"
+  casco: todarmor_helmet
+  pechera: todarmor_chestplate
+  pantalones: todarmor_leggings
+  botas: todarmor_boots

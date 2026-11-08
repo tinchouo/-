@@ -37,7 +37,7 @@ final class Nueva implements Listener {
     private static final NamespacedKey ORAXEN = new NamespacedKey("oraxen", "id");
     private static final String[] PIEZAS = {"casco", "pechera", "pantalones", "botas"};
     // por si mejoras.yml no tiene la seccion (los nombres de Oraxen de la armadura nueva)
-    static final String[] NUEVA_DEF = {"???", "???", "???", "???"};
+    static final String[] NUEVA_DEF = {"todarmor_helmet", "todarmor_chestplate", "todarmor_leggings", "todarmor_boots"};
 
     private final TOD4Mejoras pl;
     private final NamespacedKey clave;
