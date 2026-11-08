@@ -73,7 +73,8 @@ final class Datos {
         meteoritos = YamlConfiguration.loadConfiguration(new File(tod, "meteoritos.yml")).getInt("ultimo", 0);
         ConfigurationSection act = YamlConfiguration.loadConfiguration(new File(tod, "cambios.yml")).getConfigurationSection("activos");
         cambios = 0;
-        if (act != null) for (String k : act.getKeys(false)) if (act.getBoolean(k)) cambios++;
+        // los ids tienen puntos ("d14.totem_falla"): en el yml quedan anidados
+        if (act != null) for (String k : act.getKeys(true)) if (act.isBoolean(k) && act.getBoolean(k)) cambios++;
 
         equipos.clear();
         ConfigurationSection eq = YamlConfiguration.loadConfiguration(new File(tod, "equipos.yml")).getConfigurationSection("equipos");

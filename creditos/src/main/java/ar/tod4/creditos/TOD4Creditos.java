@@ -141,6 +141,13 @@ public final class TOD4Creditos extends JavaPlugin implements Listener {
         if (show != null) for (Player v : show.viendo) v.hidePlayer(this, p);
     }
 
+    /** Mientras miran no se mueven nada (si el cliente se despega de la camara, vuelve). */
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void mueve(org.bukkit.event.player.PlayerMoveEvent e) {
+        if (show == null || !show.incluye(e.getPlayer())) return;
+        if (e.getFrom().distanceSquared(e.getTo()) > 1e-6) e.setCancelled(true);
+    }
+
     @EventHandler(priority = EventPriority.HIGHEST)
     public void dejaDeMirar(PlayerStopSpectatingEntityEvent e) {
         if (show != null && show.incluye(e.getPlayer()) && e.getSpectatorTarget() == show.camara()) e.setCancelled(true);
@@ -207,6 +214,9 @@ public final class TOD4Creditos extends JavaPlugin implements Listener {
                             .append(Component.text(rec == null ? "-" : rec[0] + " (" + rec[1] + ")", NamedTextColor.WHITE)));
                 }
                 Contenido c = new Contenido(this, d, creditos, prem.ganadores(), premios);
+                int caps = new Show(this, List.of(), true, c, 0).contarCapturas();
+                ok(s, "Capturas: entran " + caps
+                        + (prem.ganadores().isEmpty() ? ". PREMIOS no aparece: todavía no elegiste ningún ganador (/premios)." : "."));
                 double seg = getConfig().getDouble("tiempos.termina_de_subir", 170) - getConfig().getDouble("tiempos.empieza_a_subir", 6);
                 ok(s, c.items.size() + " renglones; suben a " + Math.round(c.alto / seg) + " píxeles por segundo.");
             }

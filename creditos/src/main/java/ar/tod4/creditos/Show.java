@@ -11,17 +11,13 @@ import org.bukkit.Color;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
 import org.bukkit.util.Vector;
@@ -38,7 +34,8 @@ import net.kyori.adventure.title.Title;
  * Una pasada de los creditos para un grupo de jugadores (todos, o solo uno para probar).
  *  - Todos quedan en espectador "pegados" a una camara invisible (no se pueden mover ni girar), adentro de una caja
  *    negra (no se ve el mundo).
- *  - Adelante de la camara, en un "plano" a "distancia" bloques, van los textos (TextDisplay) y el logo (ItemDisplay).
+ *  - Adelante de la camara, en un "plano" a "distancia" bloques, van los textos, el logo y las capturas (TextDisplay;
+ *    el logo y las capturas son "letras" del pack).
  *    Todos estan en el mismo punto (justo adelante) y se mueven con la "translation" de su transformacion: asi el
  *    cliente los sube suave solo (interpolacion), sin mandar nada cada tick.
  *  - Las entidades solo las ven los que miran los creditos.
@@ -71,6 +68,8 @@ final class Show {
     private int ev;
     private TextDisplay gracias, titulo;
     private int capturas;
+    private final List<Fundido> fundidos = new ArrayList<>();
+    private record Fundido(TextDisplay d, int t0, int t1, int anim) { }
 
     private interface Accion { void run(); }
     private record Ev(int tick, Accion a) { }
@@ -85,7 +84,14 @@ final class Show {
 
     private int ticks(String k, double def) { return (int) Math.round(pl.getConfig().getDouble("tiempos." + k, def) * 20); }
 
-    void empezar() {
+    /** Cuantas capturas entran (para /creditos datos), sin mostrar nada. */
+    int contarCapturas() {
+        tiempos();
+        planearCapturas();
+        return capturas;
+    }
+
+    private void tiempos() {
         int negro = ticks("negro_antes", 2.0);
         tMusica = negro;
         tFlash = negro + ticks("flash", 0.93);
@@ -100,7 +106,11 @@ final class Show {
         double dist = pl.getConfig().getDouble("pantalla.distancia", 6);
         double fov = pl.getConfig().getDouble("pantalla.fov", 70);
         k = 2 * dist * Math.tan(Math.toRadians(fov / 2)) / Contenido.H;
+    }
 
+    void empezar() {
+        tiempos();
+        double dist = pl.getConfig().getDouble("pantalla.distancia", 6);
         ojo = lugarCamara();
         Vector f = ojo.getDirection().setY(0).normalize();
         centro = ojo.clone().add(f.clone().multiply(dist));
@@ -238,15 +248,22 @@ final class Show {
         return new Vector3f(x, y, 0);
     }
 
-    private float escala(Contenido.Item it) { return it.logo ? (float) (it.h * k) : (float) (it.s * k / 0.025); }
+    private float escala(Contenido.Item it) { return it.logo ? (float) (it.h * k / (512 * 0.025)) : (float) (it.s * k / 0.025); }
+
+    /** Una imagen del pack: 4 pedazos (la letra de Minecraft no deja glifos de mas de 256) armados con espacios negativos. */
+    static Component imagen(String fuente) {
+        return Component.text("\uE001\uF801\uE002\uF802\uE003\uF801\uE004", net.kyori.adventure.text.format.NamedTextColor.WHITE)
+                .font(Key.key(fuente));
+    }
 
     private Display crear(Contenido.Item it, double s) {
         Transformation tr = new Transformation(lugar(it, s), new AxisAngle4f(), new Vector3f(escala(it)), new AxisAngle4f());
         Display d;
         if (it.logo) {
-            d = centro.getWorld().spawn(centro, ItemDisplay.class, x -> {
-                x.setItemStack(modelo(pl.getConfig().getString("logo", "creditos:logo")));
-                x.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
+            d = centro.getWorld().spawn(centro, TextDisplay.class, x -> {
+                x.text(imagen(pl.getConfig().getString("logo", "creditos:logo")));
+                texto(x);
+                x.setShadowed(false);
                 base(x, tr);
             });
         } else {
@@ -284,56 +301,43 @@ final class Show {
         d.setTransformation(new Transformation(lugar(it, sOut), new AxisAngle4f(), new Vector3f(escala(it)), new AxisAngle4f()));
     }
 
-    static ItemStack modelo(String id) {
-        ItemStack it = new ItemStack(Material.PAPER);
-        ItemMeta m = it.getItemMeta();
-        NamespacedKey key = NamespacedKey.fromString(id);
-        if (key != null) m.setItemModel(key);
-        it.setItemMeta(m);
-        return it;
-    }
 
     // ------------------------------------------------------------------------------------------------ capturas
 
     /** Las capturas quedan quietas en la pantalla (al medio, a un costado), aparecen y desaparecen, una de cada lado. */
     private void planearCapturas() {
         List<String> caps = pl.getConfig().getStringList("capturas");
+        if (caps.isEmpty() && pl.getConfig().getDefaults() != null) caps = pl.getConfig().getDefaults().getStringList("capturas");
         if (caps.isEmpty()) return;
         int vis = (int) Math.round(pl.getConfig().getDouble("capturas_segundos", 5.0) * 20);
-        int anim = 8, total = vis + 2 * anim, hueco = 24;
+        int anim = 12, total = vis + 2 * anim, hueco = 16;
         int tt = tSube + 60, n = 0, lado = 0;
         while (tt + total < tTermina && n < caps.size()) {
             if (scroll(tt + total) + Contenido.H >= c.inicioJugadores) break;
             boolean izq = lado % 2 == 0;
             Boolean donde = libre(tt, tt + total, izq) ? Boolean.valueOf(izq) : libre(tt, tt + total, !izq) ? Boolean.valueOf(!izq) : null;
             if (donde == null) { tt += 5; continue; }
-            final String modelo = caps.get(n);
+            final String fuente = caps.get(n);
             final boolean iz = donde;
-            final int t0 = tt;
-            ItemDisplay[] ref = new ItemDisplay[1];
+            final int t0 = tt, t1 = tt + total;
             float cx = (float) (((iz ? MARG + CW / 2.0 : Contenido.W - MARG - CW / 2.0) - Contenido.W / 2.0) * k);
-            float sc = (float) (CW * k);
-            eventos.add(new Ev(t0, () -> ref[0] = centro.getWorld().spawn(centro, ItemDisplay.class, x -> {
-                x.setItemStack(modelo(modelo));
-                x.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.NONE);
-                base(x, new Transformation(new Vector3f(cx, 0, 0), new AxisAngle4f(), new Vector3f(0.001f), new AxisAngle4f()));
+            float sc = (float) (CH * k / (288 * 0.025));
+            eventos.add(new Ev(t0, () -> {
+                TextDisplay x = centro.getWorld().spawn(centro, TextDisplay.class, d -> {
+                    d.text(imagen(fuente));
+                    texto(d);
+                    d.setShadowed(false);
+                    base(d, new Transformation(new Vector3f(cx, 0, 0), new AxisAngle4f(), new Vector3f(sc), new AxisAngle4f()));
+                    d.setTextOpacity((byte) 26);
+                });
                 mostrar(x);
-            })));
-            eventos.add(new Ev(t0 + 2, () -> escalar(ref[0], cx, sc, anim)));
-            eventos.add(new Ev(t0 + total - anim, () -> escalar(ref[0], cx, 0.001f, anim)));
-            eventos.add(new Ev(t0 + total + 1, () -> { if (ref[0] != null) { ref[0].remove(); entidades.remove(ref[0]); } }));
+                fundidos.add(new Fundido(x, t0, t1, anim));
+            }));
             n++;
             capturas++;
             lado = iz ? 1 : 0;
             tt += total + hueco;
         }
-    }
-
-    private void escalar(Display d, float cx, float sc, int dur) {
-        if (d == null) return;
-        d.setInterpolationDelay(0);
-        d.setInterpolationDuration(dur);
-        d.setTransformation(new Transformation(new Vector3f(cx, 0, 0), new AxisAngle4f(), new Vector3f(sc), new AxisAngle4f()));
     }
 
     /** Que el texto no se pise con la captura en todo ese rato. */
@@ -392,11 +396,18 @@ final class Show {
     private void tick() {
         if (terminado) return;
         // la camara siempre trabada (aunque aprieten shift)
+        int desdeInicio = t - desde * 20;
         for (Player p : new ArrayList<>(viendo)) {
             if (!p.isOnline()) { viendo.remove(p); continue; }
-            if (p.getSpectatorTarget() != camara) {
+            // al principio el cliente puede no conocer todavia a la camara (lo acabamos de traer de lejos): se la vuelve
+            // a mandar unas veces. Despues, si se despego o se movio aunque sea un poco, se lo vuelve a pegar.
+            boolean reenganchar = desdeInicio == 5 || desdeInicio == 15 || desdeInicio == 30 || desdeInicio == 60;
+            boolean suelto = p.getSpectatorTarget() != camara || p.getWorld() != camara.getWorld()
+                    || p.getLocation().distanceSquared(camara.getLocation()) > 0.25;
+            if (reenganchar || suelto) {
                 if (p.getGameMode() != GameMode.SPECTATOR) p.setGameMode(GameMode.SPECTATOR);
-                if (p.getLocation().distanceSquared(camara.getLocation()) > 4 || p.getWorld() != camara.getWorld()) p.teleport(camara);
+                if (p.getSpectatorTarget() != null) p.setSpectatorTarget(null);
+                p.teleport(camara);
                 p.setSpectatorTarget(camara);
             }
         }
@@ -405,6 +416,13 @@ final class Show {
             try { eventos.get(ev).a().run(); } catch (Exception e) { pl.getLogger().warning("Creditos: " + e); }
             ev++;
             if (terminado) return;
+        }
+        // las capturas: aparecen y se van de a poco
+        for (java.util.Iterator<Fundido> i = fundidos.iterator(); i.hasNext(); ) {
+            Fundido f = i.next();
+            if (t >= f.t1()) { f.d().remove(); entidades.remove(f.d()); i.remove(); continue; }
+            double a = Math.min(1, Math.min((t - f.t0()) / (double) f.anim(), (f.t1() - t) / (double) f.anim()));
+            f.d().setTextOpacity((byte) Math.max(26, Math.min(255, (int) Math.round(26 + 229 * Math.max(0, a)))));
         }
         // aparecer / irse de a poco
         if (gracias != null && titulo != null) {
