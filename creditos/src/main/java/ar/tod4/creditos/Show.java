@@ -59,6 +59,8 @@ final class Show {
     private BukkitTask tarea;
     private int t;
     private boolean terminado;
+    /** El plugin esta despegando la camara a proposito (no cancelarlo). */
+    boolean soltando;
 
     // tiempos en ticks desde que arranca
     private int tMusica, tFlash, tSube, tTermina, tGracias, tColores, tSeVa, tFin;
@@ -406,7 +408,8 @@ final class Show {
                     || p.getLocation().distanceSquared(camara.getLocation()) > 0.25;
             if (reenganchar || suelto) {
                 if (p.getGameMode() != GameMode.SPECTATOR) p.setGameMode(GameMode.SPECTATOR);
-                if (p.getSpectatorTarget() != null) p.setSpectatorTarget(null);
+                soltando = true;   // que el plugin no se cancele a si mismo (ver dejaDeMirar)
+                try { if (p.getSpectatorTarget() != null) p.setSpectatorTarget(null); } finally { soltando = false; }
                 p.teleport(camara);
                 p.setSpectatorTarget(camara);
             }
@@ -440,6 +443,7 @@ final class Show {
     void terminar() {
         if (terminado) return;
         terminado = true;
+        soltando = true;
         if (tarea != null) tarea.cancel();
         String s = pl.getConfig().getString("musica", "creditos:musica");
         for (Player p : viendo) {
@@ -456,6 +460,9 @@ final class Show {
     }
 
     boolean incluye(Player p) { return viendo.contains(p); }
+
+    /** Hay que mantenerle la camara pegada (no la esta soltando el plugin). */
+    boolean trabar(Player p) { return !terminado && !soltando && viendo.contains(p); }
 
     Entity camara() { return camara; }
 

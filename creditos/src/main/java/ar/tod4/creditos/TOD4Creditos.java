@@ -144,13 +144,13 @@ public final class TOD4Creditos extends JavaPlugin implements Listener {
     /** Mientras miran no se mueven nada (si el cliente se despega de la camara, vuelve). */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void mueve(org.bukkit.event.player.PlayerMoveEvent e) {
-        if (show == null || !show.incluye(e.getPlayer())) return;
+        if (show == null || !show.trabar(e.getPlayer())) return;
         if (e.getFrom().distanceSquared(e.getTo()) > 1e-6) e.setCancelled(true);
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void dejaDeMirar(PlayerStopSpectatingEntityEvent e) {
-        if (show != null && show.incluye(e.getPlayer()) && e.getSpectatorTarget() == show.camara()) e.setCancelled(true);
+        if (show != null && show.trabar(e.getPlayer()) && e.getSpectatorTarget() == show.camara()) e.setCancelled(true);
     }
 
     // ------------------------------------------------------------------------------------------------ comandos

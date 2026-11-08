@@ -51,11 +51,12 @@ jobs:
           echo ---- datos; grep -A30 "creditos datos" log.txt | grep -vE "^\s*$" | head -30
           echo ---- despues; sed -n '/PRUEBA_CREDITOS/,$p' log.txt | grep -E "playerGameType|Pos|Creditos|terminaron" | head -20
           echo ---- bot; grep -E "CUENTA_FINAL|camera|set_title|sound_effect" bot.txt | cut -c1-300 | head -30
+          N=$(grep -c "PAQUETE.* camera " bot.txt); echo "paquetes de camara: $N"; [ "$N" -ge 6 ] || { echo "::error::No se reengancho la camara"; exit 1; }
           if grep -E "Exception" log.txt | grep -qiE "creditos"; then echo "::error::Excepcion en TOD4Creditos"; exit 1; fi
           grep -q "\[Creditos\] empiezan para 1 jugador" log.txt || { echo "::error::No empezaron los creditos"; exit 1; }
           grep -q "\[Creditos\] terminaron" log.txt || { echo "::error::No terminaron"; exit 1; }
-          sed -n '/terminaron (tick 1400)/,/terminaron (tick 200)/p' log.txt | grep -q "playerGameType.*: 0" || { echo "::error::Al terminar no volvio a supervivencia"; exit 1; }
-          sed -n '/terminaron (tick 200)/,$p' log.txt | grep -q "playerGameType.*: 0" || { echo "::error::Al parar no volvio a supervivencia"; exit 1; }
+          sed -n '/terminaron (tick 1400)/,/terminaron (tick 200)/p' log.txt | grep -q "entity data: 0$" || { echo "::error::Al terminar no volvio a supervivencia"; exit 1; }
+          sed -n '/terminaron (tick 200)/,$p' log.txt | grep -q "entity data: 0$" || { echo "::error::Al parar no volvio a supervivencia"; exit 1; }
           sed -n '/terminaron (tick 1400)/,/terminaron (tick 200)/p' log.txt | grep -q "\[5.5d, -60.0d, 7.5d\]" || { echo "::error::Al terminar no volvio a donde estaba"; exit 1; }
       - name: Guardar el log
         if: always()
