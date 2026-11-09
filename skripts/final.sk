@@ -568,11 +568,13 @@ on damage of entity:
 	finalSonido("entity.ravager.attack", 1, 0.6)
 	wait 12 ticks
 	if {_p} is online:
-		strike lightning effect at {_p}
 		finalSonido("entity.generic.explode", 0.8, 1)
 		if {-final::prueba} is true:
+			# en la prueba no cae el rayo (el trueno lo escucharia todo el mundo) ni se muere
+			force draw 40 large smoke particles at {_p}
 			send "&7(Prueba: acá te mataría.)" to {_p}
 		else:
+			strike lightning effect at {_p}
 			set health of {_p} to 0
 	set {-final::golpe} to "listo"
 
