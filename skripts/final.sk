@@ -36,7 +36,9 @@ options:
 
 function finalVe(p: player) :: boolean:
 	if {-final::prueba} is true:
-		return {_p} is op
+		if {_p} is op:
+			return true
+		return false
 	return true
 
 function finalMsg(m: text):
@@ -54,7 +56,9 @@ function truquito(t: text):
 	finalSonido("{@sonido-truquito}", 1, 0.8)
 
 function finalSigue() :: boolean:
-	return {-final::activo} is true
+	if {-final::activo} is true:
+		return true
+	return false
 
 # punto al medio del bloque
 function finalCentro(l: location) :: location:
@@ -454,7 +458,7 @@ function finalEscapa(p: player):
 		set {_e} to location of {_p} ~ vector(0, 60, 0)
 	teleport {_p} to {_e}
 	set {-final::quieto::%uuid of {_p}%} to {_e}
-	apply potion of blindness of tier 1 to {_p} for 10 minutes
+	execute console command "effect give %name of {_p}% minecraft:blindness 600 0 true"
 
 # el portal de verdad (el del End) no tiene que mandarlos a ningun lado
 on teleport:
@@ -467,7 +471,7 @@ function finalTerminar():
 	set {_prueba} to {-final::prueba}
 	loop {-final::jug::*}:
 		if loop-value is online:
-			remove blindness from loop-value
+			execute console command "effect clear %name of loop-value% minecraft:blindness"
 			finalSoltar(loop-value)
 	if {_prueba} is true:
 		finalMsg("&a[Final] Prueba terminada: acá arrancarían los créditos (/creditos probar para verlos). /final parar deja todo como estaba.")
@@ -488,7 +492,7 @@ function finalParar():
 	loop {-final::jug::*}:
 		if loop-value is online:
 			finalSoltar(loop-value)
-			remove blindness from loop-value
+			execute console command "effect clear %name of loop-value% minecraft:blindness"
 			set {_m} to {-final::modo::%uuid of loop-value%}
 			if {_m} is set:
 				set gamemode of loop-value to {_m}
@@ -510,11 +514,6 @@ on player move:
 		stop
 	if distance between player and {_l} > 0.2:
 		cancel event
-
-on toggle glide:
-	{-final::activo} is true
-	{-final::jug::*} contains player
-	cancel event
 
 # a los que participan no los lastima nada mientras dura
 on damage of player:
