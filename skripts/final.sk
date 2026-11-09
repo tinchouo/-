@@ -32,6 +32,10 @@ options:
 	sonido-truquito: entity.piglin_brute.ambient
 	# segundos maximos esperando que entren todos al portal (despues arrancan los creditos igual)
 	espera-maxima: 120
+	# a cuantos bloques del Bruto se tiene que acercar el admin para que le pegue
+	distancia-golpe: 4
+	# cuanto tarda en morir desde que arranca la animacion de pegar (en ticks: 20 = 1 segundo)
+	demora-golpe: 20
 
 # ---------------------------------------------------------------------------------------------- utilidades
 
@@ -395,6 +399,14 @@ function finalEmpezar(admin: player, prueba: boolean):
 	loop 6000 times:
 		if {-final::golpe} is "listo":
 			exit loop
+		if {-final::golpe} is "esperando":
+			set {_br} to finalBruto()
+			if {_br} is set:
+				loop players in radius {@distancia-golpe} around {_br}:
+					if {-final::jug::*} does not contain loop-player-2:
+						if gamemode of loop-player-2 is survival or adventure:
+							finalAtaca(loop-player-2)
+							exit loop
 		if {-final::seguir} is true:
 			exit loop
 		if finalSigue() is false:
@@ -562,11 +574,15 @@ on damage of entity:
 	attacker is a player
 	{-final::golpe} is "esperando"
 	{-final::jug::*} does not contain attacker
+	finalAtaca(attacker)
+
+# el Bruto le pega: arranca la animacion y {@demora-golpe} ticks despues se muere
+function finalAtaca(p: player):
+	{-final::golpe} is "esperando"
 	set {-final::golpe} to "golpeado"
-	set {_p} to attacker
 	finalSenal("pegar")
 	finalSonido("entity.ravager.attack", 1, 0.6)
-	wait 12 ticks
+	wait {@demora-golpe} ticks
 	if {_p} is online:
 		finalSonido("entity.generic.explode", 0.8, 1)
 		if {-final::prueba} is true:
