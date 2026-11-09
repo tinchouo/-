@@ -58,18 +58,21 @@ public class MenuPrincipal extends Screen {
 	@Override
 	public void added() {
 		super.added();
-		if (this.inicio == 0) {
-			this.inicio = Util.getMillis();
-			LOG.info("TOD5 menu abierto (intro: {})", this.conIntro);
-			this.minecraft.gameRenderer.panorama().startSpin();
-			if (this.conIntro) {
-				introVista = true;
-				// la musica arranca justo con la intro
-				this.minecraft.getMusicManager().stopPlaying();
-				this.minecraft.getMusicManager().startPlaying(Musics.MENU);
-				// el cartelito de "Sonando ahora" sale cuando aparecen los botones, no arriba de la intro
-				this.minecraft.gui.toastManager().hideNowPlayingToast();
-			}
+		this.minecraft.gameRenderer.panorama().startSpin();
+	}
+
+	/** La intro arranca recien cuando se fue la pantalla de carga de Mojang (si no, queda tapada). */
+	private void arrancarSiHaceFalta() {
+		if (this.inicio != 0 || this.minecraft.gui.overlay() != null) return;
+		this.inicio = Util.getMillis();
+		LOG.info("TOD5 menu abierto (intro: {})", this.conIntro);
+		if (this.conIntro) {
+			introVista = true;
+			// la musica arranca justo con la intro
+			this.minecraft.getMusicManager().stopPlaying();
+			this.minecraft.getMusicManager().startPlaying(Musics.MENU);
+			// el cartelito de "Sonando ahora" sale cuando aparecen los botones, no arriba de la intro
+			this.minecraft.gui.toastManager().hideNowPlayingToast();
 		}
 	}
 
@@ -81,11 +84,13 @@ public class MenuPrincipal extends Screen {
 
 	/** Segundos desde que se abrio (con intro) o un tiempo "ya terminado" (sin intro, con fundido corto). */
 	private float t() {
+		if (this.inicio == 0) return 0;
 		float s = (Util.getMillis() - this.inicio) / 1000f;
 		return this.conIntro ? s : T_BOTONES + BOTONES_DURA + s;
 	}
 
 	private void saltearIntro() {
+		if (this.inicio == 0) return;
 		if (this.conIntro && t() < T_BOTONES + BOTONES_DURA) this.inicio = Util.getMillis() - (long) ((T_BOTONES + BOTONES_DURA) * 1000);
 	}
 
@@ -116,8 +121,9 @@ public class MenuPrincipal extends Screen {
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+		arrancarSiHaceFalta();
 		float t = t();
-		float alfaBotones = this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
+		float alfaBotones = this.inicio == 0 ? 0 : this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
 		this.fadeWidgets(alfaBotones);
 		if (this.conIntro && !this.toastMostrado && alfaBotones > 0) {
 			this.toastMostrado = true;
@@ -129,7 +135,7 @@ public class MenuPrincipal extends Screen {
 		this.extractPanorama(g, a);
 
 		// 2) el logo, flotando despacito
-		float alfaLogo = this.conIntro ? (t >= T_FLASH ? 1 : 0) : 1;
+		float alfaLogo = this.inicio == 0 ? 0 : this.conIntro ? (t >= T_FLASH ? 1 : 0) : 1;
 		if (alfaLogo > 0) {
 			int lw = Math.min(300, (int) (this.width * 0.62f));
 			int lh = lw * LOGO_H / LOGO_W;
@@ -142,7 +148,7 @@ public class MenuPrincipal extends Screen {
 		g.text(this.font, "TRUCOFDEATH 5 - v0.1", 2, this.height - 10, argb(alfaBotones * 0.6f, 0xFFFFFF));
 
 		// 4) la intro: negro que se va y flash blanco
-		float negro = this.conIntro
+		float negro = this.inicio == 0 ? 1 : this.conIntro
 			? 1 - clamp01((t - T_ESTRELLAS) / (T_ESTRELLAS_FIN - T_ESTRELLAS))
 			: 1 - clamp01((t - (T_BOTONES + BOTONES_DURA)) / 0.5f);
 		if (negro > 0) g.fill(0, 0, this.width, this.height, argb(negro, 0x000000));
