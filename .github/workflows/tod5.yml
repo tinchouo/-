@@ -20,15 +20,17 @@ jobs:
       - name: Fuentes de Minecraft (referencia)
         if: contains(github.event.head_commit.message, '[ref]')
         run: |
-          ./gradlew genSources 2>&1 | tail -5 || true
-          J=$(find ~/.gradle .gradle -name '*sources*.jar' 2>/dev/null | while read f; do unzip -l "$f" 2>/dev/null | grep -q 'net/minecraft/client/gui/screens/TitleScreen.java' && echo "$f"; done | head -1)
-          echo "jar: $J"
-          mkdir -p /tmp/ref && cd /tmp/ref && unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/sounds/*' 'com/mojang/blaze3d/*' 'net/minecraft/network/protocol/common/*' || true
-          find . -type f | wc -l
+          (./gradlew tasks --all | grep -i -E "gensources|decompile" ; ./gradlew genSources --stacktrace | tail -30) > ref.log 2>&1 || true
+          find ~/.gradle .gradle build -name '*.jar' 2>/dev/null | grep -i -E 'minecraft|sources' | head -40 >> ref.log
+          J=""
+          for f in $(find ~/.gradle .gradle -name '*sources*.jar' 2>/dev/null); do if unzip -l "$f" 2>/dev/null | grep -q 'client/gui/screens/TitleScreen.java'; then J="$f"; break; fi; done
+          echo "jar: $J" >> ref.log
+          mkdir -p /tmp/ref && cd /tmp/ref && [ -n "$J" ] && unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/sounds/*' 'com/mojang/blaze3d/*' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
+          find /tmp/ref -type f | wc -l >> $GITHUB_WORKSPACE/ref.log
       - name: Subir log y referencia
         if: always()
         run: |
-          mkdir -p /tmp/out && cp build.log /tmp/out/ 2>/dev/null || true
+          mkdir -p /tmp/out && cp build.log ref.log /tmp/out/ 2>/dev/null || true; cp build.log /tmp/out/ 2>/dev/null || true
           [ -d /tmp/ref ] && cp -r /tmp/ref /tmp/out/src || true
           cd /tmp/out && git init -q && git checkout -q -b log
           git config user.name ci && git config user.email ci@local
