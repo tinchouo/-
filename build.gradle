@@ -4,6 +4,11 @@ plugins {
 
 loom {
 	splitEnvironmentSourceSets()
+	runs {
+		client {
+			programArgs "--width", "1280", "--height", "720"
+		}
+	}
 	mods {
 		"tod5" {
 			sourceSet sourceSets.main
