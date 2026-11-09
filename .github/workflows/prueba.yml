@@ -28,9 +28,9 @@ jobs:
           pulseaudio --start --exit-idle-time=-1 || true
           export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.6 MESA_GLSL_VERSION_OVERRIDE=460
           export DISPLAY=:99
-          (./gradlew runClient --stacktrace > juego.log 2>&1 &)
+          (env -u CI ./gradlew runClient --stacktrace > juego.log 2>&1 &)
           for i in $(seq 1 420); do grep -q "TOD5 menu abierto" run/logs/latest.log 2>/dev/null && break; grep -q "BUILD FAILED\|crash-reports" juego.log && break; sleep 1
-            if [ $i = 240 ]; then import -window root cap/trabado.png || true; P=$(pgrep -f KnotClient | head -1); [ -n "$P" ] && jstack $P > hilos.txt 2>&1 || true; fi
+            if [ $i = 240 ]; then import -window root cap/trabado.png || true; P=$(pgrep -f "devlaunchinjector.Main" | head -1); [ -n "$P" ] && jstack $P > hilos.txt 2>&1 || true; fi
           done
           T0=$(date +%s.%N)
           for t in 0.3 1.8 3.0 3.8 4.5 6.5 12 20; do
