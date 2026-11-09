@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "tod5",
+  "version": "${version}",
+  "name": "TRUCOFDEATH 5",
+  "description": "El mod de TRUCOFDEATH 5.",
+  "authors": ["tinchooide", "Trick"],
+  "license": "All-Rights-Reserved",
+  "icon": "assets/tod5/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["ar.tod5.menu.TOD5Client"]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.0",
+    "minecraft": "~26.3",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}

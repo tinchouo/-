@@ -1,0 +1,41 @@
+name: TOD5 mod
+on:
+  push:
+    branches: [tod5-menu]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compilar
+        run: ./gradlew build --stacktrace 2>&1 | tee build.log
+      - name: Fuentes de Minecraft (referencia)
+        if: contains(github.event.head_commit.message, '[ref]')
+        run: |
+          ./gradlew genSources 2>&1 | tail -5 || true
+          J=$(find ~/.gradle .gradle -name '*sources*.jar' 2>/dev/null | while read f; do unzip -l "$f" 2>/dev/null | grep -q 'net/minecraft/client/gui/screens/TitleScreen.java' && echo "$f"; done | head -1)
+          echo "jar: $J"
+          mkdir -p /tmp/ref && cd /tmp/ref && unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/sounds/*' 'com/mojang/blaze3d/*' 'net/minecraft/network/protocol/common/*' || true
+          find . -type f | wc -l
+      - name: Subir log y referencia
+        if: always()
+        run: |
+          mkdir -p /tmp/out && cp build.log /tmp/out/ 2>/dev/null || true
+          [ -d /tmp/ref ] && cp -r /tmp/ref /tmp/out/src || true
+          cd /tmp/out && git init -q && git checkout -q -b log
+          git config user.name ci && git config user.email ci@local
+          git add . && git commit -q -m "tod5 $GITHUB_SHA"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" log:ci-logs-tod5
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tod5-mod
+          path: build/libs/*.jar
