@@ -348,8 +348,26 @@ function finalEmpezar(admin: player, prueba: boolean):
 		force draw 6 happy villager particles at loop-value
 	finalSonido("entity.generic.explode", 1, 1.2)
 	finalSonido("block.anvil.land", 1, 0.6)
+	# cada barrote ya unido con los de al lado (si no, quedan palitos sueltos)
 	loop {_reja::*}:
-		finalPoner(loop-value, "minecraft:iron_bars")
+		set {_hay::%floor(x-coordinate of loop-value)%,%floor(y-coordinate of loop-value)%,%floor(z-coordinate of loop-value)%} to true
+	loop {_reja::*}:
+		set {_x} to floor(x-coordinate of loop-value)
+		set {_y} to floor(y-coordinate of loop-value)
+		set {_z} to floor(z-coordinate of loop-value)
+		set {_e} to "false"
+		set {_o} to "false"
+		set {_n} to "false"
+		set {_s} to "false"
+		if {_hay::%{_x} + 1%,%{_y}%,%{_z}%} is set:
+			set {_e} to "true"
+		if {_hay::%{_x} - 1%,%{_y}%,%{_z}%} is set:
+			set {_o} to "true"
+		if {_hay::%{_x}%,%{_y}%,%{_z} - 1%} is set:
+			set {_n} to "true"
+		if {_hay::%{_x}%,%{_y}%,%{_z} + 1%} is set:
+			set {_s} to "true"
+		finalPoner(loop-value, "minecraft:iron_bars[east=%{_e}%,west=%{_o}%,north=%{_n}%,south=%{_s}%]")
 	loop {-final::jug::*}:
 		finalSoltar(loop-value)
 	wait 2 seconds
