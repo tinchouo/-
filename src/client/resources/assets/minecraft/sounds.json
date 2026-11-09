@@ -1,0 +1,6 @@
+{
+  "music.menu": {
+    "replace": true,
+    "sounds": [ { "name": "tod5:musica", "stream": true } ]
+  }
+}

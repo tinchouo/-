@@ -1,0 +1,14 @@
+{
+	"required": true,
+	"package": "ar.tod5.menu.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"GuiMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
