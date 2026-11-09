@@ -403,9 +403,9 @@ function finalEmpezar(admin: player, prueba: boolean):
 			set {_br} to finalBruto()
 			if {_br} is set:
 				loop players in radius {@distancia-golpe} around {_br}:
-					if {-final::jug::*} does not contain loop-player-2:
-						if gamemode of loop-player-2 is survival or adventure:
-							finalAtaca(loop-player-2)
+					if {-final::jug::*} does not contain loop-player:
+						if gamemode of loop-player is survival or adventure:
+							finalAtaca(loop-player)
 							exit loop
 		if {-final::seguir} is true:
 			exit loop
