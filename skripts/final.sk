@@ -1,0 +1,551 @@
+# =====================================================================================================================
+#  FINAL DE TRUCOFDEATH 4: la animacion de Truquito y el Bruto Revivido.     plugins/Skript/scripts/final.sk
+#  Necesita el mob de MythicMobs "BrutoRevivido" (FinalTOD4.yml, con el modelo bruto_revivido de BetterModel)
+#  y el plugin de creditos (TOD4Creditos).
+#
+#  1) Marcar los lugares (parado ahi; para truquito y bruto, mirando hacia donde van a estar los jugadores):
+#     /final marcar esquina1      una punta del lugar donde quedan los jugadores (el piso donde se paran)
+#     /final marcar esquina2      la otra punta (alrededor de ese rectangulo cae la reja)
+#     /final marcar truquito      donde aparece Truquito
+#     /final marcar bruto         donde cae el Bruto (cae del cielo, 30 bloques arriba)
+#     /final marcar portal        donde aparece el portal (afuera de la reja: se rompe la pared de la reja de ese lado)
+#     /final marcar espera        a donde van los que se escapan por el portal, hasta que arrancan los creditos
+#     /final ver                  muestra lo marcado
+#  2) /final probar               PRUEBA: participan solo los OP (menos vos); los mensajes y sonidos solo los ven los OP.
+#                                 No borra inventarios, no te mata de verdad y al final no arrancan los creditos.
+#     /final empezar              EL DE VERDAD: todos los que NO son OP.
+#     /final seguir               si nadie le pega al Bruto, sigue igual
+#     /final creditos             arrancar los creditos ya (sin esperar a que entren todos al portal)
+#     /final parar                corta todo y deja todo como estaba (reja, portal, mobs, modos de juego)
+#
+#  Lo que pasa: todos quietos mirando a Truquito -> discurso -> cae el Bruto (golpe al suelo) -> invoca -> particulas
+#  verdes y cae la reja (ya se pueden mover, en aventura) -> discurso -> el admin le pega al Bruto y el Bruto lo mata
+#  (de verdad) -> se rie -> "todos ustedes moriran" -> invoca y les borra el inventario -> aparece el portal y se rompe
+#  la pared de la reja de ese lado -> al entrar al portal van a "espera" -> cuando entraron todos: los creditos.
+# =====================================================================================================================
+
+options:
+	permiso: tod4.admin
+	# alto de la reja (despues va el techo)
+	alto: 5
+	sonido-truquito: entity.piglin_brute.ambient
+	# segundos maximos esperando que entren todos al portal (despues arrancan los creditos igual)
+	espera-maxima: 120
+
+# ---------------------------------------------------------------------------------------------- utilidades
+
+function finalVe(p: player) :: boolean:
+	if {-final::prueba} is true:
+		return {_p} is op
+	return true
+
+function finalMsg(m: text):
+	loop all players:
+		if finalVe(loop-player) is true:
+			send {_m} to loop-player
+
+function finalSonido(s: text, v: number, pi: number):
+	loop all players:
+		if finalVe(loop-player) is true:
+			play sound {_s} with volume {_v} and pitch {_pi} to loop-player
+
+function truquito(t: text):
+	finalMsg("&2&l☠ Truquito&a&l: %{_t}%")
+	finalSonido("{@sonido-truquito}", 1, 0.8)
+
+function finalSigue() :: boolean:
+	return {-final::activo} is true
+
+# punto al medio del bloque
+function finalCentro(l: location) :: location:
+	return location(floor(x-coordinate of {_l}) + 0.5, floor(y-coordinate of {_l}), floor(z-coordinate of {_l}) + 0.5, world of {_l})
+
+# mirando hacia {_t} desde {_d}
+function finalMirando(d: location, t: location) :: location:
+	set {_dx} to x-coordinate of {_t} - x-coordinate of {_d}
+	set {_dz} to z-coordinate of {_t} - z-coordinate of {_d}
+	set {_yaw} to atan2({_dz}, -1 * {_dx})
+	return location(x-coordinate of {_d}, y-coordinate of {_d}, z-coordinate of {_d}, world of {_d}, {_yaw}, 0)
+
+function finalBruto() :: entity:
+	loop entities in radius 80 around {final::lugar::bruto}:
+		if scoreboard tags of loop-entity contain "final_bruto":
+			return loop-entity
+	return {_nada}
+
+function finalSenal(s: text):
+	set {_b} to finalBruto()
+	if {_b} is set:
+		execute console command "mm signal %uuid of {_b}% %{_s}%"
+
+# guarda como era el bloque (para /final parar) y lo cambia
+function finalPoner(l: location, tipo: text):
+	set {_b} to block at {_l}
+	add 1 to {-final::n}
+	set {-final::pos::%{-final::n}%} to location of {_b}
+	set {-final::bd::%{-final::n}%} to "%block data of {_b}%"
+	set {_bd} to {_tipo} parsed as block data
+	set block data of {_b} to {_bd}
+
+function finalRestaurar():
+	if {-final::n} is set:
+		set {_i} to {-final::n}
+		while {_i} >= 1:
+			set {_l} to {-final::pos::%{_i}%}
+			set {_bd} to {-final::bd::%{_i}%} parsed as block data
+			if {_l} is set:
+				if {_bd} is set:
+					set block data of block at {_l} to {_bd}
+			remove 1 from {_i}
+	delete {-final::pos::*}
+	delete {-final::bd::*}
+	delete {-final::n}
+
+function finalSoltar(p: player):
+	delete {-final::quieto::%uuid of {_p}%}
+
+# ---------------------------------------------------------------------------------------------- la reja
+
+function finalMedidas():
+	set {_a} to {final::lugar::esquina1}
+	set {_b} to {final::lugar::esquina2}
+	set {-final::x1} to min(floor(x-coordinate of {_a}), floor(x-coordinate of {_b}))
+	set {-final::x2} to max(floor(x-coordinate of {_a}), floor(x-coordinate of {_b}))
+	set {-final::z1} to min(floor(z-coordinate of {_a}), floor(z-coordinate of {_b}))
+	set {-final::z2} to max(floor(z-coordinate of {_a}), floor(z-coordinate of {_b}))
+	set {-final::y} to min(floor(y-coordinate of {_a}), floor(y-coordinate of {_b}))
+	set {-final::mundo} to world of {_a}
+
+# los lugares de la reja: las 4 paredes (1 bloque afuera del rectangulo) y el techo
+function finalLugaresReja() :: locations:
+	set {_w} to {-final::mundo}
+	set {_y} to {-final::y}
+	loop {@alto} times:
+		set {_yy} to {_y} + loop-number - 1
+		set {_x} to {-final::x1} - 1
+		while {_x} <= {-final::x2} + 1:
+			add location({_x}, {_yy}, {-final::z1} - 1, {_w}) to {_l::*}
+			add location({_x}, {_yy}, {-final::z2} + 1, {_w}) to {_l::*}
+			add 1 to {_x}
+		set {_z} to {-final::z1}
+		while {_z} <= {-final::z2}:
+			add location({-final::x1} - 1, {_yy}, {_z}, {_w}) to {_l::*}
+			add location({-final::x2} + 1, {_yy}, {_z}, {_w}) to {_l::*}
+			add 1 to {_z}
+	set {_x} to {-final::x1} - 1
+	while {_x} <= {-final::x2} + 1:
+		set {_z} to {-final::z1} - 1
+		while {_z} <= {-final::z2} + 1:
+			add location({_x}, {_y} + {@alto}, {_z}, {_w}) to {_l::*}
+			add 1 to {_z}
+		add 1 to {_x}
+	return {_l::*}
+
+# la pared que da al portal
+function finalParedAtras() :: locations:
+	set {_p} to {final::lugar::portal}
+	set {_cx} to ({-final::x1} + {-final::x2}) / 2 + 0.5
+	set {_cz} to ({-final::z1} + {-final::z2}) / 2 + 0.5
+	set {_dx} to x-coordinate of {_p} - {_cx}
+	set {_dz} to z-coordinate of {_p} - {_cz}
+	set {_w} to {-final::mundo}
+	loop {@alto} times:
+		set {_yy} to {-final::y} + loop-number - 1
+		if abs({_dx}) >= abs({_dz}):
+			set {_x} to {-final::x2} + 1
+			if {_dx} < 0:
+				set {_x} to {-final::x1} - 1
+			set {_z} to {-final::z1}
+			while {_z} <= {-final::z2}:
+				add location({_x}, {_yy}, {_z}, {_w}) to {_l::*}
+				add 1 to {_z}
+		else:
+			set {_z} to {-final::z2} + 1
+			if {_dz} < 0:
+				set {_z} to {-final::z1} - 1
+			set {_x} to {-final::x1}
+			while {_x} <= {-final::x2}:
+				add location({_x}, {_yy}, {_z}, {_w}) to {_l::*}
+				add 1 to {_x}
+	return {_l::*}
+
+# los lugares donde se paran los jugadores: separados (uno cada dos bloques primero, despues los del medio)
+function finalLugaresGente() :: locations:
+	loop 2 times:
+		set {_x} to {-final::x1}
+		while {_x} <= {-final::x2}:
+			set {_z} to {-final::z1}
+			while {_z} <= {-final::z2}:
+				if mod({_x} + {_z}, 2) = loop-number - 1:
+					add location({_x} + 0.5, {-final::y}, {_z} + 0.5, {-final::mundo}) to {_l::*}
+				add 1 to {_z}
+			add 1 to {_x}
+	return {_l::*}
+
+# ---------------------------------------------------------------------------------------------- comando
+
+command /final [<text>] [<text>]:
+	permission: {@permiso}
+	permission message: &cNo tenés permiso.
+	trigger:
+		if arg-1 is "marcar":
+			if arg-2 is not "esquina1", "esquina2", "truquito", "bruto", "portal" or "espera":
+				send "&cUso: /final marcar <esquina1|esquina2|truquito|bruto|portal|espera>"
+				stop
+			set {_l} to location of player
+			if arg-2 is "esquina1" or "esquina2":
+				set {_l} to location of block at player
+			set {final::lugar::%arg-2%} to {_l}
+			send "&a✔ %arg-2%: &f%floor(x-coordinate of {_l})% %floor(y-coordinate of {_l})% %floor(z-coordinate of {_l})% &7(%world of {_l}%)"
+			stop
+		if arg-1 is "ver":
+			loop "esquina1", "esquina2", "truquito", "bruto", "portal" and "espera":
+				set {_l} to {final::lugar::%loop-value%}
+				if {_l} is set:
+					send "&7%loop-value%: &f%floor(x-coordinate of {_l})% %floor(y-coordinate of {_l})% %floor(z-coordinate of {_l})% &7(%world of {_l}%)"
+					force draw 30 happy villager particles at {_l}
+				else:
+					send "&7%loop-value%: &cfalta"
+			stop
+		if arg-1 is "empezar" or "probar":
+			if {-final::activo} is true:
+				send "&cYa está en marcha (/final parar para cortarlo)."
+				stop
+			loop "esquina1", "esquina2", "truquito", "bruto" and "portal":
+				if {final::lugar::%loop-value%} is not set:
+					send "&cFalta marcar &f%loop-value% &c(/final marcar %loop-value%)."
+					stop
+			if arg-1 is "probar":
+				finalEmpezar(player, true)
+			else:
+				finalEmpezar(player, false)
+			stop
+		if arg-1 is "seguir":
+			set {-final::seguir} to true
+			send "&aSigue."
+			stop
+		if arg-1 is "creditos":
+			set {-final::ya} to true
+			send "&aArrancan los créditos."
+			stop
+		if arg-1 is "parar":
+			finalParar()
+			send "&aCortado: todo como estaba."
+			stop
+		send "&e/final marcar <esquina1|esquina2|truquito|bruto|portal|espera> &7| &e/final ver"
+		send "&e/final probar &7(solo OP) &8| &e/final empezar &7(de verdad) &8| &e/final seguir | creditos | parar"
+
+# ---------------------------------------------------------------------------------------------- la animacion
+
+function finalEmpezar(admin: player, prueba: boolean):
+	set {-final::activo} to true
+	set {-final::prueba} to {_prueba}
+	delete {-final::seguir}
+	delete {-final::ya}
+	delete {-final::golpe}
+	delete {-final::portal}
+	delete {-final::jug::*}
+	delete {-final::escapo::*}
+	finalMedidas()
+	# quienes participan
+	loop all players:
+		if {_prueba} is true:
+			if loop-player is op:
+				if loop-player is not {_admin}:
+					add loop-player to {-final::jug::*}
+		else if loop-player is not op:
+			add loop-player to {-final::jug::*}
+	if {_prueba} is true:
+		if size of {-final::jug::*} = 0:
+			add {_admin} to {-final::jug::*}
+			send "&e(Estás solo: participás vos. Para seguir sin pegarle al Bruto: /final seguir)" to {_admin}
+	set {_lugares::*} to finalLugaresGente()
+	set {_t} to finalCentro({final::lugar::truquito})
+	set {_i} to 0
+	loop {-final::jug::*}:
+		add 1 to {_i}
+		set {_k} to mod({_i} - 1, size of {_lugares::*}) + 1
+		set {_l} to finalMirando({_lugares::%{_k}%}, {_t})
+		set {-final::modo::%uuid of loop-value%} to gamemode of loop-value
+		set gamemode of loop-value to adventure
+		teleport loop-value to {_l}
+		set {-final::quieto::%uuid of loop-value%} to {_l}
+	if {_prueba} is true:
+		send "&a[Final] Prueba con %size of {-final::jug::*}% jugador(es)." to {_admin}
+	else:
+		send "&a[Final] Empieza con %size of {-final::jug::*}% jugadores." to {_admin}
+	# Truquito
+	set {_tl} to location(x-coordinate of {_t}, y-coordinate of {_t}, z-coordinate of {_t}, world of {_t}, yaw of {final::lugar::truquito}, 0)
+	spawn a piglin brute at {_tl}
+	set {_tr} to last spawned entity
+	set artificial intelligence of {_tr} to false
+	set display name of {_tr} to "&0Truquito"
+	make {_tr} invulnerable
+	silence {_tr}
+	add "final_truquito" to scoreboard tags of {_tr}
+	force draw 40 large smoke particles at {_tl}
+	finalSonido("entity.piglin_brute.angry", 1, 0.7)
+	wait 3 seconds
+	if finalSigue() is false:
+		stop
+	truquito("Cayeron en mi trampa...")
+	wait 4 seconds
+	if finalSigue() is false:
+		stop
+	truquito("Después de tanto tiempo de sufrimiento...")
+	wait 4 seconds
+	if finalSigue() is false:
+		stop
+	truquito("Tanto resentimiento con ustedes...")
+	wait 4 seconds
+	if finalSigue() is false:
+		stop
+	truquito("No he venido solo.")
+	wait 3 seconds
+	if finalSigue() is false:
+		stop
+	truquito("¡Vine con mi viejo!")
+	wait 1 second
+	# el Bruto cae del cielo
+	set {_b} to finalCentro({final::lugar::bruto})
+	execute console command "mm m spawn BrutoRevivido 1 %world of {_b}%,%x-coordinate of {_b}%,%y-coordinate of {_b} + 30%,%z-coordinate of {_b}%"
+	finalSonido("entity.wither.spawn", 0.7, 0.6)
+	wait 5 ticks
+	set {_br} to finalBruto()
+	if {_br} is not set:
+		send "&c[Final] No apareció el BrutoRevivido: ¿está cargado FinalTOD4.yml en MythicMobs? (/mm reload)" to {_admin}
+	loop 200 times:
+		if {_br} is not set:
+			exit loop
+		if {_br} is on ground:
+			exit loop
+		wait 2 ticks
+	if finalSigue() is false:
+		stop
+	# que mire hacia donde se marco
+	if {_br} is set:
+		teleport {_br} to location(x-coordinate of location of {_br}, y-coordinate of location of {_br}, z-coordinate of location of {_br}, world of {_br}, yaw of {final::lugar::bruto}, 0)
+	finalSenal("golpe")
+	force draw 3 explosion emitter particles at {_b}
+	force draw 80 large smoke particles at {_b}
+	finalSonido("entity.generic.explode", 1, 0.6)
+	finalSonido("entity.ravager.roar", 1, 0.6)
+	wait 4 seconds
+	if finalSigue() is false:
+		stop
+	# invoca: cae la reja
+	finalSenal("invocar")
+	finalSonido("entity.evoker.prepare_summon", 1, 0.7)
+	wait 2 seconds
+	if finalSigue() is false:
+		stop
+	set {_reja::*} to finalLugaresReja()
+	loop {_reja::*}:
+		force draw 6 happy villager particles at loop-value
+	finalSonido("entity.generic.explode", 1, 1.2)
+	finalSonido("block.anvil.land", 1, 0.6)
+	loop {_reja::*}:
+		finalPoner(loop-value, "minecraft:iron_bars")
+	loop {-final::jug::*}:
+		finalSoltar(loop-value)
+	wait 2 seconds
+	if finalSigue() is false:
+		stop
+	truquito("Después de tanto tiempo, logré reconstruirlo...")
+	wait 4 seconds
+	if finalSigue() is false:
+		stop
+	truquito("¡Y ahora los mataremos a todos!")
+	# ahora el admin le pega al Bruto (o /final seguir)
+	set {-final::golpe} to "esperando"
+	loop 6000 times:
+		if {-final::golpe} is "listo":
+			exit loop
+		if {-final::seguir} is true:
+			exit loop
+		if finalSigue() is false:
+			stop
+		wait 2 ticks
+	if finalSigue() is false:
+		stop
+	delete {-final::golpe}
+	wait 3 seconds
+	# se rie
+	finalSonido("entity.witch.celebrate", 1, 0.5)
+	finalSonido("entity.piglin_brute.angry", 1, 0.5)
+	wait 1 second
+	finalSonido("entity.witch.celebrate", 1, 0.6)
+	wait 6 seconds
+	if finalSigue() is false:
+		stop
+	truquito("¡Todos ustedes morirán!")
+	wait 2 seconds
+	if finalSigue() is false:
+		stop
+	finalSenal("invocar")
+	finalSonido("entity.evoker.prepare_summon", 1, 0.6)
+	wait 2 seconds
+	if finalSigue() is false:
+		stop
+	# les borra el inventario
+	loop {-final::jug::*}:
+		if loop-value is online:
+			force draw 30 portal particles at loop-value
+			if {_prueba} is not true:
+				clear inventory of loop-value
+	finalSonido("entity.evoker.cast_spell", 1, 0.6)
+	finalSonido("entity.item.break", 1, 0.8)
+	wait 4 seconds
+	if finalSigue() is false:
+		stop
+	# el portal
+	set {_po} to finalCentro({final::lugar::portal})
+	finalPoner({_po}, "minecraft:end_gateway")
+	force draw 60 portal particles at {_po}
+	finalSonido("block.end_portal.spawn", 1, 1)
+	wait 2 seconds
+	if finalSigue() is false:
+		stop
+	# se rompe la pared de atras de la reja
+	set {_pared::*} to finalParedAtras()
+	loop {_pared::*}:
+		force draw 8 happy villager particles at loop-value
+		finalPoner(loop-value, "minecraft:air")
+	finalSonido("block.chain.break", 1, 0.6)
+	finalSonido("entity.zombie.break_wooden_door", 1, 0.8)
+	set {-final::portal} to true
+	# el Bruto se rie mientras escapan
+	loop {@espera-maxima} times:
+		if finalSigue() is false:
+			stop
+		if {-final::ya} is true:
+			exit loop
+		if mod(loop-number, 3) = 1:
+			finalSonido("entity.witch.celebrate", 0.8, 0.5)
+		# entraron todos los que siguen conectados
+		set {_faltan} to 0
+		loop {-final::jug::*}:
+			if loop-value-2 is online:
+				if {-final::escapo::%uuid of loop-value-2%} is not set:
+					add 1 to {_faltan}
+		if {_faltan} = 0:
+			exit loop
+		wait 1 second
+	if finalSigue() is false:
+		stop
+	finalTerminar()
+
+# alguien entra al portal
+every 5 ticks:
+	{-final::portal} is true
+	set {_po} to finalCentro({final::lugar::portal})
+	loop {-final::jug::*}:
+		if loop-value is online:
+			if {-final::escapo::%uuid of loop-value%} is not set:
+				if world of loop-value is world of {_po}:
+					if distance between loop-value and {_po} < 1.6:
+						finalEscapa(loop-value)
+
+function finalEscapa(p: player):
+	set {-final::escapo::%uuid of {_p}%} to true
+	play sound "entity.enderman.teleport" with volume 1 to {_p}
+	set {_e} to {final::lugar::espera}
+	if {_e} is not set:
+		set {_e} to location of {_p} ~ vector(0, 60, 0)
+	teleport {_p} to {_e}
+	set {-final::quieto::%uuid of {_p}%} to {_e}
+	apply potion of blindness of tier 1 to {_p} for 10 minutes
+
+# el portal de verdad (el del End) no tiene que mandarlos a ningun lado
+on teleport:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	teleport cause is ender pearl or chorus fruit or end gateway
+	cancel event
+
+function finalTerminar():
+	set {_prueba} to {-final::prueba}
+	loop {-final::jug::*}:
+		if loop-value is online:
+			remove blindness from loop-value
+			finalSoltar(loop-value)
+	if {_prueba} is true:
+		finalMsg("&a[Final] Prueba terminada: acá arrancarían los créditos (/creditos probar para verlos). /final parar deja todo como estaba.")
+		set {-final::activo} to false
+		loop {-final::jug::*}:
+			if loop-value is online:
+				set {_m} to {-final::modo::%uuid of loop-value%}
+				if {_m} is set:
+					set gamemode of loop-value to {_m}
+		stop
+	set {-final::activo} to false
+	wait 1 second
+	execute console command "creditos empezar"
+
+function finalParar():
+	set {-final::activo} to false
+	delete {-final::portal}
+	loop {-final::jug::*}:
+		if loop-value is online:
+			finalSoltar(loop-value)
+			remove blindness from loop-value
+			set {_m} to {-final::modo::%uuid of loop-value%}
+			if {_m} is set:
+				set gamemode of loop-value to {_m}
+	delete {-final::quieto::*}
+	delete {-final::modo::*}
+	loop all entities:
+		if scoreboard tags of loop-entity contain "final_truquito" or "final_bruto":
+			kill loop-entity
+	finalRestaurar()
+
+# ---------------------------------------------------------------------------------------------- reglas mientras dura
+
+# quietos (hasta que cae la reja, y los que ya escaparon)
+on player move:
+	{-final::quieto::%uuid of player%} is set
+	set {_l} to {-final::quieto::%uuid of player%}
+	if world of player is not world of {_l}:
+		teleport player to {_l}
+		stop
+	if distance between player and {_l} > 0.2:
+		cancel event
+
+on toggle glide:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	cancel event
+
+# a los que participan no los lastima nada mientras dura
+on damage of player:
+	{-final::activo} is true
+	{-final::jug::*} contains victim
+	cancel event
+
+# el Bruto y Truquito no reciben dano; el admin que le pega al Bruto se muere
+on damage of entity:
+	if scoreboard tags of victim contain "final_truquito":
+		cancel event
+		stop
+	scoreboard tags of victim contain "final_bruto"
+	cancel event
+	attacker is a player
+	{-final::golpe} is "esperando"
+	{-final::jug::*} does not contain attacker
+	set {-final::golpe} to "golpeado"
+	set {_p} to attacker
+	finalSenal("pegar")
+	finalSonido("entity.ravager.attack", 1, 0.6)
+	wait 12 ticks
+	if {_p} is online:
+		strike lightning effect at {_p}
+		finalSonido("entity.generic.explode", 0.8, 1)
+		if {-final::prueba} is true:
+			send "&7(Prueba: acá te mataría.)" to {_p}
+		else:
+			set health of {_p} to 0
+	set {-final::golpe} to "listo"
+
+# si se desconecta en el medio, al volver no queda trabado
+on join:
+	delete {-final::quieto::%uuid of player%}
