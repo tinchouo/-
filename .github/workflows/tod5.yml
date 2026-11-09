@@ -25,7 +25,10 @@ jobs:
           J=""
           for f in $(find ~/.gradle .gradle -name '*sources*.jar' 2>/dev/null); do if unzip -l "$f" 2>/dev/null | grep -q 'client/gui/screens/TitleScreen.java'; then J="$f"; break; fi; done
           echo "jar: $J" >> ref.log
-          mkdir -p /tmp/ref && cd /tmp/ref && [ -n "$J" ] && unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/sounds/*' 'com/mojang/blaze3d/*' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
+          J=$(realpath "$J"); C=$(realpath $(find .gradle -name 'minecraft-common-*-sources.jar' | head -1))
+          mkdir -p /tmp/ref && cd /tmp/ref
+          unzip -q -o "$J" 'net/minecraft/client/gui/*' 'net/minecraft/client/renderer/CubeMap*' 'net/minecraft/client/renderer/Panorama*' 'net/minecraft/client/renderer/RenderPipelines*' 'net/minecraft/client/Minecraft.java' 'net/minecraft/client/sounds/*' 'net/minecraft/client/resources/sounds/*' 'net/minecraft/client/multiplayer/resolver/*' 'net/minecraft/client/multiplayer/ServerData.java' 'net/minecraft/client/Options.java' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
+          unzip -q -o "$C" 'net/minecraft/sounds/*' 'net/minecraft/network/chat/Component.java' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
           find /tmp/ref -type f | wc -l >> $GITHUB_WORKSPACE/ref.log
       - name: Subir log y referencia
         if: always()
