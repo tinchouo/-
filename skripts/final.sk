@@ -8,7 +8,8 @@
 #     /final marcar esquina2      la otra punta (alrededor de ese rectangulo cae la reja)
 #     /final marcar truquito      donde aparece Truquito
 #     /final marcar bruto         donde cae el Bruto (cae del cielo, 30 bloques arriba)
-#     /final marcar portal        donde aparece el portal (afuera de la reja: se rompe la pared de la reja de ese lado)
+#     /final marcar portal        donde aparece el portal (afuera de la reja)
+#     /final marcar atras         parado AFUERA de la reja, del lado de la pared que se rompe (si no, la del lado del portal)
 #     /final marcar espera        a donde van los que se escapan por el portal, hasta que arrancan los creditos
 #     /final ver                  muestra lo marcado
 #  2) /final probar               PRUEBA: participan solo los OP (menos vos); los mensajes y sonidos solo los ven los OP.
@@ -147,7 +148,10 @@ function finalLugaresReja() :: locations:
 
 # la pared que da al portal
 function finalParedAtras() :: locations:
-	set {_p} to {final::lugar::portal}
+	# la pared que se rompe: la del lado donde se marco "atras" (si no se marco, la del lado del portal)
+	set {_p} to {final::lugar::atras}
+	if {_p} is not set:
+		set {_p} to {final::lugar::portal}
 	set {_cx} to ({-final::x1} + {-final::x2}) / 2 + 0.5
 	set {_cz} to ({-final::z1} + {-final::z2}) / 2 + 0.5
 	set {_dx} to x-coordinate of {_p} - {_cx}
@@ -193,8 +197,8 @@ command /final [<text>] [<text>]:
 	permission message: &cNo tenés permiso.
 	trigger:
 		if arg-1 is "marcar":
-			if arg-2 is not "esquina1", "esquina2", "truquito", "bruto", "portal" or "espera":
-				send "&cUso: /final marcar <esquina1|esquina2|truquito|bruto|portal|espera>"
+			if arg-2 is not "esquina1", "esquina2", "truquito", "bruto", "portal", "atras" or "espera":
+				send "&cUso: /final marcar <esquina1|esquina2|truquito|bruto|portal|atras|espera>"
 				stop
 			set {_l} to location of player
 			if arg-2 is "esquina1" or "esquina2":
@@ -203,7 +207,7 @@ command /final [<text>] [<text>]:
 			send "&a✔ %arg-2%: &f%floor(x-coordinate of {_l})% %floor(y-coordinate of {_l})% %floor(z-coordinate of {_l})% &7(%world of {_l}%)"
 			stop
 		if arg-1 is "ver":
-			loop "esquina1", "esquina2", "truquito", "bruto", "portal" and "espera":
+			loop "esquina1", "esquina2", "truquito", "bruto", "portal", "atras" and "espera":
 				set {_l} to {final::lugar::%loop-value%}
 				if {_l} is set:
 					send "&7%loop-value%: &f%floor(x-coordinate of {_l})% %floor(y-coordinate of {_l})% %floor(z-coordinate of {_l})% &7(%world of {_l}%)"
@@ -236,7 +240,7 @@ command /final [<text>] [<text>]:
 			finalParar()
 			send "&aCortado: todo como estaba."
 			stop
-		send "&e/final marcar <esquina1|esquina2|truquito|bruto|portal|espera> &7| &e/final ver"
+		send "&e/final marcar <esquina1|esquina2|truquito|bruto|portal|atras|espera> &7| &e/final ver"
 		send "&e/final probar &7(solo OP) &8| &e/final empezar &7(de verdad) &8| &e/final seguir | creditos | parar"
 
 # ---------------------------------------------------------------------------------------------- la animacion
@@ -272,13 +276,18 @@ function finalEmpezar(admin: player, prueba: boolean):
 		set {_l} to finalMirando({_lugares::%{_k}%}, {_t})
 		set {-final::modo::%uuid of loop-value%} to gamemode of loop-value
 		set gamemode of loop-value to adventure
+		# con algo montado encima (o montado en algo) no se puede teletransportar
+		eject passengers of loop-value
+		dismount loop-value
 		teleport loop-value to {_l}
 		set {-final::quieto::%uuid of loop-value%} to {_l}
 	if {_prueba} is true:
 		send "&a[Final] Prueba con %size of {-final::jug::*}% jugador(es)." to {_admin}
 	else:
 		send "&a[Final] Empieza con %size of {-final::jug::*}% jugadores." to {_admin}
+	finalLimpiarMobs()
 	# Truquito
+	set {-final::spawneando} to true
 	set {_tl} to location(x-coordinate of {_t}, y-coordinate of {_t}, z-coordinate of {_t}, world of {_t}, yaw of {final::lugar::truquito}, 0)
 	spawn a piglin brute at {_tl}
 	set {_tr} to last spawned entity
@@ -287,6 +296,7 @@ function finalEmpezar(admin: player, prueba: boolean):
 	make {_tr} invulnerable
 	silence {_tr}
 	add "final_truquito" to scoreboard tags of {_tr}
+	set {-final::spawneando} to false
 	force draw 40 large smoke particles at {_tl}
 	finalSonido("entity.piglin_brute.angry", 1, 0.7)
 	wait 3 seconds
@@ -312,9 +322,11 @@ function finalEmpezar(admin: player, prueba: boolean):
 	wait 1 second
 	# el Bruto cae del cielo
 	set {_b} to finalCentro({final::lugar::bruto})
+	set {-final::spawneando} to true
 	execute console command "mm m spawn BrutoRevivido 1 %world of {_b}%,%x-coordinate of {_b}%,%y-coordinate of {_b} + 30%,%z-coordinate of {_b}%"
 	finalSonido("entity.wither.spawn", 0.7, 0.6)
 	wait 5 ticks
+	set {-final::spawneando} to false
 	set {_br} to finalBruto()
 	if {_br} is not set:
 		send "&c[Final] No apareció el BrutoRevivido: ¿está cargado FinalTOD4.yml en MythicMobs? (/mm reload)" to {_admin}
@@ -474,6 +486,7 @@ function finalEscapa(p: player):
 	set {_e} to {final::lugar::espera}
 	if {_e} is not set:
 		set {_e} to location of {_p} ~ vector(0, 60, 0)
+	set gamemode of {_p} to spectator
 	teleport {_p} to {_e}
 	set {-final::quieto::%uuid of {_p}%} to {_e}
 	execute console command "effect give %name of {_p}% minecraft:blindness 600 0 true"
@@ -562,6 +575,80 @@ on damage of entity:
 		else:
 			set health of {_p} to 0
 	set {-final::golpe} to "listo"
+
+# ---------------------------------------------------------------------------------------------- sin mobs molestando
+
+function finalCentroZona() :: location:
+	return location(({-final::x1} + {-final::x2}) / 2 + 0.5, {-final::y}, ({-final::z1} + {-final::z2}) / 2 + 0.5, {-final::mundo})
+
+function finalRadio() :: number:
+	return max({-final::x2} - {-final::x1}, {-final::z2} - {-final::z1}) / 2 + 40
+
+# saca todos los mobs de alrededor (menos Truquito y el Bruto), sin que tiren nada
+function finalLimpiarMobs():
+	loop entities in radius finalRadio() around finalCentroZona():
+		if loop-entity is not a player:
+			if loop-entity is a living entity:
+				if loop-entity is not an armor stand:
+					if scoreboard tags of loop-entity do not contain "final_truquito" or "final_bruto":
+						add "final_quitado" to scoreboard tags of loop-entity
+						eject passengers of loop-entity
+						kill loop-entity
+
+every 1 second:
+	{-final::activo} is true
+	finalLimpiarMobs()
+	# tambien los que se les suben encima
+	loop {-final::jug::*}:
+		if loop-value is online:
+			eject passengers of loop-value
+
+on death:
+	scoreboard tags of victim contain "final_quitado"
+	clear drops
+	set dropped exp to 0
+
+# mientras dura no aparece ningun mob cerca (solo Truquito y el Bruto)
+on spawn:
+	{-final::activo} is true
+	{-final::spawneando} is not true
+	event-entity is not a player
+	world of event-entity is {-final::mundo}
+	distance between event-entity and finalCentroZona() < finalRadio()
+	cancel event
+
+# ---------------------------------------------------------------------------------------------- no pueden usar nada
+
+on right click:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	cancel event
+
+on shoot:
+	{-final::activo} is true
+	shooter is a player
+	{-final::jug::*} contains shooter
+	cancel event
+
+on place:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	cancel event
+
+on break:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	cancel event
+
+on consume:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	cancel event
+
+on drop:
+	{-final::activo} is true
+	{-final::jug::*} contains player
+	cancel event
 
 # si se desconecta en el medio, al volver no queda trabado
 on join:
