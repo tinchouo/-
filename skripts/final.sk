@@ -278,7 +278,7 @@ function finalEmpezar(admin: player, prueba: boolean):
 		set gamemode of loop-value to adventure
 		# con algo montado encima (o montado en algo) no se puede teletransportar
 		eject passengers of loop-value
-		dismount loop-value
+		make loop-value dismount
 		teleport loop-value to {_l}
 		set {-final::quieto::%uuid of loop-value%} to {_l}
 	if {_prueba} is true:
@@ -606,7 +606,6 @@ every 1 second:
 on death:
 	scoreboard tags of victim contain "final_quitado"
 	clear drops
-	set dropped exp to 0
 
 # mientras dura no aparece ningun mob cerca (solo Truquito y el Bruto)
 on spawn:
