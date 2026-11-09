@@ -14,6 +14,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.sounds.Musics;
 import net.minecraft.util.Util;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * El menu principal de TOD5: la galaxia girando de fondo, el logo y tres botones (Jugar, Opciones, Salir).
@@ -31,6 +33,7 @@ public class MenuPrincipal extends Screen {
 	private static final float T_FLASH = 3.6f, FLASH_DURA = 1.4f;            // flash blanco + aparece el logo
 	private static final float T_BOTONES = 5.2f, BOTONES_DURA = 0.9f;        // aparecen los botones
 
+	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
 	private static boolean introVista = false;
 
 	private final boolean conIntro;
@@ -57,6 +60,7 @@ public class MenuPrincipal extends Screen {
 		super.added();
 		if (this.inicio == 0) {
 			this.inicio = Util.getMillis();
+			LOG.info("TOD5 menu abierto (intro: {})", this.conIntro);
 			this.minecraft.gameRenderer.panorama().startSpin();
 			if (this.conIntro) {
 				introVista = true;

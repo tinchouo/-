@@ -1,0 +1,48 @@
+name: TOD5 prueba en el juego
+on:
+  push:
+    branches: [tod5-menu]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  prueba:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Pantalla virtual
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio >/dev/null
+          glxinfo -B 2>/dev/null | head -5 || true
+      - name: Abrir Minecraft y sacar capturas
+        run: |
+          mkdir -p run cap
+          printf 'onboardAccessibility:false\nskipMultiplayerWarning:true\njoinedFirstServer:true\ntutorialStep:none\nguiScale:2\n' > run/options.txt
+          pulseaudio --start --exit-idle-time=-1 || true
+          export LIBGL_ALWAYS_SOFTWARE=1
+          Xvfb :99 -screen 0 1280x720x24 & sleep 2
+          export DISPLAY=:99
+          (./gradlew runClient --stacktrace > juego.log 2>&1 &)
+          for i in $(seq 1 600); do grep -q "TOD5 menu abierto" run/logs/latest.log 2>/dev/null && break; grep -q "BUILD FAILED\|crash-reports" juego.log && break; sleep 1; done
+          T0=$(date +%s.%N)
+          for t in 0.3 1.8 3.0 3.8 4.5 6.5 12 20; do
+            while [ $(echo "$(date +%s.%N) - $T0 < $t" | bc) = 1 ]; do sleep 0.05; done
+            import -window root cap/t_$t.png || xwd -root -silent | convert xwd:- cap/t_$t.png
+          done
+          pkill -f net.fabricmc || true; sleep 3
+      - name: Subir capturas y logs
+        if: always()
+        run: |
+          mkdir -p /tmp/out && cp -r cap /tmp/out/ 2>/dev/null || true
+          cp juego.log /tmp/out/ 2>/dev/null || true; cp run/logs/latest.log /tmp/out/mc.log 2>/dev/null || true
+          cp -r run/crash-reports /tmp/out/ 2>/dev/null || true
+          cd /tmp/out && git init -q && git checkout -q -b log
+          git config user.name ci && git config user.email ci@local
+          git add . && git commit -q -m "prueba $GITHUB_SHA"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" log:ci-prueba-tod5
