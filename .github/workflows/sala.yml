@@ -67,7 +67,7 @@ jobs:
           # 5) la tablet: J, cada seccion, hover y clic en crafteos, y J para cerrar
           W=$(xdotool getmousewindow 2>/dev/null || true); echo "ventana: $W, foco: $(xdotool getwindowfocus 2>/dev/null || true)"; xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; grep -c 'llego una tecla' $L || true; grep 'tecla de la tablet' $L || true; xdotool key e; sleep 2; import -window root cap/t0_inventario.png; xdotool key Escape; sleep 1; grep -c 'llego una tecla' $L || true; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'TAMPOCO'; import -window root cap/t1_inicio.png
           xdotool mousemove 224 204 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t2_novedades.png
-          xdotool mousemove 224 268 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t3_misiones.png
+          xdotool mousemove 224 268 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t3_misiones.png; xdotool mousemove 976 328 click 1; sleep 1; xdotool mousemove 972 228 click 1; sleep 1; xdotool mousemove 1000 360; sleep 1; import -window root cap/t3b_recompensas.png
           xdotool mousemove 224 332 click 1; sleep 2; xdotool mousemove 294 170; sleep 1.5; import -window root cap/t4_crafteos_hover.png
           xdotool mousemove 330 170 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/t5_crafteo_todarmor.png
           xdotool mousemove 224 396 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t6_equipo.png

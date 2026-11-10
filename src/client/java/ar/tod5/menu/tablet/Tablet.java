@@ -338,6 +338,8 @@ public class Tablet extends Screen {
 	}
 
 	// ---------- MISIONES: la diaria arriba, las opcionales abajo ----------
+	private final Set<String> abiertas = new HashSet<>();   // misiones con las recompensas desplegadas
+
 	private void misiones(GuiGraphicsExtractor g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Misiones", x, y);
 		int yy = y + 16;
@@ -347,7 +349,8 @@ public class Tablet extends Screen {
 		TabletDatos.Mision d = datos.diarias.get(this.dia);
 		if (d == null) { g.text(this.font, "Ese día no hubo misión diaria.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
 		else {
-			int alto = 34;
+			int extra = this.abiertas.contains(d.id()) ? altoRecompensas(d, cw) : 0;
+			int alto = 34 + extra;
 			tarjeta(g, x, yy, cw, alto);
 			g.pose().pushMatrix(); g.pose().translate(x + 6, yy + 5); g.pose().scale(1.25f, 1.25f);
 			g.text(this.font, d.titulo(), 0, 0, BLANCO, true);
@@ -358,21 +361,53 @@ public class Tablet extends Screen {
 			int lleno = (int) ((barW - 2) * Math.min(1, d.hecho() / (float) d.total()));
 			g.fill(x + 7, yy + 22, x + 7 + lleno, yy + 26, VERDE);
 			g.text(this.font, d.hecho() + " / " + d.total(), x + 10 + barW, yy + 20, BLANCO, true);
-			g.text(this.font, d.premio(), x + cw - 70 - this.font.width(d.premio()) / 2 + 20, yy + 6, AMARILLO, true);
+			botonRecompensas(g, d, x + cw - 5, yy + 3, mx, my);
 			boolean hecha = this.reclamadas.contains(d.id());
 			if (hecha) g.text(this.font, "Reclamada", x + cw - 58, yy + 20, VERDE, true);
 			else if (d.hecho() >= d.total()) boton(g, "Reclamar", x + cw - 58, yy + 18, false, mx, my, () -> this.reclamadas.add(d.id()));
+			if (extra > 0) dibujarRecompensas(g, d, x + 6, yy + 33, cw - 12, mx, my);
 			yy += alto + 6;
 		}
 		g.text(this.font, "MISIONES OPCIONALES", x, yy, GRIS_TEXTO, false);
 		yy += 11;
 		for (TabletDatos.Mision m : datos.opcionales) {
-			tarjeta(g, x, yy, cw, 16);
-			g.text(this.font, this.font.plainSubstrByWidth(m.titulo(), cw - 140), x + 5, yy + 4, BLANCO, true);
+			int extra = this.abiertas.contains(m.id()) ? altoRecompensas(m, cw) : 0;
+			tarjeta(g, x, yy, cw, 18 + extra);
+			g.text(this.font, this.font.plainSubstrByWidth(m.titulo(), cw - 170), x + 5, yy + 5, BLANCO, true);
 			String p = m.hecho() + " / " + m.total();
-			g.text(this.font, p, x + cw - 120, yy + 4, BLANCO, true);
-			g.text(this.font, m.premio(), x + cw - 5 - this.font.width(m.premio()), yy + 4, AMARILLO, true);
-			yy += 18;
+			g.text(this.font, p, x + cw - 150, yy + 5, BLANCO, true);
+			botonRecompensas(g, m, x + cw - 3, yy + 2, mx, my);
+			if (extra > 0) dibujarRecompensas(g, m, x + 5, yy + 17, cw - 10, mx, my);
+			yy += 20 + extra;
+		}
+	}
+
+	/** "Ver recompensas" / "Ocultar": despliega la cajita con todas las recompensas. x = borde derecho. */
+	private void botonRecompensas(GuiGraphicsExtractor g, TabletDatos.Mision m, int derecha, int y, int mx, int my) {
+		boolean abierta = this.abiertas.contains(m.id());
+		String t = abierta ? "Ocultar" : "Ver recompensas";
+		int bw = this.font.width(t) + 10;
+		boton(g, t, derecha - bw, y, abierta, mx, my, () -> { if (!this.abiertas.remove(m.id())) this.abiertas.add(m.id()); });
+	}
+
+	private static final int CASILLA = 18;
+	private int porFila(int ancho) { return Math.max(1, ancho / (CASILLA + 1)); }
+	private int altoRecompensas(TabletDatos.Mision m, int cw) {
+		int filas = (m.recompensas().size() + porFila(cw - 12) - 1) / porFila(cw - 12);
+		return 6 + filas * (CASILLA + 1);
+	}
+	/** Las recompensas como casillas de inventario (con cantidad y el nombre al pasar el mouse). */
+	private void dibujarRecompensas(GuiGraphicsExtractor g, TabletDatos.Mision m, int x, int y, int ancho, int mx, int my) {
+		g.fill(x, y, x + ancho, y + 1, LINEA);
+		int pf = porFila(ancho), i = 0;
+		for (ItemStack st : m.recompensas()) {
+			int sx = x + (i % pf) * (CASILLA + 1), sy = y + 4 + (i / pf) * (CASILLA + 1);
+			hundido(g, sx, sy, CASILLA, CASILLA);
+			g.item(st, sx + 1, sy + 1);
+			if (st.getCount() > 1) g.itemDecorations(this.font, st, sx + 1, sy + 1, String.valueOf(st.getCount()));
+			if (mx >= sx && my >= sy && mx < sx + CASILLA && my < sy + CASILLA)
+				g.setTooltipForNextFrame(Component.literal(st.getCount() + " × ").append(st.getHoverName()), mx, my);
+			i++;
 		}
 	}
 

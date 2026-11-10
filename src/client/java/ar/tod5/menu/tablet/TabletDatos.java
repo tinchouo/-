@@ -8,7 +8,8 @@ import net.minecraft.world.item.Items;
 /** Lo que muestra la tablet. Por ahora datos de EJEMPLO; despues los va a mandar el plugin del server. */
 public class TabletDatos {
 	public record Novedad(int dia, String tipo, String titulo, String texto, boolean nuevo) {}
-	public record Mision(String id, String titulo, int hecho, int total, String premio) {}
+	public record Mision(String id, String titulo, int hecho, int total, List<ItemStack> recompensas) {}
+	private static ItemStack it(Item i, int n) { return new ItemStack(i, n); }
 	public record Crafteo(String nombre, String categoria, int dia, boolean nuevo, ItemStack icono, int cantidad, ItemStack[] grilla, String nota) {}
 	public record Miembro(String nombre, boolean conectado) {}
 	public record Mensaje(String hora, String quien, String texto) {}
@@ -58,11 +59,11 @@ public class TabletDatos {
 		d.novedades.add(new Novedad(h - 1, "aviso", "Nuevo crafteo: TODARMOR", "Ya está en Crafteos.", true));
 		d.novedades.add(new Novedad(h - 1, "cambio", "Los zombies rompen puertas de hierro", "Cuidado con las bases.", false));
 		d.novedades.add(new Novedad(1, "aviso", "¡Bienvenidos a TRUCOFDEATH: Revenants!", "La billetera ya se puede craftear.", false));
-		d.diarias.put(h, new Mision("d" + h, "Matá 30 zombies", 30, 30, "+3 monedas"));
-		d.diarias.put(h - 1, new Mision("d" + (h - 1), "Conseguí 16 de obsidiana", 16, 16, "+2 monedas"));
-		d.opcionales.add(new Mision("o1", "Encontrá el templo escondido del Aether", 0, 1, "Tótem especial"));
-		d.opcionales.add(new Mision("o2", "Crafteá un set completo de TODARMOR", 2, 4, "+10 monedas"));
-		d.opcionales.add(new Mision("o3", "Sobreviví 3 noches seguidas sin morir", 1, 3, "+5 monedas"));
+		d.diarias.put(h, new Mision("d" + h, "Matá 30 zombies", 30, 30, List.of(it(Items.GOLD_NUGGET, 3), it(Items.BREAD, 16), it(Items.IRON_INGOT, 8), it(Items.EXPERIENCE_BOTTLE, 5))));
+		d.diarias.put(h - 1, new Mision("d" + (h - 1), "Conseguí 16 de obsidiana", 16, 16, List.of(it(Items.GOLD_NUGGET, 2), it(Items.COOKED_BEEF, 8))));
+		d.opcionales.add(new Mision("o1", "Encontrá el templo escondido del Aether", 0, 1, List.of(it(Items.TOTEM_OF_UNDYING, 1), it(Items.GOLD_NUGGET, 15), it(Items.DIAMOND, 4), it(Items.GOLDEN_APPLE, 2), it(Items.ENDER_PEARL, 8), it(Items.OBSIDIAN, 32), it(Items.COBBLED_DEEPSLATE, 64), it(Items.OAK_LOG, 64), it(Items.TORCH, 64), it(Items.ARROW, 32), it(Items.EMERALD, 12))));
+		d.opcionales.add(new Mision("o2", "Crafteá un set completo de TODARMOR", 2, 4, List.of(it(Items.GOLD_NUGGET, 10), it(Items.RABBIT_HIDE, 16), it(Items.LEATHER, 8))));
+		d.opcionales.add(new Mision("o3", "Sobreviví 3 noches seguidas sin morir", 1, 3, List.of(it(Items.GOLD_NUGGET, 5), it(Items.WHITE_BED, 1), it(Items.CAMPFIRE, 2))));
 		d.crafteos.add(new Crafteo("Billetera", "general", 1, false, i(Items.BUNDLE), 1, g(null, Items.STRING, null, Items.LEATHER, Items.GOLD_NUGGET, Items.LEATHER, null, Items.LEATHER, null), "Guarda tus monedas. Podés tener más de una, pero no se apilan."));
 		d.crafteos.add(new Crafteo("Pechera TODARMOR", "general", h - 1, true, i(Items.NETHERITE_CHESTPLATE), 1, g(Items.RABBIT_HIDE, Items.RABBIT_HIDE, Items.RABBIT_HIDE, Items.RABBIT_HIDE, Items.DIAMOND_CHESTPLATE, Items.RABBIT_HIDE, Items.RABBIT_HIDE, Items.RABBIT_HIDE, Items.RABBIT_HIDE), "8 pieles de conejo en cada casilla. Admite 2 mejoras."));
 		d.crafteos.add(new Crafteo("Brújula del Aether", "aether", 4, false, i(Items.RECOVERY_COMPASS), 1, g(null, Items.DIAMOND, null, Items.DIAMOND, Items.COMPASS, Items.DIAMOND, null, Items.DIAMOND, null), "Ejemplo de un crafteo de dimensión."));
