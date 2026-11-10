@@ -1,7 +1,6 @@
 package ar.tod5.servidor;
 
 import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -62,14 +61,11 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	// ---------- lo que ve el menu del mod ----------
 	@EventHandler
 	public void alPreguntarEstado(PaperServerListPingEvent e) {
-		String saludo = "";
-		InetSocketAddress v = e.getClient().getVirtualHost();
-		if (v != null) saludo = v.getHostString();
-		int i = saludo.indexOf("tod5:");
-		if (i >= 0) {
-			String[] p = saludo.substring(i + 5).split(":");
-			if (p.length > 1 && p[1].startsWith("fila")) fila.put(p[0], System.currentTimeMillis());
-			else fila.remove(p[0]);
+		// el mod manda un numero de protocolo negativo: -(1.000.000 + codigo) = mirando, -(2.000.000 + codigo) = en la fila
+		int p = e.getClient().getProtocolVersion();
+		if (p <= -1_000_000) {
+			int n = -p; String codigo = String.valueOf(n % 1_000_000);
+			if (n >= 2_000_000) fila.put(codigo, System.currentTimeMillis()); else fila.remove(codigo);
 		}
 		e.motd(Component.text("tod5;" + (abierto() ? "abierto" : "preparacion") + ";" + enFila()));
 	}

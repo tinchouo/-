@@ -28,7 +28,7 @@ public class BotonTOD extends Button {
 
 	@Override
 	protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
-		Identifier tex = this.active && this.isHoveredOrFocused() ? this.encima : this.normal;
+		Identifier tex = this.active && this.isHovered() ? this.encima : this.normal;
 		int color = ((int) (Math.max(0, Math.min(1, this.alpha)) * 255) << 24) | 0xFFFFFF;
 		g.blit(RenderPipelines.GUI_TEXTURED, tex, this.getX(), this.getY(), 0, 0, this.getWidth(), this.getHeight(),
 			TEX_W, TEX_H, TEX_W, TEX_H, color);

@@ -7,7 +7,6 @@ import java.io.*;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.util.UUID;
 import net.minecraft.client.multiplayer.resolver.ResolvedServerAddress;
 import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.multiplayer.resolver.ServerNameResolver;
@@ -19,13 +18,14 @@ import org.slf4j.LoggerFactory;
  * Cada 3 segundos, en un hilo aparte, para no trabar el menu.
  *
  * El plugin del server contesta en la descripcion: "tod5;<abierto|preparacion>;<jugadores en la fila>".
- * Para que el server sepa quien esta en la fila, el mod le pasa un codigo propio en la direccion del saludo.
+ * Para que el server sepa quien esta en la fila, el mod le pasa un codigo propio en el numero de protocolo del saludo.
  */
 public final class EstadoServer {
 	public enum Estado { BUSCANDO, CERRADO, PREPARACION, ABIERTO }
 
 	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
-	private static final String CODIGO = UUID.randomUUID().toString().substring(0, 8);
+	/** Codigo de este juego (0..999999). Va en el numero de protocolo del saludo, que llega intacto al server. */
+	private static final int CODIGO = new java.util.Random().nextInt(1_000_000);
 
 	public static volatile Estado estado = Estado.BUSCANDO;
 	public static volatile int enFilaServer = 0, conectados = 0, maximo = 0;
@@ -60,7 +60,8 @@ public final class EstadoServer {
 		try {
 			ServerAddress dir = ServerAddress.parseString(TOD5Client.IP_SERVER);
 			ResolvedServerAddress r = ServerNameResolver.DEFAULT.resolveAddress(dir).orElseThrow(() -> new IOException("no se encontro el server"));
-			String json = pedirEstado(r.getHostIp(), r.getPort(), dir.getHost() + "\0tod5:" + CODIGO + (enFila ? ":fila" : ""));
+			int protocolo = -((enFila ? 2_000_000 : 1_000_000) + CODIGO);   // negativo = "soy el mod de TOD"
+			String json = pedirEstado(r.getHostIp(), r.getPort(), dir.getHost(), protocolo);
 			JsonObject o = JsonParser.parseString(json).getAsJsonObject();
 			String desc = textoPlano(o.get("description"));
 			if (o.has("players")) {
@@ -82,7 +83,7 @@ public final class EstadoServer {
 	}
 
 	/** Protocolo de "estado" de Minecraft: saludo + pedido de estado, y lee el JSON de respuesta. */
-	private static String pedirEstado(String host, int puerto, String direccionSaludo) throws IOException {
+	private static String pedirEstado(String host, int puerto, String direccionSaludo, int protocolo) throws IOException {
 		try (Socket s = new Socket()) {
 			s.connect(new InetSocketAddress(host, puerto), 3000);
 			s.setSoTimeout(3000);
@@ -90,7 +91,7 @@ public final class EstadoServer {
 			DataInputStream in = new DataInputStream(s.getInputStream());
 			ByteArrayOutputStream b = new ByteArrayOutputStream();
 			DataOutputStream h = new DataOutputStream(b);
-			varInt(h, 0x00); varInt(h, -1); texto(h, direccionSaludo); h.writeShort(puerto); varInt(h, 1);
+			varInt(h, 0x00); varInt(h, protocolo); texto(h, direccionSaludo); h.writeShort(puerto); varInt(h, 1);
 			varInt(out, b.size()); out.write(b.toByteArray());
 			varInt(out, 1); varInt(out, 0x00);   // pedido de estado
 			out.flush();

@@ -62,7 +62,7 @@ jobs:
           sleep 10; import -window root cap/4_adentro.png
           # 5) lo echan: vuelve al menu (no a la lista de servers)
           echo "kick @a Prueba de echar" >> srv/cmds.txt; sleep 4; import -window root cap/5_echado.png
-          for y in 380 400 420 440 460; do xdotool mousemove 640 $y click 1; sleep 0.5; done
+          xdotool mousemove 640 464 click 1
           sleep 4; import -window root cap/6_vuelve_al_menu.png
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
