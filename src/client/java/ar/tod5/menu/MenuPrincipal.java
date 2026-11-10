@@ -58,11 +58,12 @@ public class MenuPrincipal extends Screen {
 	@Override
 	protected void init() {
 		int bw = 200, bh = 20, x = this.width / 2 - bw / 2;
-		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 4 + 48));
-		this.addRenderableWidget(Button.builder(Component.literal("Jugar"), b -> jugar()).bounds(x, y, bw, bh).build());
-		this.addRenderableWidget(Button.builder(Component.literal("Opciones"),
-			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))).bounds(x, y + 24, bw, bh).build());
-		this.addRenderableWidget(Button.builder(Component.literal("Salir"), b -> this.minecraft.stop()).bounds(x, y + 48, bw, bh).build());
+		// los botones van en la mitad de la pantalla (solo el logo va arriba)
+		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 2 + 30));
+		this.addRenderableWidget(new BotonTOD("jugar", "Jugar", x, y, bw, bh, b -> jugar()));
+		this.addRenderableWidget(new BotonTOD("opciones", "Opciones", x, y + 24, bw, bh,
+			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
+		this.addRenderableWidget(new BotonTOD("salir", "Salir", x, y + 48, bw, bh, b -> this.minecraft.stop()));
 	}
 
 	@Override
