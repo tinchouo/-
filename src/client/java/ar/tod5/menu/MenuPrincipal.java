@@ -204,9 +204,10 @@ public class MenuPrincipal extends Screen {
 		switch (this.secreto) {
 			case ENTRANDO -> {
 				float p = clamp01(ts() / S_ENTRAR), k = p * p * p;
-				this.agX = lerp(baseX, this.width / 2f, suave(p));
-				this.agY = lerp(baseY, this.height / 2f, suave(p));
 				this.agD = baseD * (float) Math.exp(Math.log(grande / baseD) * k);
+				float mover = 1 - baseD / this.agD;   // se corre al centro solo a medida que crece (como una camara entrando)
+				this.agX = lerp(baseX, this.width / 2f, mover);
+				this.agY = lerp(baseY, this.height / 2f, mover);
 				agujeroArriba = true;
 				negroSecreto = clamp01((p - 0.78f) / 0.22f);
 				if (p >= 1) pasarA(Secreto.PISTA);
@@ -219,9 +220,10 @@ public class MenuPrincipal extends Screen {
 			}
 			case VOLVIENDO -> {
 				float s = ts(), p = clamp01(s / S_AGUJERO), k = 1 - suave(p);
-				this.agX = lerp(baseX, this.width / 2f, k);
-				this.agY = lerp(baseY, this.height / 2f, k);
 				this.agD = baseD * (float) Math.exp(Math.log(grande / baseD) * k * k * k);
+				float mover = 1 - baseD / this.agD;
+				this.agX = lerp(baseX, this.width / 2f, mover);
+				this.agY = lerp(baseY, this.height / 2f, mover);
 				negroSecreto = 1 - clamp01(s / 0.5f);
 				alfaLogo = suave(clamp01((s - S_AGUJERO) / S_LOGO));
 				alfaBotones = clamp01((s - S_AGUJERO - S_LOGO * 0.6f) / S_BOTONES);

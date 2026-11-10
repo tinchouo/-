@@ -16,7 +16,7 @@ import org.joml.Matrix3x2fStack;
 public final class Fondo {
 	private static Identifier tex(String n) { return Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/fondo/" + n + ".png"); }
 	private static final Identifier NEBULOSA = tex("nebulosa"), ESTRELLAS_A = tex("estrellas_a"), ESTRELLAS_B = tex("estrellas_b"),
-		FUGAZ = tex("fugaz"), AG_DISCO = tex("ag_disco"), AG_LADO = tex("ag_lado"), AG_SOMBRA = tex("ag_sombra");
+		FUGAZ = tex("fugaz"), AG_DISCO = tex("ag_disco"), AG_LADO = tex("ag_lado"), AG_SOMBRA = tex("ag_sombra"), AG_NEGRO = tex("ag_negro");
 
 	private static final int NEB_W = 4608, NEB_H = 1296, EST_W = 4096, EST_H = 1152;
 	// agujero en alta resolucion, en capas: el disco (visto desde arriba) lo gira y lo aplasta el juego
@@ -93,6 +93,8 @@ public final class Fondo {
 		int ah = Math.round(diametro / (2 * AG_RADIO)), aw = ah * AG_W / AG_H;
 		int d = Math.round(2 * DISCO_ALCANCE * rs);
 		float late = 0.12f + 0.12f * (0.5f + 0.5f * (float) Math.sin(t * 1.4));
+		// 0) un circulo negro lleno abajo de todo: lo de atras (estrellas, la fugaz) nunca se ve a traves del agujero
+		g.blit(RenderPipelines.GUI_TEXTURED, AG_NEGRO, cx - aw / 2, cy - ah / 2, 0, 0, aw, ah, AG_W, AG_H, AG_W, AG_H, 0xFFFFFFFF);
 		// 1) el disco girando, inclinado y aplastado
 		var p = g.pose();
 		p.pushMatrix();
