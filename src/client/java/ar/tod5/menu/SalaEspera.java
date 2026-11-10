@@ -52,7 +52,7 @@ public class SalaEspera extends Screen {
 		int n = Math.max(esperando, 0);
 		String cantidad = "Jugadores esperando: " + n;
 		g.text(this.font, cantidad, this.width / 2 - this.font.width(cantidad) / 2, y + 26, 0xFF7DFFA0);
-		String aviso = "El server todavia no abrio. Cuando abra, vas a entrar automaticamente.";
+		String aviso = "El server todavía no abrió. Cuando abra, vas a entrar automáticamente.";
 		g.text(this.font, aviso, this.width / 2 - this.font.width(aviso) / 2, y + 42, argb(0.55f + 0.25f * (float) Math.sin(t * 2), 0xFFFFFF));
 
 		super.extractRenderState(g, mouseX, mouseY, a);
