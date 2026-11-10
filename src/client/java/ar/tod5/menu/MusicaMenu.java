@@ -20,7 +20,7 @@ public final class MusicaMenu {
 	private static final Identifier SONIDO = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "menu");
 	private static SoundInstance actual;
 	private static boolean deberiaSonar;
-	private static int espera, chequeo, enMundo;
+	private static int espera, chequeo;
 
 	private MusicaMenu() {}
 
@@ -46,11 +46,8 @@ public final class MusicaMenu {
 	}
 
 	public static void tick(Minecraft mc) {
-		boolean enSala = SalaEspera.esperando >= 0;
-		if (enSala && !deberiaSonar) { deberiaSonar = true; espera = 19; }   // en la sala de espera sigue la musica del menu
-		// entraste a un mundo o server (y no estas en la sala): se corta. Espero 3 s por si el server me manda a la sala.
-		enMundo = (mc.level != null && !enSala) ? enMundo + 1 : 0;
-		if (enMundo > 60) {
+		// entraste a un mundo o server: se corta en el momento
+		if (mc.level != null) {
 			if (deberiaSonar || actual != null) parar();
 			return;
 		}

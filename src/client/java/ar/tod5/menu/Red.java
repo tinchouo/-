@@ -9,7 +9,6 @@ import net.minecraft.resources.Identifier;
 /**
  * Los mensajes entre el mod y el plugin del server. Son texto plano (UTF-8), asi el plugin de Paper los lee
  * como "plugin messages" sin nada especial:
- *   server -> mod  (tod5:sala):  "espera;<cantidad>"  |  "abrir"
  *   mod -> server  (tod5:hola):  "<version del mod>;<mod1>,<mod2>,..."
  */
 public final class Red {
@@ -19,7 +18,6 @@ public final class Red {
 		@Override public Type<? extends CustomPacketPayload> type() { return tipo; }
 	}
 
-	public static final CustomPacketPayload.Type<Texto> SALA = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "sala"));
 	public static final CustomPacketPayload.Type<Texto> HOLA = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "hola"));
 
 	public static StreamCodec<RegistryFriendlyByteBuf, Texto> codec(CustomPacketPayload.Type<Texto> tipo) {

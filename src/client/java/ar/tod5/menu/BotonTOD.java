@@ -12,10 +12,16 @@ import net.minecraft.resources.Identifier;
  */
 public class BotonTOD extends Button {
 	private static final int TEX_W = 1000, TEX_H = 100;
-	private final Identifier normal, encima;
+	private Identifier normal, encima;
 
 	public BotonTOD(String estilo, String nombre, String texto, int x, int y, int w, int h, OnPress accion) {
 		super(x, y, w, h, Component.literal(texto), accion, DEFAULT_NARRATION);
+		this.normal = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/" + estilo + nombre + ".png");
+		this.encima = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/" + estilo + nombre + "_hover.png");
+	}
+
+	/** Cambia la imagen del boton (por ejemplo JUGAR -> EN ESPERA). */
+	public void imagen(String estilo, String nombre) {
 		this.normal = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/" + estilo + nombre + ".png");
 		this.encima = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/" + estilo + nombre + "_hover.png");
 	}

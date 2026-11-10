@@ -51,6 +51,9 @@ public class MenuPrincipal extends Screen {
 
 	private final boolean conIntro;
 	private long inicio;
+	private BotonTOD botonJugar;
+	private Button botonAdmin;
+	private boolean entrando;
 	private int botonesY;
 
 	public MenuPrincipal() {
@@ -64,7 +67,11 @@ public class MenuPrincipal extends Screen {
 		// los botones van en la mitad de la pantalla (solo el logo va arriba)
 		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 2 + 30));
 		this.botonesY = y;
-		this.addRenderableWidget(new BotonTOD(ESTILO, "jugar", "Jugar", x, y, bw, bh, b -> jugar()));
+		this.botonJugar = this.addRenderableWidget(new BotonTOD(ESTILO, "jugar", "Jugar", x, y, bw, bh, b -> jugar()));
+		// solo con el server en preparacion: los admins pueden entrar igual
+		this.botonAdmin = this.addRenderableWidget(Button.builder(Component.literal("Entrar como admin"), b -> conectar())
+			.bounds(this.width - 112, 6, 106, 14).build());
+		this.botonAdmin.visible = false;
 		this.addRenderableWidget(new BotonTOD(ESTILO, "opciones", "Opciones", x, y + 24, bw, bh,
 			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
 		this.addRenderableWidget(new BotonTOD(ESTILO, "salir", "Salir", x, y + 48, bw, bh, b -> this.minecraft.stop()));
@@ -74,6 +81,13 @@ public class MenuPrincipal extends Screen {
 	public void added() {
 		super.added();
 		this.minecraft.gameRenderer.panorama().startSpin();
+		EstadoServer.empezar();
+	}
+
+	@Override
+	public void removed() {
+		super.removed();
+		if (!EstadoServer.enFila) EstadoServer.parar();   // si estas en la fila sigue preguntando (por ejemplo, desde Opciones)
 	}
 
 	/** La intro arranca recien cuando se fue la pantalla de carga de Mojang (si no, queda tapada). */
@@ -85,7 +99,14 @@ public class MenuPrincipal extends Screen {
 		MusicaMenu.iniciar();   // con la intro arranca desde el principio; si ya sonaba, sigue
 	}
 
+	/** JUGAR: con el server abierto entra; si no, te pone en la fila (o te saca, si ya estabas). */
 	private void jugar() {
+		if (EstadoServer.estado == EstadoServer.Estado.ABIERTO) { EstadoServer.enFila = false; conectar(); return; }
+		EstadoServer.enFila = !EstadoServer.enFila;
+		LOG.info("TOD5 fila: {}", EstadoServer.enFila ? "entro" : "salio");
+	}
+
+	private void conectar() {
 		ServerAddress dir = ServerAddress.parseString(TOD5Client.IP_SERVER);
 		ServerData datos = new ServerData(NOMBRE, TOD5Client.IP_SERVER, ServerData.Type.OTHER);
 		ConnectScreen.startConnecting(this, this.minecraft, dir, datos, false, null);
@@ -123,6 +144,44 @@ public class MenuPrincipal extends Screen {
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+	}
+
+	private void actualizarEstado() {
+		var e = EstadoServer.estado;
+		if (this.botonJugar != null) this.botonJugar.imagen(ESTILO, EstadoServer.enFila && e != EstadoServer.Estado.ABIERTO ? "espera" : "jugar");
+		if (this.botonAdmin != null) this.botonAdmin.visible = e == EstadoServer.Estado.PREPARACION && t() >= FIN_INTRO;
+		// estabas en la fila y abrio: entras solo
+		if (EstadoServer.enFila && e == EstadoServer.Estado.ABIERTO && !this.entrando) {
+			this.entrando = true;
+			EstadoServer.enFila = false;
+			LOG.info("TOD5 el server abrio: entrando solo");
+			conectar();
+		}
+	}
+
+	private void dibujarEstado(GuiGraphicsExtractor g, float alfa, float t) {
+		if (alfa <= 0) return;
+		var e = EstadoServer.estado;
+		String titulo; int color; String detalle;
+		switch (e) {
+			case ABIERTO -> { titulo = "SERVER ABIERTO"; color = 0x7DFFA0; detalle = "Jugadores conectados: " + EstadoServer.conectados; }
+			case PREPARACION -> { titulo = "EN PREPARACIÓN"; color = 0x7DFFA0; detalle = "Los admins están preparando todo"; }
+			case CERRADO -> { titulo = "SERVER CERRADO"; color = 0xFF5555; detalle = null; }
+			default -> { titulo = "Buscando el server" + ".".repeat((int) (t * 2) % 4); color = 0xAAAAAA; detalle = null; }
+		}
+		int y = this.botonesY + 3 * 24 + 6;
+		g.text(this.font, titulo, this.width / 2 - this.font.width(titulo) / 2, y, argb(alfa, color));
+		int fila = 0;
+		if (detalle != null) { fila++; g.text(this.font, detalle, this.width / 2 - this.font.width(detalle) / 2, y + 11, argb(alfa * 0.7f, 0xFFFFFF)); }
+		if (e != EstadoServer.Estado.ABIERTO && e != EstadoServer.Estado.BUSCANDO && (EstadoServer.enFila || EstadoServer.enFilaServer > 0)) {
+			String f = "Jugadores esperando: " + Math.max(EstadoServer.enFilaServer, EstadoServer.enFila ? 1 : 0);
+			g.text(this.font, f, this.width / 2 - this.font.width(f) / 2, y + 11 + 11 * fila, argb(alfa * 0.9f, 0x7DFFA0));
+			fila++;
+		}
+		if (EstadoServer.enFila && e != EstadoServer.Estado.ABIERTO) {
+			String f = "Estás en la fila. Cuando abra, vas a entrar solo.";
+			g.text(this.font, f, this.width / 2 - this.font.width(f) / 2, y + 11 + 11 * fila, argb(alfa * (0.45f + 0.25f * (float) Math.sin(t * 2)), 0xFFFFFF));
+		}
 	}
 
 	private int logoAncho() { return Math.min(340, (int) (this.width * 0.7f)); }
@@ -174,8 +233,10 @@ public class MenuPrincipal extends Screen {
 		float alfaLogo = !empezo ? 0 : this.conIntro ? suave(clamp01((t - T_LOGO) / LOGO_DURA)) : 1;
 		if (alfaLogo > 0) dibujarLogo(g, t, alfaLogo);
 
-		// 3) los botones y los textos de abajo
+		// 3) los botones, el estado del server y los textos de abajo
+		actualizarEstado();
 		super.extractRenderState(g, mouseX, mouseY, a);
+		dibujarEstado(g, alfaBotones, t);
 		int gris = argb(alfaBotones * 0.6f, 0xFFFFFF);
 		g.text(this.font, NOMBRE + " v" + VERSION, 2, this.height - 10, gris);
 		g.text(this.font, CREDITO, this.width - this.font.width(CREDITO) - 2, this.height - 10, gris);

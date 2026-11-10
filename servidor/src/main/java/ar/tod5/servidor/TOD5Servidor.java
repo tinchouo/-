@@ -1,47 +1,49 @@
 package ar.tod5.servidor;
 
+import com.destroystokyo.paper.event.server.PaperServerListPingEvent;
+import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
-import net.kyori.adventure.title.Title;
 import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.*;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 
 /**
  * TOD5 (server):
- *  - Sala de espera: con el server cerrado, los que entran quedan esperando (quietos, invisibles) y el mod les muestra
- *    la pantalla con la cantidad de jugadores. /tod abrir los hace entrar a todos juntos. Los admins entran igual.
+ *  - Estado para el menu del mod: el menu le pregunta al server como esta (sin entrar) y el plugin contesta
+ *    en la descripcion "tod5;<abierto|preparacion>;<jugadores en la fila>".
+ *    La fila son los que apretaron JUGAR con el server sin abrir (el mod manda un codigo propio al preguntar).
+ *  - Cerrado (en preparacion): solo entran los admins (OP o permiso tod5.admin, o los de la lista "admins" de la config).
  *  - Control del mod: sin el mod de TOD no se entra; con mods que no estan permitidos tampoco.
  */
 public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageListener {
-	static final String CANAL_SALA = "tod5:sala", CANAL_HOLA = "tod5:hola";
+	static final String CANAL_HOLA = "tod5:hola";
 	private static final MiniMessage MM = MiniMessage.miniMessage();
 	private static final Set<String> SIEMPRE = Set.of("minecraft", "java", "fabricloader", "mixinextras");
+	private static final long VIGENCIA_FILA = 10_000;   // ms: si no pregunta en 10 s, ya no esta en la fila
 
 	private final Set<UUID> saludaron = new HashSet<>();
-	private final LinkedHashSet<UUID> esperando = new LinkedHashSet<>();
-	private final Map<UUID, GameMode> modoAntes = new HashMap<>();
+	private final Map<String, Long> fila = new ConcurrentHashMap<>();
 
 	@Override
 	public void onEnable() {
 		saveDefaultConfig();
-		getServer().getMessenger().registerOutgoingPluginChannel(this, CANAL_SALA);
 		getServer().getMessenger().registerIncomingPluginChannel(this, CANAL_HOLA, this);
 		getServer().getPluginManager().registerEvents(this, this);
-		// cada 5 segundos le recuerdo a la sala cuantos son (por si alguno se perdio un mensaje)
-		Bukkit.getScheduler().runTaskTimer(this, this::avisarSala, 100, 100);
-		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "CERRADO (sala de espera)"));
+		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
 	}
 
 	boolean abierto() { return getConfig().getBoolean("abierto", false); }
@@ -50,13 +52,47 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		for (int i = 0; i + 1 < reemplazos.length; i += 2) s = s.replace(reemplazos[i], reemplazos[i + 1]);
 		return MM.deserialize(s);
 	}
-	private void enviar(Player p, String texto) { p.sendPluginMessage(this, CANAL_SALA, texto.getBytes(StandardCharsets.UTF_8)); }
+
+	private int enFila() {
+		long ahora = System.currentTimeMillis();
+		fila.values().removeIf(t -> ahora - t > VIGENCIA_FILA);
+		return fila.size();
+	}
+
+	// ---------- lo que ve el menu del mod ----------
+	@EventHandler
+	public void alPreguntarEstado(PaperServerListPingEvent e) {
+		String saludo = "";
+		InetSocketAddress v = e.getClient().getVirtualHost();
+		if (v != null) saludo = v.getHostString();
+		int i = saludo.indexOf("tod5:");
+		if (i >= 0) {
+			String[] p = saludo.substring(i + 5).split(":");
+			if (p.length > 1 && p[1].startsWith("fila")) fila.put(p[0], System.currentTimeMillis());
+			else fila.remove(p[0]);
+		}
+		e.motd(Component.text("tod5;" + (abierto() ? "abierto" : "preparacion") + ";" + enFila()));
+	}
 
 	// ---------- entrar ----------
+	private boolean esAdmin(UUID id, String nombre) {
+		OfflinePlayer op = Bukkit.getOfflinePlayer(id);
+		if (op.isOp()) return true;
+		return getConfig().getStringList("admins").stream().anyMatch(n -> n.equalsIgnoreCase(nombre));
+	}
+
+	@EventHandler(priority = EventPriority.HIGHEST)
+	public void antesDeEntrar(AsyncPlayerPreLoginEvent e) {
+		if (abierto() || e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) return;
+		if (esAdmin(e.getUniqueId(), e.getName())) return;
+		e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, msg("en_preparacion"));
+	}
+
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void alEntrar(PlayerJoinEvent e) {
 		Player p = e.getPlayer();
 		saludaron.remove(p.getUniqueId());
+		if (!abierto() && !esAdmin(p.getUniqueId(), p.getName()) && !p.hasPermission("tod5.admin")) { p.kick(msg("en_preparacion")); return; }
 		if (getConfig().getBoolean("exigir_mod", true)) {
 			int seg = Math.max(2, getConfig().getInt("espera_saludo", 6));
 			Bukkit.getScheduler().runTaskLater(this, () -> {
@@ -66,14 +102,12 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 				}
 			}, seg * 20L);
 		}
-		if (!abierto() && !p.hasPermission("tod5.admin")) ponerEnSala(p);
 	}
 
 	@Override
 	public void onPluginMessageReceived(String canal, Player p, byte[] datos) {
 		if (!CANAL_HOLA.equals(canal)) return;
-		String s = new String(datos, StandardCharsets.UTF_8);
-		String[] partes = s.split(";", 2);
+		String[] partes = new String(datos, StandardCharsets.UTF_8).split(";", 2);
 		String version = partes[0];
 		Set<String> mods = new TreeSet<>(partes.length > 1 && !partes[1].isBlank() ? Arrays.asList(partes[1].split(",")) : List.of());
 		Set<String> permitidos = new HashSet<>(getConfig().getStringList("mods_permitidos"));
@@ -85,60 +119,10 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 			return;
 		}
 		saludaron.add(p.getUniqueId());
-		if (esperando.contains(p.getUniqueId())) avisarSala();   // ahora que se que tiene el mod, le muestro la sala
-	}
-
-	// ---------- sala de espera ----------
-	private void ponerEnSala(Player p) {
-		esperando.add(p.getUniqueId());
-		modoAntes.putIfAbsent(p.getUniqueId(), p.getGameMode());
-		p.setGameMode(GameMode.SPECTATOR);
-		Location sala = p.getWorld().getSpawnLocation().clone().add(0.5, 60, 0.5);
-		p.teleport(sala);
-		for (Player otro : Bukkit.getOnlinePlayers()) { if (otro != p) { otro.hidePlayer(this, p); p.hidePlayer(this, otro); } }
-		avisarSala();
-	}
-
-	private void avisarSala() {
-		int n = esperando.size();
-		for (UUID id : esperando) { Player p = Bukkit.getPlayer(id); if (p != null) enviar(p, "espera;" + n); }
-	}
-
-	private void abrirTodo() {
-		List<Player> entran = new ArrayList<>();
-		for (UUID id : esperando) { Player p = Bukkit.getPlayer(id); if (p != null) entran.add(p); }
-		esperando.clear();
-		for (Player p : entran) {
-			enviar(p, "abrir");
-			p.setGameMode(modoAntes.getOrDefault(p.getUniqueId(), GameMode.SURVIVAL) == GameMode.SPECTATOR ? GameMode.SURVIVAL : modoAntes.getOrDefault(p.getUniqueId(), GameMode.SURVIVAL));
-			p.teleport(p.getWorld().getSpawnLocation().clone().add(0.5, 0, 0.5));
-			p.showTitle(Title.title(msg("abrio"), Component.empty()));
-		}
-		modoAntes.clear();
-		for (Player a : Bukkit.getOnlinePlayers()) for (Player b : Bukkit.getOnlinePlayers()) if (a != b) a.showPlayer(this, b);
-	}
-
-	// mientras esperan: no se mueven, no hablan entre ellos por chat de juego (se puede cambiar), no hacen nada
-	@EventHandler
-	public void alMoverse(PlayerMoveEvent e) {
-		if (esperando.contains(e.getPlayer().getUniqueId()) && e.hasChangedPosition()) e.setCancelled(true);
 	}
 
 	@EventHandler
-	public void alTeletransportarse(PlayerTeleportEvent e) {
-		if (esperando.contains(e.getPlayer().getUniqueId()) && e.getCause() == PlayerTeleportEvent.TeleportCause.SPECTATE) e.setCancelled(true);
-	}
-
-	@EventHandler
-	public void alSalir(PlayerQuitEvent e) {
-		UUID id = e.getPlayer().getUniqueId();
-		saludaron.remove(id);
-		if (esperando.remove(id)) {
-			GameMode antes = modoAntes.remove(id);
-			if (antes != null) e.getPlayer().setGameMode(antes);
-			Bukkit.getScheduler().runTask(this, this::avisarSala);
-		}
-	}
+	public void alSalir(PlayerQuitEvent e) { saludaron.remove(e.getPlayer().getUniqueId()); }
 
 	// ---------- comandos ----------
 	@Override
@@ -147,16 +131,14 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		switch (sub) {
 			case "abrir" -> {
 				getConfig().set("abierto", true); saveConfig();
-				int n = esperando.size();
-				abrirTodo();
-				s.sendMessage(MM.deserialize("<green>Server ABIERTO.</green> <gray>Entraron " + n + " jugadores de la sala.</gray>"));
+				s.sendMessage(MM.deserialize("<green>Server ABIERTO.</green> <gray>Los " + enFila() + " de la fila van a entrar solos en unos segundos.</gray>"));
 			}
 			case "cerrar" -> {
 				getConfig().set("abierto", false); saveConfig();
-				s.sendMessage(MM.deserialize("<red>Server CERRADO.</red> <gray>Los que entren ahora van a la sala de espera (los admins entran igual).</gray>"));
+				s.sendMessage(MM.deserialize("<yellow>Server EN PREPARACIÓN.</yellow> <gray>Solo entran los admins. Los que ya estan adentro siguen jugando.</gray>"));
 			}
 			case "recargar" -> { reloadConfig(); s.sendMessage(MM.deserialize("<green>Config recargada.</green>")); }
-			default -> s.sendMessage(MM.deserialize((abierto() ? "<green>Server ABIERTO" : "<red>Server CERRADO") + "</green></red> <gray>- en la sala: " + esperando.size() + "</gray>"));
+			default -> s.sendMessage(MM.deserialize((abierto() ? "<green>Server ABIERTO" : "<yellow>Server EN PREPARACIÓN") + "</yellow></green> <gray>- en la fila: " + enFila() + " - conectados: " + Bukkit.getOnlinePlayers().size() + "</gray>"));
 		}
 		return true;
 	}

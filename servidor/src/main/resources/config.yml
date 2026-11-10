@@ -1,6 +1,10 @@
-# ¿El server esta abierto? Cerrado = los que entran quedan en la sala de espera (los admins entran igual).
+# ¿El server esta abierto para todos? Si no, esta "EN PREPARACION": solo entran los admins
+# y los demas esperan en la fila desde el menu del mod (entran solos cuando abre).
 # Se cambia con /tod abrir y /tod cerrar (no hace falta tocarlo aca).
 abierto: false
+
+# Admins: los OP entran siempre. Aca se pueden sumar mas por nombre.
+admins: []
 
 # Hace falta el mod de TOD para entrar.
 exigir_mod: true
@@ -15,6 +19,6 @@ mods_permitidos:
   - sodium
 
 mensajes:
+  en_preparacion: "<green><bold>TRUCOFDEATH: Revenants</bold></green>\n<white>El server está en preparación.</white>\n<gray>Esperá en el menú: cuando abra vas a entrar solo.</gray>"
   sin_mod: "<red>Para entrar a <green>TRUCOFDEATH: Revenants</green> necesitás el mod.</red>"
   mods_prohibidos: "<red>Tenés mods que no están permitidos:</red>\n<yellow>{mods}</yellow>\n<gray>Sacalos y volvé a entrar.</gray>"
-  abrio: "<green><bold>¡El server abrió!</bold></green>"

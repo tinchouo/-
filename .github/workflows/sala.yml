@@ -24,7 +24,7 @@ jobs:
           echo "paper-api: $PV" | tee plugin.log
           ./gradlew -p servidor build -Ppaper_version="$PV" 2>&1 | tee -a plugin.log
           ls servidor/build/libs/
-      - name: Server Paper 26.3 de prueba
+      - name: Preparar server Paper 26.3 (todavia apagado)
         run: |
           mkdir -p srv/plugins && cp servidor/build/libs/tod5-servidor-*.jar srv/plugins/
           URL=$(curl -s https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest | jq -r '.downloads["server:default"].url')
@@ -33,10 +33,7 @@ jobs:
           cd srv && echo "eula=true" > eula.txt
           printf 'white-list=false\nenforce-whitelist=false\nonline-mode=false\nenforce-secure-profile=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\nview-distance=4\nsimulation-distance=4\n' > server.properties
           touch cmds.txt
-          (tail -f cmds.txt | java -Xmx2G -jar paper.jar nogui > server.log 2>&1 &)
-          for i in $(seq 1 240); do grep -q "Done (" server.log && break; sleep 1; done
-          grep -E "TOD5|Done \(" server.log | head
-      - name: Juego conectandose al server
+      - name: Prueba completa
         run: |
           mkdir -p run cap
           printf 'onboardAccessibility:false\nskipMultiplayerWarning:true\njoinedFirstServer:true\ntutorialStep:none\nguiScale:2\n' > run/options.txt
@@ -44,18 +41,30 @@ jobs:
           export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.6 MESA_GLSL_VERSION_OVERRIDE=460
           Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset & sleep 2
           export DISPLAY=:99
+          L=run/logs/latest.log
+          espera() { for i in $(seq 1 $2); do grep -q "$1" $L 2>/dev/null && return 0; sleep 1; done; echo "NO LLEGO: $1"; }
+          # 1) el juego abre con el server APAGADO
           (env -u CI ./gradlew runClient -Ptod5_ip=localhost --stacktrace > juego.log 2>&1 &)
-          for i in $(seq 1 420); do grep -q "TOD5 menu abierto" run/logs/latest.log 2>/dev/null && break; sleep 1; done
-          sleep 9; import -window root cap/1_menu.png
-          xdotool mousemove 640 438; sleep 1; xdotool click 1
-          for i in $(seq 1 120); do grep -q "TOD5 server dice: espera" run/logs/latest.log 2>/dev/null && break; sleep 1; done
-          sleep 4; import -window root cap/2_sala.png
-          xdotool key Escape; sleep 3; import -window root cap/3_sala_tras_escape.png
+          espera "TOD5 menu abierto" 420; espera "estado del server: CERRADO" 30
+          sleep 9; import -window root cap/1_cerrado.png
+          # 2) se prende el server (arranca en preparacion)
+          (cd srv && tail -f cmds.txt | java -Xmx2G -jar paper.jar nogui > server.log 2>&1 &)
+          for i in $(seq 1 240); do grep -q "Done (" srv/server.log && break; sleep 1; done
+          espera "estado del server: PREPARACION" 30; sleep 2; import -window root cap/2_preparacion.png
+          # 3) JUGAR con el server en preparacion: a la fila
+          xdotool mousemove 640 438; sleep 1; xdotool click 1; espera "TOD5 fila: entro" 10
+          xdotool mousemove 200 650; sleep 8; import -window root cap/3_en_fila.png
+          xdotool mousemove 640 438; sleep 2; import -window root cap/3b_en_fila_hover.png; xdotool mousemove 200 650
           echo "tod estado" >> srv/cmds.txt; sleep 2
+          # 4) se abre: entra solo
           echo "tod abrir" >> srv/cmds.txt
-          for i in $(seq 1 30); do grep -q "TOD5 server dice: abrir" run/logs/latest.log 2>/dev/null && break; sleep 1; done
-          sleep 5; import -window root cap/4_abierto.png
-          sleep 8; import -window root cap/5_jugando.png
+          espera "entrando solo" 20; espera "saludo enviado" 60
+          sleep 10; import -window root cap/4_adentro.png
+          # 5) lo echan: vuelve al menu (no a la lista de servers)
+          echo "kick @a Prueba de echar" >> srv/cmds.txt; sleep 4; import -window root cap/5_echado.png
+          for y in 380 400 420 440 460; do xdotool mousemove 640 $y click 1; sleep 0.5; done
+          sleep 4; import -window root cap/6_vuelve_al_menu.png
+          echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs
         if: always()

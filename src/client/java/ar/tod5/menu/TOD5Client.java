@@ -12,7 +12,6 @@ public class TOD5Client implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		ClientTickEvents.END_CLIENT_TICK.register(MusicaMenu::tick);
-		ClientTickEvents.END_CLIENT_TICK.register(Conexion::tick);
 		Conexion.registrar();
 	}
 }
