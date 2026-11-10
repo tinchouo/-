@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 /**
  * La tecla de la tablet (J por defecto). Aparece en Opciones > Controles, en la seccion "TRUCOFDEATH", arriba de todo.
@@ -25,7 +24,7 @@ public final class TeclaTablet {
 		orden.remove(CATEGORIA);
 		orden.add(0, CATEGORIA);
 
-		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_J, CATEGORIA));
+		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", InputConstants.Type.KEYSYM, InputConstants.KEY_J, CATEGORIA));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
 				if (mc.player != null && mc.level != null && mc.gui.screen() == null) mc.gui.setScreen(new Tablet());
