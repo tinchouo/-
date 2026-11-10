@@ -45,6 +45,8 @@ public class MenuPrincipal extends Screen {
 	private static final float T_BOTONES = 6.0f, BOTONES_DURA = 1.2f;    // aparecen los botones
 	private static final float FIN_INTRO = T_BOTONES + BOTONES_DURA;
 
+	/** Estilo de los botones del menu: "boton_" = placa de hierro, "botontxt_" = solo el texto flotando (idea de Frack). */
+	private static final String ESTILO = "botontxt_";
 	private static boolean introVista = false;
 
 	private final boolean conIntro;
@@ -62,10 +64,10 @@ public class MenuPrincipal extends Screen {
 		// los botones van en la mitad de la pantalla (solo el logo va arriba)
 		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 2 + 30));
 		this.botonesY = y;
-		this.addRenderableWidget(new BotonTOD("jugar", "Jugar", x, y, bw, bh, b -> jugar()));
-		this.addRenderableWidget(new BotonTOD("opciones", "Opciones", x, y + 24, bw, bh,
+		this.addRenderableWidget(new BotonTOD(ESTILO, "jugar", "Jugar", x, y, bw, bh, b -> jugar()));
+		this.addRenderableWidget(new BotonTOD(ESTILO, "opciones", "Opciones", x, y + 24, bw, bh,
 			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
-		this.addRenderableWidget(new BotonTOD("salir", "Salir", x, y + 48, bw, bh, b -> this.minecraft.stop()));
+		this.addRenderableWidget(new BotonTOD(ESTILO, "salir", "Salir", x, y + 48, bw, bh, b -> this.minecraft.stop()));
 	}
 
 	@Override
@@ -166,7 +168,7 @@ public class MenuPrincipal extends Screen {
 
 		// 1) el fondo (plano y animado); el agujero negro va entre el logo y los botones
 		int arriba = logoY() + logoAlto(), hueco = Math.max(20, this.botonesY - arriba);
-		Fondo.dibujar(g, this.width, this.height, t, this.width / 2, arriba + hueco / 2, Math.min(hueco * 0.62f, this.width * 0.12f));
+		Fondo.dibujar(g, this.width, this.height, this.width / 2, arriba + hueco / 2, Math.min(hueco * 0.62f, this.width * 0.12f));
 
 		// 2) el logo, quieto arriba, saliendo de la oscuridad
 		float alfaLogo = !empezo ? 0 : this.conIntro ? suave(clamp01((t - T_LOGO) / LOGO_DURA)) : 1;

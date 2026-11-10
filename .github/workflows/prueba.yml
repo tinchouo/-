@@ -18,7 +18,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - name: Pantalla virtual
         run: |
-          sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio >/dev/null
+          sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio >/dev/null
           Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset & sleep 2
           DISPLAY=:99 glxinfo -B 2>&1 | head -12 | tee glx.txt || true
       - name: Abrir Minecraft y sacar capturas
@@ -37,6 +37,10 @@ jobs:
             while [ $(echo "$(date +%s.%N) - $T0 < $t" | bc) = 1 ]; do sleep 0.05; done
             import -window root cap/t_$t.png || xwd -root -silent | convert xwd:- cap/t_$t.png
           done
+          # mouse encima de JUGAR, despues entrar a Opciones y pasar el mouse por un boton de Minecraft
+          xdotool mousemove 640 438; sleep 2; import -window root cap/hover_jugar.png
+          xdotool mousemove 640 488; sleep 1; xdotool click 1; sleep 4; import -window root cap/opciones.png
+          for y in 150 200 250 300 350; do xdotool mousemove 400 $y; sleep 1; import -window root cap/opciones_hover_$y.png; done
           pkill -f net.fabricmc || true; sleep 3
       - name: Subir capturas y logs
         if: always()

@@ -28,6 +28,28 @@ public final class Fondo {
 
 	private Fondo() {}
 
+	/** Reloj propio del fondo: sigue corriendo igual al pasar de un menu a otro (no arranca de cero). */
+	private static long inicio = 0;
+	public static float tiempo() {
+		long ahora = net.minecraft.util.Util.getMillis();
+		if (inicio == 0) inicio = ahora;
+		return (ahora - inicio) / 1000f;
+	}
+
+	/** El mismo fondo para los otros menus (Opciones, etc.), sin el agujero negro. */
+	public static void dibujarSinAgujero(GuiGraphicsExtractor g, int ancho, int alto) {
+		float t = tiempo();
+		capas(g, ancho, alto, t);
+	}
+
+	private static void capas(GuiGraphicsExtractor g, int ancho, int alto, float t) {
+		g.fill(0, 0, ancho, alto, 0xFF000000);
+		capa(g, NEBULOSA, NEB_W, NEB_H, t * V_NEB, ancho, alto, 0xFFFFFFFF);
+		capa(g, ESTRELLAS_A, EST_W, EST_H, t * V_EST_A, ancho, alto, argb(0.75f + 0.25f * (float) Math.sin(t * 0.9), 0xFFFFFF));
+		capa(g, ESTRELLAS_B, EST_W, EST_H, t * V_EST_B + 700, ancho, alto, argb(0.8f + 0.2f * (float) Math.sin(t * 1.7 + 1), 0xFFFFFF));
+		fugaz(g, ancho, alto, t);
+	}
+
 	private static int argb(float a, int rgb) { return ((int) (Math.max(0, Math.min(1, a)) * 255) << 24) | (rgb & 0xFFFFFF); }
 
 	/** Una capa que se repite de costado, escalada para ocupar todo el alto de la pantalla. */
@@ -48,13 +70,9 @@ public final class Fondo {
 	 * @param cx,cy  centro del agujero negro en la pantalla
 	 * @param diametro  diametro del agujero (sin el disco) en pixeles de pantalla
 	 */
-	public static void dibujar(GuiGraphicsExtractor g, int ancho, int alto, float t, int cx, int cy, float diametro) {
-		g.fill(0, 0, ancho, alto, 0xFF000000);
-		capa(g, NEBULOSA, NEB_W, NEB_H, t * V_NEB, ancho, alto, 0xFFFFFFFF);
-		capa(g, ESTRELLAS_A, EST_W, EST_H, t * V_EST_A, ancho, alto, argb(0.75f + 0.25f * (float) Math.sin(t * 0.9), 0xFFFFFF));
-		capa(g, ESTRELLAS_B, EST_W, EST_H, t * V_EST_B + 700, ancho, alto, argb(0.8f + 0.2f * (float) Math.sin(t * 1.7 + 1), 0xFFFFFF));
-
-		fugaz(g, ancho, alto, t);
+	public static void dibujar(GuiGraphicsExtractor g, int ancho, int alto, int cx, int cy, float diametro) {
+		float t = tiempo();
+		capas(g, ancho, alto, t);
 
 		// agujero negro: el disco gira (48 cuadros) y el brillo late despacio
 		int ah = Math.round(diametro / (2 * AG_RADIO)), aw = ah * AG_W / AG_H;
