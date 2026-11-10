@@ -24,7 +24,7 @@ public final class TeclaTablet {
 		orden.remove(CATEGORIA);
 		orden.add(0, CATEGORIA);
 
-		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", InputConstants.Type.KEYSYM, InputConstants.KEY_J, CATEGORIA));
+		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", InputConstants.Type.KEYSYM, 74 /* J */, CATEGORIA));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
 				if (mc.player != null && mc.level != null && mc.gui.screen() == null) mc.gui.setScreen(new Tablet());
