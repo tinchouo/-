@@ -49,6 +49,7 @@ public class MenuPrincipal extends Screen {
 
 	private final boolean conIntro;
 	private long inicio;
+	private int botonesY;
 
 	public MenuPrincipal() {
 		super(Component.literal(NOMBRE));
@@ -60,6 +61,7 @@ public class MenuPrincipal extends Screen {
 		int bw = 200, bh = 20, x = this.width / 2 - bw / 2;
 		// los botones van en la mitad de la pantalla (solo el logo va arriba)
 		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 2 + 30));
+		this.botonesY = y;
 		this.addRenderableWidget(new BotonTOD("jugar", "Jugar", x, y, bw, bh, b -> jugar()));
 		this.addRenderableWidget(new BotonTOD("opciones", "Opciones", x, y + 24, bw, bh,
 			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
@@ -162,8 +164,9 @@ public class MenuPrincipal extends Screen {
 		this.fadeWidgets(alfaBotones);
 		for (var w : this.children()) if (w instanceof Button b) b.active = alfaBotones > 0.6f;
 
-		// 1) la galaxia
-		this.extractPanorama(g, a);
+		// 1) el fondo (plano y animado); el agujero negro va entre el logo y los botones
+		int arriba = logoY() + logoAlto(), hueco = Math.max(20, this.botonesY - arriba);
+		Fondo.dibujar(g, this.width, this.height, t, this.width / 2, arriba + hueco / 2, Math.min(hueco * 0.62f, this.width * 0.12f));
 
 		// 2) el logo, quieto arriba, saliendo de la oscuridad
 		float alfaLogo = !empezo ? 0 : this.conIntro ? suave(clamp01((t - T_LOGO) / LOGO_DURA)) : 1;
