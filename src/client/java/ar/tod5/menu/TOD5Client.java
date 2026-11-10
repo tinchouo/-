@@ -13,6 +13,7 @@ public class TOD5Client implements ClientModInitializer {
 	public void onInitializeClient() {
 		ClientTickEvents.END_CLIENT_TICK.register(MusicaMenu::tick);
 		Conexion.registrar();
+		Ruleta.registrar();
 		ar.tod5.menu.tablet.TeclaTablet.registrar();
 	}
 }

@@ -17,7 +17,7 @@ jobs:
           java-version: 25
       - uses: gradle/actions/setup-gradle@v4
       - name: Herramientas
-        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio jq >/dev/null
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio jq ffmpeg >/dev/null
       - name: Compilar plugin
         run: |
           PV=$(curl -s https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -o '<version>26\.3[^<]*</version>' | sed 's/<[^>]*>//g' | grep -E '^26\.3\.build\.[0-9]+-alpha$' | sort -V | tail -1)
@@ -66,11 +66,15 @@ jobs:
           sleep 25; import -window root cap/8_op_adentro.png
           # 5) sistema de la tablet: editor, anuncios con colores, crafteo oculto
           echo "tod editor agregar $N" >> srv/cmds.txt; sleep 2
-          echo "tod anuncio cambio Los creepers dejan veneno al morir." >> srv/cmds.txt
+          # la ruleta: la grabo en video (con sonido) mientras sale el primer anuncio
+          MON="$(pactl get-default-sink 2>/dev/null).monitor"; echo "audio: $MON"
+          (ffmpeg -v error -y -f x11grab -video_size 1280x720 -framerate 30 -i :99 -f pulse -i "$MON" -t 10 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p -c:a aac cap/ruleta.mp4 > ffmpeg.log 2>&1 || ffmpeg -v error -y -f x11grab -video_size 1280x720 -framerate 30 -i :99 -t 10 -c:v libx264 -preset veryfast -crf 23 -pix_fmt yuv420p cap/ruleta.mp4 >> ffmpeg.log 2>&1) &
+          sleep 0.5; echo "tod anuncio cambio Los creepers dejan veneno al morir." >> srv/cmds.txt
           echo "tod anuncio aviso Hoy a las 20:00 hay evento en el Nether." >> srv/cmds.txt
           echo "tod anuncio truco Todos con un solo corazón por 10 minutos." >> srv/cmds.txt
           echo "tod anuncio dungeon NUEVA DIMENSIÓN | Se abrió el Aether." >> srv/cmds.txt
-          sleep 2; import -window root cap/c1_chat.png
+          sleep 3; import -window root cap/r1_girando.png; sleep 3.6; import -window root cap/r2_eligio.png; sleep 3.5; import -window root cap/r3_chat.png
+          cat ffmpeg.log || true; sleep 26; import -window root cap/c1_chat.png
           echo "tod crafteo ocultar billetera" >> srv/cmds.txt; sleep 2
           # 6) la tablet: J, secciones, y en Crafteos el modo edicion: marcar la billetera y activarla
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; import -window root cap/t1_inicio.png
@@ -81,7 +85,7 @@ jobs:
           xdotool mousemove 294 170 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/t6_marcado.png
           xdotool mousemove 340 318 click 1; sleep 3; xdotool mousemove 1200 700; sleep 1; import -window root cap/t7_activado.png
           xdotool mousemove 1040 128 click 1; sleep 1; xdotool mousemove 294 170; sleep 1; import -window root cap/t8_listo.png
-          xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 1; import -window root cap/t9_chat.png
+          xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 9; import -window root cap/t9_chat.png
           grep -E "TOD5 tablet:" $L | tail -5 || true; grep -E "activo crafteos|Tablet:" srv/server.log || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5

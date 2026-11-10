@@ -48,5 +48,40 @@
         "name": "tod5:secreto_volver"
       }
     ]
+  },
+  "ruleta_aparece": {
+    "sounds": [
+      {
+        "name": "tod5:ruleta_aparece"
+      }
+    ]
+  },
+  "ruleta_tic": {
+    "sounds": [
+      {
+        "name": "tod5:ruleta_tic"
+      }
+    ]
+  },
+  "ruleta_piri": {
+    "sounds": [
+      {
+        "name": "tod5:ruleta_piri"
+      }
+    ]
+  },
+  "ruleta_elige": {
+    "sounds": [
+      {
+        "name": "tod5:ruleta_elige"
+      }
+    ]
+  },
+  "ruleta_se_va": {
+    "sounds": [
+      {
+        "name": "tod5:ruleta_se_va"
+      }
+    ]
   }
 }

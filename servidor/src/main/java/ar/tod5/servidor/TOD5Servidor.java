@@ -45,6 +45,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		getServer().getMessenger().registerIncomingPluginChannel(this, CANAL_HOLA, this);
 		getServer().getMessenger().registerIncomingPluginChannel(this, Tablero.CANAL_ACCION, this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Tablero.CANAL_TABLET);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Tablero.CANAL_RULETA);
 		tablero = new Tablero(this);
 		tablero.cargar();
 		getServer().getPluginManager().registerEvents(this, this);

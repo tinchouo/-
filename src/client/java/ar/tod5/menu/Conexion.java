@@ -18,6 +18,11 @@ public final class Conexion {
 		PayloadTypeRegistry.serverboundPlay().register(Red.HOLA, Red.codec(Red.HOLA));
 		PayloadTypeRegistry.serverboundPlay().register(Red.ACCION, Red.codec(Red.ACCION));
 		PayloadTypeRegistry.clientboundPlay().register(Red.TABLET, Red.codec(Red.TABLET));
+		PayloadTypeRegistry.clientboundPlay().register(Red.RULETA, Red.codec(Red.RULETA));
+		ClientPlayNetworking.registerGlobalReceiver(Red.RULETA, (p, ctx) -> ctx.client().execute(() -> {
+			try { Ruleta.empezar(Integer.parseInt(p.texto().trim())); LOG.info("TOD5 ruleta: color {}", p.texto().trim()); }
+			catch (NumberFormatException e) { LOG.warn("TOD5 ruleta: no entendi '{}'", p.texto()); }
+		}));
 
 		// el server me manda lo que muestra la tablet (al entrar y cada vez que cambia algo)
 		ClientPlayNetworking.registerGlobalReceiver(Red.TABLET, (p, ctx) -> ctx.client().execute(() -> ar.tod5.menu.tablet.TabletDatos.recibir(p.texto())));

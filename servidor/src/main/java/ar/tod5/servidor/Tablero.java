@@ -35,21 +35,24 @@ import org.bukkit.persistence.PersistentDataType;
  *   plugins/TOD5/datos/novedades.yml   las novedades publicadas
  */
 public class Tablero {
-	static final String CANAL_TABLET = "tod5:tablet", CANAL_ACCION = "tod5:accion";
+	static final String CANAL_TABLET = "tod5:tablet", CANAL_ACCION = "tod5:accion", CANAL_RULETA = "tod5:ruleta";
+	/** Lo que dura la ruleta en el mod (unos 7,7 s): recien despues sale el mensaje en el chat. */
+	static final long DURACION_RULETA = 156;
 	private static final Gson GSON = new Gson();
 
 	/** Los tipos de anuncio: color de la ruleta, titulo por defecto, y si quedan guardados en la tablet. */
 	enum Tipo {
-		DIARIA("diaria", 0x55FF55, "MISIÓN DIARIA", false),
-		AVISO("aviso", 0x55FFFF, "AVISO", true),
-		CAMBIO("cambio", 0xFF9600, "CAMBIO DE DIFICULTAD", true),
-		SANCION("sancion", 0xB45AFF, "SANCIÓN", false),
-		TRUCO("truco", 0xFF3C3C, "MOMENTO TRUCO", false),
-		CUY("cuy", 0xFF78C8, "MOMENTO CUY", false),
-		MOB("mob", 0xFFE63C, "NUEVO MOB", true),
-		DUNGEON("dungeon", 0x4678FF, "NUEVA DUNGEON", true);
-		final String id; final int color; final String titulo; final boolean enTablet;
-		Tipo(String id, int color, String titulo, boolean enTablet) { this.id = id; this.color = color; this.titulo = titulo; this.enTablet = enTablet; }
+		// el numero es el gajo de la ruleta (mismo orden que en el mod)
+		DIARIA("diaria", 0x55FF55, "MISIÓN DIARIA", false, 0),
+		AVISO("aviso", 0x55FFFF, "AVISO", true, 1),
+		CAMBIO("cambio", 0xFF9600, "CAMBIO DE DIFICULTAD", true, 6),
+		SANCION("sancion", 0xB45AFF, "SANCIÓN", false, 3),
+		TRUCO("truco", 0xFF3C3C, "MOMENTO TRUCO", false, 5),
+		CUY("cuy", 0xFF78C8, "MOMENTO CUY", false, 4),
+		MOB("mob", 0xFFE63C, "NUEVO MOB", true, 7),
+		DUNGEON("dungeon", 0x4678FF, "NUEVA DUNGEON", true, 2);
+		final String id; final int color; final String titulo; final boolean enTablet; final int gajo;
+		Tipo(String id, int color, String titulo, boolean enTablet, int gajo) { this.id = id; this.color = color; this.titulo = titulo; this.enTablet = enTablet; this.gajo = gajo; }
 		static Tipo de(String s) { for (Tipo t : values()) if (t.id.equalsIgnoreCase(s)) return t; return null; }
 	}
 
@@ -197,8 +200,30 @@ public class Tablero {
 	void cambiarDia(int n) { dia = Math.max(1, n); guardarEstado(); sincronizarTodos(); }
 	int dia() { return dia; }
 
-	/** Un anuncio como en DeDSafio: titulo en negrita con ">" y abajo el texto, en el mismo color mas claro. La ruleta se suma mas adelante. */
+	// ---- la ruleta: los anuncios van en fila; cada uno gira la ruleta y recien al terminar sale en el chat ----
+	private final ArrayDeque<Runnable> cola = new ArrayDeque<>();
+	private boolean girando = false;
+
+	/** Un anuncio como en DeDSafio: primero la ruleta (en el mod), despues el mensaje en el chat. */
 	void anunciar(Tipo t, String titulo, String texto) {
+		cola.add(() -> {
+			byte[] b = String.valueOf(t.gajo).getBytes(StandardCharsets.UTF_8);
+			for (Player p : Bukkit.getOnlinePlayers()) if (plugin.tieneElMod(p)) p.sendPluginMessage(plugin, CANAL_RULETA, b);
+			Bukkit.getScheduler().runTaskLater(plugin, () -> {
+				publicar(t, titulo, texto);
+				Bukkit.getScheduler().runTaskLater(plugin, this::siguiente, 10);   // medio segundo entre ruletas
+			}, DURACION_RULETA);
+		});
+		if (!girando) siguiente();
+	}
+	private void siguiente() {
+		Runnable r = cola.poll();
+		girando = r != null;
+		if (r != null) r.run();
+	}
+
+	/** El mensaje: titulo en negrita con ">" y abajo el texto, en el mismo color mas claro. */
+	private void publicar(Tipo t, String titulo, String texto) {
 		String tit = titulo == null || titulo.isBlank() ? t.titulo : titulo.toUpperCase(Locale.ROOT);
 		TextColor fuerte = TextColor.color(t.color), claro = TextColor.color(aclarar(t.color));
 		Component msg = Component.text("> " + tit + ":", fuerte).decorate(TextDecoration.BOLD)
