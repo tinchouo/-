@@ -18,6 +18,7 @@ import net.minecraft.util.Util;
  *   al medio del gajo -> el color se contagia gajo por gajo -> se va.
  * Recien cuando termina, el server manda el mensaje al chat.
  * Cada sonido es un archivo aparte (assets/tod5/sounds/ruleta_*.ogg) para poder cambiarlos.
+ * ruleta_tic es UNA nota: el juego le cambia el tono en cada golpe.
  */
 public final class Ruleta {
 	/** Colores en el orden de la rueda: diaria, aviso, dungeon, sancion, cuy, truco, cambio, mob. */
@@ -25,7 +26,7 @@ public final class Ruleta {
 
 	private static Identifier tex(String n) { return Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/ruleta/" + n + ".png"); }
 	private static final Identifier GAJO = tex("ruleta_gajo"), ARO = tex("ruleta_aro"), BLANCA = tex("ruleta_blanca"),
-		FLECHA = tex("ruleta_flecha"), GEMA = tex("ruleta_gema"), LUZ = tex("ruleta_luz");
+		FLECHA = tex("ruleta_flecha"), GEMA = tex("ruleta_gema"), GEMA_ORO = tex("ruleta_gema_oro"), LUZ = tex("ruleta_luz");
 
 	// tiempos (segundos)
 	private static final float T_AP = 0.32f, T_ON = 0.30f, T0 = T_AP + T_ON * 0.6f, T_GIRO = 5.2f, T_VUELTA = 0.7f;
@@ -35,7 +36,10 @@ public final class Ruleta {
 	/** Cuanto dura todo (el server espera esto antes de mandar el mensaje). */
 	public static final float DURACION = T_FIN;
 
-	private static final float[] PIRI = { 0.794f, 1f, 1.189f, 1.587f, 2f, 1.587f, 1.189f, 1f };   // do mi sol do' mi' do' sol mi (sobre Mi5)
+	/** Cada golpe de la flecha es un "plin" en una nota distinta (escala pentatonica), como en DeDSafio. */
+	private static final float[] NOTAS = { 0.70f, 0.79f, 0.89f, 1.0f, 1.12f, 1.19f, 1.33f, 1.5f };
+	/** Gira rapido y parejo casi todo el tiempo, y frena recien al final (como la de DeDSafio). */
+	private static final float PAREJO = 0.68f;
 
 	private static long inicio = 0;
 	private static int sel;
@@ -52,7 +56,7 @@ public final class Ruleta {
 	/** Arranca la ruleta: va a frenar en ese color (0..7). */
 	public static void empezar(int color) {
 		sel = Math.floorMod(color, 8);
-		centro = 5 * 360 + (sel + 0.5f) * 45f;
+		centro = 10 * 360 + (sel + 0.5f) * 45f;
 		fin = centro + 15f;                      // se pasa 15 grados del medio y vuelve
 		inicio = Util.getMillis();
 		cruces = 0; sonoElige = false; sonoSeVa = false;
@@ -61,9 +65,23 @@ public final class Ruleta {
 
 	private static float giro(float t) {
 		if (t < T0) return 0;
-		if (t < T0 + T_GIRO) { float p = (t - T0) / T_GIRO; return fin * (1 - (float) Math.pow(1 - p, 2.2)); }
+		if (t < T0 + T_GIRO) {
+			// velocidad pareja hasta PAREJO, despues frena (v = v0 * (1-u)^2)
+			float p = (t - T0) / T_GIRO, v0 = fin / (PAREJO + (1 - PAREJO) / 3f);
+			if (p < PAREJO) return v0 * p;
+			float u = (p - PAREJO) / (1 - PAREJO);
+			return v0 * (PAREJO + (1 - PAREJO) * (1 - (float) Math.pow(1 - u, 3)) / 3f);
+		}
 		float q = Math.min(1, (t - T0 - T_GIRO) / T_VUELTA);   // vuelve al medio del gajo, con un rebotito
 		return centro + (fin - centro) * (float) (Math.exp(-q * 5) * Math.cos(q * Math.PI * 1.5));
+	}
+
+	/** Vueltas por segundo en ese momento (para cuanto se dobla la flecha). */
+	private static float velocidad(float t) {
+		float p = (t - T0) / T_GIRO, v0 = fin / (PAREJO + (1 - PAREJO) / 3f) / T_GIRO / 360f;
+		if (p < PAREJO) return v0;
+		float u = Math.min(1, (p - PAREJO) / (1 - PAREJO));
+		return v0 * (1 - u) * (1 - u);
 	}
 
 	private static void sonido(String n, float tono, float vol) {
@@ -93,7 +111,7 @@ public final class Ruleta {
 		// ---- sonidos al ritmo de la animacion ----
 		if (t > T0 && t < T0 + T_GIRO) {
 			int c = (int) (giro / 45f), nuevos = 0;
-			while (cruces < c && nuevos < 2) { cruces++; nuevos++; sonido("ruleta_tic", 0.95f + (float) Math.random() * 0.1f, 0.7f); sonido("ruleta_piri", PIRI[cruces % 8], 0.35f); }
+			while (cruces < c && nuevos < 2) { cruces++; nuevos++; sonido("ruleta_tic", NOTAS[(int) (Math.random() * NOTAS.length)], 0.55f); }
 			cruces = c;
 		}
 		if (!sonoElige && t >= T_STOP) { sonoElige = true; sonido("ruleta_elige", 1f, 0.9f); }
@@ -142,17 +160,16 @@ public final class Ruleta {
 		g.blit(RenderPipelines.GUI_TEXTURED, ARO, Math.round(cx - d / 2), Math.round(cy - d / 2), 0, 0, di, di, 512, 512, 512, 512, argb(alfa, 0xFFFFFF));
 
 		// ---- la flecha: entra en los colores, se dobla en cada rayita, y su luz muestra el color de abajo ----
-		int arriba = Math.floorMod((int) Math.floor(giro / 45f), 8);
-		int colLuz = t >= T_AP + T_ON ? COLORES[arriba] : 0x667070;
+		boolean eligio = t >= T_STOP;   // hasta que elige, la luz es de oro verde; despues, del color que salio
 		float desde = 9;
 		if (t > T0 && t < T0 + T_GIRO) {   // tiempo desde la ultima rayita (aproximado con la velocidad)
 			float fase = (giro % 45f) / 45f;
-			float vel = Math.max(0.05f, fin * 2.2f * (float) Math.pow(1 - (t - T0) / T_GIRO, 1.2) / T_GIRO / 360f);
+			float vel = Math.max(0.05f, velocidad(t));
 			desde = fase * 45f / (vel * 360f);
 		}
 		float defl = 0;
 		if (t > T0 && t < T0 + T_GIRO) {
-			float vel = fin * 2.2f * (float) Math.pow(1 - (t - T0) / T_GIRO, 1.2) / T_GIRO / 360f;
+			float vel = velocidad(t);
 			defl = -28f * (float) Math.exp(-desde / 0.05f) * Math.min(1, 0.3f + vel * 0.35f);
 		}
 		if (ts >= 0 && ts < 0.5f) defl = 8f * (float) (Math.exp(-ts * 8) * Math.sin(ts * 40));
@@ -164,7 +181,8 @@ public final class Ruleta {
 		pose.rotate((float) Math.toRadians(defl));
 		g.blit(RenderPipelines.GUI_TEXTURED, FLECHA, Math.round(-fw / 2), Math.round(-piv), 0, 0, Math.round(fw), Math.round(fh), 120, 240, 120, 240, argb(alfa, 0xFFFFFF));
 		int gs = Math.round(fw * 0.30f * (1 + 0.3f * pop));
-		g.blit(RenderPipelines.GUI_TEXTURED, GEMA, -gs / 2, -gs / 2, 0, 0, gs, gs, 64, 64, 64, 64, argb(alfa, mezclar(colLuz, 0xFFFFFF, pop)));
+		if (eligio) g.blit(RenderPipelines.GUI_TEXTURED, GEMA, -gs / 2, -gs / 2, 0, 0, gs, gs, 64, 64, 64, 64, argb(alfa, mezclar(COLORES[sel], 0xFFFFFF, pop)));
+		else g.blit(RenderPipelines.GUI_TEXTURED, GEMA_ORO, -gs / 2, -gs / 2, 0, 0, gs, gs, 64, 64, 64, 64, argb(alfa, 0xFFFFFF));
 		pose.popMatrix();
 
 		// ---- blanco al aparecer / al irse ----

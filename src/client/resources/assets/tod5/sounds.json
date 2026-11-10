@@ -63,13 +63,6 @@
       }
     ]
   },
-  "ruleta_piri": {
-    "sounds": [
-      {
-        "name": "tod5:ruleta_piri"
-      }
-    ]
-  },
   "ruleta_elige": {
     "sounds": [
       {
