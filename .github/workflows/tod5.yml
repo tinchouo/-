@@ -38,6 +38,8 @@ jobs:
               cl=$(echo $c | sed 's#^\./##; s#\.class$##; s#/#.#g'); echo "== $cl" >> $LOG; javap -cp x_$n -public "$cl" >> $LOG 2>&1
             done
           done
+          CJ=$(find $W/.gradle ~/.gradle -name 'minecraft-clientOnly-*.jar' ! -name '*sources*' 2>/dev/null | head -1); echo "client jar: $CJ" >> $LOG
+          mkdir -p /tmp/ref/widget && cd /tmp/ref/widget && unzip -q -o -j "$CJ" 'assets/minecraft/textures/gui/sprites/widget/*' >> $LOG 2>&1; ls /tmp/ref/widget >> $LOG
           echo "archivos ref: $(find /tmp/ref -type f | wc -l)" >> $LOG
           true
       - name: Subir log y referencia
