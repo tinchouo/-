@@ -50,7 +50,7 @@ jobs:
           sleep 7; xdotool mousemove 100 100; import -window root cap/2_cerrado.png
           # 2) se prende el server (en preparacion): intenta entrar, lo rechaza (no es OP) y queda en la cola
           (cd srv && tail -f cmds.txt | java -Xmx2G -jar paper.jar nogui > server.log 2>&1 &)
-          for i in $(seq 1 240); do grep -q "Done (" srv/server.log && break; sleep 1; done
+          for i in $(seq 1 240); do grep -q "Done (" srv/server.log && break; sleep 1; done; echo "difficulty peaceful" >> srv/cmds.txt
           espera "intento entrar (por si soy OP)" 30; sleep 12; import -window root cap/3_preparacion.png
           echo "tod estado" >> srv/cmds.txt; sleep 2
           # 3) se abre: SERVIDOR ABIERTO, suena el aviso, 3 s despues de que termina entra solo
