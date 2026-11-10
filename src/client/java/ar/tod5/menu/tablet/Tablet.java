@@ -293,7 +293,9 @@ public class Tablet extends Screen {
 			g.pose().pushMatrix(); g.pose().translate(tx + 6, ty + 16); g.pose().scale(1.5f, 1.5f);
 			g.text(this.font, tarjetas[i][1], 0, 0, VERDE, true);
 			g.pose().popMatrix();
-			g.text(this.font, this.font.plainSubstrByWidth(tarjetas[i][2], colW - 12), tx + 6, ty + 34, BLANCO, true);
+			String linea = tarjetas[i][2];
+			if (this.font.width(linea) > colW - 12) linea = this.font.plainSubstrByWidth(linea, colW - 12 - this.font.width("...")) + "...";
+			g.text(this.font, linea, tx + 6, ty + 34, BLANCO, true);
 			final Seccion d = destino[i]; final boolean cambios = i == 2;
 			this.zonas.add(new Zona(tx, ty, colW, alto, () -> { irA(d); if (cambios) this.filtro = "cambio"; }));
 		}
