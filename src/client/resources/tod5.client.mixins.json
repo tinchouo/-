@@ -5,7 +5,9 @@
 	"client": [
 		"GuiMixin",
 		"ScreenMixin",
-		"AbstractWidgetMixin"
+		"AbstractWidgetMixin",
+		"LoadingOverlayMixin",
+		"LogoTextureMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

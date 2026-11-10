@@ -40,6 +40,7 @@ public final class Fondo {
 	public static void dibujarSinAgujero(GuiGraphicsExtractor g, int ancho, int alto) {
 		float t = tiempo();
 		capas(g, ancho, alto, t);
+		g.fill(0, 0, ancho, alto, 0x8C000000);   // mas oscuro, para que se lean bien los botones
 	}
 
 	private static void capas(GuiGraphicsExtractor g, int ancho, int alto, float t) {
@@ -52,18 +53,21 @@ public final class Fondo {
 
 	private static int argb(float a, int rgb) { return ((int) (Math.max(0, Math.min(1, a)) * 255) << 24) | (rgb & 0xFFFFFF); }
 
-	/** Una capa que se repite de costado, escalada para ocupar todo el alto de la pantalla. */
+	/**
+	 * Una capa que se repite de costado, escalada para ocupar todo el alto de la pantalla.
+	 * Se dibujan copias enteras de la imagen corridas con posicion con decimales: el tamano no cambia nunca
+	 * de un cuadro al otro, asi el movimiento es parejo (antes el redondeo hacia temblar las estrellas).
+	 */
 	private static void capa(GuiGraphicsExtractor g, Identifier t, int texW, int texH, float desplazamiento, int ancho, int alto, int color) {
 		float s = alto / (float) texH;
-		int visible = (int) Math.ceil(ancho / s) + 1;
-		float u0 = desplazamiento % texW;
-		int parte1 = (int) Math.min(visible, texW - (int) u0);
-		int w1 = Math.round(parte1 * s);
-		g.blit(RenderPipelines.GUI_TEXTURED, t, 0, 0, u0, 0, w1, alto, parte1, texH, texW, texH, color);
-		if (parte1 < visible) {
-			int parte2 = visible - parte1;
-			g.blit(RenderPipelines.GUI_TEXTURED, t, w1, 0, 0, 0, Math.round(parte2 * s), alto, parte2, texH, texW, texH, color);
-		}
+		int w = Math.round(texW * s);                 // ancho de una copia en pantalla (fijo)
+		float x0 = -((desplazamiento % texW) / texW) * w;
+		Matrix3x2fStack p = g.pose();
+		p.pushMatrix();
+		p.translate(x0, 0);
+		for (int x = 0; x0 + x < ancho; x += w)
+			g.blit(RenderPipelines.GUI_TEXTURED, t, x, 0, 0, 0, w, alto, texW, texH, texW, texH, color);
+		p.popMatrix();
 	}
 
 	/**

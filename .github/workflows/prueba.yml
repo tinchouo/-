@@ -30,6 +30,7 @@ jobs:
           export DISPLAY=:99
           (env -u CI ./gradlew runClient --stacktrace > juego.log 2>&1 &)
           for i in $(seq 1 420); do grep -q "TOD5 menu abierto" run/logs/latest.log 2>/dev/null && break; grep -q "BUILD FAILED\|crash-reports" juego.log && break; sleep 1
+            if [ $i = 25 ] || [ $i = 45 ]; then import -window root cap/carga_$i.png || true; fi
             if [ $i = 240 ]; then import -window root cap/trabado.png || true; P=$(pgrep -f "devlaunchinjector.Main" | head -1); [ -n "$P" ] && jstack $P > hilos.txt 2>&1 || true; fi
           done
           T0=$(date +%s.%N)
@@ -41,6 +42,7 @@ jobs:
           xdotool mousemove 640 438; sleep 2; import -window root cap/hover_jugar.png
           xdotool mousemove 640 488; sleep 1; xdotool click 1; sleep 4; import -window root cap/opciones.png
           for y in 150 200 250 300 350; do xdotool mousemove 400 $y; sleep 1; import -window root cap/opciones_hover_$y.png; done
+          xdotool key Escape; sleep 2; xdotool keydown F3 key t keyup F3; sleep 25; import -window root cap/despues_recarga.png
           pkill -f net.fabricmc || true; sleep 3
       - name: Subir capturas y logs
         if: always()
