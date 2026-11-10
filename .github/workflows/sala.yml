@@ -20,7 +20,7 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio jq >/dev/null
       - name: Compilar plugin
         run: |
-          PV=$(curl -s https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -o '<version>26\.3[^<]*</version>' | sed 's/<[^>]*>//g' | grep -v rc | tail -1)
+          PV=$(curl -s https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -o '<version>26\.3[^<]*</version>' | sed 's/<[^>]*>//g' | grep -E '^26\.3\.build\.[0-9]+-alpha$' | sort -V | tail -1)
           echo "paper-api: $PV" | tee plugin.log
           ./gradlew -p servidor build -Ppaper_version="$PV" 2>&1 | tee -a plugin.log
           ls servidor/build/libs/
@@ -31,7 +31,7 @@ jobs:
           echo "paper: $URL" | tee -a plugin.log
           curl -sL "$URL" -o srv/paper.jar
           cd srv && echo "eula=true" > eula.txt
-          printf 'online-mode=false\nenforce-secure-profile=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\nview-distance=4\nsimulation-distance=4\n' > server.properties
+          printf 'white-list=false\nenforce-whitelist=false\nonline-mode=false\nenforce-secure-profile=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\nview-distance=4\nsimulation-distance=4\n' > server.properties
           touch cmds.txt
           (tail -f cmds.txt | java -Xmx2G -jar paper.jar nogui > server.log 2>&1 &)
           for i in $(seq 1 240); do grep -q "Done (" server.log && break; sleep 1; done
