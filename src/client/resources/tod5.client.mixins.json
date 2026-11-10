@@ -8,7 +8,8 @@
 		"AbstractWidgetMixin",
 		"LoadingOverlayMixin",
 		"LogoTextureMixin",
-		"DisconnectedScreenAccessor"
+		"DisconnectedScreenAccessor",
+		"KeyCategoryAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

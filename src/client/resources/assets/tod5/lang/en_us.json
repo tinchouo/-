@@ -1,1 +1,5 @@
-{ "tod5.musica": "TRUCOFDEATH: Revenants - Tema del menú (prueba)" }
+{
+ "tod5.musica": "TRUCOFDEATH: Revenants - Tema del menú (prueba)",
+ "key.category.tod5.trucofdeath": "TRUCOFDEATH",
+ "key.tod5.tablet": "Abrir la tablet"
+}
