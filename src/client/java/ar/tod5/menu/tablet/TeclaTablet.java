@@ -1,7 +1,6 @@
 package ar.tod5.menu.tablet;
 
 import ar.tod5.menu.mixin.KeyCategoryAccessor;
-import com.mojang.blaze3d.platform.InputConstants;
 import java.util.List;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -24,7 +23,7 @@ public final class TeclaTablet {
 		orden.remove(CATEGORIA);
 		orden.add(0, CATEGORIA);
 
-		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", InputConstants.Type.KEYSYM, 74 /* J */, CATEGORIA));
+		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", 74 /* J */, CATEGORIA));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
 				if (mc.player != null && mc.level != null && mc.gui.screen() == null) mc.gui.setScreen(new Tablet());
