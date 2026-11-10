@@ -13,7 +13,6 @@ import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
-import net.minecraft.sounds.Musics;
 import net.minecraft.util.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,8 +32,12 @@ public class MenuPrincipal extends Screen {
 	private static final String VERSION = FabricLoader.getInstance().getModContainer(TOD5Client.MOD_ID)
 		.map(m -> m.getMetadata().getVersion().getFriendlyString().replaceAll("\\.0$", "")).orElse("?");
 
-	private static final Identifier LOGO = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/logo.png");
-	private static final int LOGO_W = 1200, LOGO_H = 286;   // tamano real de la imagen
+	// el logo va en 3 capas: la base, el brillo verde de TRUCOFDEATH (late y le pasa un reflejo) y el fuego de REVENANTS
+	private static final Identifier LOGO = tex("logo_base"), BRILLO = tex("logo_brillo"), FUEGO = tex("logo_fuego");
+	private static final int LOGO_W = 1200, LOGO_H = 273;                                   // tamano de la imagen
+	private static final int FUEGO_X = 154, FUEGO_Y = 104, FUEGO_W = 872, FUEGO_H = 166, FUEGO_CUADROS = 24;
+	private static final float FUEGO_FPS = 15f;
+	private static Identifier tex(String n) { return Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/" + n + ".png"); }
 
 	// tiempos de la intro, en segundos
 	private static final float T_GALAXIA = 1.2f, T_GALAXIA_FIN = 3.6f;   // el negro se va y se ve la galaxia
@@ -46,7 +49,6 @@ public class MenuPrincipal extends Screen {
 
 	private final boolean conIntro;
 	private long inicio;
-	private boolean toastMostrado;
 
 	public MenuPrincipal() {
 		super(Component.literal(NOMBRE));
@@ -56,7 +58,7 @@ public class MenuPrincipal extends Screen {
 	@Override
 	protected void init() {
 		int bw = 200, bh = 20, x = this.width / 2 - bw / 2;
-		int y = Math.min(this.height - 3 * 24 - 16, this.height / 2 + 30);
+		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 4 + 48));
 		this.addRenderableWidget(Button.builder(Component.literal("Jugar"), b -> jugar()).bounds(x, y, bw, bh).build());
 		this.addRenderableWidget(Button.builder(Component.literal("Opciones"),
 			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))).bounds(x, y + 24, bw, bh).build());
@@ -74,14 +76,8 @@ public class MenuPrincipal extends Screen {
 		if (this.inicio != 0 || this.minecraft.gui.overlay() != null) return;
 		this.inicio = Util.getMillis();
 		LOG.info("TOD5 menu abierto (intro: {}, version {})", this.conIntro, VERSION);
-		if (this.conIntro) {
-			introVista = true;
-			// la musica arranca justo con la intro
-			this.minecraft.getMusicManager().stopPlaying();
-			this.minecraft.getMusicManager().startPlaying(Musics.MENU);
-			// el cartelito de "Sonando ahora" sale cuando aparecen los botones, no arriba de la intro
-			this.minecraft.gui.toastManager().hideNowPlayingToast();
-		}
+		if (this.conIntro) introVista = true;
+		MusicaMenu.iniciar();   // con la intro arranca desde el principio; si ya sonaba, sigue
 	}
 
 	private void jugar() {
@@ -124,6 +120,33 @@ public class MenuPrincipal extends Screen {
 	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
 	}
 
+	private int logoAncho() { return Math.min(340, (int) (this.width * 0.7f)); }
+	private int logoAlto() { return logoAncho() * LOGO_H / LOGO_W; }
+	private int logoY() { return Math.max(10, Math.min(30, this.height / 10)); }
+
+	private void dibujarLogo(GuiGraphicsExtractor g, float t, float alfa) {
+		int lw = logoAncho(), lh = logoAlto(), lx = this.width / 2 - lw / 2, ly = logoY();
+		float s = lw / (float) LOGO_W;
+		g.blit(RenderPipelines.GUI_TEXTURED, LOGO, lx, ly, 0, 0, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, argb(alfa, 0xFFFFFF));
+
+		// brillo verde de TRUCOFDEATH: late despacito, poquito
+		float late = 0.22f + 0.16f * (0.5f + 0.5f * (float) Math.sin(t * 1.15));
+		g.blit(RenderPipelines.GUI_TEXTURED, BRILLO, lx, ly, 0, 0, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, argb(alfa * late, 0xFFFFFF));
+		// y cada 9 segundos le pasa un reflejo de izquierda a derecha
+		float ciclo = (t % 9f) / 2.4f;
+		if (ciclo < 1) {
+			int cx = lx + (int) ((-0.15f + 1.3f * ciclo) * lw), banda = Math.max(8, lw / 12);
+			g.enableScissor(cx - banda, ly, cx + banda, ly + lh);
+			g.blit(RenderPipelines.GUI_TEXTURED, BRILLO, lx, ly, 0, 0, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, argb(alfa * 0.55f, 0xFFFFFF));
+			g.disableScissor();
+		}
+
+		// fuego verde de REVENANTS (animado)
+		int cuadro = (int) (t * FUEGO_FPS) % FUEGO_CUADROS;
+		g.blit(RenderPipelines.GUI_TEXTURED, FUEGO, lx + Math.round(FUEGO_X * s), ly + Math.round(FUEGO_Y * s), 0, cuadro * FUEGO_H,
+			Math.round(FUEGO_W * s), Math.round(FUEGO_H * s), FUEGO_W, FUEGO_H, FUEGO_W, FUEGO_H * FUEGO_CUADROS, argb(alfa * 0.9f, 0xFFFFFF));
+	}
+
 	private static float clamp01(float v) { return v < 0 ? 0 : Math.min(1, v); }
 	private static float suave(float x) { return x * x * (3 - 2 * x); }
 	private static int argb(float alpha, int rgb) { return ((int) (clamp01(alpha) * 255) << 24) | (rgb & 0xFFFFFF); }
@@ -137,22 +160,13 @@ public class MenuPrincipal extends Screen {
 		float alfaBotones = !empezo ? 0 : this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
 		this.fadeWidgets(alfaBotones);
 		for (var w : this.children()) if (w instanceof Button b) b.active = alfaBotones > 0.6f;
-		if (this.conIntro && !this.toastMostrado && alfaBotones > 0) {
-			this.toastMostrado = true;
-			this.minecraft.gui.toastManager().showNowPlayingToast();
-		}
 
 		// 1) la galaxia
 		this.extractPanorama(g, a);
 
-		// 2) el logo, saliendo de la oscuridad y flotando despacito
+		// 2) el logo, quieto arriba, saliendo de la oscuridad
 		float alfaLogo = !empezo ? 0 : this.conIntro ? suave(clamp01((t - T_LOGO) / LOGO_DURA)) : 1;
-		if (alfaLogo > 0) {
-			int lw = Math.min(340, (int) (this.width * 0.7f));
-			int lh = lw * LOGO_H / LOGO_W;
-			int ly = Math.max(8, this.height / 2 + 30 - lh - 18) + (int) Math.round(Math.sin(t * 1.1) * 2);
-			g.blit(RenderPipelines.GUI_TEXTURED, LOGO, this.width / 2 - lw / 2, ly, 0, 0, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, argb(alfaLogo, 0xFFFFFF));
-		}
+		if (alfaLogo > 0) dibujarLogo(g, t, alfaLogo);
 
 		// 3) los botones y los textos de abajo
 		super.extractRenderState(g, mouseX, mouseY, a);
