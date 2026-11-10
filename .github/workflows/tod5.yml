@@ -29,6 +29,9 @@ jobs:
           mkdir -p /tmp/ref && cd /tmp/ref
           unzip -q -o "$J" 'net/minecraft/client/gui/*' 'net/minecraft/client/renderer/CubeMap*' 'net/minecraft/client/renderer/Panorama*' 'net/minecraft/client/renderer/RenderPipelines*' 'net/minecraft/client/Minecraft.java' 'net/minecraft/client/sounds/*' 'net/minecraft/client/resources/sounds/*' 'net/minecraft/client/multiplayer/resolver/*' 'net/minecraft/client/multiplayer/ServerData.java' 'net/minecraft/client/Options.java' 'net/minecraft/client/renderer/texture/CubeMapTexture.java' 'net/minecraft/client/renderer/GameRenderer.java' 'net/minecraft/client/gui/render/*' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
           CJ=$(realpath $(find .gradle -name 'minecraft-clientOnly-*-26.3.jar' ! -name '*sources*' | head -1)); unzip -q -o "$CJ" 'assets/minecraft/shaders/core/panorama*' 'assets/minecraft/shaders/include/*' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
+          for jj in $(find ~/.gradle -name 'fabric-networking-api-v1-*-sources.jar' -o -name 'fabric-lifecycle-events-v1-*-sources.jar' | head -4); do unzip -q -o "$jj" 'net/*' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true; done
+          [ -z "$(find ~/.gradle -name 'fabric-networking-api-v1-*-sources.jar' | head -1)" ] && find ~/.gradle -name 'fabric-networking-api-v1*' >> $GITHUB_WORKSPACE/ref.log
+          unzip -q -o "$C" 'net/minecraft/network/protocol/common/custom/*' 'net/minecraft/network/codec/*' 'net/minecraft/network/FriendlyByteBuf.java' 'net/minecraft/network/RegistryFriendlyByteBuf.java' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
           unzip -q -o "$C" 'net/minecraft/sounds/*' 'net/minecraft/network/chat/Component.java' >> $GITHUB_WORKSPACE/ref.log 2>&1 || true
           find /tmp/ref -type f | wc -l >> $GITHUB_WORKSPACE/ref.log
       - name: Subir log y referencia
