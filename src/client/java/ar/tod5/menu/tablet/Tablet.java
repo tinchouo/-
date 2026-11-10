@@ -83,6 +83,11 @@ public class Tablet extends Screen {
 		g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, oscuro);
 	}
 	/** Casilla hundida (como las del inventario). */
+	/** Como hundido pero oscuro por dentro: para filas con texto (se lee mejor el verde y el amarillo). */
+	private static void tarjeta(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+		hundido(g, x, y, w, h);
+		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF4A4C50);
+	}
 	private static void hundido(GuiGraphicsExtractor g, int x, int y, int w, int h) {
 		g.fill(x, y, x + w, y + h, SLOT);
 		g.fill(x, y, x + w, y + 1, SLOT_OSCURO);
@@ -102,10 +107,11 @@ public class Tablet extends Screen {
 	}
 	private void numerito(GuiGraphicsExtractor g, int n, int x, int y) {
 		String s = String.valueOf(n);
-		int bw = Math.max(9, this.font.width(s) + 4);
-		g.fill(x, y, x + bw, y + 9, NEGRO);
-		g.fill(x + 1, y + 1, x + bw - 1, y + 8, VERDE);
-		g.text(this.font, s, x + (bw - this.font.width(s)) / 2, y + 1, 0xFF0B2A0B, false);
+		int bw = Math.max(10, this.font.width(s) + 5);
+		int bh = 11;
+		g.fill(x, y - 1, x + bw, y - 1 + bh, NEGRO);
+		g.fill(x + 1, y, x + bw - 1, y - 2 + bh, VERDE);
+		g.text(this.font, s, x + (bw - this.font.width(s)) / 2 + 1, y + 1, 0xFF0B2A0B, false);
 	}
 
 	// ---------- pantalla ----------
@@ -228,7 +234,7 @@ public class Tablet extends Screen {
 		Seccion[] destino = { Seccion.NOVEDADES, Seccion.MISIONES, Seccion.NOVEDADES, datos.equipo != null ? Seccion.EQUIPO : Seccion.CRAFTEOS };
 		for (int i = 0; i < 4; i++) {
 			int tx = x + (i % 2) * (colW + 6), ty = y + 18 + (i / 2) * (alto + 6);
-			hundido(g, tx, ty, colW, alto);
+			tarjeta(g, tx, ty, colW, alto);
 			boolean encima = mx >= tx && my >= ty && mx < tx + colW && my < ty + alto;
 			if (encima) g.fill(tx + 1, ty + 1, tx + colW - 1, ty + alto - 1, 0x33FFFFFF);
 			g.text(this.font, tarjetas[i][0], tx + 6, ty + 5, 0xFFE0E0E0, true);
@@ -255,7 +261,7 @@ public class Tablet extends Screen {
 			List<FormattedCharSequence> renglones = this.font.split(Component.literal(n.texto()), cw - 60);
 			int alto = 16 + renglones.size() * 10;
 			if (yy + alto > y + ch) break;
-			hundido(g, x, yy, cw, alto);
+			tarjeta(g, x, yy, cw, alto);
 			boolean aviso = n.tipo().equals("aviso");
 			String et = aviso ? "AVISO" : "CAMBIO";
 			relieve(g, x + 4, yy + 4, 46, 11, aviso ? 0xFF2F6F2F : 0xFF6F5A1F, aviso ? 0xFF4F8F4F : 0xFF8F7A3F, aviso ? 0xFF1F4F1F : 0xFF4F3A0F);
@@ -278,7 +284,7 @@ public class Tablet extends Screen {
 		if (d == null) { g.text(this.font, "Ese día no hubo misión diaria.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
 		else {
 			int alto = 34;
-			hundido(g, x, yy, cw, alto);
+			tarjeta(g, x, yy, cw, alto);
 			g.pose().pushMatrix(); g.pose().translate(x + 6, yy + 5); g.pose().scale(1.25f, 1.25f);
 			g.text(this.font, d.titulo(), 0, 0, BLANCO, true);
 			g.pose().popMatrix();
@@ -297,7 +303,7 @@ public class Tablet extends Screen {
 		g.text(this.font, "MISIONES OPCIONALES", x, yy, GRIS_TEXTO, false);
 		yy += 11;
 		for (TabletDatos.Mision m : datos.opcionales) {
-			hundido(g, x, yy, cw, 16);
+			tarjeta(g, x, yy, cw, 16);
 			g.text(this.font, this.font.plainSubstrByWidth(m.titulo(), cw - 140), x + 5, yy + 4, BLANCO, true);
 			String p = m.hecho() + " / " + m.total();
 			g.text(this.font, p, x + cw - 120, yy + 4, BLANCO, true);
@@ -331,8 +337,8 @@ public class Tablet extends Screen {
 				this.zonas.add(new Zona(sx, sy, t, t, () -> this.itemElegido = k));
 			}
 		}
-		g.text(this.font, "Pasá el mouse para ver el nombre.", gx, gy + filas * t + 5, GRIS_TEXTO, false);
-		g.text(this.font, "Clic para ver el crafteo.", gx, gy + filas * t + 15, GRIS_TEXTO, false);
+		g.text(this.font, "Mouse encima: el nombre.", gx, gy + filas * t + 5, GRIS_TEXTO, false);
+		g.text(this.font, "Clic: ver el crafteo.", gx, gy + filas * t + 15, GRIS_TEXTO, false);
 
 		// el crafteo del elegido, como una mesa de crafteo
 		if (!visibles.isEmpty()) {

@@ -30,7 +30,7 @@ public final class TeclaTablet {
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
 				boolean puede = mc.player != null && mc.level != null && mc.gui.screen() == null;
-				org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla tablet (abre: {}, pantalla: {})", puede, mc.gui.screen());
+				if (Boolean.getBoolean("tod5.debugTeclas")) org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla tablet (abre: {}, pantalla: {})", puede, mc.gui.screen());
 				if (puede) mc.gui.setScreen(new Tablet());
 			}
 		});
