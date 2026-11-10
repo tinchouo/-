@@ -13,21 +13,27 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.util.Util;
 
 /**
  * La tablet: se abre con la tecla (J por defecto) cuando no tenes ningun inventario abierto.
- * Estilo "vanilla": cuadrada, el gris de los menus de Minecraft con bordes en relieve, pestañas como el creativo.
+ * Estilo: marco de metal oscuro con luces verdes, pantalla oscura, pestañas como iconos grandes a la izquierda.
  * Secciones: Inicio, Novedades, Misiones, Crafteos y Equipo (solo si tenes equipo).
  * Por ahora con datos de ejemplo (TabletDatos); despues los manda el server.
  */
 public class Tablet extends Screen {
-	// colores
-	private static final int NEGRO = 0xFF000000, CUERPO = 0xFF3B3F45, CUERPO_CLARO = 0xFF5B6068, CUERPO_OSCURO = 0xFF24272B;
-	private static final int GRIS = 0xFFC6C6C6, BLANCO = 0xFFFFFFFF, SOMBRA = 0xFF555555, SLOT = 0xFF8B8B8B, SLOT_OSCURO = 0xFF373737;
-	private static final int TEXTO = 0xFF3F3F3F, VERDE = 0xFF55FF55, AMARILLO = 0xFFFFFF55, GRIS_TEXTO = 0xFF555555;
+	// colores: marco de metal oscuro (el del logo) con luces verdes; pantalla oscura adentro
+	private static final int NEGRO = 0xFF000000, BLANCO = 0xFFFFFFFF;
+	private static final int PANTALLA = 0xFF0B100E, LINEA = 0xFF26302B;
+	private static final int SLOT = 0xFF19201C, SLOT_OSCURO = 0xFF050706, SLOT_CLARO = 0xFF34403A, SOMBRA = 0xFF3A443F;
+	private static final int TEXTO = 0xFFD9E2DC, VERDE = 0xFF55FF55, AMARILLO = 0xFFFFE066, GRIS_TEXTO = 0xFF7D8A83;
+	private static final int M_BORDE = 0xFF0A0B0C, M_LUZ = 0xFF8D949C, M_CLARO = 0xFF5E646B, M_BASE = 0xFF3C4147, M_OSCURO = 0xFF24272B;
 
-	enum Seccion { INICIO("Inicio"), NOVEDADES("Novedades"), MISIONES("Misiones"), CRAFTEOS("Crafteos"), EQUIPO("Equipo");
-		final String nombre; Seccion(String n) { nombre = n; } }
+	enum Seccion { INICIO("Inicio", Items.COMPASS), NOVEDADES("Novedades", Items.WRITABLE_BOOK), MISIONES("Misiones", Items.IRON_SWORD),
+		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.WHITE_BANNER);
+		final String nombre; final ItemStack icono;
+		Seccion(String n, net.minecraft.world.item.Item i) { nombre = n; icono = new ItemStack(i); } }
 
 	private static Seccion ultima = Seccion.INICIO;   // al reabrir, vuelve a donde estabas
 
@@ -73,7 +79,7 @@ public class Tablet extends Screen {
 		return super.mouseClicked(event, doubleClick);
 	}
 
-	// ---------- dibujo de piezas "vanilla" ----------
+	// ---------- piezas ----------
 	private static void relieve(GuiGraphicsExtractor g, int x, int y, int w, int h, int fondo, int claro, int oscuro) {
 		g.fill(x, y, x + w, y + h, NEGRO);
 		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fondo);
@@ -82,26 +88,28 @@ public class Tablet extends Screen {
 		g.fill(x + 1, y + h - 2, x + w - 1, y + h - 1, oscuro);
 		g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, oscuro);
 	}
-	/** Casilla hundida (como las del inventario). */
-	/** Como hundido pero oscuro por dentro: para filas con texto (se lee mejor el verde y el amarillo). */
+	/** Fila oscura con borde fino: para las tarjetas con texto. */
 	private static void tarjeta(GuiGraphicsExtractor g, int x, int y, int w, int h) {
-		hundido(g, x, y, w, h);
-		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF4A4C50);
+		g.fill(x, y, x + w, y + h, LINEA);
+		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF141B18);
+		g.fill(x + 1, y + 1, x + w - 1, y + 2, 0xFF1D2622);
 	}
+	/** Casilla hundida (como las del inventario, pero oscura). */
 	private static void hundido(GuiGraphicsExtractor g, int x, int y, int w, int h) {
 		g.fill(x, y, x + w, y + h, SLOT);
 		g.fill(x, y, x + w, y + 1, SLOT_OSCURO);
 		g.fill(x, y, x + 1, y + h, SLOT_OSCURO);
-		g.fill(x, y + h - 1, x + w, y + h, BLANCO);
-		g.fill(x + w - 1, y, x + w, y + h, BLANCO);
+		g.fill(x, y + h - 1, x + w, y + h, SLOT_CLARO);
+		g.fill(x + w - 1, y, x + w, y + h, SLOT_CLARO);
 	}
-	/** Boton gris de Minecraft (verde si esta elegido). Devuelve su ancho. */
+	/** Boton oscuro; borde verde si esta elegido o con el mouse encima. Devuelve su ancho. */
 	private int boton(GuiGraphicsExtractor g, String t, int x, int y, boolean elegido, int mx, int my, Runnable accion) {
 		int bw = this.font.width(t) + 10, bh = 13;
 		boolean encima = mx >= x && my >= y && mx < x + bw && my < y + bh;
-		if (elegido) relieve(g, x, y, bw, bh, 0xFF4F6F4F, 0xFF7FA07F, 0xFF2F452F);
-		else relieve(g, x, y, bw, bh, encima ? 0xFF7F7F7F : 0xFF6F6F6F, 0xFFA8A8A8, 0xFF4A4A4A);
-		g.text(this.font, t, x + 5, y + 3, elegido || encima ? VERDE : BLANCO, true);
+		g.fill(x, y, x + bw, y + bh, elegido ? 0xFF2F9E46 : encima ? 0xFF55FF55 : 0xFF3A4840);
+		g.fill(x + 1, y + 1, x + bw - 1, y + bh - 1, elegido ? 0xFF143A1F : encima ? 0xFF1E2D24 : 0xFF1A211D);
+		g.fill(x + 1, y + 1, x + bw - 1, y + 2, elegido ? 0xFF1F5A2E : 0xFF27312C);
+		g.text(this.font, t, x + 5, y + 3, elegido || encima ? VERDE : TEXTO, true);
 		this.zonas.add(new Zona(x, y, bw, bh, accion));
 		return bw;
 	}
@@ -119,44 +127,31 @@ public class Tablet extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float a) {
 		this.zonas.clear();
 		if (this.seccion == Seccion.EQUIPO && this.datos.equipo == null) this.seccion = Seccion.INICIO;
-		this.w = Math.min(460, this.width - 16);
-		this.h = Math.min(290, this.height - 16);
+		this.w = Math.min(470, this.width - 16);
+		this.h = Math.min(290, this.height - 24);
 		this.x0 = (this.width - this.w) / 2;
-		this.y0 = (this.height - this.h) / 2;
+		this.y0 = (this.height - this.h) / 2 + 2;   // +2: lugar para la muesca de arriba
 
-		// cuerpo de la tablet
-		relieve(g, x0, y0, w, h, CUERPO, CUERPO_CLARO, CUERPO_OSCURO);
-		g.text(this.font, "TABLET", x0 + 8, y0 + 7, 0xFFC9CCD1, true);
-		String dia = "DÍA " + datos.hoy;
-		g.pose().pushMatrix();
-		g.pose().translate(x0 + w / 2f, y0 + 5);
-		g.pose().scale(1.5f, 1.5f);
-		g.text(this.font, dia, -this.font.width(dia) / 2, 0, VERDE, true);
-		g.pose().popMatrix();
-		// campanita: total de cosas sin ver (te lleva a Novedades)
-		int bx = x0 + w - 26, by = y0 + 4;
-		relieve(g, bx, by, 18, 14, 0xFF6F6F6F, 0xFFA8A8A8, 0xFF4A4A4A);
-		g.fill(bx + 7, by + 3, bx + 11, by + 4, BLANCO); g.fill(bx + 6, by + 4, bx + 12, by + 9, BLANCO); g.fill(bx + 5, by + 9, bx + 13, by + 10, BLANCO); g.fill(bx + 8, by + 11, bx + 10, by + 12, BLANCO);
-		int total = datos.novedadesNuevas() + datos.diariaParaReclamar(reclamadas) + (datos.equipo != null ? datos.equipo.mensajesNuevos : 0);
-		if (total > 0) numerito(g, total, bx + 12, by - 4);
-		this.zonas.add(new Zona(bx, by, 18, 14, () -> irA(Seccion.NOVEDADES)));
+		float t = (Util.getMillis() % 100000L) / 1000f;
+		marco(g, t);
 
-		// pestañas (como el creativo)
-		int tx = x0 + 6, ty = y0 + 22;
+		// la pantalla
+		int sx = x0 + BORDE, sy = y0 + BORDE_ARRIBA, sw = w - 2 * BORDE, sh = h - BORDE - BORDE_ARRIBA;
+		g.fill(sx - 1, sy - 1, sx + sw + 1, sy + sh + 1, NEGRO);
+		g.fill(sx, sy, sx + sw, sy + sh, PANTALLA);
+
+		// pestañas: iconos grandes a la izquierda
+		int tx = sx + 5, ty = sy + 6, tam = 26;
+		Seccion encima = null;
 		for (Seccion s : Seccion.values()) {
 			if (s == Seccion.EQUIPO && datos.equipo == null) continue;   // sin equipo, no aparece
-			int tw = this.font.width(s.nombre) + 14;
-			boolean act = s == this.seccion;
-			if (act) {
-				g.fill(tx, ty, tx + tw, ty + 18, NEGRO);
-				g.fill(tx + 1, ty + 1, tx + tw - 1, ty + 19, GRIS);
-				g.fill(tx + 1, ty + 1, tx + tw - 1, ty + 2, BLANCO);
-				g.fill(tx + 1, ty + 1, tx + 2, ty + 19, BLANCO);
-				g.text(this.font, s.nombre, tx + 7, ty + 6, TEXTO, false);
-			} else {
-				relieve(g, tx, ty + 3, tw, 15, SLOT, 0xFFA8A8A8, SOMBRA);
-				g.text(this.font, s.nombre, tx + 7, ty + 7, BLANCO, true);
-			}
+			boolean act = s == this.seccion, sobre = mx >= tx && my >= ty && mx < tx + tam && my < ty + tam;
+			if (sobre) encima = s;
+			relieve(g, tx, ty, tam, tam, act ? 0xFF16301F : sobre ? 0xFF2A3230 : 0xFF1E2422, act ? 0xFF55FF55 : M_CLARO, act ? 0xFF1F7A33 : M_OSCURO);
+			if (act) g.fill(tx - 3, ty + 6, tx - 1, ty + tam - 6, pulso(t, 0.6f, 1f));
+			g.pose().pushMatrix(); g.pose().translate(tx + 3, ty + 3); g.pose().scale(1.25f, 1.25f);
+			g.item(s.icono, 0, 0);
+			g.pose().popMatrix();
 			int badge = switch (s) {
 				case NOVEDADES -> datos.novedadesNuevas();
 				case MISIONES -> datos.diariaParaReclamar(reclamadas);
@@ -164,23 +159,15 @@ public class Tablet extends Screen {
 				case EQUIPO -> datos.equipo.mensajesNuevos;
 				default -> 0;
 			};
-			if (badge > 0) numerito(g, badge, tx + tw - 6, ty - 2);
+			if (badge > 0) numerito(g, badge, tx + tam - 7, ty - 2);
 			final Seccion destino = s;
-			this.zonas.add(new Zona(tx, ty, tw, 18, () -> irA(destino)));
-			tx += tw + 2;
+			this.zonas.add(new Zona(tx, ty, tam, tam, () -> irA(destino)));
+			ty += tam + 6;
 		}
+		int div = sx + tam + 10;
+		g.fill(div, sy + 4, div + 1, sy + sh - 4, LINEA);
 
-		// la pantalla gris
-		int px = x0 + 6, py = y0 + 39, pw = w - 12, ph = h - 45;
-		g.fill(px, py, px + pw, py + ph, NEGRO);
-		g.fill(px + 1, py + 1, px + pw - 1, py + ph - 1, GRIS);
-		g.fill(px + 1, py + 1, px + 2, py + ph - 1, BLANCO);
-		g.fill(px + 1, py + ph - 2, px + pw - 1, py + ph - 1, SOMBRA);
-		g.fill(px + pw - 2, py + 1, px + pw - 1, py + ph - 1, SOMBRA);
-		// tapo el borde de arriba debajo de la pestaña activa, para que se "unan"
-		redibujarUnion(g, py);
-
-		int cx = px + 8, cy = py + 7, cw = pw - 16, ch = ph - 14;
+		int cx = div + 8, cy = sy + 8, cw = sx + sw - 8 - cx, ch = sh - 16;
 		switch (this.seccion) {
 			case INICIO -> inicio(g, cx, cy, cw, mx, my);
 			case NOVEDADES -> novedades(g, cx, cy, cw, ch, mx, my);
@@ -189,16 +176,81 @@ public class Tablet extends Screen {
 			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
 		}
 		super.extractRenderState(g, mx, my, a);
+		if (encima != null) g.setTooltipForNextFrame(Component.literal(encima.nombre), mx, my);
 	}
 
-	private void redibujarUnion(GuiGraphicsExtractor g, int py) {
-		int tx = x0 + 6;
-		for (Seccion s : Seccion.values()) {
-			if (s == Seccion.EQUIPO && datos.equipo == null) continue;
-			int tw = this.font.width(s.nombre) + 14;
-			if (s == this.seccion) { g.fill(tx + 1, py, tx + tw - 1, py + 2, GRIS); g.fill(tx + 1, py, tx + 2, py + 2, BLANCO); }
-			tx += tw + 2;
+	private static final int BORDE = 9, BORDE_ARRIBA = 14;
+
+	/** Verde que late despacito (para las luces del marco). */
+	private static int pulso(float t, float min, float max) {
+		float k = min + (max - min) * (0.5f + 0.5f * (float) Math.sin(t * 2.2));
+		int gr = (int) (0xFF * k), r = (int) (0x55 * k), b = (int) (0x55 * k);
+		return 0xFF000000 | (r << 16) | (gr << 8) | b;
+	}
+
+	/** El marco de metal: bisel, esquinas cortadas, tornillos, muesca arriba con el dia y luces verdes. */
+	private void marco(GuiGraphicsExtractor g, float t) {
+		int x = x0, y = y0, x2 = x0 + w, y2 = y0 + h, c = 4;   // c = cuanto se cortan las esquinas
+		// silueta con esquinas cortadas (por escalones)
+		for (int i = 0; i < h; i++) {
+			int corte = i < c ? c - i : i >= h - c ? i - (h - c) + 1 : 0;
+			g.fill(x + corte, y + i, x2 - corte, y + i + 1, M_BORDE);
 		}
+		for (int i = 1; i < h - 1; i++) {
+			int corte = i < c ? c - i + 1 : i >= h - c - 1 ? i - (h - c - 1) + 2 : 1;
+			int col = i < 3 ? M_LUZ : i < BORDE_ARRIBA - 2 || i > h - BORDE + 1 ? M_BASE : M_BASE;
+			g.fill(x + corte, y + i, x2 - corte, y + i + 1, col);
+		}
+		// bisel: luz arriba e izquierda, sombra abajo y derecha
+		g.fill(x + c + 1, y + 1, x2 - c - 1, y + 2, M_LUZ);
+		g.fill(x + c + 1, y + 2, x2 - c - 1, y + 3, M_CLARO);
+		g.fill(x + 1, y + c + 1, x + 2, y2 - c - 1, M_LUZ);
+		g.fill(x + 2, y + c + 1, x + 3, y2 - c - 1, M_CLARO);
+		g.fill(x + c + 1, y2 - 2, x2 - c - 1, y2 - 1, M_OSCURO);
+		g.fill(x + c + 1, y2 - 3, x2 - c - 1, y2 - 2, 0xFF2E3237);
+		g.fill(x2 - 2, y + c + 1, x2 - 1, y2 - c - 1, M_OSCURO);
+		g.fill(x2 - 3, y + c + 1, x2 - 2, y2 - c - 1, 0xFF2E3237);
+		// ranura interna alrededor de la pantalla
+		int sx = x + BORDE, sy = y + BORDE_ARRIBA, sx2 = x2 - BORDE, sy2 = y2 - BORDE;
+		g.fill(sx - 3, sy - 3, sx2 + 3, sy - 2, M_OSCURO);
+		g.fill(sx - 3, sy - 3, sx - 2, sy2 + 3, M_OSCURO);
+		g.fill(sx - 3, sy2 + 2, sx2 + 3, sy2 + 3, M_CLARO);
+		g.fill(sx2 + 2, sy - 3, sx2 + 3, sy2 + 3, M_CLARO);
+		// tornillos en las esquinas
+		int[][] tor = { { x + 5, y + 5 }, { x2 - 8, y + 5 }, { x + 5, y2 - 8 }, { x2 - 8, y2 - 8 } };
+		for (int[] p : tor) { g.fill(p[0], p[1], p[0] + 3, p[1] + 3, M_LUZ); g.fill(p[0] + 1, p[1] + 1, p[0] + 2, p[1] + 2, M_BORDE); }
+		// lucecitas arriba a los costados (tipo "■■■ ■■")
+		for (int k = 0; k < 3; k++) { led(g, x + 14 + k * 4, y + 6, 3, 2, t, k * 0.4f); led(g, x2 - 26 + k * 4, y + 6, 3, 2, t, k * 0.4f + 1); }
+		// tiras verdes en los costados
+		int mitad = (y + y2) / 2, largo = Math.min(60, h / 3);
+		g.fill(x + 3, mitad - largo / 2 - 1, x + 6, mitad + largo / 2 + 1, M_BORDE);
+		g.fill(x2 - 6, mitad - largo / 2 - 1, x2 - 3, mitad + largo / 2 + 1, M_BORDE);
+		for (int i = 0; i < largo; i += 3) {
+			led(g, x + 4, mitad - largo / 2 + i, 1, 2, t, i * 0.08f);
+			led(g, x2 - 5, mitad - largo / 2 + i, 1, 2, t, i * 0.08f + 0.5f);
+		}
+		// muesca de arriba con el dia
+		String dia = "DÍA " + datos.hoy;
+		int mw = Math.max(70, this.font.width(dia) * 3 / 2 + 30), mx0 = (x + x2) / 2 - mw / 2, my0 = y - 4;
+		for (int i = 0; i < 18; i++) {
+			int corte = i < 4 ? 4 - i : i >= 14 ? i - 13 : 0;
+			g.fill(mx0 + corte, my0 + i, mx0 + mw - corte, my0 + i + 1, M_BORDE);
+			if (i > 0 && i < 17) g.fill(mx0 + corte + 1, my0 + i, mx0 + mw - corte - 1, my0 + i + 1, i < 3 ? M_LUZ : i > 14 ? M_OSCURO : M_BASE);
+		}
+		g.fill(mx0 + 6, my0 + 4, mx0 + mw - 6, my0 + 15, 0xFF07100A);
+		g.pose().pushMatrix();
+		g.pose().translate((x + x2) / 2f, my0 + 5);
+		g.pose().scale(1.25f, 1.25f);
+		g.text(this.font, dia, -this.font.width(dia) / 2, 0, pulso(t, 0.8f, 1f), true);
+		g.pose().popMatrix();
+		// luces abajo al centro
+		int bw = 60, bx = (x + x2) / 2 - bw / 2;
+		g.fill(bx - 1, y2 - 6, bx + bw + 1, y2 - 2, M_BORDE);
+		for (int i = 0; i < bw; i += 4) led(g, bx + i + 1, y2 - 5, 2, 2, t, i * 0.05f);
+	}
+
+	private static void led(GuiGraphicsExtractor g, int x, int y, int lw, int lh, float t, float fase) {
+		g.fill(x, y, x + lw, y + lh, pulso(t + fase, 0.35f, 1f));
 	}
 
 	private void irA(Seccion s) { this.seccion = s; this.dia = datos.hoy; }
@@ -328,11 +380,11 @@ public class Tablet extends Screen {
 			hundido(g, sx, sy, t, t);
 			if (i < visibles.size()) {
 				TabletDatos.Crafteo c = visibles.get(i);
-				if (i == this.itemElegido) g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0xFFC5C5C5);
+				if (i == this.itemElegido) { g.fill(sx, sy, sx + t, sy + t, VERDE); g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0xFF1F3A27); }
 				g.item(c.icono(), sx + 1, sy + 1);
 				if (c.nuevo()) g.fill(sx + t - 4, sy + 1, sx + t - 1, sy + 4, VERDE);
 				boolean encima = mx >= sx && my >= sy && mx < sx + t && my < sy + t;
-				if (encima) { g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x80FFFFFF); hover = c; }
+				if (encima) { g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x50FFFFFF); hover = c; }
 				final int k = i;
 				this.zonas.add(new Zona(sx, sy, t, t, () -> this.itemElegido = k));
 			}
@@ -357,8 +409,8 @@ public class Tablet extends Screen {
 			}
 			// flecha
 			int ax = mgx + 3 * t + 6, ay = mgy + t + 5;
-			g.fill(ax, ay + 3, ax + 12, ay + 6, SLOT);
-			for (int k = 0; k < 5; k++) g.fill(ax + 11 + k, ay + k, ax + 12 + k, ay + 9 - k, SLOT);
+			g.fill(ax, ay + 3, ax + 12, ay + 6, 0xFF5A6A62);
+			for (int k = 0; k < 5; k++) g.fill(ax + 11 + k, ay + k, ax + 12 + k, ay + 9 - k, 0xFF5A6A62);
 			// resultado
 			int ox = ax + 22, oy = mgy + t - 4;
 			hundido(g, ox, oy, 26, 26);
@@ -390,7 +442,7 @@ public class Tablet extends Screen {
 		int yy = y + 17, lw = 110;
 		for (TabletDatos.Miembro m : eq.miembros) {
 			hundido(g, x, yy, lw, 14);
-			g.text(this.font, this.font.plainSubstrByWidth(m.nombre(), lw - 18), x + 4, yy + 3, m.conectado() ? BLANCO : 0xFFD0D0D0, true);
+			g.text(this.font, this.font.plainSubstrByWidth(m.nombre(), lw - 18), x + 4, yy + 3, m.conectado() ? BLANCO : GRIS_TEXTO, true);
 			g.fill(x + lw - 9, yy + 4, x + lw - 3, yy + 10, NEGRO);
 			g.fill(x + lw - 8, yy + 5, x + lw - 4, yy + 9, m.conectado() ? VERDE : SOMBRA);
 			yy += 15;
