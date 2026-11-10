@@ -67,7 +67,14 @@ public final class Fondo {
 	}
 
 	/** Cada 13 segundos, una estrella fugaz en un lugar distinto. */
+	private static final boolean PRUEBA = Boolean.getBoolean("tod5.prueba");
+
 	private static void fugaz(GuiGraphicsExtractor g, int ancho, int alto, float t) {
+		if (PRUEBA) {   // solo en la prueba automatica: una sin rotar y una rotada, siempre visibles
+			g.blit(RenderPipelines.GUI_TEXTURED, FUGAZ, 20, 20, 0, 0, 120, 4, 256, 16, 256, 16, 0xFFFFFFFF);
+			Matrix3x2fStack q = g.pose(); q.pushMatrix(); q.translate(ancho * 0.25f, alto * 0.3f); q.rotate((float) Math.toRadians(160));
+			g.blit(RenderPipelines.GUI_TEXTURED, FUGAZ, -120, -2, 0, 0, 120, 4, 256, 16, 256, 16, 0xFFFFFFFF); q.popMatrix();
+		}
 		final float ciclo = 13f, dura = 1.1f;
 		int n = (int) (t / ciclo);
 		float f = (t - n * ciclo - 4f) / dura;   // arranca 4 s despues de empezar cada ciclo
