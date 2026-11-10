@@ -33,7 +33,7 @@ jobs:
             if [ $i = 240 ]; then import -window root cap/trabado.png || true; P=$(pgrep -f "devlaunchinjector.Main" | head -1); [ -n "$P" ] && jstack $P > hilos.txt 2>&1 || true; fi
           done
           T0=$(date +%s.%N)
-          for t in 0.3 1.8 3.0 3.8 4.5 6.5 12 20; do
+          for t in 0.3 2.5 4.0 5.0 6.5 8.0 12 20; do
             while [ $(echo "$(date +%s.%N) - $T0 < $t" | bc) = 1 ]; do sleep 0.05; done
             import -window root cap/t_$t.png || xwd -root -silent | convert xwd:- cap/t_$t.png
           done

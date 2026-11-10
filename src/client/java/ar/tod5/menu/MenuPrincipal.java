@@ -1,5 +1,6 @@
 package ar.tod5.menu;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConnectScreen;
@@ -18,22 +19,29 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * El menu principal de TOD5: la galaxia girando de fondo, el logo y tres botones (Jugar, Opciones, Salir).
+ * El menu principal: la galaxia girando de fondo, el logo y tres botones (Jugar, Opciones, Salir).
  *
- * La primera vez que se abre (al iniciar el juego) hace la intro, estilo Mario Galaxy:
- *   negro -> arranca la musica -> aparecen las estrellas -> flash blanco con el logo -> aparecen los botones.
+ * La primera vez que se abre (al iniciar el juego) hace la intro:
+ *   negro -> arranca la musica -> aparece la galaxia -> el logo sale despacio de la oscuridad -> aparecen los botones.
  * Cualquier tecla o click la saltea. Las otras veces solo hace un fundido corto.
  */
 public class MenuPrincipal extends Screen {
+	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
+
+	public static final String NOMBRE = "TRUCOFDEATH: Revenants";
+	private static final String CREDITO = "Creado por Trick";
+	private static final String VERSION = FabricLoader.getInstance().getModContainer(TOD5Client.MOD_ID)
+		.map(m -> m.getMetadata().getVersion().getFriendlyString().replaceAll("\\.0$", "")).orElse("?");
+
 	private static final Identifier LOGO = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/logo.png");
-	private static final int LOGO_W = 656, LOGO_H = 228;   // tamano real de la imagen
+	private static final int LOGO_W = 1200, LOGO_H = 286;   // tamano real de la imagen
 
 	// tiempos de la intro, en segundos
-	private static final float T_ESTRELLAS = 1.2f, T_ESTRELLAS_FIN = 3.6f;   // el negro se va y se ve la galaxia
-	private static final float T_FLASH = 3.6f, FLASH_DURA = 1.4f;            // flash blanco + aparece el logo
-	private static final float T_BOTONES = 5.2f, BOTONES_DURA = 0.9f;        // aparecen los botones
+	private static final float T_GALAXIA = 1.2f, T_GALAXIA_FIN = 3.6f;   // el negro se va y se ve la galaxia
+	private static final float T_LOGO = 3.4f, LOGO_DURA = 2.6f;          // el logo sale despacio de la oscuridad
+	private static final float T_BOTONES = 6.0f, BOTONES_DURA = 1.2f;    // aparecen los botones
+	private static final float FIN_INTRO = T_BOTONES + BOTONES_DURA;
 
-	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
 	private static boolean introVista = false;
 
 	private final boolean conIntro;
@@ -41,7 +49,7 @@ public class MenuPrincipal extends Screen {
 	private boolean toastMostrado;
 
 	public MenuPrincipal() {
-		super(Component.literal("TRUCOFDEATH 5"));
+		super(Component.literal(NOMBRE));
 		this.conIntro = !introVista;
 	}
 
@@ -65,7 +73,7 @@ public class MenuPrincipal extends Screen {
 	private void arrancarSiHaceFalta() {
 		if (this.inicio != 0 || this.minecraft.gui.overlay() != null) return;
 		this.inicio = Util.getMillis();
-		LOG.info("TOD5 menu abierto (intro: {})", this.conIntro);
+		LOG.info("TOD5 menu abierto (intro: {}, version {})", this.conIntro, VERSION);
 		if (this.conIntro) {
 			introVista = true;
 			// la musica arranca justo con la intro
@@ -78,7 +86,7 @@ public class MenuPrincipal extends Screen {
 
 	private void jugar() {
 		ServerAddress dir = ServerAddress.parseString(TOD5Client.IP_SERVER);
-		ServerData datos = new ServerData("TRUCOFDEATH 5", TOD5Client.IP_SERVER, ServerData.Type.OTHER);
+		ServerData datos = new ServerData(NOMBRE, TOD5Client.IP_SERVER, ServerData.Type.OTHER);
 		ConnectScreen.startConnecting(this, this.minecraft, dir, datos, false, null);
 	}
 
@@ -86,12 +94,12 @@ public class MenuPrincipal extends Screen {
 	private float t() {
 		if (this.inicio == 0) return 0;
 		float s = (Util.getMillis() - this.inicio) / 1000f;
-		return this.conIntro ? s : T_BOTONES + BOTONES_DURA + s;
+		return this.conIntro ? s : FIN_INTRO + s;
 	}
 
 	private void saltearIntro() {
 		if (this.inicio == 0) return;
-		if (this.conIntro && t() < T_BOTONES + BOTONES_DURA) this.inicio = Util.getMillis() - (long) ((T_BOTONES + BOTONES_DURA) * 1000);
+		if (this.conIntro && t() < FIN_INTRO) this.inicio = Util.getMillis() - (long) (FIN_INTRO * 1000);
 	}
 
 	@Override
@@ -117,44 +125,45 @@ public class MenuPrincipal extends Screen {
 	}
 
 	private static float clamp01(float v) { return v < 0 ? 0 : Math.min(1, v); }
+	private static float suave(float x) { return x * x * (3 - 2 * x); }
 	private static int argb(float alpha, int rgb) { return ((int) (clamp01(alpha) * 255) << 24) | (rgb & 0xFFFFFF); }
 
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
 		arrancarSiHaceFalta();
 		float t = t();
-		float alfaBotones = this.inicio == 0 ? 0 : this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
+		boolean empezo = this.inicio != 0;
+
+		float alfaBotones = !empezo ? 0 : this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
 		this.fadeWidgets(alfaBotones);
+		for (var w : this.children()) if (w instanceof Button b) b.active = alfaBotones > 0.6f;
 		if (this.conIntro && !this.toastMostrado && alfaBotones > 0) {
 			this.toastMostrado = true;
 			this.minecraft.gui.toastManager().showNowPlayingToast();
 		}
-		for (var w : this.children()) if (w instanceof Button b) b.active = alfaBotones > 0.6f;
 
 		// 1) la galaxia
 		this.extractPanorama(g, a);
 
-		// 2) el logo, flotando despacito
-		float alfaLogo = this.inicio == 0 ? 0 : this.conIntro ? (t >= T_FLASH ? 1 : 0) : 1;
+		// 2) el logo, saliendo de la oscuridad y flotando despacito
+		float alfaLogo = !empezo ? 0 : this.conIntro ? suave(clamp01((t - T_LOGO) / LOGO_DURA)) : 1;
 		if (alfaLogo > 0) {
-			int lw = Math.min(300, (int) (this.width * 0.62f));
+			int lw = Math.min(340, (int) (this.width * 0.7f));
 			int lh = lw * LOGO_H / LOGO_W;
-			int ly = Math.max(8, this.height / 2 + 30 - lh - 18) + (int) Math.round(Math.sin(t * 1.3) * 3);
+			int ly = Math.max(8, this.height / 2 + 30 - lh - 18) + (int) Math.round(Math.sin(t * 1.1) * 2);
 			g.blit(RenderPipelines.GUI_TEXTURED, LOGO, this.width / 2 - lw / 2, ly, 0, 0, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, argb(alfaLogo, 0xFFFFFF));
 		}
 
-		// 3) los botones
+		// 3) los botones y los textos de abajo
 		super.extractRenderState(g, mouseX, mouseY, a);
-		g.text(this.font, "TRUCOFDEATH 5 - v0.1", 2, this.height - 10, argb(alfaBotones * 0.6f, 0xFFFFFF));
+		int gris = argb(alfaBotones * 0.6f, 0xFFFFFF);
+		g.text(this.font, NOMBRE + " v" + VERSION, 2, this.height - 10, gris);
+		g.text(this.font, CREDITO, this.width - this.font.width(CREDITO) - 2, this.height - 10, gris);
 
-		// 4) la intro: negro que se va y flash blanco
-		float negro = this.inicio == 0 ? 1 : this.conIntro
-			? 1 - clamp01((t - T_ESTRELLAS) / (T_ESTRELLAS_FIN - T_ESTRELLAS))
-			: 1 - clamp01((t - (T_BOTONES + BOTONES_DURA)) / 0.5f);
+		// 4) el negro del principio que se va
+		float negro = !empezo ? 1 : this.conIntro
+			? 1 - clamp01((t - T_GALAXIA) / (T_GALAXIA_FIN - T_GALAXIA))
+			: 1 - clamp01((t - FIN_INTRO) / 0.5f);
 		if (negro > 0) g.fill(0, 0, this.width, this.height, argb(negro, 0x000000));
-		if (this.conIntro && t >= T_FLASH) {
-			float f = (t - T_FLASH) / FLASH_DURA;
-			if (f < 1) g.fill(0, 0, this.width, this.height, argb((1 - f) * (1 - f), 0xFFFFFF));
-		}
 	}
 }
