@@ -65,13 +65,13 @@ jobs:
           xdotool mousemove 640 438 click 1
           sleep 25; import -window root cap/8_op_adentro.png
           # 5) la tablet: J, cada seccion, hover y clic en crafteos, y J para cerrar
-          W=$(xdotool search --onlyvisible --name 'Minecraft' | head -1); echo "ventana: $W"; xdotool windowfocus $W 2>/dev/null; xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; import -window root cap/t1_inicio.png
+          W=$(xdotool getmousewindow 2>/dev/null || true); echo "ventana: $W, foco: $(xdotool getwindowfocus 2>/dev/null || true)"; xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; import -window root cap/t1_inicio.png
           xdotool mousemove 352 132 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t2_novedades.png
           xdotool mousemove 486 132 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t3_misiones.png
           xdotool mousemove 614 132 click 1; sleep 2; xdotool mousemove 226 214; sleep 1.5; import -window root cap/t4_crafteos_hover.png
           xdotool mousemove 262 214 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/t5_crafteo_todarmor.png
           xdotool mousemove 730 132 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t6_equipo.png
-          xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2; import -window root cap/t7_cerrada.png; grep 'tecla tablet' $L
+          xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2; import -window root cap/t7_cerrada.png; grep 'tecla tablet' $L || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs
