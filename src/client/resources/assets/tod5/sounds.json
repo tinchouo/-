@@ -13,5 +13,26 @@
         "name": "tod5:abrio"
       }
     ]
+  },
+  "tablet_abrir": {
+    "sounds": [
+      {
+        "name": "tod5:tablet_abrir"
+      }
+    ]
+  },
+  "tablet_cerrar": {
+    "sounds": [
+      {
+        "name": "tod5:tablet_cerrar"
+      }
+    ]
+  },
+  "tablet_tocar": {
+    "sounds": [
+      {
+        "name": "tod5:tablet_tocar"
+      }
+    ]
   }
 }

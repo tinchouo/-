@@ -59,7 +59,17 @@ public class Tablet extends Screen {
 	@Override public boolean isPauseScreen() { return false; }
 
 	@Override
-	public void removed() { ultima = this.seccion; super.removed(); }
+	public void added() { super.added(); sonido("tablet_abrir"); }
+
+	@Override
+	public void removed() { ultima = this.seccion; sonido("tablet_cerrar"); super.removed(); }
+
+	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
+	private void sonido(String nombre) {
+		this.minecraft.getSoundManager().play(new SimpleSoundInstance(net.minecraft.resources.Identifier.fromNamespaceAndPath("tod5", nombre),
+			net.minecraft.sounds.SoundSource.MASTER, 0.8f, 1f, net.minecraft.util.RandomSource.create(), false, 0,
+			net.minecraft.client.resources.sounds.SoundInstance.Attenuation.NONE, 0, 0, 0, true));
+	}
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
@@ -71,7 +81,7 @@ public class Tablet extends Screen {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		for (Zona z : List.copyOf(this.zonas)) {
 			if (z.adentro(event.x(), event.y())) {
-				this.minecraft.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f));
+				sonido("tablet_tocar");
 				z.accion().run();
 				return true;
 			}
@@ -391,8 +401,6 @@ public class Tablet extends Screen {
 				this.zonas.add(new Zona(sx, sy, t, t, () -> this.itemElegido = k));
 			}
 		}
-		g.text(this.font, "Mouse encima: el nombre.", gx, gy + filas * t + 5, GRIS_TEXTO, false);
-		g.text(this.font, "Clic: ver el crafteo.", gx, gy + filas * t + 15, GRIS_TEXTO, false);
 
 		// el crafteo del elegido, como una mesa de crafteo
 		if (!visibles.isEmpty()) {
@@ -434,8 +442,7 @@ public class Tablet extends Screen {
 	private void equipo(GuiGraphicsExtractor g, int x, int y, int cw, int ch, int mx, int my) {
 		TabletDatos.Equipo eq = datos.equipo;
 		g.pose().pushMatrix(); g.pose().translate(x, y); g.pose().scale(1.25f, 1.25f);
-		g.text(this.font, "Equipo ", 0, 0, TEXTO, false);
-		g.text(this.font, eq.nombre, this.font.width("Equipo "), 0, eq.color, false);
+		g.text(this.font, eq.nombre, 0, 0, eq.color, false);
 		g.pose().popMatrix();
 		int fx = x + cw;
 		fx -= this.font.width("Notas") + 12; boton(g, "Notas", fx, y - 1, verNotas, mx, my, () -> verNotas = true);
