@@ -15,6 +15,7 @@ import net.minecraft.util.RandomSource;
 public final class MusicaMenu {
 	private static final Identifier SONIDO = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "menu");
 	private static SoundInstance actual;
+	private static int chequeo;
 
 	private MusicaMenu() {}
 
@@ -24,7 +25,9 @@ public final class MusicaMenu {
 		mc.getMusicManager().stopPlaying();
 		actual = new SimpleSoundInstance(SONIDO, SoundSource.MUSIC, 1.0f, 1.0f, RandomSource.create(),
 			true, 0, SoundInstance.Attenuation.NONE, 0, 0, 0, true);
-		mc.getSoundManager().play(actual);
+		var res = mc.getSoundManager().play(actual);
+		org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 musica del menu: {}", res);
+		chequeo = 100;
 	}
 
 	public static void parar() {
@@ -35,5 +38,7 @@ public final class MusicaMenu {
 	/** Cada tick: si entraste a un mundo, se corta. */
 	public static void tick(Minecraft mc) {
 		if (actual != null && mc.level != null) parar();
+		if (chequeo > 0 && --chequeo == 0 && actual != null)
+			org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 musica del menu sonando 5s despues: {}", mc.getSoundManager().isActive(actual));
 	}
 }
