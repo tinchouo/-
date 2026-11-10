@@ -6,6 +6,11 @@ abierto: false
 # Admins: los OP entran siempre. Aca se pueden sumar mas por nombre.
 admins: []
 
+# Editores de la tablet: ven lo oculto (crafteos que no salieron, etc.) y editan.
+# NO alcanza con ser OP: asi alguien puede tener OP (por ejemplo para WorldEdit) sin ver nada.
+# Tambien: /tod editor agregar <nombre>  y  /tod editor sacar <nombre>
+editores: []
+
 # Hace falta el mod de TOD para entrar.
 exigir_mod: true
 # Segundos que espera el saludo del mod antes de echar al jugador.

@@ -35,12 +35,18 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	private static final long VIGENCIA_FILA = 10_000;   // ms: si no pregunta en 10 s, ya no esta en la fila
 
 	private final Set<UUID> saludaron = new HashSet<>();
+	private Tablero tablero;
+	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
 
 	@Override
 	public void onEnable() {
 		saveDefaultConfig();
 		getServer().getMessenger().registerIncomingPluginChannel(this, CANAL_HOLA, this);
+		getServer().getMessenger().registerIncomingPluginChannel(this, Tablero.CANAL_ACCION, this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Tablero.CANAL_TABLET);
+		tablero = new Tablero(this);
+		tablero.cargar();
 		getServer().getPluginManager().registerEvents(this, this);
 		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
 	}
@@ -107,6 +113,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public void onPluginMessageReceived(String canal, Player p, byte[] datos) {
+		if (Tablero.CANAL_ACCION.equals(canal)) { tablero.accion(p, datos); return; }
 		if (!CANAL_HOLA.equals(canal)) return;
 		String[] partes = new String(datos, StandardCharsets.UTF_8).split(";", 2);
 		String version = partes[0];
@@ -120,6 +127,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 			return;
 		}
 		saludaron.add(p.getUniqueId());
+		tablero.sincronizar(p);   // le mando lo que tiene que ver en la tablet
 	}
 
 	@EventHandler
@@ -129,6 +137,9 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	@Override
 	public boolean onCommand(CommandSender s, Command cmd, String label, String[] args) {
 		String sub = args.length > 0 ? args[0].toLowerCase() : "estado";
+		if (args.length > 0 && tablero.comando(s, args)) return true;
+		boolean admin = !(s instanceof Player p) || p.isOp() || p.hasPermission("tod5.admin");
+		if (!admin) { s.sendMessage(MM.deserialize("<red>Eso es solo para los admins de TOD.</red>")); return true; }
 		switch (sub) {
 			case "abrir" -> {
 				getConfig().set("abierto", true); saveConfig();
@@ -138,7 +149,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 				getConfig().set("abierto", false); saveConfig();
 				s.sendMessage(MM.deserialize("<yellow>Server EN PREPARACIÓN.</yellow> <gray>Solo entran los admins. Los que ya estan adentro siguen jugando.</gray>"));
 			}
-			case "recargar" -> { reloadConfig(); s.sendMessage(MM.deserialize("<green>Config recargada.</green>")); }
+			case "recargar" -> { reloadConfig(); tablero.cargar(); tablero.sincronizarTodos(); s.sendMessage(MM.deserialize("<green>Config y datos de la tablet recargados.</green>")); }
 			default -> s.sendMessage(MM.deserialize((abierto() ? "<green>Server ABIERTO" : "<yellow>Server EN PREPARACIÓN") + "</yellow></green> <gray>- en la fila: " + enFila() + " - conectados: " + Bukkit.getOnlinePlayers().size() + "</gray>"));
 		}
 		return true;
@@ -146,6 +157,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		return args.length == 1 ? List.of("abrir", "cerrar", "estado", "recargar") : List.of();
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor");
+		return tablero.completar(args);
 	}
 }

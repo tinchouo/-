@@ -1,9 +1,6 @@
 package ar.tod5.menu.tablet;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.KeyEvent;
@@ -14,6 +11,9 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.FormattedCharSequence;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.util.Util;
 
 /**
@@ -37,7 +37,7 @@ public class Tablet extends Screen {
 
 	private static Seccion ultima = Seccion.INICIO;   // al reabrir, vuelve a donde estabas
 
-	private final TabletDatos datos = TabletDatos.ejemplo();
+	private TabletDatos datos = TabletDatos.actual();   // se actualiza solo si el server manda algo nuevo
 	private Seccion seccion = ultima;
 	private int dia = datos.hoy;
 	private String filtro = "todo";
@@ -62,7 +62,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { ultima = this.seccion; sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -135,6 +135,8 @@ public class Tablet extends Screen {
 	// ---------- pantalla ----------
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float a) {
+		this.datos = TabletDatos.actual();
+		if (!this.datos.editor) this.editando = false;
 		this.zonas.clear();
 		if (this.seccion == Seccion.EQUIPO && this.datos.equipo == null) this.seccion = Seccion.INICIO;
 		this.w = Math.min(470, this.width - 16);
@@ -322,19 +324,36 @@ public class Tablet extends Screen {
 		List<TabletDatos.Novedad> lista = datos.novedadesDe(this.dia, this.filtro);
 		if (lista.isEmpty()) { g.text(this.font, "Ese día no hubo novedades de este tipo.", x, yy + 6, GRIS_TEXTO, false); return; }
 		for (TabletDatos.Novedad n : lista) {
-			List<FormattedCharSequence> renglones = this.font.split(Component.literal(n.texto()), cw - 60);
-			int alto = 16 + renglones.size() * 10;
+			boolean conTitulo = n.titulo() != null;
+			List<FormattedCharSequence> renglones = this.font.split(Component.literal(n.texto()), cw - 66);
+			int alto = (conTitulo ? 16 : 6) + renglones.size() * 10;
 			if (yy + alto > y + ch) break;
 			tarjeta(g, x, yy, cw, alto);
-			boolean aviso = n.tipo().equals("aviso");
-			String et = aviso ? "AVISO" : "CAMBIO";
-			relieve(g, x + 4, yy + 4, 46, 11, aviso ? 0xFF2F6F2F : 0xFF6F5A1F, aviso ? 0xFF4F8F4F : 0xFF8F7A3F, aviso ? 0xFF1F4F1F : 0xFF4F3A0F);
-			g.text(this.font, et, x + 4 + (46 - this.font.width(et)) / 2, yy + 6, aviso ? VERDE : AMARILLO, true);
-			g.text(this.font, n.titulo(), x + 56, yy + 5, BLANCO, true);
-			int ry = yy + 16;
-			for (FormattedCharSequence r : renglones) { g.text(this.font, r, x + 56, ry, 0xFFECECEC, true); ry += 10; }
+			int[] c = colorDe(n.tipo());
+			String et = etiquetaDe(n.tipo());
+			relieve(g, x + 4, yy + 4, 52, 11, c[1], c[2], c[3]);
+			g.text(this.font, et, x + 4 + (52 - this.font.width(et)) / 2, yy + 6, c[0], true);
+			if (n.nuevo()) g.fill(x + cw - 6, yy + 3, x + cw - 3, yy + 6, VERDE);
+			int ry = yy + 5;
+			if (conTitulo) { g.text(this.font, n.titulo(), x + 62, ry, c[0], true); ry += 11; }
+			for (FormattedCharSequence r : renglones) { g.text(this.font, r, x + 62, ry, 0xFFECECEC, true); ry += 10; }
+			Vistos.marcar("n:" + n.id());   // ya la vio
 			yy += alto + 3;
 		}
+	}
+
+	/** Color de cada tipo de novedad (los mismos de la ruleta): {texto, fondo, luz, sombra}. */
+	private static int[] colorDe(String tipo) {
+		return switch (tipo) {
+			case "cambio" -> new int[] { 0xFFFFB050, 0xFF5A3A0A, 0xFF7A5A2A, 0xFF3A2000 };
+			case "mob" -> new int[] { 0xFFFFE63C, 0xFF5A520A, 0xFF7A722A, 0xFF3A3200 };
+			case "dungeon" -> new int[] { 0xFF7FA0FF, 0xFF1A2A6A, 0xFF3A4A8A, 0xFF0A1A4A };
+			case "diaria" -> new int[] { 0xFF55FF55, 0xFF1F5A1F, 0xFF3F7A3F, 0xFF0F3A0F };
+			default -> new int[] { 0xFF55FFFF, 0xFF0F4A4A, 0xFF2F6A6A, 0xFF052A2A };   // aviso
+		};
+	}
+	private static String etiquetaDe(String tipo) {
+		return switch (tipo) { case "cambio" -> "CAMBIO"; case "mob" -> "MOB"; case "dungeon" -> "DUNGEON"; case "diaria" -> "MISIÓN"; default -> "AVISO"; };
 	}
 
 	// ---------- MISIONES: la diaria arriba, las opcionales abajo ----------
@@ -370,6 +389,7 @@ public class Tablet extends Screen {
 		}
 		g.text(this.font, "MISIONES OPCIONALES", x, yy, GRIS_TEXTO, false);
 		yy += 11;
+		if (datos.opcionales.isEmpty()) g.text(this.font, "Todavía no hay misiones opcionales.", x, yy + 2, GRIS_TEXTO, false);
 		for (TabletDatos.Mision m : datos.opcionales) {
 			int extra = this.abiertas.contains(m.id()) ? altoRecompensas(m, cw) : 0;
 			tarjeta(g, x, yy, cw, 18 + extra);
@@ -412,36 +432,71 @@ public class Tablet extends Screen {
 	}
 
 	// ---------- CRAFTEOS: los items como en el creativo ----------
+	private boolean editando = false;                  // modo edicion (solo editores)
+	private final Set<String> marcados = new LinkedHashSet<>();
+	private final Map<Identifier, Boolean> tieneTextura = new HashMap<>();
+
 	private void crafteos(GuiGraphicsExtractor g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Crafteos", x, y);
 		int fx = x + 70;
 		String[][] cs = { { "todos", "Todos" }, { "general", "General" }, { "aether", "Aether" } };
 		for (String[] c : cs) fx += boton(g, c[1], fx, y - 1, this.categoria.equals(c[0]), mx, my, () -> { this.categoria = c[0]; this.itemElegido = 0; }) + 2;
+		if (datos.editor) {
+			String t = this.editando ? "Listo" : "Editar";
+			boton(g, t, x + cw - this.font.width(t) - 10, y - 1, this.editando, mx, my, () -> { this.editando = !this.editando; this.marcados.clear(); });
+		}
 
-		List<TabletDatos.Crafteo> visibles = datos.crafteosDe(this.categoria);
+		List<TabletDatos.Crafteo> visibles = datos.crafteosDe(this.categoria, this.editando);
 		int gx = x, gy = y + 17, cols = 9, filas = 4, t = 18;
 		g.fill(gx - 1, gy - 1, gx + cols * t + 1, gy + filas * t + 1, SLOT_OSCURO);
 		TabletDatos.Crafteo hover = null;
 		for (int i = 0; i < cols * filas; i++) {
 			int sx = gx + (i % cols) * t, sy = gy + (i / cols) * t;
 			hundido(g, sx, sy, t, t);
-			if (i < visibles.size()) {
-				TabletDatos.Crafteo c = visibles.get(i);
-				if (i == this.itemElegido) { g.fill(sx, sy, sx + t, sy + t, VERDE); g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0xFF1F3A27); }
-				g.item(c.icono(), sx + 1, sy + 1);
-				if (c.nuevo()) g.fill(sx + t - 4, sy + 1, sx + t - 1, sy + 4, VERDE);
-				boolean encima = mx >= sx && my >= sy && mx < sx + t && my < sy + t;
-				if (encima) { g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x50FFFFFF); hover = c; }
-				final int k = i;
-				this.zonas.add(new Zona(sx, sy, t, t, () -> this.itemElegido = k));
+			if (i >= visibles.size()) continue;
+			TabletDatos.Crafteo c = visibles.get(i);
+			boolean sombra = !this.editando && !c.activo();          // lo ve como silueta negra, sin nombre
+			boolean marcado = this.editando && this.marcados.contains(c.id());
+			if (i == this.itemElegido && !sombra) { g.fill(sx, sy, sx + t, sy + t, VERDE); g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0xFF1F3A27); }
+			if (sombra) silueta(g, c.icono(), sx + 1, sy + 1);
+			else g.item(c.icono(), sx + 1, sy + 1);
+			if (this.editando && !c.activo()) {                       // oculto: oscurecido, con una marquita roja
+				g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x99000000);
+				g.fill(sx + 1, sy + t - 4, sx + 4, sy + t - 1, 0xFFE04040);
+			}
+			if (marcado) { g.fill(sx, sy, sx + t, sy + 1, VERDE); g.fill(sx, sy + t - 1, sx + t, sy + t, VERDE); g.fill(sx, sy, sx + 1, sy + t, VERDE); g.fill(sx + t - 1, sy, sx + t, sy + t, VERDE); }
+			if (c.nuevo() && !this.editando) g.fill(sx + t - 4, sy + 1, sx + t - 1, sy + 4, VERDE);
+			boolean encima = mx >= sx && my >= sy && mx < sx + t && my < sy + t;
+			if (sombra) continue;                                      // la sombra no dice nada ni se puede tocar
+			if (encima) { g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x50FFFFFF); hover = c; Vistos.marcar("c:" + c.id()); }
+			final int k = i;
+			this.zonas.add(new Zona(sx, sy, t, t, () -> {
+				this.itemElegido = k;
+				Vistos.marcar("c:" + c.id());
+				if (this.editando && !this.marcados.remove(c.id())) this.marcados.add(c.id());
+			}));
+		}
+		if (visibles.isEmpty()) g.text(this.font, "Todavía no hay crafteos.", gx + 4, gy + filas * t + 6, GRIS_TEXTO, false);
+
+		// editando: activar / ocultar los marcados (varios de una: un solo anuncio en el chat)
+		if (this.editando) {
+			int by = gy + filas * t + 5, bx = gx;
+			List<String> ids = List.copyOf(this.marcados);
+			if (!ids.isEmpty()) {
+				bx += boton(g, "Activar (" + ids.size() + ")", bx, by, false, mx, my, () -> { enviar("crafteo_activar", ids, null); this.marcados.clear(); }) + 3;
+				boton(g, "Ocultar (" + ids.size() + ")", bx, by, false, mx, my, () -> { enviar("crafteo_ocultar", ids, null); this.marcados.clear(); });
 			}
 		}
 
 		// el crafteo del elegido, como una mesa de crafteo
-		if (!visibles.isEmpty()) {
-			TabletDatos.Crafteo c = visibles.get(Math.min(this.itemElegido, visibles.size() - 1));
+		TabletDatos.Crafteo c = visibles.isEmpty() ? null : visibles.get(Math.min(this.itemElegido, visibles.size() - 1));
+		if (c != null && !c.soloSombra() && (this.editando || c.activo())) {
 			int rx = gx + cols * t + 14, ry = gy;
 			g.text(this.font, c.nombre(), rx, ry, TEXTO, false);
+			if (this.editando) {
+				String estado = c.activo() ? "Activo" : "Oculto";
+				g.text(this.font, estado, x + cw - this.font.width(estado), ry, c.activo() ? VERDE : 0xFFE06060, false);
+			}
 			int mgx = rx, mgy = ry + 12;
 			for (int i = 0; i < 9; i++) {
 				int sx = mgx + (i % 3) * t, sy = mgy + (i / 3) * t;
@@ -464,13 +519,38 @@ public class Tablet extends Screen {
 			int ny = mgy + 3 * t + 6;
 			g.text(this.font, "Desde el día " + c.dia(), rx, ny, GRIS_TEXTO, false);
 			for (FormattedCharSequence r : this.font.split(Component.literal(c.nota()), x + cw - rx)) { ny += 10; g.text(this.font, r, rx, ny, TEXTO, false); }
+			if (this.editando) {   // la sombra: si esta oculto, los jugadores ven (o no) su silueta
+				String sb = "Sombra: " + (c.sombra() ? "sí" : "no");
+				boton(g, sb, rx, ny + 14, c.sombra(), mx, my, () -> enviar("crafteo_sombra", List.of(c.id()), !c.sombra()));
+			}
 		}
 		if (hover != null) {
 			List<FormattedCharSequence> tip = new ArrayList<>();
 			tip.add(Component.literal(hover.nombre()).getVisualOrderText());
 			if (hover.nuevo()) tip.add(Component.literal("§aNuevo · día " + hover.dia()).getVisualOrderText());
+			if (this.editando && !hover.activo()) tip.add(Component.literal("§cOculto").getVisualOrderText());
 			g.setTooltipForNextFrame(tip, mx, my);
 		}
+	}
+
+	/** La silueta negra de un item (para los crafteos que todavia no salieron, si tienen sombra). */
+	private void silueta(GuiGraphicsExtractor g, ItemStack st, int x, int y) {
+		Identifier key = BuiltInRegistries.ITEM.getKey(st.getItem());
+		Identifier tex = Identifier.fromNamespaceAndPath(key.getNamespace(), "textures/item/" + key.getPath() + ".png");
+		boolean hay = this.tieneTextura.computeIfAbsent(tex, k -> this.minecraft.getResourceManager().getResource(k).isPresent());
+		if (hay) g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0, 0, 16, 16, 16, 16, 16, 16, 0xFF000000);
+		else { g.fill(x + 2, y + 2, x + 14, y + 14, 0xFF000000); g.text(this.font, "?", x + 6, y + 4, 0xFF3A3A3A, false); }
+	}
+
+	/** Lo que hace el editor: se lo mando al server, que lo aplica y le manda a todos la tablet actualizada. */
+	private void enviar(String accion, List<String> ids, Boolean v) {
+		com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+		o.addProperty("a", accion);
+		com.google.gson.JsonArray a = new com.google.gson.JsonArray();
+		ids.forEach(a::add);
+		o.add("ids", a);
+		if (v != null) o.addProperty("v", v);
+		ar.tod5.menu.Conexion.accion(o.toString());
 	}
 
 	// ---------- EQUIPO ----------

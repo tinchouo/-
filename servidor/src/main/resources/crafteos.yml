@@ -1,0 +1,20 @@
+# Crafteos del evento.
+# Nada se activa solo: se activan a mano desde la tablet (modo edicion) o con /tod crafteo activar <id>.
+# "activo: true" solo cuenta la primera vez que arranca el server (la billetera sale desde el dia 1).
+#
+# forma: 3 renglones de 3 letras (espacio = casilla vacia). ingredientes: que item es cada letra.
+# resultado: el item que da (nombre de Minecraft). nombre: como se llama en la tablet y en el juego.
+crafteos:
+  billetera:
+    nombre: Billetera
+    categoria: general
+    dia: 1
+    activo: true
+    nota: "Guarda tus monedas. Podés tener más de una, pero no se apilan."
+    resultado: bundle
+    cantidad: 1
+    forma: [" H ", "CPC", " C "]
+    ingredientes:
+      H: string
+      C: leather
+      P: gold_nugget

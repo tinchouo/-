@@ -64,14 +64,25 @@ jobs:
           xdotool mousemove 640 416 click 1; sleep 4; import -window root cap/7_menu_otra_vez.png
           xdotool mousemove 640 438 click 1
           sleep 25; import -window root cap/8_op_adentro.png
-          # 5) la tablet: J, cada seccion, hover y clic en crafteos, y J para cerrar
-          W=$(xdotool getmousewindow 2>/dev/null || true); echo "ventana: $W, foco: $(xdotool getwindowfocus 2>/dev/null || true)"; xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; grep -c 'llego una tecla' $L || true; grep 'tecla de la tablet' $L || true; xdotool key e; sleep 2; import -window root cap/t0_inventario.png; xdotool key Escape; sleep 1; grep -c 'llego una tecla' $L || true; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'TAMPOCO'; import -window root cap/t1_inicio.png
+          # 5) sistema de la tablet: editor, anuncios con colores, crafteo oculto
+          echo "tod editor agregar $N" >> srv/cmds.txt; sleep 2
+          echo "tod anuncio cambio Los creepers dejan veneno al morir." >> srv/cmds.txt
+          echo "tod anuncio aviso Hoy a las 20:00 hay evento en el Nether." >> srv/cmds.txt
+          echo "tod anuncio truco Todos con un solo corazón por 10 minutos." >> srv/cmds.txt
+          echo "tod anuncio dungeon NUEVA DIMENSIÓN | Se abrió el Aether." >> srv/cmds.txt
+          sleep 2; import -window root cap/c1_chat.png
+          echo "tod crafteo ocultar billetera" >> srv/cmds.txt; sleep 2
+          # 6) la tablet: J, secciones, y en Crafteos el modo edicion: marcar la billetera y activarla
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; import -window root cap/t1_inicio.png
           xdotool mousemove 224 204 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t2_novedades.png
-          xdotool mousemove 224 268 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t3_misiones.png; xdotool mousemove 976 328 click 1; sleep 1; xdotool mousemove 972 228 click 1; sleep 1; xdotool mousemove 1000 360; sleep 1; import -window root cap/t3b_recompensas.png
-          xdotool mousemove 224 332 click 1; sleep 2; xdotool mousemove 294 170; sleep 1.5; import -window root cap/t4_crafteos_hover.png
-          xdotool mousemove 330 170 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/t5_crafteo_todarmor.png
-          xdotool mousemove 224 396 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t6_equipo.png
-          xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2; import -window root cap/t7_cerrada.png; grep 'tecla tablet' $L || true
+          xdotool mousemove 224 268 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t3_misiones.png
+          xdotool mousemove 224 332 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t4_crafteos_vacio.png
+          xdotool mousemove 1032 128 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/t5_editando.png
+          xdotool mousemove 294 170 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/t6_marcado.png
+          xdotool mousemove 340 318 click 1; sleep 3; xdotool mousemove 1200 700; sleep 1; import -window root cap/t7_activado.png
+          xdotool mousemove 1040 128 click 1; sleep 1; xdotool mousemove 294 170; sleep 1; import -window root cap/t8_listo.png
+          xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 1; import -window root cap/t9_chat.png
+          grep -E "TOD5 tablet:" $L | tail -5 || true; grep -E "activo crafteos|Tablet:" srv/server.log || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs
