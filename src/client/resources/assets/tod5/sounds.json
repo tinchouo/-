@@ -34,5 +34,19 @@
         "name": "tod5:tablet_tocar"
       }
     ]
+  },
+  "secreto_entrar": {
+    "sounds": [
+      {
+        "name": "tod5:secreto_entrar"
+      }
+    ]
+  },
+  "secreto_volver": {
+    "sounds": [
+      {
+        "name": "tod5:secreto_volver"
+      }
+    ]
   }
 }

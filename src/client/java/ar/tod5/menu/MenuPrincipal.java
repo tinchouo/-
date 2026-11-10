@@ -50,6 +50,25 @@ public class MenuPrincipal extends Screen {
 	private long inicio;
 	private int botonesY;
 
+	// ---- secreto: clic en el agujero negro -> entras, se ve la pista, y volves ----
+	private enum Secreto { NADA, ENTRANDO, PISTA, SALIENDO, VOLVIENDO }
+	private static final Identifier PISTA = tex("pista");
+	private static final int PISTA_W = 750, PISTA_H = 1200;
+	private static final Identifier SONIDO_ENTRAR = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "secreto_entrar");
+	private static final Identifier SONIDO_VOLVER = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "secreto_volver");
+	private static final float S_ENTRAR = 2.8f, S_PISTA_FADE = 1.8f, S_SALIR = 0.9f;
+	private static final float S_AGUJERO = 2.2f, S_LOGO = 1.2f, S_BOTONES = 0.9f;   // la vuelta, como la intro
+	private Secreto secreto = Secreto.NADA;
+	private long secretoDesde;
+	private float agX, agY, agD;          // donde esta el agujero ahora (para el clic)
+
+	private float ts() { return (Util.getMillis() - this.secretoDesde) / 1000f; }
+	private void pasarA(Secreto s) { this.secreto = s; this.secretoDesde = Util.getMillis(); }
+	private void sonidoSecreto(Identifier id) {
+		this.minecraft.getSoundManager().play(new net.minecraft.client.resources.sounds.SimpleSoundInstance(id, net.minecraft.sounds.SoundSource.MASTER,
+			0.55f, 1f, net.minecraft.util.RandomSource.create(), false, 0, net.minecraft.client.resources.sounds.SoundInstance.Attenuation.NONE, 0, 0, 0, true));
+	}
+
 	public MenuPrincipal() {
 		super(Component.literal(NOMBRE));
 		this.conIntro = !introVista;
@@ -96,14 +115,30 @@ public class MenuPrincipal extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (this.secreto != Secreto.NADA) { volverDelSecreto(); return true; }
 		if (this.conIntro && t() < T_BOTONES) { saltearIntro(); return true; }
 		return super.keyPressed(event);
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (this.secreto != Secreto.NADA) { volverDelSecreto(); return true; }
 		if (this.conIntro && t() < T_BOTONES) { saltearIntro(); return true; }
-		return super.mouseClicked(event, doubleClick);
+		if (super.mouseClicked(event, doubleClick)) return true;
+		// el secreto: clic adentro del agujero (sin sonido de clic ni nada que lo delate)
+		double dx = event.x() - this.agX, dy = event.y() - this.agY;
+		if (this.inicio != 0 && dx * dx + dy * dy <= (this.agD * 0.55) * (this.agD * 0.55)) {
+			pasarA(Secreto.ENTRANDO);
+			MusicaMenu.fundir(0f, S_ENTRAR * 0.9f);
+			sonidoSecreto(SONIDO_ENTRAR);
+			return true;
+		}
+		return false;
+	}
+
+	/** Desde la imagen se puede volver con cualquier clic o tecla (cuando ya termino de entrar). */
+	private void volverDelSecreto() {
+		if (this.secreto == Secreto.PISTA && ts() > 0.6f) { pasarA(Secreto.SALIENDO); sonidoSecreto(SONIDO_VOLVER); }
 	}
 
 	@Override
@@ -147,22 +182,68 @@ public class MenuPrincipal extends Screen {
 	private static float suave(float x) { return x * x * (3 - 2 * x); }
 	private static int argb(float alpha, int rgb) { return ((int) (clamp01(alpha) * 255) << 24) | (rgb & 0xFFFFFF); }
 
+	private static float lerp(float a, float b, float k) { return a + (b - a) * k; }
+
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
 		arrancarSiHaceFalta();
 		float t = t();
 		boolean empezo = this.inicio != 0;
 
-		float alfaBotones = !empezo ? 0 : this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
-		this.fadeWidgets(alfaBotones);
-		for (var w : this.children()) if (w instanceof Button b) b.active = alfaBotones > 0.6f;
-
-		// 1) el fondo (plano y animado); el agujero negro va entre el logo y los botones
+		// donde va el agujero normalmente: entre el logo y los botones
 		int arriba = logoY() + logoAlto(), hueco = Math.max(20, this.botonesY - arriba);
-		Fondo.dibujar(g, this.width, this.height, this.width / 2, arriba + hueco / 2, Math.min(hueco * 0.62f, this.width * 0.12f));
+		float baseX = this.width / 2f, baseY = arriba + hueco / 2f, baseD = Math.min(hueco * 0.62f, this.width * 0.12f);
+		float grande = 3.2f * (float) Math.hypot(this.width, this.height);   // tan grande que el centro negro tapa todo
 
-		// 2) el logo, quieto arriba, saliendo de la oscuridad
+		float alfaBotones = !empezo ? 0 : this.conIntro ? clamp01((t - T_BOTONES) / BOTONES_DURA) : 1;
 		float alfaLogo = !empezo ? 0 : this.conIntro ? suave(clamp01((t - T_LOGO) / LOGO_DURA)) : 1;
+		float negroSecreto = 0, alfaPista = 0;
+		boolean agujeroArriba = false;   // true: el agujero va encima del logo y los botones
+		this.agX = baseX; this.agY = baseY; this.agD = baseD;
+
+		switch (this.secreto) {
+			case ENTRANDO -> {
+				float p = clamp01(ts() / S_ENTRAR), k = p * p * p;
+				this.agX = lerp(baseX, this.width / 2f, suave(p));
+				this.agY = lerp(baseY, this.height / 2f, suave(p));
+				this.agD = baseD * (float) Math.exp(Math.log(grande / baseD) * k);
+				agujeroArriba = true;
+				negroSecreto = clamp01((p - 0.78f) / 0.22f);
+				if (p >= 1) pasarA(Secreto.PISTA);
+			}
+			case PISTA -> { negroSecreto = 1; alfaPista = suave(clamp01((ts() - 0.3f) / S_PISTA_FADE)); }
+			case SALIENDO -> {
+				negroSecreto = 1;
+				alfaPista = 1 - clamp01(ts() / S_SALIR);
+				if (ts() >= S_SALIR + 0.3f) pasarA(Secreto.VOLVIENDO);
+			}
+			case VOLVIENDO -> {
+				float s = ts(), p = clamp01(s / S_AGUJERO), k = 1 - suave(p);
+				this.agX = lerp(baseX, this.width / 2f, k);
+				this.agY = lerp(baseY, this.height / 2f, k);
+				this.agD = baseD * (float) Math.exp(Math.log(grande / baseD) * k * k * k);
+				negroSecreto = 1 - clamp01(s / 0.5f);
+				alfaLogo = suave(clamp01((s - S_AGUJERO) / S_LOGO));
+				alfaBotones = clamp01((s - S_AGUJERO - S_LOGO * 0.6f) / S_BOTONES);
+				if (s >= S_AGUJERO && !this.musicaVuelve) { this.musicaVuelve = true; MusicaMenu.fundir(1f, 2.5f); }
+				if (s >= S_AGUJERO + S_LOGO * 0.6f + S_BOTONES) { pasarA(Secreto.NADA); this.musicaVuelve = false; }
+			}
+			default -> {}
+		}
+		if (this.secreto == Secreto.ENTRANDO) {
+			alfaBotones = Math.min(alfaBotones, 1 - clamp01(ts() / 0.6f));
+			alfaLogo = Math.min(alfaLogo, 1 - clamp01(ts() / (S_ENTRAR * 0.55f)));
+		}
+		else if (this.secreto == Secreto.PISTA || this.secreto == Secreto.SALIENDO) { alfaLogo = 0; alfaBotones = 0; }
+
+		this.fadeWidgets(alfaBotones);
+		for (var w : this.children()) if (w instanceof Button b) b.active = alfaBotones > 0.6f && this.secreto == Secreto.NADA;
+
+		// 1) el cielo y (normalmente) el agujero debajo de todo
+		Fondo.cielo(g, this.width, this.height);
+		if (!agujeroArriba) Fondo.agujero(g, Math.round(this.agX), Math.round(this.agY), this.agD);
+
+		// 2) el logo, quieto arriba
 		if (alfaLogo > 0) dibujarLogo(g, t, alfaLogo);
 
 		// 3) los botones y los textos de abajo
@@ -171,10 +252,26 @@ public class MenuPrincipal extends Screen {
 		g.text(this.font, NOMBRE + " v" + VERSION, 2, this.height - 10, gris);
 		g.text(this.font, CREDITO, this.width - this.font.width(CREDITO) - 2, this.height - 10, gris);
 
-		// 4) el negro del principio que se va
+		// 4) entrando al agujero: va encima de todo y lo tapa
+		if (agujeroArriba) Fondo.agujero(g, Math.round(this.agX), Math.round(this.agY), this.agD);
+
+		// 5) adentro: negro y la imagen
+		if (negroSecreto > 0) g.fill(0, 0, this.width, this.height, argb(negroSecreto, 0x000000));
+		if (alfaPista > 0) {
+			int ph = (int) (this.height * 0.9f), pw = ph * PISTA_W / PISTA_H;
+			g.blit(RenderPipelines.GUI_TEXTURED, PISTA, (this.width - pw) / 2, (this.height - ph) / 2, 0, 0, pw, ph, PISTA_W, PISTA_H, PISTA_W, PISTA_H, argb(alfaPista, 0xFFFFFF));
+		}
+
+		// 6) el negro del principio que se va
 		float negro = !empezo ? 1 : this.conIntro
 			? 1 - clamp01((t - T_GALAXIA) / (T_GALAXIA_FIN - T_GALAXIA))
 			: 1 - clamp01((t - FIN_INTRO) / 0.5f);
 		if (negro > 0) g.fill(0, 0, this.width, this.height, argb(negro, 0x000000));
+
+		// 7) cerrando el juego: todo a negro
+		float salida = Salida.oscuro();
+		if (salida > 0) g.fill(0, 0, this.width, this.height, argb(salida, 0x000000));
 	}
+
+	private boolean musicaVuelve = false;
 }

@@ -10,7 +10,8 @@
 		"LogoTextureMixin",
 		"DisconnectedScreenAccessor",
 		"KeyCategoryAccessor",
-		"TecladoDebugMixin"
+		"TecladoDebugMixin",
+		"MinecraftMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

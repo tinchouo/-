@@ -75,9 +75,16 @@ public final class Fondo {
 	 * @param diametro  diametro del agujero (sin el disco) en pixeles de pantalla
 	 */
 	public static void dibujar(GuiGraphicsExtractor g, int ancho, int alto, int cx, int cy, float diametro) {
-		float t = tiempo();
-		capas(g, ancho, alto, t);
+		capas(g, ancho, alto, tiempo());
+		agujero(g, cx, cy, diametro);
+	}
 
+	/** Solo el cielo (nebulosa, estrellas, fugaz), sin oscurecer ni agujero. */
+	public static void cielo(GuiGraphicsExtractor g, int ancho, int alto) { capas(g, ancho, alto, tiempo()); }
+
+	/** Solo el agujero negro, en cualquier tamaño (para el secreto lo agranda hasta tapar todo). */
+	public static void agujero(GuiGraphicsExtractor g, int cx, int cy, float diametro) {
+		float t = tiempo();
 		// agujero negro: el disco gira (48 cuadros) y el brillo late despacio
 		int ah = Math.round(diametro / (2 * AG_RADIO)), aw = ah * AG_W / AG_H;
 		int cuadro = (int) (t * AG_FPS) % AG_CUADROS;

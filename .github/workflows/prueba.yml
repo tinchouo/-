@@ -42,6 +42,13 @@ jobs:
           xdotool mousemove 640 488; sleep 1; xdotool click 1; sleep 4; import -window root cap/opciones.png
           for y in 150 200 250 300 350; do xdotool mousemove 400 $y; sleep 1; import -window root cap/opciones_hover_$y.png; done
           xdotool key Escape; sleep 2; xdotool keydown F3 key t keyup F3; for k in 1 2 3 4 6 8; do sleep 1; import -window root cap/recarga_$k.png; done; sleep 20; import -window root cap/despues_recarga.png
+          # secreto: clic en el agujero negro, la pista, y volver
+          xdotool mousemove 640 316; sleep 0.5; xdotool click 1; sleep 1.2; import -window root cap/s1_entrando.png; sleep 1.2; import -window root cap/s2_entrando.png
+          sleep 2.6; import -window root cap/s3_pista.png; xdotool click 1; sleep 0.6; import -window root cap/s4_saliendo.png
+          sleep 1.6; import -window root cap/s5_volviendo.png; sleep 1.6; import -window root cap/s6_volviendo.png; sleep 3; import -window root cap/s7_menu.png
+          # salir: se oscurece y se cierra solo
+          xdotool mousemove 640 536; sleep 0.5; xdotool click 1; sleep 0.8; import -window root cap/x1_saliendo.png; sleep 3
+          pgrep -f net.fabricmc > /dev/null && echo "SALIDA: el juego sigue abierto" || echo "SALIDA: el juego se cerro solo"
           pkill -f net.fabricmc || true; sleep 3
       - name: Subir capturas y logs
         if: always()
