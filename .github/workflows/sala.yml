@@ -43,27 +43,27 @@ jobs:
           export DISPLAY=:99
           L=run/logs/latest.log
           espera() { for i in $(seq 1 $2); do grep -q "$1" $L 2>/dev/null && return 0; sleep 1; done; echo "NO LLEGO: $1"; }
-          # 1) el juego abre con el server APAGADO
+          # 1) el juego abre con el server APAGADO y aprieto JUGAR
           (env -u CI ./gradlew runClient -Ptod5_ip=localhost --stacktrace > juego.log 2>&1 &)
-          espera "TOD5 menu abierto" 420; espera "estado del server: CERRADO" 30
-          sleep 9; import -window root cap/1_cerrado.png
-          # 2) se prende el server (arranca en preparacion)
+          espera "TOD5 menu abierto" 420; sleep 9; import -window root cap/0_menu.png
+          xdotool mousemove 640 438; sleep 0.3; xdotool click 1; sleep 0.5; import -window root cap/1_conectando.png
+          sleep 7; xdotool mousemove 100 100; import -window root cap/2_cerrado.png
+          # 2) se prende el server (en preparacion): intenta entrar, lo rechaza (no es OP) y queda en la cola
           (cd srv && tail -f cmds.txt | java -Xmx2G -jar paper.jar nogui > server.log 2>&1 &)
           for i in $(seq 1 240); do grep -q "Done (" srv/server.log && break; sleep 1; done
-          espera "estado del server: PREPARACION" 30; sleep 2; import -window root cap/2_preparacion.png
-          # 3) JUGAR con el server en preparacion: a la fila
-          xdotool mousemove 640 438; sleep 1; xdotool click 1; espera "TOD5 fila: entro" 10
-          xdotool mousemove 200 650; sleep 8; import -window root cap/3_en_fila.png
-          xdotool mousemove 640 438; sleep 2; import -window root cap/3b_en_fila_hover.png; xdotool mousemove 200 650
+          espera "intento entrar (por si soy OP)" 30; sleep 12; import -window root cap/3_preparacion.png
           echo "tod estado" >> srv/cmds.txt; sleep 2
-          # 4) se abre: entra solo
+          # 3) se abre: SERVIDOR ABIERTO, suena el aviso, 3 s despues de que termina entra solo
           echo "tod abrir" >> srv/cmds.txt
-          espera "entrando solo" 20; espera "saludo enviado" 60
-          sleep 10; import -window root cap/4_adentro.png
-          # 5) lo echan: vuelve al menu (no a la lista de servers)
-          echo "kick @a Prueba de echar" >> srv/cmds.txt; sleep 4; import -window root cap/5_echado.png
-          xdotool mousemove 640 464 click 1
-          sleep 4; import -window root cap/6_vuelve_al_menu.png
+          espera "el server abrio: sonido" 20; sleep 2; import -window root cap/4_abierto.png
+          espera "saludo enviado" 60; sleep 8; import -window root cap/5_adentro.png
+          # 4) como OP entra directo aunque este en preparacion
+          N=$(grep -o "UUID of player [A-Za-z0-9_]*" srv/server.log | tail -1 | awk '{print $4}'); echo "jugador: $N"
+          echo "op $N" >> srv/cmds.txt; echo "tod cerrar" >> srv/cmds.txt; sleep 2
+          echo "kick @a Prueba" >> srv/cmds.txt; sleep 4; import -window root cap/6_echado.png
+          xdotool mousemove 640 416 click 1; sleep 4; import -window root cap/7_menu_otra_vez.png
+          xdotool mousemove 640 438 click 1
+          sleep 25; import -window root cap/8_op_adentro.png
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs

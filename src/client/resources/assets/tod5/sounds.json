@@ -1,5 +1,17 @@
 {
   "menu": {
-    "sounds": [ { "name": "tod5:musica", "stream": true } ]
+    "sounds": [
+      {
+        "name": "tod5:musica",
+        "stream": true
+      }
+    ]
+  },
+  "abrio": {
+    "sounds": [
+      {
+        "name": "tod5:abrio"
+      }
+    ]
   }
 }

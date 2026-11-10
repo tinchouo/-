@@ -52,6 +52,11 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		return MM.deserialize(s);
 	}
 
+	/** El rechazo por "en preparacion" lleva una marca invisible: el mod la ve y te pone en la cola en vez de mostrar el cartel. */
+	private Component enPreparacion() {
+		return Component.text("").insertion("tod5:preparacion").append(msg("en_preparacion"));
+	}
+
 	private int enFila() {
 		long ahora = System.currentTimeMillis();
 		fila.values().removeIf(t -> ahora - t > VIGENCIA_FILA);
@@ -81,14 +86,14 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	public void antesDeEntrar(AsyncPlayerPreLoginEvent e) {
 		if (abierto() || e.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) return;
 		if (esAdmin(e.getUniqueId(), e.getName())) return;
-		e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, msg("en_preparacion"));
+		e.disallow(AsyncPlayerPreLoginEvent.Result.KICK_WHITELIST, enPreparacion());
 	}
 
 	@EventHandler(priority = EventPriority.HIGHEST)
 	public void alEntrar(PlayerJoinEvent e) {
 		Player p = e.getPlayer();
 		saludaron.remove(p.getUniqueId());
-		if (!abierto() && !esAdmin(p.getUniqueId(), p.getName()) && !p.hasPermission("tod5.admin")) { p.kick(msg("en_preparacion")); return; }
+		if (!abierto() && !esAdmin(p.getUniqueId(), p.getName()) && !p.hasPermission("tod5.admin")) { p.kick(enPreparacion()); return; }
 		if (getConfig().getBoolean("exigir_mod", true)) {
 			int seg = Math.max(2, getConfig().getInt("espera_saludo", 6));
 			Bukkit.getScheduler().runTaskLater(this, () -> {
