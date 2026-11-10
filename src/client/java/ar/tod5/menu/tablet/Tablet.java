@@ -31,7 +31,7 @@ public class Tablet extends Screen {
 	private static final int M_BORDE = 0xFF0A0B0C, M_LUZ = 0xFF8D949C, M_CLARO = 0xFF5E646B, M_BASE = 0xFF3C4147, M_OSCURO = 0xFF24272B;
 
 	enum Seccion { INICIO("Inicio", Items.COMPASS), NOVEDADES("Novedades", Items.WRITABLE_BOOK), MISIONES("Misiones", Items.IRON_SWORD),
-		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.WHITE_BANNER);
+		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD);
 		final String nombre; final ItemStack icono;
 		Seccion(String n, net.minecraft.world.item.Item i) { nombre = n; icono = new ItemStack(i); } }
 
