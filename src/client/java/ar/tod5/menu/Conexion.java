@@ -34,10 +34,15 @@ public final class Conexion {
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
 			SalaEspera.esperando = -1;
 			String version = FabricLoader.getInstance().getModContainer(TOD5Client.MOD_ID).map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
+			// los pedacitos de Fabric API (fabric-algo, hechos por FabricMC) cuentan como "fabric-api"
 			String mods = FabricLoader.getInstance().getAllMods().stream()
 				.filter(m -> m.getContainingMod().isEmpty())
-				.map(m -> m.getMetadata().getId())
-				.sorted().collect(Collectors.joining(","));
+				.map(m -> {
+					var md = m.getMetadata();
+					boolean deFabric = md.getId().startsWith("fabric-") && md.getAuthors().stream().anyMatch(a -> a.getName().equals("FabricMC"));
+					return deFabric ? "fabric-api" : md.getId();
+				})
+				.distinct().sorted().collect(Collectors.joining(","));
 			ClientPlayNetworking.send(new Red.Texto(Red.HOLA, version + ";" + mods));
 			LOG.info("TOD5 saludo enviado: {} {}", version, mods);
 		});
