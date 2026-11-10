@@ -1,0 +1,74 @@
+name: TOD5 prueba sala de espera
+on:
+  push:
+    branches: [tod5-menu]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sala:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 25
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Herramientas
+        run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio jq >/dev/null
+      - name: Compilar plugin
+        run: |
+          PV=$(curl -s https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -o '<version>26\.3[^<]*</version>' | sed 's/<[^>]*>//g' | grep -v rc | tail -1)
+          echo "paper-api: $PV" | tee plugin.log
+          ./gradlew -p servidor build -Ppaper_version="$PV" 2>&1 | tee -a plugin.log
+          ls servidor/build/libs/
+      - name: Server Paper 26.3 de prueba
+        run: |
+          mkdir -p srv/plugins && cp servidor/build/libs/tod5-servidor-*.jar srv/plugins/
+          URL=$(curl -s https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest | jq -r '.downloads["server:default"].url')
+          echo "paper: $URL" | tee -a plugin.log
+          curl -sL "$URL" -o srv/paper.jar
+          cd srv && echo "eula=true" > eula.txt
+          printf 'online-mode=false\nenforce-secure-profile=false\nspawn-protection=0\nlevel-type=minecraft\\:flat\nview-distance=4\nsimulation-distance=4\n' > server.properties
+          touch cmds.txt
+          (tail -f cmds.txt | java -Xmx2G -jar paper.jar nogui > server.log 2>&1 &)
+          for i in $(seq 1 240); do grep -q "Done (" server.log && break; sleep 1; done
+          grep -E "TOD5|Done \(" server.log | head
+      - name: Juego conectandose al server
+        run: |
+          mkdir -p run cap
+          printf 'onboardAccessibility:false\nskipMultiplayerWarning:true\njoinedFirstServer:true\ntutorialStep:none\nguiScale:2\n' > run/options.txt
+          pulseaudio --start --exit-idle-time=-1 || true
+          export LIBGL_ALWAYS_SOFTWARE=1 MESA_GL_VERSION_OVERRIDE=4.6 MESA_GLSL_VERSION_OVERRIDE=460
+          Xvfb :99 -screen 0 1280x720x24 +extension GLX +render -noreset & sleep 2
+          export DISPLAY=:99
+          (env -u CI ./gradlew runClient -Ptod5_ip=localhost --stacktrace > juego.log 2>&1 &)
+          for i in $(seq 1 420); do grep -q "TOD5 menu abierto" run/logs/latest.log 2>/dev/null && break; sleep 1; done
+          sleep 9; import -window root cap/1_menu.png
+          xdotool mousemove 640 438; sleep 1; xdotool click 1
+          for i in $(seq 1 120); do grep -q "TOD5 server dice: espera" run/logs/latest.log 2>/dev/null && break; sleep 1; done
+          sleep 4; import -window root cap/2_sala.png
+          xdotool key Escape; sleep 3; import -window root cap/3_sala_tras_escape.png
+          echo "tod estado" >> srv/cmds.txt; sleep 2
+          echo "tod abrir" >> srv/cmds.txt
+          for i in $(seq 1 30); do grep -q "TOD5 server dice: abrir" run/logs/latest.log 2>/dev/null && break; sleep 1; done
+          sleep 5; import -window root cap/4_abierto.png
+          sleep 8; import -window root cap/5_jugando.png
+          pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
+      - name: Subir capturas y logs
+        if: always()
+        run: |
+          mkdir -p /tmp/out && cp -r cap /tmp/out/ 2>/dev/null || true
+          cp plugin.log juego.log /tmp/out/ 2>/dev/null || true; cp run/logs/latest.log /tmp/out/mc.log 2>/dev/null || true
+          cp srv/server.log /tmp/out/server.log 2>/dev/null || true
+          cd /tmp/out && git init -q && git checkout -q -b log
+          git config user.name ci && git config user.email ci@local
+          git add . && git commit -q -m "sala $GITHUB_SHA"
+          git push -q -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" log:ci-sala-tod5
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: tod5-plugin-servidor
+          path: servidor/build/libs/*.jar

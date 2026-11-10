@@ -1,0 +1,20 @@
+# ¿El server esta abierto? Cerrado = los que entran quedan en la sala de espera (los admins entran igual).
+# Se cambia con /tod abrir y /tod cerrar (no hace falta tocarlo aca).
+abierto: false
+
+# Hace falta el mod de TOD para entrar.
+exigir_mod: true
+# Segundos que espera el saludo del mod antes de echar al jugador.
+espera_saludo: 6
+
+# Mods permitidos (los ids de Fabric). Si alguien tiene otro, lo echa y le dice cual.
+# Los de Minecraft/Fabric/Java siempre estan permitidos.
+mods_permitidos:
+  - tod5
+  - fabric-api
+  - sodium
+
+mensajes:
+  sin_mod: "<red>Para entrar a <green>TRUCOFDEATH: Revenants</green> necesitás el mod.</red>"
+  mods_prohibidos: "<red>Tenés mods que no están permitidos:</red>\n<yellow>{mods}</yellow>\n<gray>Sacalos y volvé a entrar.</gray>"
+  abrio: "<green><bold>¡El server abrió!</bold></green>"

@@ -1,0 +1,15 @@
+name: TOD5
+version: '${version}'
+main: ar.tod5.servidor.TOD5Servidor
+api-version: '26.3'
+description: Plugin del server de TRUCOFDEATH Revenants (sala de espera, control del mod)
+authors: [tinchooide, Trick]
+commands:
+  tod:
+    description: Comandos de TOD (abrir / cerrar / estado / recargar)
+    usage: /tod <abrir|cerrar|estado|recargar>
+    permission: tod5.admin
+permissions:
+  tod5.admin:
+    description: Admins de TOD (entran aunque este cerrado y usan /tod)
+    default: op
