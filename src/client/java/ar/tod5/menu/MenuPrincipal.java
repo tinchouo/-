@@ -31,8 +31,8 @@ public class MenuPrincipal extends Screen {
 
 	// el logo va en 3 capas: la base, el brillo verde de TRUCOFDEATH (late y le pasa un reflejo) y el fuego de REVENANTS
 	private static final Identifier LOGO = tex("logo_base"), BRILLO = tex("logo_brillo"), FUEGO = tex("logo_fuego");
-	private static final int LOGO_W = 1200, LOGO_H = 273;                                   // tamano de la imagen
-	private static final int FUEGO_X = 154, FUEGO_Y = 104, FUEGO_W = 872, FUEGO_H = 166, FUEGO_CUADROS = 24;
+	private static final int LOGO_W = 1756, LOGO_H = 399;                                   // tamano de la imagen
+	private static final int FUEGO_X = 226, FUEGO_Y = 152, FUEGO_W = 1276, FUEGO_H = 243, FUEGO_CUADROS = 24;
 	private static final float FUEGO_FPS = 15f;
 	private static Identifier tex(String n) { return Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/" + n + ".png"); }
 

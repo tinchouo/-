@@ -16,15 +16,18 @@ import org.joml.Matrix3x2fStack;
 public final class Fondo {
 	private static Identifier tex(String n) { return Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/fondo/" + n + ".png"); }
 	private static final Identifier NEBULOSA = tex("nebulosa"), ESTRELLAS_A = tex("estrellas_a"), ESTRELLAS_B = tex("estrellas_b"),
-		AGUJERO = tex("agujero"), FUGAZ = tex("fugaz");
+		FUGAZ = tex("fugaz"), AG_DISCO = tex("ag_disco"), AG_LADO = tex("ag_lado"), AG_SOMBRA = tex("ag_sombra");
 
-	private static final int NEB_W = 3072, NEB_H = 864, EST_W = 2048, EST_H = 576;
-	private static final int AG_W = 640, AG_H = 256, AG_COLS = 6, AG_CUADROS = 48;
-	private static final float AG_RADIO = 0.165f;     // radio del agujero respecto del alto del cuadro
-	private static final float AG_FPS = 12f;
+	private static final int NEB_W = 4608, NEB_H = 1296, EST_W = 4096, EST_H = 1152;
+	// agujero en alta resolucion, en capas: el disco (visto desde arriba) lo gira y lo aplasta el juego
+	private static final int DISCO_TAM = 2048, AG_W = 1920, AG_H = 768;
+	private static final float AG_RADIO = 0.165f;     // radio del agujero respecto del alto de la sombra
+	private static final float DISCO_ALCANCE = 6.5f;  // el disco llega hasta 6.5 radios del agujero
+	private static final float INCLINACION = (float) Math.toRadians(-11), APLASTADO = 0.17f;
+	private static final float GIRO = (float) Math.toRadians(30);   // grados por segundo
 
 	// velocidades en pixeles de textura por segundo
-	private static final float V_NEB = 5f, V_EST_A = 9f, V_EST_B = 20f;
+	private static final float V_NEB = 7.5f, V_EST_A = 18f, V_EST_B = 40f;
 
 	private Fondo() {}
 
@@ -47,7 +50,7 @@ public final class Fondo {
 		g.fill(0, 0, ancho, alto, 0xFF000000);
 		capa(g, NEBULOSA, NEB_W, NEB_H, t * V_NEB, ancho, alto, 0xFFFFFFFF);
 		capa(g, ESTRELLAS_A, EST_W, EST_H, t * V_EST_A, ancho, alto, argb(0.75f + 0.25f * (float) Math.sin(t * 0.9), 0xFFFFFF));
-		capa(g, ESTRELLAS_B, EST_W, EST_H, t * V_EST_B + 700, ancho, alto, argb(0.8f + 0.2f * (float) Math.sin(t * 1.7 + 1), 0xFFFFFF));
+		capa(g, ESTRELLAS_B, EST_W, EST_H, t * V_EST_B + 1400, ancho, alto, argb(0.8f + 0.2f * (float) Math.sin(t * 1.7 + 1), 0xFFFFFF));
 		fugaz(g, ancho, alto, t);
 	}
 
@@ -85,14 +88,24 @@ public final class Fondo {
 	/** Solo el agujero negro, en cualquier tamaño (para el secreto lo agranda hasta tapar todo). */
 	public static void agujero(GuiGraphicsExtractor g, int cx, int cy, float diametro) {
 		float t = tiempo();
-		// agujero negro: el disco gira (48 cuadros) y el brillo late despacio
+		// agujero negro: el disco gira (lo gira el juego, sin cuadros) y el brillo late despacio
+		float rs = diametro / 2f;                                   // radio del agujero en pantalla
 		int ah = Math.round(diametro / (2 * AG_RADIO)), aw = ah * AG_W / AG_H;
-		int cuadro = (int) (t * AG_FPS) % AG_CUADROS;
-		float u = (cuadro % AG_COLS) * AG_W, v = (cuadro / AG_COLS) * AG_H;
-		int texW = AG_W * AG_COLS, texH = AG_H * (AG_CUADROS / AG_COLS);
-		g.blit(RenderPipelines.GUI_TEXTURED, AGUJERO, cx - aw / 2, cy - ah / 2, u, v, aw, ah, AG_W, AG_H, texW, texH, 0xFFFFFFFF);
+		int d = Math.round(2 * DISCO_ALCANCE * rs);
 		float late = 0.12f + 0.12f * (0.5f + 0.5f * (float) Math.sin(t * 1.4));
-		g.blit(RenderPipelines.GUI_TEXTURED, AGUJERO, cx - aw / 2, cy - ah / 2, u, v, aw, ah, AG_W, AG_H, texW, texH, argb(late, 0xFFFFFF));
+		// 1) el disco girando, inclinado y aplastado
+		var p = g.pose();
+		p.pushMatrix();
+		p.translate(cx, cy);
+		p.rotate(INCLINACION);
+		p.scale(1f, APLASTADO);
+		p.rotate(-GIRO * t);
+		g.blit(RenderPipelines.GUI_TEXTURED, AG_DISCO, -d / 2, -d / 2, 0, 0, d, d, DISCO_TAM, DISCO_TAM, DISCO_TAM, DISCO_TAM, 0xFFFFFFFF);
+		g.blit(RenderPipelines.GUI_TEXTURED, AG_DISCO, -d / 2, -d / 2, 0, 0, d, d, DISCO_TAM, DISCO_TAM, DISCO_TAM, DISCO_TAM, argb(late, 0xFFFFFF));
+		p.popMatrix();
+		// 2) el lado mas brillante del disco y 3) la sombra con el anillo de luz (estos no giran)
+		g.blit(RenderPipelines.GUI_TEXTURED, AG_LADO, cx - aw / 2, cy - ah / 2, 0, 0, aw, ah, AG_W, AG_H, AG_W, AG_H, 0xFFFFFFFF);
+		g.blit(RenderPipelines.GUI_TEXTURED, AG_SOMBRA, cx - aw / 2, cy - ah / 2, 0, 0, aw, ah, AG_W, AG_H, AG_W, AG_H, 0xFFFFFFFF);
 	}
 
 	/** Cada 13 segundos, una estrella fugaz en un lugar distinto. */
