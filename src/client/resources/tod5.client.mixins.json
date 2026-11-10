@@ -9,7 +9,8 @@
 		"LoadingOverlayMixin",
 		"LogoTextureMixin",
 		"DisconnectedScreenAccessor",
-		"KeyCategoryAccessor"
+		"KeyCategoryAccessor",
+		"TecladoDebugMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

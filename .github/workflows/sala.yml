@@ -44,7 +44,7 @@ jobs:
           L=run/logs/latest.log
           espera() { for i in $(seq 1 $2); do grep -q "$1" $L 2>/dev/null && return 0; sleep 1; done; echo "NO LLEGO: $1"; }
           # 1) el juego abre con el server APAGADO y aprieto JUGAR
-          (env -u CI ./gradlew runClient -Ptod5_ip=localhost --stacktrace > juego.log 2>&1 &)
+          (env -u CI ./gradlew runClient -Ptod5_ip=localhost -Ptod5_debug --stacktrace > juego.log 2>&1 &)
           espera "TOD5 menu abierto" 420; sleep 9; import -window root cap/0_menu.png
           xdotool mousemove 640 438; sleep 0.3; xdotool click 1; sleep 0.5; import -window root cap/1_conectando.png
           sleep 7; xdotool mousemove 100 100; import -window root cap/2_cerrado.png
@@ -65,7 +65,7 @@ jobs:
           xdotool mousemove 640 438 click 1
           sleep 25; import -window root cap/8_op_adentro.png
           # 5) la tablet: J, cada seccion, hover y clic en crafteos, y J para cerrar
-          W=$(xdotool getmousewindow 2>/dev/null || true); echo "ventana: $W, foco: $(xdotool getwindowfocus 2>/dev/null || true)"; xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; import -window root cap/t1_inicio.png
+          W=$(xdotool getmousewindow 2>/dev/null || true); echo "ventana: $W, foco: $(xdotool getwindowfocus 2>/dev/null || true)"; xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'NO LLEGO LA TECLA'; grep -c 'llego una tecla' $L || true; grep 'tecla de la tablet' $L || true; xdotool key e; sleep 2; import -window root cap/t0_inventario.png; xdotool key Escape; sleep 1; grep -c 'llego una tecla' $L || true; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 3; grep 'tecla tablet' $L || echo 'TAMPOCO'; import -window root cap/t1_inicio.png
           xdotool mousemove 352 132 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t2_novedades.png
           xdotool mousemove 486 132 click 1; sleep 2; xdotool mousemove 1200 700; sleep 1; import -window root cap/t3_misiones.png
           xdotool mousemove 614 132 click 1; sleep 2; xdotool mousemove 226 214; sleep 1.5; import -window root cap/t4_crafteos_hover.png

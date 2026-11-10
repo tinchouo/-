@@ -8,6 +8,7 @@ loom {
 		client {
 			programArgs "--width", "1280", "--height", "720"
 			if (project.hasProperty("tod5_ip")) vmArgs "-Dtod5.ip=${project.property("tod5_ip")}"
+			if (project.hasProperty("tod5_debug")) vmArgs "-Dtod5.debugTeclas=true"
 		}
 	}
 	mods {

@@ -25,6 +25,7 @@ public final class TeclaTablet {
 
 		org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 secciones de controles: {}", orden.stream().limit(3).map(c -> c.id().toString()).toList());
 		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", 74 /* J */, CATEGORIA));
+		org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla de la tablet: {}", TECLA.saveString());
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
 				boolean puede = mc.player != null && mc.level != null && mc.gui.screen() == null;
