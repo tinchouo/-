@@ -27,7 +27,9 @@ public final class TeclaTablet {
 		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", 74 /* J */, CATEGORIA));
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
-				if (mc.player != null && mc.level != null && mc.gui.screen() == null) mc.gui.setScreen(new Tablet());
+				boolean puede = mc.player != null && mc.level != null && mc.gui.screen() == null;
+				org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla tablet (abre: {}, pantalla: {})", puede, mc.gui.screen());
+				if (puede) mc.gui.setScreen(new Tablet());
 			}
 		});
 	}
