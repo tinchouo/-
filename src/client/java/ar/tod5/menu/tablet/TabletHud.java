@@ -57,7 +57,7 @@ public final class TabletHud {
 
 	private static void dibujar(GuiGraphicsExtractor g) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null || mc.options.hideGui || mc.gui.screen() instanceof Tablet) return;
+		if (mc.player == null || mc.getDebugOverlay().showDebugScreen() || mc.gui.screen() instanceof Tablet) return;   // con F3 no se encima
 		Font f = mc.font;
 		long ahora = Util.getMillis();
 		TabletDatos d = TabletDatos.actual();
