@@ -56,5 +56,12 @@
         "stream": true
       }
     ]
+  },
+  "anuncio": {
+    "sounds": [
+      {
+        "name": "tod5:anuncio"
+      }
+    ]
   }
 }
