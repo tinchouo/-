@@ -49,31 +49,11 @@
       }
     ]
   },
-  "ruleta_aparece": {
+  "ruleta": {
     "sounds": [
       {
-        "name": "tod5:ruleta_aparece"
-      }
-    ]
-  },
-  "ruleta_tic": {
-    "sounds": [
-      {
-        "name": "tod5:ruleta_tic"
-      }
-    ]
-  },
-  "ruleta_elige": {
-    "sounds": [
-      {
-        "name": "tod5:ruleta_elige"
-      }
-    ]
-  },
-  "ruleta_se_va": {
-    "sounds": [
-      {
-        "name": "tod5:ruleta_se_va"
+        "name": "tod5:ruleta",
+        "stream": true
       }
     ]
   }

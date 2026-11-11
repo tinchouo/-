@@ -36,8 +36,8 @@ import org.bukkit.persistence.PersistentDataType;
  */
 public class Tablero {
 	static final String CANAL_TABLET = "tod5:tablet", CANAL_ACCION = "tod5:accion", CANAL_RULETA = "tod5:ruleta";
-	/** Lo que dura la ruleta en el mod (unos 7,7 s): recien despues sale el mensaje en el chat. */
-	static final long DURACION_RULETA = 156;
+	/** Lo que dura la ruleta en el mod (9,3 s): recien despues sale el mensaje en el chat. */
+	static final long DURACION_RULETA = 187;
 	private static final Gson GSON = new Gson();
 
 	/** Los tipos de anuncio: color de la ruleta, titulo por defecto, y si quedan guardados en la tablet. */
