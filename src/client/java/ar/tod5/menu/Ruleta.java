@@ -75,7 +75,11 @@ public final class Ruleta {
 
 	private static long inicio = 0;
 	private static int sel;
-	private static float g0;
+	private static float g0, extra;
+	/** Donde sale (se fija al empezar, para que no salte si cambias la opcion en el medio). */
+	private static Ajustes.PosRuleta pos = Ajustes.PosRuleta.CENTRO;
+	/** Los colores de mas que gira (para arrancar en otro color) se agregan en la parte rapida, entre estos dos momentos. */
+	private static final float EXTRA_DESDE = T_ACC, EXTRA_HASTA = T_GIRO * PAREJO;
 
 	private Ruleta() {}
 
@@ -85,8 +89,14 @@ public final class Ruleta {
 
 	/** Arranca la ruleta: va a frenar en ese color (0..7). */
 	public static void empezar(int color) {
+		pos = Ajustes.ruleta();
+		if (pos == Ajustes.PosRuleta.APAGADA) return;   // el jugador la apago: solo le llega el chat
 		sel = Math.floorMod(color, 8);
-		g0 = (sel + 0.5f) * 45f;            // arranca en el medio del color elegido y da siempre las mismas vueltas
+		// arranca en un color al azar (que no sea el que va a salir); esos colores de mas los gira en la parte rapida,
+		// asi el arranque y el frenado son siempre iguales y el sonido va justo
+		int m = 1 + (int) (Math.random() * 7);
+		extra = m * 45f;
+		g0 = (sel - m + 0.5f) * 45f;
 		simT = 0; fd = 0; fv = 0; seg = (int) Math.floor(g0 / 45f); izqOk = derOk = true;
 		java.util.Arrays.fill(hist, 0); histPos = 0;
 		inicio = Util.getMillis();
@@ -103,9 +113,12 @@ public final class Ruleta {
 	/** Angulo de la ruleta (grados) en el segundo t. */
 	private static float giro(float t) {
 		if (t < T0) return g0;
-		if (t < T0 + T_GIRO) return g0 + tabla(ANG, t - T0);
+		if (t < T0 + T_GIRO) {
+			float e = Math.max(0, Math.min(1, (t - T0 - EXTRA_DESDE) / (EXTRA_HASTA - EXTRA_DESDE)));
+			return g0 + tabla(ANG, t - T0) + extra * e * e * (3 - 2 * e);
+		}
 		float u = Math.min(1, (t - T0 - T_GIRO) / T_VUELTA), s = u * u * u * (u * (u * 6 - 15) + 10);
-		return g0 + DIST - (22.5f + PASADA) * s;      // la flecha la empuja para atras hasta el medio del color
+		return g0 + extra + DIST - (22.5f + PASADA) * s;      // la flecha la empuja para atras hasta el medio del color
 	}
 
 	private static float velRel(float t) { return t < T0 || t > T0 + T_GIRO ? 0 : tabla(VEL, t - T0); }
@@ -172,8 +185,17 @@ public final class Ruleta {
 			alfa = p < 0.85f ? 1 : (1 - p) / 0.15f;
 		}
 
-		float d0 = Math.min(h * 0.45f, 170f), d = d0 * esc;
-		float cx = w / 2f, cy = h * 0.40f;
+		// centro: la gema justo sobre la mira. Esquina: mas chica, abajo a la derecha, a la misma distancia de los dos bordes
+		float d0, cx, cy;
+		if (pos == Ajustes.PosRuleta.ESQUINA) {
+			d0 = Math.min(h * 0.30f, 110f);
+			float radio = d0 * 0.95f / 2f, margen = 8f;
+			cx = w - margen - radio; cy = h - margen - radio;
+		} else {
+			d0 = Math.min(h * 0.45f, 170f);
+			cx = w / 2f; cy = h / 2f;
+		}
+		float d = d0 * esc;
 		var pose = g.pose();
 
 		// punto de luz al aparecer / al irse

@@ -31,7 +31,7 @@ jobs:
           unzip -q -o "$C" 'net/minecraft/network/*' 'net/minecraft/sounds/*' >> $LOG 2>&1
           FA=$(find ~/.gradle -name 'fabric-api-0*.jar' ! -name '*sources*' | head -1); echo "fabric-api: $FA" >> $LOG
           mkdir -p /tmp/fa && cd /tmp/fa && unzip -q -o "$FA" 'META-INF/jars/*' >> $LOG 2>&1
-          for n in command-api-v2 networking-api-v1 lifecycle-events-v1 key-mapping-api-v1 key-binding-api-v1 rendering-v1; do
+          for n in screen-api-v1 command-api-v2 networking-api-v1 lifecycle-events-v1 key-mapping-api-v1 key-binding-api-v1 rendering-v1; do
             NJ=$(ls META-INF/jars/ | grep "fabric-$n" | head -1); echo "jar $n: $NJ" >> $LOG; [ -z "$NJ" ] && continue
             mkdir -p x_$n && (cd x_$n && unzip -q -o ../META-INF/jars/$NJ)
             for c in $(cd x_$n && find . -path '*/api/*' -name '*.class'); do

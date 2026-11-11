@@ -15,6 +15,8 @@ public class TOD5Client implements ClientModInitializer {
 		Conexion.registrar();
 		Ruleta.registrar();
 		ComandoRuleta.registrar();
+		ar.tod5.menu.tablet.TabletHud.registrar();
+		PantallaAjustes.registrar();
 		ar.tod5.menu.tablet.TeclaTablet.registrar();
 	}
 }

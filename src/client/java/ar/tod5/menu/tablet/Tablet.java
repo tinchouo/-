@@ -343,17 +343,20 @@ public class Tablet extends Screen {
 	}
 
 	/** Color de cada tipo de novedad (los mismos de la ruleta): {texto, fondo, luz, sombra}. */
-	private static int[] colorDe(String tipo) {
+	static int[] colorDe(String tipo) {
 		return switch (tipo) {
 			case "cambio" -> new int[] { 0xFFFFB050, 0xFF5A3A0A, 0xFF7A5A2A, 0xFF3A2000 };
 			case "mob" -> new int[] { 0xFFFFE63C, 0xFF5A520A, 0xFF7A722A, 0xFF3A3200 };
 			case "dungeon" -> new int[] { 0xFF7FA0FF, 0xFF1A2A6A, 0xFF3A4A8A, 0xFF0A1A4A };
 			case "diaria" -> new int[] { 0xFF55FF55, 0xFF1F5A1F, 0xFF3F7A3F, 0xFF0F3A0F };
+			case "sancion" -> new int[] { 0xFFC88CFF, 0xFF3A1A5A, 0xFF5A3A7A, 0xFF22083A };
+			case "cuy" -> new int[] { 0xFFFF8CD2, 0xFF5A1A44, 0xFF7A3A64, 0xFF3A0828 };
+			case "truco" -> new int[] { 0xFFFF5A5A, 0xFF5A1414, 0xFF7A3434, 0xFF3A0606 };
 			default -> new int[] { 0xFF55FFFF, 0xFF0F4A4A, 0xFF2F6A6A, 0xFF052A2A };   // aviso
 		};
 	}
-	private static String etiquetaDe(String tipo) {
-		return switch (tipo) { case "cambio" -> "CAMBIO"; case "mob" -> "MOB"; case "dungeon" -> "DUNGEON"; case "diaria" -> "MISIÓN"; default -> "AVISO"; };
+	static String etiquetaDe(String tipo) {
+		return switch (tipo) { case "cambio" -> "CAMBIO"; case "mob" -> "MOB"; case "dungeon" -> "DUNGEON"; case "diaria" -> "MISIÓN"; case "sancion" -> "SANCIÓN"; case "cuy" -> "MOMENTO CUY"; case "truco" -> "MOMENTO TRUCO"; default -> "AVISO"; };
 	}
 
 	// ---------- MISIONES: la diaria arriba, las opcionales abajo ----------
