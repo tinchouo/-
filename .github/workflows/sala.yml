@@ -99,6 +99,7 @@ jobs:
           xdotool type --delay 40 " al morir. Usa escudo o quedate lejos hasta el dia 4, porque el veneno dura bastante."
           xdotool key ctrl+shift+Left; sleep 0.2; xdotool mousemove 612 236 click 1; sleep 0.3   # ultima palabra subrayada
           xdotool mousemove 1200 700; sleep 1; import -window root cap/a2_editando.png
+          xdotool mousemove 954 236 click 1; sleep 0.6; import -window root cap/a2b_simbolos.png; xdotool mousemove 954 236 click 1; sleep 0.3
           xdotool mousemove 592 604 click 1; sleep 2; import -window root cap/a3_guardado.png    # Guardar
           xdotool mousemove 832 604 click 1; sleep 0.6; xdotool mousemove 832 604 click 1       # Enviar a todos (2 clics)
           sleep 4; import -window root cap/a4_ruleta.png; sleep 7; import -window root cap/a5_chat.png
