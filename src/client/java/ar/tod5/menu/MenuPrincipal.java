@@ -89,12 +89,11 @@ public class MenuPrincipal extends Screen {
 	@Override
 	public void added() {
 		super.added();
-		this.minecraft.gameRenderer.panorama().startSpin();
 	}
 
 	/** La intro arranca recien cuando se fue la pantalla de carga de Mojang (si no, queda tapada). */
 	private void arrancarSiHaceFalta() {
-		if (this.inicio != 0 || this.minecraft.gui.overlay() != null) return;
+		if (this.inicio != 0 || this.minecraft.getOverlay() != null) return;
 		this.inicio = Util.getMillis();
 		LOG.info("TOD5 menu abierto (intro: {}, version {})", this.conIntro, VERSION);
 		if (this.conIntro) introVista = true;

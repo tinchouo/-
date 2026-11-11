@@ -79,7 +79,7 @@ public final class MusicaMenu {
 		if (chequeo > 0 && --chequeo == 0 && actual != null)
 			LOG.info("TOD5 musica del menu sonando 5s despues: {}", mc.getSoundManager().isActive(actual));
 		// si Minecraft la corto, la vuelvo a poner (una vez por segundo como mucho, y solo si se escucha algo)
-		if (deberiaSonar && mc.gui.overlay() == null && ++espera >= 20) {
+		if (deberiaSonar && mc.getOverlay() == null && ++espera >= 20) {
 			espera = 0;
 			boolean seEscucha = mc.options.getFinalSoundSourceVolume(SoundSource.MUSIC) > 0;
 			if (seEscucha && (actual == null || !mc.getSoundManager().isActive(actual))) {

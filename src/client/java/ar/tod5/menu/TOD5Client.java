@@ -12,6 +12,7 @@ public class TOD5Client implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		ItemsTOD.registrar();
+		ContadorDesafio.registrar();
 		ClientTickEvents.END_CLIENT_TICK.register(MusicaMenu::tick);
 		Conexion.registrar();
 		Ruleta.registrar();

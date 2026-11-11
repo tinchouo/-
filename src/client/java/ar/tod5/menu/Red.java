@@ -25,6 +25,8 @@ public final class Red {
 	public static final CustomPacketPayload.Type<Texto> TABLET = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "tablet"));
 	public static final CustomPacketPayload.Type<Texto> RULETA = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "ruleta"));
 	public static final CustomPacketPayload.Type<Texto> ACCION = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "accion"));
+	/** server -> mod: el contador de un desafio de monedas: "juntadas;total", "fin;total" o "nada". */
+	public static final CustomPacketPayload.Type<Texto> DESAFIO = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "desafio"));
 
 	public static StreamCodec<RegistryFriendlyByteBuf, Texto> codec(CustomPacketPayload.Type<Texto> tipo) {
 		return StreamCodec.of(
