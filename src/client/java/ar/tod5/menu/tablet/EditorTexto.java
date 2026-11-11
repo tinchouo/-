@@ -154,26 +154,26 @@ public class EditorTexto {
 		if (ctrl && e.key() == 90) { deshacer(); return true; }          // Ctrl+Z
 		if (ctrl && e.key() == 73) { alternar(1); return true; }        // Ctrl+I
 		if (ctrl && e.key() == 85) { alternar(2); return true; }        // Ctrl+U
-		switch (e.input()) {
-			case 42 -> {   // borrar para atras
+		switch (e.key()) {   // codigos de tecla de GLFW (1.21.11)
+			case 259 -> {   // borrar para atras
 				guardarHistorial();
 				if (haySeleccion()) borrarSeleccion();
 				else if (this.cursor > 0) { int desde = ctrl ? palabraAtras(this.cursor) : this.cursor - 1; for (int k = desde; k < this.cursor; k++) this.texto.remove(desde); this.cursor = this.ancla = desde; }
 				return true;
 			}
-			case 76 -> {   // suprimir
+			case 261 -> {   // suprimir
 				guardarHistorial();
 				if (haySeleccion()) borrarSeleccion();
 				else if (this.cursor < this.texto.size()) this.texto.remove(this.cursor);
 				return true;
 			}
-			case 40, 88 -> { if (this.multilinea) { escribir("\n"); return true; } return false; }   // Enter
-			case 80 -> { mover(ctrl ? palabraAtras(this.cursor) : (haySeleccion() && !shift ? selIni() : Math.max(0, this.cursor - 1)), shift); return true; }
-			case 79 -> { mover(ctrl ? palabraAdelante(this.cursor) : (haySeleccion() && !shift ? selFin() : Math.min(this.texto.size(), this.cursor + 1)), shift); return true; }
-			case 82 -> { mover(verticalmente(-1), shift); return true; }
-			case 81 -> { mover(verticalmente(1), shift); return true; }
-			case 74 -> { mover(ctrl ? 0 : renglonDe(this.cursor).desde(), shift); return true; }
-			case 77 -> { mover(ctrl ? this.texto.size() : finDeRenglon(renglonDe(this.cursor)), shift); return true; }
+			case 257, 335 -> { if (this.multilinea) { escribir("\n"); return true; } return false; }   // Enter
+			case 263 -> { mover(ctrl ? palabraAtras(this.cursor) : (haySeleccion() && !shift ? selIni() : Math.max(0, this.cursor - 1)), shift); return true; }
+			case 262 -> { mover(ctrl ? palabraAdelante(this.cursor) : (haySeleccion() && !shift ? selFin() : Math.min(this.texto.size(), this.cursor + 1)), shift); return true; }
+			case 265 -> { mover(verticalmente(-1), shift); return true; }
+			case 264 -> { mover(verticalmente(1), shift); return true; }
+			case 268 -> { mover(ctrl ? 0 : renglonDe(this.cursor).desde(), shift); return true; }
+			case 269 -> { mover(ctrl ? this.texto.size() : finDeRenglon(renglonDe(this.cursor)), shift); return true; }
 			default -> { return false; }
 		}
 	}
