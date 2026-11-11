@@ -86,7 +86,24 @@ jobs:
           xdotool mousemove 340 318 click 1; sleep 3; xdotool mousemove 1200 700; sleep 1; import -window root cap/t7_activado.png
           xdotool mousemove 1040 128 click 1; sleep 1; xdotool mousemove 294 170; sleep 1; import -window root cap/t8_listo.png
           xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 9; import -window root cap/t9_chat.png
-          grep -E "TOD5 tablet:" $L | tail -5 || true; grep -E "activo crafteos|Tablet:" srv/server.log || true
+          # 7) modo admin: un anuncio nuevo desde la tablet (texto con negrita y color), y se envia a todos
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/a1_admin.png
+          xdotool mousemove 462 128 click 1; sleep 2                       # + Nuevo
+          xdotool mousemove 784 130 click 1; sleep 0.5                     # tipo naranja (cambio de dificultad)
+          xdotool mousemove 800 320 click 1; sleep 0.3                     # al cuadro de texto
+          xdotool type --delay 40 "Desde hoy, los creepers "
+          xdotool key ctrl+b; xdotool mousemove 700 236 click 1; sleep 0.2 # negrita + blanco
+          xdotool type --delay 40 "dejan veneno"
+          xdotool key ctrl+b; xdotool mousemove 676 236 click 1; sleep 0.2 # vuelve al color normal
+          xdotool type --delay 40 " al morir. Usa escudo o quedate lejos hasta el dia 4, porque el veneno dura bastante."
+          xdotool key ctrl+shift+Left; sleep 0.2; xdotool mousemove 612 236 click 1; sleep 0.3   # ultima palabra subrayada
+          xdotool mousemove 1200 700; sleep 1; import -window root cap/a2_editando.png
+          xdotool mousemove 592 604 click 1; sleep 2; import -window root cap/a3_guardado.png    # Guardar
+          xdotool mousemove 832 604 click 1; sleep 0.6; xdotool mousemove 832 604 click 1       # Enviar a todos (2 clics)
+          sleep 4; import -window root cap/a4_ruleta.png; sleep 7; import -window root cap/a5_chat.png
+          cat srv/plugins/TOD5/datos/anuncios.json 2>/dev/null | head -60 || true
+          grep -E "TOD5 tablet:" $L | tail -5 || true; grep -E "activo crafteos|Tablet:|envio el anuncio" srv/server.log || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs

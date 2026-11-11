@@ -38,7 +38,7 @@ final class PanelAnuncios {
 	private final EditorTexto texto = new EditorTexto(true, 1000);
 	private String confirmar;          // "enviar" o "borrar": esperando el segundo clic
 	private long confirmarHasta;
-	private String aviso; private long avisoHasta;
+	private String aviso; private long avisoHasta, graciaHasta;
 	private int scroll;
 	private int lx, ly, lw, lh;        // la lista (para la ruedita)
 
@@ -90,6 +90,7 @@ final class PanelAnuncios {
 		o.add("anuncio", anuncioJson());
 		ar.tod5.menu.Conexion.accion(o.toString());
 		this.sucio = false;
+		this.graciaHasta = Util.getMillis() + 4000;   // hasta que el server lo devuelva en la lista
 	}
 	void guardarSiHaceFalta() { if (this.sucio && this.id != null) mandar("anuncio_guardar"); }
 	private void avisar(String s) { this.aviso = s; this.avisoHasta = Util.getMillis() + 2500; }
@@ -99,7 +100,7 @@ final class PanelAnuncios {
 		Font f = Minecraft.getInstance().font;
 		if (this.confirmar != null && Util.getMillis() > this.confirmarHasta) this.confirmar = null;
 		// si el que estaba abierto ya no existe (lo borro otro editor), se cierra
-		if (this.id != null && !this.sucio && d.anuncios.stream().noneMatch(a -> a.id().equals(this.id)) && Util.getMillis() > this.avisoHasta) this.id = null;
+		if (this.id != null && !this.sucio && d.anuncios.stream().noneMatch(a -> a.id().equals(this.id)) && Util.getMillis() > this.graciaHasta) this.id = null;
 
 		// ===== lista =====
 		this.lw = 118; this.lx = x; this.ly = y + 16; this.lh = ch - 16;
@@ -155,8 +156,25 @@ final class PanelAnuncios {
 			if (mx >= cx && my >= ey && mx < cx + 13 && my < ey + 13) g.setTooltipForNextFrame(Component.literal(TITULOS[k]), mx, my);
 			cx += 15;
 		}
-		String rt = "Ruleta: " + (this.ruleta ? "sí" : "no");
-		t.boton(g, rt, ex + ew - f.width(rt) - 10, ey, this.ruleta, mx, my, () -> { this.ruleta = !this.ruleta; this.sucio = true; });
+		// duplicar y borrar, arriba a la derecha
+		boolean confBor = "borrar".equals(this.confirmar);
+		String tb = confBor ? "¿Borrar?" : "Borrar";
+		int bxx = ex + ew - f.width(tb) - 10;
+		t.boton(g, tb, bxx, ey, confBor, mx, my, () -> {
+			if (confBor) {
+				JsonObject o = new JsonObject(); o.addProperty("a", "anuncio_borrar");
+				JsonArray ids = new JsonArray(); ids.add(this.id); o.add("ids", ids);
+				ar.tod5.menu.Conexion.accion(o.toString());
+				this.id = null; this.sucio = false; this.confirmar = null;
+			} else { this.confirmar = "borrar"; this.confirmarHasta = Util.getMillis() + 3000; }
+		});
+		bxx -= f.width("Duplicar") + 13;
+		t.boton(g, "Duplicar", bxx, ey, false, mx, my, () -> {
+			guardarSiHaceFalta();
+			this.id = "a" + Long.toString(System.currentTimeMillis(), 36) + (int) (Math.random() * 1000);
+			mandar("anuncio_guardar"); avisar("Copia creada.");
+		});
+		if (this.id == null) return;
 		ey += 17;
 		// grupo: < Dia N / General / Momento truco >
 		g.text(f, "Va en", ex, ey + 3, Tablet.GRIS_TEXTO, false);
@@ -166,6 +184,8 @@ final class PanelAnuncios {
 		g.text(f, ng, gx + 4, ey + 3, Tablet.TEXTO, false);
 		gx += Math.max(f.width("Momento truco"), f.width(ng)) + 8;
 		t.boton(g, ">", gx, ey, false, mx, my, () -> { this.grupo = Math.min(99, this.grupo + 1); this.sucio = true; });
+		String rt = "Ruleta: " + (this.ruleta ? "sí" : "no");
+		t.boton(g, rt, ex + ew - f.width(rt) - 10, ey, this.ruleta, mx, my, () -> { this.ruleta = !this.ruleta; this.sucio = true; });
 		ey += 17;
 		// titulo
 		g.text(f, "Título", ex, ey + 3, Tablet.GRIS_TEXTO, false);
@@ -234,34 +254,17 @@ final class PanelAnuncios {
 		}
 		g.disableScissor();
 
-		// botones
+		// botones: Guardar (resaltado si hay cambios sin guardar), Probar (solo a vos) y Enviar a todos (con confirmacion)
 		int bbx = ex;
-		bbx += t.boton(g, this.sucio ? "Guardar •" : "Guardado", bbx, by, false, mx, my, () -> { mandar("anuncio_guardar"); avisar("Guardado."); }) + 3;
-		bbx += t.boton(g, "Probar", bbx, by, false, mx, my, () -> { mandar("anuncio_probar"); avisar("Te llega solo a vos."); t.onClose(); }) + 3;
+		bbx += t.boton(g, "Guardar", bbx, by, this.sucio, mx, my, () -> { mandar("anuncio_guardar"); avisar("Guardado."); }) + 3;
+		bbx += t.boton(g, "Probar", bbx, by, false, mx, my, () -> { mandar("anuncio_probar"); t.onClose(); }) + 3;
 		boolean confEnv = "enviar".equals(this.confirmar);
-		bbx += t.boton(g, confEnv ? "¿Seguro? Clic de nuevo" : "Enviar a todos", bbx, by, confEnv, mx, my, () -> {
+		t.boton(g, confEnv ? "¿Seguro? Clic de nuevo" : "Enviar a todos", bbx, by, confEnv, mx, my, () -> {
 			if (confEnv) { mandar("anuncio_enviar"); this.confirmar = null; t.onClose(); }
 			else { this.confirmar = "enviar"; this.confirmarHasta = Util.getMillis() + 3000; }
-		}) + 3;
-		if (!confEnv) {
-			bbx += t.boton(g, "Duplicar", bbx, by, false, mx, my, () -> {
-				guardarSiHaceFalta();
-				this.id = "a" + Long.toString(System.currentTimeMillis(), 36) + (int) (Math.random() * 1000);
-				mandar("anuncio_guardar"); avisar("Copia creada.");
-			}) + 3;
-			boolean confBor = "borrar".equals(this.confirmar);
-			t.boton(g, confBor ? "¿Borrar?" : "Borrar", bbx, by, confBor, mx, my, () -> {
-				if (confBor) {
-					JsonObject o = new JsonObject(); o.addProperty("a", "anuncio_borrar");
-					JsonArray ids = new JsonArray(); ids.add(this.id); o.add("ids", ids);
-					ar.tod5.menu.Conexion.accion(o.toString());
-					this.id = null; this.sucio = false; this.confirmar = null;
-				} else { this.confirmar = "borrar"; this.confirmarHasta = Util.getMillis() + 3000; }
-			});
-		}
-		if (this.aviso != null && Util.getMillis() < this.avisoHasta) g.text(f, this.aviso, ex + ew - f.width(this.aviso), ey, t.acento(), false);
+		});
+		if (this.aviso != null && Util.getMillis() < this.avisoHasta) g.text(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
 	}
-
 	private void caja(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean foco) {
 		g.fill(x, y, x + w, y + h, foco ? t.acento() : 0xFF3A4840);
 		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF070B09);
