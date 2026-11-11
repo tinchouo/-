@@ -192,9 +192,13 @@ final class Desafios implements Listener {
 				s.sendMessage(Component.text("Desafío \"" + nombre + "\" creado. Pará donde va cada moneda y usá /tod desafio moneda " + nombre, NamedTextColor.GREEN));
 			}
 			case "moneda" -> {
-				if (nombre == null || yo == null || !desafios.containsKey(nombre)) { uso(s); return; }
-				desafios.get(nombre).add(yo.getLocation().toBlockLocation().add(0.5, 0, 0.5)); guardar();
-				ItemDisplay muestra = aparecer(yo.getLocation().toBlockLocation().add(0.5, 0, 0.5));
+				// moneda <nombre> [jugador] [dx dy dz]: donde esta el jugador (vos si no decis), corrida unos bloques si queres
+				Player donde = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : yo;
+				if (nombre == null || donde == null || !desafios.containsKey(nombre)) { uso(s); return; }
+				Location lugar = donde.getLocation().toBlockLocation().add(0.5, 0, 0.5);
+				if (args.length > 6) try { lugar.add(Double.parseDouble(args[4]), Double.parseDouble(args[5]), Double.parseDouble(args[6])); } catch (NumberFormatException ex) { uso(s); return; }
+				desafios.get(nombre).add(lugar); guardar();
+				ItemDisplay muestra = aparecer(lugar);
 				Bukkit.getScheduler().runTaskLater(plugin, muestra::remove, 40);
 				s.sendMessage(Component.text("Moneda " + desafios.get(nombre).size() + " puesta en \"" + nombre + "\".", NamedTextColor.GREEN));
 			}
@@ -225,7 +229,7 @@ final class Desafios implements Listener {
 		}
 	}
 	private static void uso(CommandSender s) {
-		s.sendMessage(Component.text("/tod desafio crear <nombre> · moneda <nombre> · sacar <nombre> · empezar <nombre> [jugador] · parar [jugador] · lista · borrar <nombre>", NamedTextColor.YELLOW));
+		s.sendMessage(Component.text("/tod desafio crear <nombre> · moneda <nombre> [jugador] [dx dy dz] · sacar <nombre> · empezar <nombre> [jugador] · parar [jugador] · lista · borrar <nombre>", NamedTextColor.YELLOW));
 	}
 	List<String> completar(String[] args) {
 		if (args.length == 2) return List.of("crear", "moneda", "sacar", "empezar", "parar", "lista", "borrar");

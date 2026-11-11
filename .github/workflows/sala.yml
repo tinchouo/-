@@ -116,16 +116,26 @@ jobs:
           cat srv/plugins/TOD5/datos/anuncios.json 2>/dev/null | head -60 || true
           grep -E "TOD5 tablet:" $L | tail -5 || true; grep -E "activo crafteos|Tablet:|envio el anuncio" srv/server.log || true
           # 9) las monedas: en la mano (mitad de tamaño) y en el inventario
-          for m in amarilla roja morada ficha; do echo "tod moneda $m 12 $N" >> srv/cmds.txt; done; sleep 2
+          for m in trucoin fracoin tinchoin truquita; do echo "tod moneda $m 12 $N" >> srv/cmds.txt; done; sleep 2
           xdotool key 1; sleep 1; xdotool mousemove 1200 700; import -window root cap/m1_mano.png
           xdotool key 4; sleep 1; import -window root cap/m2_ficha_mano.png
           xdotool key e; sleep 1.5; import -window root cap/m3_inventario.png; xdotool key Escape; sleep 1
-          # 10) la pestaña Trucofdeath del creativo (solo mirar: el server no conoce los items del mod)
+          # 10) la pestaña Trucofdeath del creativo (pagina 2) y sacar una moneda (el server no te tiene que echar)
           echo "gamemode creative $N" >> srv/cmds.txt; sleep 2
           xdotool key e; sleep 2; xdotool mousemove 1200 700; import -window root cap/k1_creativo.png
-          xdotool mousemove 806 196 click 1; sleep 1; xdotool type --delay 60 "oin"; sleep 1; xdotool mousemove 1200 700; import -window root cap/k2_buscar_oin.png
-          xdotool key ctrl+a; xdotool type --delay 60 "truquita"; sleep 1; import -window root cap/k3_buscar_truquita.png
-          xdotool key Escape; sleep 1
+          xdotool mousemove 815 243 click 1; sleep 1; xdotool mousemove 1200 700; import -window root cap/k2_pagina2.png
+          xdotool mousemove 470 200 click 1; sleep 1; xdotool mousemove 1200 700; import -window root cap/k3_pestana.png
+          xdotool mousemove 477 276 click 1; sleep 0.5; xdotool mousemove 660 463 click 1; sleep 1; xdotool mousemove 1200 700; import -window root cap/k4_sacada.png
+          xdotool key Escape; sleep 2; import -window root cap/k5_sigo_adentro.png
+          grep -iE "disconnect|lost connection|kicked" srv/server.log | tail -3 || true
+          # 11) desafio de monedas: 3 monedas en fila, las junto con tp
+          echo "gamemode survival $N" >> srv/cmds.txt; echo "tp $N 0.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
+          echo "tod desafio crear prueba" >> srv/cmds.txt
+          for dx in 2 4 6; do echo "tod desafio moneda prueba $N $dx 0 0" >> srv/cmds.txt; done; sleep 3
+          echo "tod desafio empezar prueba $N" >> srv/cmds.txt; sleep 2; import -window root cap/d1_monedas.png
+          echo "tp $N 2.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.6; import -window root cap/d2_una.png
+          echo "tp $N 4.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1; echo "tp $N 6.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1; import -window root cap/d3_fin.png
+          grep -iE "desafio|Desaf" srv/server.log | tail -8 || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs
