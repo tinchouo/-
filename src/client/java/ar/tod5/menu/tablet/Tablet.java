@@ -41,6 +41,7 @@ public class Tablet extends Screen {
 	/** Modo admin (solo editores): todo lo verde pasa a amarillo y las pestañas son las de editar. */
 	private static boolean admin = false;
 	private final PanelAnuncios anuncios = new PanelAnuncios(this);
+	private boolean textoActivo;   // Minecraft solo manda letras si se le avisa que hay un cuadro de texto activo
 	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS; }
 	/** El color de las luces: verde normalmente, amarillo en modo admin. */
 	int acento() { return admin ? AMARILLO_ADMIN : VERDE; }
@@ -71,7 +72,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { this.anuncios.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { if (this.textoActivo) { this.minecraft.textInputManager().stopTextInput(this); this.textoActivo = false; } this.anuncios.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -173,6 +174,11 @@ public class Tablet extends Screen {
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float a) {
 		this.datos = TabletDatos.actual();
 		if (!this.datos.editor) { this.editando = false; admin = false; }
+		boolean escribe = this.seccion == Seccion.ANUNCIOS && this.anuncios.escribiendo();
+		if (escribe != this.textoActivo) {
+			if (escribe) this.minecraft.textInputManager().startTextInput(this); else this.minecraft.textInputManager().stopTextInput(this);
+			this.textoActivo = escribe;
+		}
 		if (admin != esAdmin(this.seccion)) this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
 		this.zonas.clear();
 		if (this.seccion == Seccion.EQUIPO && this.datos.equipo == null) this.seccion = Seccion.INICIO;

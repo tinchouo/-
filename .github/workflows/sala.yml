@@ -93,9 +93,9 @@ jobs:
           xdotool mousemove 784 130 click 1; sleep 0.5                     # tipo naranja (cambio de dificultad)
           xdotool mousemove 800 320 click 1; sleep 0.3                     # al cuadro de texto
           xdotool type --delay 40 "Desde hoy, los creepers "
-          xdotool key ctrl+b; xdotool mousemove 700 236 click 1; sleep 0.2 # negrita + blanco
+          xdotool mousemove 552 236 click 1; xdotool mousemove 700 236 click 1; sleep 0.2 # negrita + blanco
           xdotool type --delay 40 "dejan veneno"
-          xdotool key ctrl+b; xdotool mousemove 676 236 click 1; sleep 0.2 # vuelve al color normal
+          xdotool mousemove 552 236 click 1; xdotool mousemove 676 236 click 1; sleep 0.2 # sin negrita, color normal
           xdotool type --delay 40 " al morir. Usa escudo o quedate lejos hasta el dia 4, porque el veneno dura bastante."
           xdotool key ctrl+shift+Left; sleep 0.2; xdotool mousemove 612 236 click 1; sleep 0.3   # ultima palabra subrayada
           xdotool mousemove 1200 700; sleep 1; import -window root cap/a2_editando.png
