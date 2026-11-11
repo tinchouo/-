@@ -29,9 +29,12 @@ import org.bukkit.entity.Player;
  * Los renglones los corta la tablet (con la fuente de verdad) y los manda armados: asi todos los anuncios
  * quedan con el mismo ancho y el chat no los vuelve a cortar.
  *
- * En el chat:  [piedra del color]  Titulo:      (negrita, color fuerte)
+ * En el chat (todo con un poco de sangria, sin lineas):
  *              (renglon vacio)
- *              texto...                         (color claro, o el que se eligio en cada parte)
+ *                [piedra del color]  Titulo:    (negrita, color fuerte)
+ *              (renglon vacio)
+ *                texto...                       (color claro, o el que se eligio en cada parte)
+ *              (renglon vacio)
  * y suena tod5:anuncio.
  *
  * Archivo: plugins/TOD5/datos/anuncios.json
@@ -40,7 +43,9 @@ public class Anuncios {
 	/** Grupos que no son un dia. */
 	static final int GENERAL = 0, MOMENTO_TRUCO = -1;
 	/** Ancho de cada renglon en pixeles (igual que en la tablet). */
-	static final int ANCHO = 250;
+	static final int ANCHO = 270;
+	/** Sangria de cada renglon, para que no quede pegado al borde del chat. */
+	static final String MARGEN = "  ";
 	private static final Key FUENTE = Key.key("tod5", "simbolos");
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
@@ -155,9 +160,25 @@ public class Anuncios {
 		tablero.sincronizarTodos();
 		return a.id;
 	}
+	/** La novedad que deja un anuncio enviado en la tablet de todos lleva este id. */
+	static String idNovedad(String idAnuncio) { return "t" + idAnuncio; }
+
+	/** Borrar: se va de la lista y, si estaba enviado, tambien de la tablet de los jugadores. */
 	boolean borrar(String id) {
 		if (anuncios.remove(id) == null) return false;
-		guardar(); tablero.sincronizarTodos();
+		guardar();
+		tablero.borrarNovedad(idNovedad(id));
+		tablero.sincronizarTodos();
+		return true;
+	}
+	/** Retirar: lo saca de la tablet de los jugadores sin avisar a nadie y vuelve a ser borrador. */
+	boolean retirar(String id) {
+		Anuncio a = anuncios.get(id);
+		if (a == null || !a.enviado) return false;
+		a.enviado = false;
+		guardar();
+		tablero.borrarNovedad(idNovedad(id));
+		tablero.sincronizarTodos();
 		return true;
 	}
 	/** Solo para el editor: la ruleta y el mensaje le llegan solo a el. */
@@ -178,10 +199,13 @@ public class Anuncios {
 		if (a == null) return;
 		a.enviado = true;
 		guardar();
+		tablero.sincronizarTodos();   // en la tablet pasa a "Enviado" en el momento, no al terminar la ruleta
 		Tablero.Tipo t = Tablero.Tipo.de(a.tipo);
 		tablero.enFila(t, a.ruleta, () -> {
-			mostrar(Bukkit.getOnlinePlayers(), t, a.titulo, a.lineas);
-			tablero.anotarNovedad(t, a.titulo, textoPlano(a));
+			Anuncio act = anuncios.get(id);   // si lo retiraron o borraron mientras giraba la ruleta, no sale
+			if (act == null || !act.enviado) return;
+			mostrar(Bukkit.getOnlinePlayers(), t, act.titulo, act.lineas);
+			tablero.anotarNovedad(t, act.titulo, textoPlano(act), idNovedad(id));
 		});
 	}
 
@@ -203,18 +227,21 @@ public class Anuncios {
 		};
 	}
 
-	/** El mensaje: la piedra del color, el titulo en negrita, un renglon vacio y el texto. Despues suena el anuncio. */
+	/** El mensaje: renglon vacio, la piedra del color y el titulo en negrita, renglon vacio, el texto y otro renglon vacio. Despues suena el anuncio. */
 	static void mostrar(Collection<? extends Player> quienes, Tablero.Tipo t, String titulo, List<List<Trozo>> lineas) {
 		if (t == null) t = Tablero.Tipo.AVISO;
 		TextColor fuerte = TextColor.color(t.color), claro = TextColor.color(Tablero.aclarar(t.color));
 		String tit = titulo == null || titulo.isBlank() ? tituloPorDefecto(t) : titulo;
 		TextComponent.Builder msg = Component.text()
+			.append(Component.text(" ")).append(Component.newline())   // renglon vacio arriba
+			.append(Component.text(MARGEN))
 			.append(Component.text(String.valueOf((char) (0xE000 + t.gajo))).font(FUENTE).color(NamedTextColor.WHITE))
 			.append(Component.text(" "))
 			.append(Component.text(tit + ":", fuerte).decorate(TextDecoration.BOLD))
-			.append(Component.newline());   // renglon vacio entre el titulo y el texto
+			.append(Component.newline()).append(Component.text(" "));   // renglon vacio entre el titulo y el texto
 		for (List<Trozo> linea : lineas) {
 			msg.append(Component.newline());
+			msg.append(Component.text(MARGEN));
 			for (Trozo tr : linea) {
 				Component c = Component.text(tr.t(), tr.color() == null ? claro : TextColor.color(tr.color()))
 					.decoration(TextDecoration.BOLD, tr.b()).decoration(TextDecoration.ITALIC, tr.i())
@@ -222,6 +249,7 @@ public class Anuncios {
 				msg.append(c);
 			}
 		}
+		msg.append(Component.newline()).append(Component.text(" "));   // renglon vacio abajo
 		Component m = msg.build();
 		for (Player p : quienes) {
 			p.sendMessage(m);

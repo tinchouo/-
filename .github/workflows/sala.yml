@@ -90,19 +90,28 @@ jobs:
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
           xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 1200 700; sleep 1; import -window root cap/a1_admin.png
           xdotool mousemove 462 128 click 1; sleep 2                       # + Nuevo
-          xdotool mousemove 784 130 click 1; sleep 0.5                     # tipo naranja (cambio de dificultad)
+          xdotool mousemove 752 130 click 1; sleep 0.5                     # tipo naranja (cambio de dificultad)
           xdotool mousemove 800 320 click 1; sleep 0.3                     # al cuadro de texto
           xdotool type --delay 40 "Desde hoy, los creepers "
-          xdotool mousemove 552 236 click 1; xdotool mousemove 700 236 click 1; sleep 0.2 # negrita + blanco
+          xdotool mousemove 520 236 click 1; xdotool mousemove 668 236 click 1; sleep 0.2 # negrita + blanco
           xdotool type --delay 40 "dejan veneno"
-          xdotool mousemove 552 236 click 1; xdotool mousemove 676 236 click 1; sleep 0.2 # sin negrita, color normal
+          xdotool mousemove 520 236 click 1; xdotool mousemove 644 236 click 1; sleep 0.2 # sin negrita, color normal
           xdotool type --delay 40 " al morir. Usa escudo o quedate lejos hasta el dia 4, porque el veneno dura bastante."
-          xdotool key ctrl+shift+Left; sleep 0.2; xdotool mousemove 612 236 click 1; sleep 0.3   # ultima palabra subrayada
+          xdotool key ctrl+shift+Left; sleep 0.2; xdotool mousemove 580 236 click 1; sleep 0.3   # ultima palabra subrayada
           xdotool mousemove 1200 700; sleep 1; import -window root cap/a2_editando.png
-          xdotool mousemove 954 236 click 1; sleep 0.6; import -window root cap/a2b_simbolos.png; xdotool mousemove 954 236 click 1; sleep 0.3
-          xdotool mousemove 592 604 click 1; sleep 2; import -window root cap/a3_guardado.png    # Guardar
-          xdotool mousemove 832 604 click 1; sleep 0.6; xdotool mousemove 832 604 click 1       # Enviar a todos (2 clics)
-          sleep 4; import -window root cap/a4_ruleta.png; sleep 7; import -window root cap/a5_chat.png
+          xdotool mousemove 916 236 click 1; sleep 0.6; import -window root cap/a2b_simbolos.png; xdotool mousemove 916 236 click 1; sleep 0.3
+          xdotool mousemove 556 604 click 1; sleep 2; import -window root cap/a3_guardado.png    # Guardar
+          xdotool mousemove 776 604 click 1; sleep 0.6; xdotool mousemove 776 604 click 1       # Enviar a todos (2 clics)
+          sleep 0.5; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 1.5; xdotool mousemove 1200 700; import -window root cap/a3b_enviado_ya.png; xdotool key Escape
+          sleep 3; import -window root cap/a4_ruleta.png; sleep 7; import -window root cap/a5_chat.png
+          # 8) retirar: abro el anuncio enviado, Retirar (2 clics) y tiene que volver a borrador y salir de las novedades
+          cat srv/plugins/TOD5/datos/novedades.yml 2>/dev/null | tail -8 || true
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 376 196 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/a6_abierto.png
+          xdotool mousemove 776 604 click 1; sleep 0.6; xdotool mousemove 776 604 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/a7_retirado.png
+          grep -E "retiro el anuncio" srv/server.log || echo "NO SE RETIRO"
+          cat srv/plugins/TOD5/datos/novedades.yml 2>/dev/null | tail -8 || true
+          xdotool key Escape; sleep 1
           cat srv/plugins/TOD5/datos/anuncios.json 2>/dev/null | head -60 || true
           grep -E "TOD5 tablet:" $L | tail -5 || true; grep -E "activo crafteos|Tablet:|envio el anuncio" srv/server.log || true
           echo "tod estado" >> srv/cmds.txt; sleep 2

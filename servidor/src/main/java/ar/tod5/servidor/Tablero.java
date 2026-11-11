@@ -240,10 +240,14 @@ public class Tablero {
 	}
 
 	/** Los tipos que quedan en la tablet (avisos, cambios, mobs, dungeons) se guardan como novedad del dia. */
-	void anotarNovedad(Tipo t, String titulo, String texto) {
+	void anotarNovedad(Tipo t, String titulo, String texto) { anotarNovedad(t, titulo, texto, null); }
+	/** idFijo: la novedad de un anuncio de la tablet lleva un id atado al anuncio, asi "Retirar" la encuentra. */
+	void anotarNovedad(Tipo t, String titulo, String texto, String idFijo) {
 		if (!t.enTablet) return;
 		String tit = titulo == null || titulo.isBlank() ? null : titulo;
-		novedades.add(new Novedad("n" + (proximaNovedad++), dia, t.id, tit, texto));
+		String id = idFijo != null ? idFijo : "n" + (proximaNovedad++);
+		novedades.removeIf(n -> n.id().equals(id));   // si se reenvia, no queda repetida
+		novedades.add(new Novedad(id, dia, t.id, tit, texto));
 		guardarNovedades();
 	}
 	boolean borrarNovedad(String id) {
@@ -324,6 +328,9 @@ public class Tablero {
 				plugin.getLogger().info(p.getName() + " envio el anuncio " + id);
 			}
 			case "anuncio_borrar" -> { for (String id : ids) anuncios.borrar(id); }
+			case "anuncio_retirar" -> {
+				for (String id : ids) if (anuncios.retirar(id)) plugin.getLogger().info(p.getName() + " retiro el anuncio " + id);
+			}
 			default -> {}
 		}
 	}

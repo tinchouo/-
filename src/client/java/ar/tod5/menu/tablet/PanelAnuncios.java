@@ -36,7 +36,7 @@ final class PanelAnuncios {
 	private boolean ruleta = true, sucio, verSimbolos;
 	private final EditorTexto titulo = new EditorTexto(false, 40);
 	private final EditorTexto texto = new EditorTexto(true, 1000);
-	private String confirmar;          // "enviar" o "borrar": esperando el segundo clic
+	private String confirmar;          // "enviar", "retirar" o "borrar": esperando el segundo clic
 	private long confirmarHasta;
 	private String aviso; private long avisoHasta, graciaHasta;
 	private int scroll;
@@ -106,14 +106,14 @@ final class PanelAnuncios {
 		if (!d.conAnuncios) {   // el plugin del server es viejo: no puede guardar ni mandar anuncios
 			t.titulo(g, "Anuncios", x, y);
 			g.text(f, "El plugin del server no tiene anuncios todavía.", x, y + 22, Tablet.AMARILLO_ADMIN, false);
-			g.text(f, "Actualizalo: tod5-plugin-servidor 0.15 o más nuevo,", x, y + 34, Tablet.TEXTO, false);
+			g.text(f, "Actualizalo: tod5-plugin-servidor 0.16 o más nuevo,", x, y + 34, Tablet.TEXTO, false);
 			g.text(f, "en la carpeta plugins del server, y reinicialo.", x, y + 44, Tablet.TEXTO, false);
 			return;
 		}
 		// ===== lista =====
-		this.lw = 118; this.lx = x; this.ly = y + 16; this.lh = ch - 16;
+		this.lw = 102; this.lx = x; this.ly = y + 16; this.lh = ch - 16;   // angosta: el editor necesita el ancho de un renglon del chat
 		t.titulo(g, "Anuncios", x, y);
-		t.boton(g, "+ Nuevo", x + lw - f.width("+ Nuevo") - 10, y - 1, false, mx, my, () -> nuevo(d));
+		t.boton(g, "+Nuevo", x + lw - f.width("+Nuevo") - 10, y - 1, false, mx, my, () -> nuevo(d));
 		List<TabletDatos.Anuncio> orden = new ArrayList<>(d.anuncios);
 		orden.sort(Comparator.comparingInt((TabletDatos.Anuncio a) -> a.grupo() <= 0 ? 10000 - a.grupo() : a.grupo()));   // dias, General, Momento truco
 		g.enableScissor(lx, ly, lx + lw, ly + lh);
@@ -127,7 +127,10 @@ final class PanelAnuncios {
 			g.fill(lx + 1, yy + 1, lx + lw - 1, yy + alto - 1, sel ? 0xFF2A2610 : 0xFF141B18);
 			g.fill(lx + 3, yy + 3, lx + 5, yy + alto - 3, fuerte(k));
 			String tit = a.titulo().isBlank() ? TITULOS[k] : a.titulo();
-			g.text(f, f.plainSubstrByWidth(tit, lw - 14), lx + 8, yy + 3, fuerte(k), false);
+			String corto = f.plainSubstrByWidth(tit, lw - 14);
+			if (!corto.equals(tit)) corto = f.plainSubstrByWidth(tit, lw - 14 - f.width("…")) + "…";
+			g.text(f, corto, lx + 8, yy + 3, fuerte(k), false);
+			if (!corto.equals(tit) && mx >= lx && my >= Math.max(yy, ly) && mx < lx + lw && my < Math.min(yy + alto, ly + lh)) g.setTooltipForNextFrame(Component.literal(tit), mx, my);
 			String est = a.enviado() ? "Enviado" : "Borrador";
 			g.text(f, est, lx + 8, yy + 12, a.enviado() ? 0xFF6FCF7F : Tablet.GRIS_TEXTO, false);
 			if (yy + alto > ly && yy < ly + lh) t.zona(lx, Math.max(yy, ly), lw, Math.min(yy + alto, ly + lh) - Math.max(yy, ly), () -> abrir(a));
@@ -240,11 +243,12 @@ final class PanelAnuncios {
 		g.text(f, "Así sale en el chat", ex, ey, Tablet.GRIS_TEXTO, false);
 		g.fill(ex, py, ex + ew, py + ph, 0xFF000000);
 		g.enableScissor(ex, py, ex + ew, py + ph);
-		int k = this.tipo, ry = py + 3, rx = ex + 3;
+		// igual que en el chat: renglon vacio arriba, todo con dos espacios de sangria
+		int k = this.tipo, ry = py + 3 + 9, rx = ex + 2 + f.width("  ");
 		g.blit(RenderPipelines.GUI_TEXTURED, PIEDRAS, rx, ry - 1, k * 6, 0, 5, 9, 5, 9, 48, 9, 0xFFFFFFFF);
 		String tit = this.titulo.plano().trim().isEmpty() ? TITULOS[k] : this.titulo.plano().trim();
 		g.text(f, Component.literal(tit + ":").withStyle(Style.EMPTY.withBold(true).withColor(fuerte(k) & 0xFFFFFF)).getVisualOrderText(), rx + 9, ry, fuerte(k), true);
-		ry += 20;   // renglon vacio
+		ry += 18;   // renglon vacio
 		for (List<EditorTexto.Letra> l : EditorTexto.renglones(this.texto.letras())) {
 			if (ry > py + ph) break;
 			g.text(f, EditorTexto.componente(l, 0, l.size(), claro(k)).getVisualOrderText(), rx, ry, claro(k), true);
@@ -256,11 +260,28 @@ final class PanelAnuncios {
 		int bbx = ex;
 		bbx += t.boton(g, "Guardar", bbx, by, this.sucio, mx, my, () -> { mandar("anuncio_guardar"); avisar("Guardado."); }) + 3;
 		bbx += t.boton(g, "Probar", bbx, by, false, mx, my, () -> { mandar("anuncio_probar"); t.onClose(); }) + 3;
-		boolean confEnv = "enviar".equals(this.confirmar);
-		t.boton(g, confEnv ? "¿Seguro? Clic de nuevo" : "Enviar a todos", bbx, by, confEnv, mx, my, () -> {
-			if (confEnv) { mandar("anuncio_enviar"); this.confirmar = null; t.onClose(); }
-			else { this.confirmar = "enviar"; this.confirmarHasta = Util.getMillis() + 3000; }
-		});
+		boolean yaEnviado = d.anuncios.stream().anyMatch(a -> a.id().equals(this.id) && a.enviado());
+		if (yaEnviado) {
+			// ya salio: se puede retirar (sale de la tablet de los jugadores sin avisar a nadie y vuelve a ser borrador)
+			boolean confRet = "retirar".equals(this.confirmar);
+			t.boton(g, confRet ? "¿Retirar? Clic de nuevo" : "Retirar", bbx, by, confRet, mx, my, () -> {
+				if (confRet) {
+					guardarSiHaceFalta();
+					JsonObject o = new JsonObject(); o.addProperty("a", "anuncio_retirar");
+					JsonArray ids = new JsonArray(); ids.add(this.id); o.add("ids", ids);
+					ar.tod5.menu.Conexion.accion(o.toString());
+					this.confirmar = null; avisar("Volvió a borrador.");
+				} else { this.confirmar = "retirar"; this.confirmarHasta = Util.getMillis() + 3000; }
+			});
+			if (mx >= bbx && my >= by && mx < bbx + f.width("Retirar") + 10 && my < by + 13 && !confRet)
+				g.setTooltipForNextFrame(Component.literal("Lo saca de la tablet de todos, sin avisar. Vuelve a borrador."), mx, my);
+		} else {
+			boolean confEnv = "enviar".equals(this.confirmar);
+			t.boton(g, confEnv ? "¿Seguro? Clic de nuevo" : "Enviar a todos", bbx, by, confEnv, mx, my, () -> {
+				if (confEnv) { mandar("anuncio_enviar"); this.confirmar = null; t.onClose(); }
+				else { this.confirmar = "enviar"; this.confirmarHasta = Util.getMillis() + 3000; }
+			});
+		}
 		if (this.aviso != null && Util.getMillis() < this.avisoHasta) g.text(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
 
 		// los simbolos: un cartelito que se abre abajo de la estrella, encima de todo (no tapa nada cuando esta cerrado)

@@ -24,7 +24,7 @@ import net.minecraft.util.Util;
  */
 public class EditorTexto {
 	/** Ancho de los renglones en pixeles (el mismo que usa el server para los avisos simples). */
-	public static final int ANCHO = 250;
+	public static final int ANCHO = 270;
 
 	/** Una letra con su estilo. color -1 = el color normal del anuncio (el claro de su tipo). */
 	public record Letra(char c, int color, boolean b, boolean i, boolean u, boolean s) {
