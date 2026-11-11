@@ -7,6 +7,7 @@ permissions:
   contents: write
 jobs:
   sala:
+    if: "!contains(github.event.head_commit.message, '[ref]')"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
@@ -14,7 +15,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Herramientas
         run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio jq ffmpeg >/dev/null

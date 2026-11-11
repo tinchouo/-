@@ -13,7 +13,7 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 25
+          java-version: 21
       - uses: gradle/actions/setup-gradle@v4
       - name: Compilar
         run: set -o pipefail; ./gradlew build --stacktrace 2>&1 | tee build.log
@@ -22,24 +22,21 @@ jobs:
         shell: bash {0}
         run: |
           W=$GITHUB_WORKSPACE; LOG=$W/ref.log
-          ./gradlew genSources > /dev/null 2>&1
-          J=$(find $W/.gradle -name 'minecraft-clientOnly-*-sources.jar' | head -1)
-          C=$(find $W/.gradle -name 'minecraft-common-*-sources.jar' | head -1)
-          echo "client: $J  common: $C" >> $LOG
+          ./gradlew genSources > gensources.log 2>&1; tail -5 gensources.log >> $LOG
+          find $W/.gradle ~/.gradle -name '*minecraft*sources.jar' 2>/dev/null >> $LOG
           mkdir -p /tmp/ref && cd /tmp/ref
-          unzip -q -o "$J" 'net/minecraft/client/*' >> $LOG 2>&1
-          unzip -q -o "$C" 'net/minecraft/network/*' 'net/minecraft/sounds/*' 'net/minecraft/world/item/CreativeModeTab*' 'net/minecraft/world/item/CreativeModeTabs*' 'net/minecraft/world/item/ItemStack.java' 'net/minecraft/core/component/DataComponents.java' 'net/minecraft/world/item/component/CustomData.java' 'net/minecraft/core/registries/*' 'net/minecraft/resources/*' >> $LOG 2>&1
-          FA=$(find ~/.gradle -name 'fabric-api-0*.jar' ! -name '*sources*' | head -1); echo "fabric-api: $FA" >> $LOG
-          mkdir -p /tmp/fa && cd /tmp/fa && unzip -q -o "$FA" 'META-INF/jars/*' >> $LOG 2>&1
-          for n in item-group-api-v1 screen-api-v1 command-api-v2 networking-api-v1 lifecycle-events-v1 key-mapping-api-v1 key-binding-api-v1 rendering-v1; do
-            NJ=$(ls META-INF/jars/ | grep "fabric-$n" | head -1); echo "jar $n: $NJ" >> $LOG; [ -z "$NJ" ] && continue
-            mkdir -p x_$n && (cd x_$n && unzip -q -o ../META-INF/jars/$NJ)
-            for c in $(cd x_$n && find . -path '*/api/*' -name '*.class'); do
-              cl=$(echo $c | sed 's#^\./##; s#\.class$##; s#/#.#g'); echo "== $cl" >> $LOG; javap -cp x_$n -public "$cl" >> $LOG 2>&1
+          for J in $(find $W/.gradle ~/.gradle -name '*minecraft*sources.jar' 2>/dev/null); do
+            unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/network/*' 'net/minecraft/sounds/*' 'net/minecraft/world/item/*' 'net/minecraft/core/component/*' 'net/minecraft/core/registries/*' 'net/minecraft/resources/*' 'net/minecraft/util/Util.java' 'net/minecraft/world/entity/Display*' >> $LOG 2>&1
+          done
+          echo "--- jars de fabric api (con nombres de Mojang)" >> $LOG
+          mkdir -p /tmp/fa
+          for n in item-group-api-v1 screen-api-v1 command-api-v2 networking-api-v1 lifecycle-events-v1 key-binding-api-v1 rendering-v1 resource-loader-v0; do
+            NJ=$(find $W/.gradle -path '*remapped*' -name "fabric-$n-*.jar" ! -name '*sources*' 2>/dev/null | head -1); echo "jar $n: $NJ" >> $LOG; [ -z "$NJ" ] && continue
+            mkdir -p /tmp/fa/x_$n && (cd /tmp/fa/x_$n && unzip -q -o "$NJ")
+            for c in $(cd /tmp/fa/x_$n && find . -path '*/api/*' -name '*.class' ! -name '*$*'); do
+              cl=$(echo $c | sed 's#^\./##; s#\.class$##; s#/#.#g'); echo "== $cl" >> $LOG; javap -cp /tmp/fa/x_$n -public "$cl" >> $LOG 2>&1
             done
           done
-          CJ=$(find $W/.gradle ~/.gradle -name 'minecraft-clientOnly-*.jar' ! -name '*sources*' 2>/dev/null | head -1); echo "client jar: $CJ" >> $LOG
-          mkdir -p /tmp/ref/widget && cd /tmp/ref/widget && unzip -q -o -j "$CJ" 'assets/minecraft/textures/gui/sprites/widget/*' >> $LOG 2>&1; ls /tmp/ref/widget >> $LOG
           echo "archivos ref: $(find /tmp/ref -type f | wc -l)" >> $LOG
           true
       - name: Subir log y referencia
