@@ -21,14 +21,14 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q xvfb x11-apps imagemagick xdotool mesa-utils libgl1-mesa-dri mesa-vulkan-drivers pulseaudio jq ffmpeg >/dev/null
       - name: Compilar plugin
         run: |
-          PV=$(curl -s https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/maven-metadata.xml | grep -o '<version>26\.3[^<]*</version>' | sed 's/<[^>]*>//g' | grep -E '^26\.3\.build\.[0-9]+-alpha$' | sort -V | tail -1)
+          PV=1.21.11-R0.1-SNAPSHOT
           echo "paper-api: $PV" | tee plugin.log
           ./gradlew -p servidor build -Ppaper_version="$PV" 2>&1 | tee -a plugin.log
           ls servidor/build/libs/
-      - name: Preparar server Paper 26.3 (todavia apagado)
+      - name: Preparar server Paper 1.21.11 (todavia apagado)
         run: |
           mkdir -p srv/plugins && cp servidor/build/libs/tod5-servidor-*.jar srv/plugins/
-          URL=$(curl -s https://fill.papermc.io/v3/projects/paper/versions/26.3/builds/latest | jq -r '.downloads["server:default"].url')
+          URL=$(curl -s https://fill.papermc.io/v3/projects/paper/versions/1.21.11/builds/latest | jq -r '.downloads["server:default"].url')
           echo "paper: $URL" | tee -a plugin.log
           curl -sL "$URL" -o srv/paper.jar
           cd srv && echo "eula=true" > eula.txt

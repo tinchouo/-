@@ -26,16 +26,22 @@ jobs:
           find $W/.gradle ~/.gradle -name '*minecraft*sources.jar' 2>/dev/null >> $LOG
           mkdir -p /tmp/ref && cd /tmp/ref
           for J in $(find $W/.gradle ~/.gradle -name '*minecraft*sources.jar' 2>/dev/null); do
+            echo "== $J ($(stat -c %s "$J") bytes)" >> $LOG; unzip -l "$J" 2>&1 | head -8 >> $LOG
             unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/network/*' 'net/minecraft/sounds/*' 'net/minecraft/world/item/*' 'net/minecraft/core/component/*' 'net/minecraft/core/registries/*' 'net/minecraft/resources/*' 'net/minecraft/util/Util.java' 'net/minecraft/world/entity/Display*' >> $LOG 2>&1
           done
           echo "--- jars de fabric api (con nombres de Mojang)" >> $LOG
           mkdir -p /tmp/fa
           for n in item-group-api-v1 screen-api-v1 command-api-v2 networking-api-v1 lifecycle-events-v1 key-binding-api-v1 rendering-v1 resource-loader-v0; do
-            NJ=$(find $W/.gradle -path '*remapped*' -name "fabric-$n-*.jar" ! -name '*sources*' 2>/dev/null | head -1); echo "jar $n: $NJ" >> $LOG; [ -z "$NJ" ] && continue
-            mkdir -p /tmp/fa/x_$n && (cd /tmp/fa/x_$n && unzip -q -o "$NJ")
+            for NJ in $(find $W/.gradle -path '*remapped*' -name "fabric-$n-*.jar" ! -name '*sources*' 2>/dev/null); do echo "jar $n: $NJ" >> $LOG; mkdir -p /tmp/fa/x_$n && (cd /tmp/fa/x_$n && unzip -q -o "$NJ"); done
+            [ -d /tmp/fa/x_$n ] || continue
             for c in $(cd /tmp/fa/x_$n && find . -path '*/api/*' -name '*.class' ! -name '*$*'); do
               cl=$(echo $c | sed 's#^\./##; s#\.class$##; s#/#.#g'); echo "== $cl" >> $LOG; javap -cp /tmp/fa/x_$n -public "$cl" >> $LOG 2>&1
             done
+          done
+          echo "--- clases de Minecraft (javap)" >> $LOG
+          CP=$(find $W/.gradle -path '*minecraftMaven*' -name 'minecraft-*.jar' ! -name '*sources*' 2>/dev/null | tr '\n' ':'); echo "cp: $CP" >> $LOG
+          for cl in net.minecraft.client.gui.GuiGraphics net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.components.AbstractWidget net.minecraft.client.gui.components.Button net.minecraft.client.input.KeyEvent net.minecraft.client.input.CharacterEvent net.minecraft.client.input.MouseButtonEvent net.minecraft.client.gui.Font net.minecraft.client.Minecraft net.minecraft.client.gui.screens.TitleScreen net.minecraft.client.gui.screens.LoadingOverlay net.minecraft.client.gui.Gui net.minecraft.client.KeyMapping 'net.minecraft.client.KeyMapping$Category' net.minecraft.client.gui.screens.options.OptionsScreen net.minecraft.client.gui.layouts.HeaderAndFooterLayout net.minecraft.client.gui.layouts.GridLayout net.minecraft.client.gui.screens.DisconnectedScreen net.minecraft.client.renderer.RenderPipelines net.minecraft.resources.Identifier net.minecraft.resources.ResourceLocation net.minecraft.world.item.CreativeModeTab 'net.minecraft.world.item.CreativeModeTab$Builder' net.minecraft.world.item.Item 'net.minecraft.world.item.Item$Properties' net.minecraft.core.component.DataComponents net.minecraft.world.item.component.CustomData net.minecraft.client.gui.components.debug.DebugScreenOverlay net.minecraft.client.KeyboardHandler net.minecraft.client.MouseHandler net.minecraft.util.Mth net.minecraft.client.sounds.SoundManager net.minecraft.client.resources.sounds.SimpleSoundInstance net.minecraft.network.protocol.common.custom.CustomPacketPayload net.minecraft.client.gui.components.EditBox net.minecraft.client.gui.screens.ConnectScreen net.minecraft.client.multiplayer.resolver.ServerAddress net.minecraft.client.multiplayer.ServerData net.minecraft.client.gui.components.toasts.ToastManager net.minecraft.client.gui.screens.worldselection.SelectWorldScreen net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen net.minecraft.client.gui.components.Tooltip net.minecraft.client.gui.navigation.ScreenRectangle; do
+            echo "== $cl" >> $LOG; javap -cp "$CP" -public "$cl" >> $LOG 2>&1
           done
           echo "archivos ref: $(find /tmp/ref -type f | wc -l)" >> $LOG
           true

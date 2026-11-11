@@ -351,7 +351,7 @@ public class Tablero {
 	/** /tod dia|crafteo|anuncio|novedad|editor ... Devuelve false si no es un comando de la tablet. */
 	boolean comando(CommandSender s, String[] args) {
 		String sub = args[0].toLowerCase(Locale.ROOT);
-		if (!List.of("dia", "crafteo", "anuncio", "novedad", "editor", "moneda").contains(sub)) return false;
+		if (!List.of("dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "desafio").contains(sub)) return false;
 		if (!esEditor(s)) { s.sendMessage(Component.text("Eso es solo para los editores de TOD.", NamedTextColor.RED)); return true; }
 		switch (sub) {
 			case "dia" -> {
@@ -405,6 +405,7 @@ public class Tablero {
 				sincronizarTodos();
 			}
 			case "moneda" -> plugin.monedas.comando(s, args);
+			case "desafio" -> plugin.desafios.comando(s, args);
 		}
 		return true;
 	}
@@ -412,6 +413,7 @@ public class Tablero {
 
 	List<String> completar(String[] args) {
 		String sub = args[0].toLowerCase(Locale.ROOT);
+		if (sub.equals("desafio")) return plugin.desafios.completar(args);
 		if (args.length == 2) return switch (sub) {
 			case "dia" -> List.of("siguiente");
 			case "crafteo" -> List.of("lista", "activar", "ocultar", "sombra");

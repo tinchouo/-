@@ -37,6 +37,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	private final Set<UUID> saludaron = new HashSet<>();
 	private Tablero tablero;
 	Monedas monedas;
+	Desafios desafios;
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
 
@@ -52,8 +53,15 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		getServer().getPluginManager().registerEvents(this, this);
 		monedas = new Monedas(this);
 		getServer().getPluginManager().registerEvents(monedas, this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Desafios.CANAL);
+		desafios = new Desafios(this);
+		desafios.cargar();
+		getServer().getPluginManager().registerEvents(desafios, this);
 		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
 	}
+
+	@Override
+	public void onDisable() { if (desafios != null) desafios.apagar(); }
 
 	boolean abierto() { return getConfig().getBoolean("abierto", false); }
 	private Component msg(String clave, String... reemplazos) {
@@ -161,7 +169,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda");
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "desafio");
 		return tablero.completar(args);
 	}
 }

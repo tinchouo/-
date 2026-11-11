@@ -1,67 +1,77 @@
 {
-  "menu": {
-    "sounds": [
-      {
-        "name": "tod5:musica",
-        "stream": true
-      }
-    ]
-  },
-  "abrio": {
-    "sounds": [
-      {
-        "name": "tod5:abrio"
-      }
-    ]
-  },
-  "tablet_abrir": {
-    "sounds": [
-      {
-        "name": "tod5:tablet_abrir"
-      }
-    ]
-  },
-  "tablet_cerrar": {
-    "sounds": [
-      {
-        "name": "tod5:tablet_cerrar"
-      }
-    ]
-  },
-  "tablet_tocar": {
-    "sounds": [
-      {
-        "name": "tod5:tablet_tocar"
-      }
-    ]
-  },
-  "secreto_entrar": {
-    "sounds": [
-      {
-        "name": "tod5:secreto_entrar"
-      }
-    ]
-  },
-  "secreto_volver": {
-    "sounds": [
-      {
-        "name": "tod5:secreto_volver"
-      }
-    ]
-  },
-  "ruleta": {
-    "sounds": [
-      {
-        "name": "tod5:ruleta",
-        "stream": true
-      }
-    ]
-  },
-  "anuncio": {
-    "sounds": [
-      {
-        "name": "tod5:anuncio"
-      }
-    ]
-  }
+ "menu": {
+  "sounds": [
+   {
+    "name": "tod5:musica",
+    "stream": true
+   }
+  ]
+ },
+ "abrio": {
+  "sounds": [
+   {
+    "name": "tod5:abrio"
+   }
+  ]
+ },
+ "tablet_abrir": {
+  "sounds": [
+   {
+    "name": "tod5:tablet_abrir"
+   }
+  ]
+ },
+ "tablet_cerrar": {
+  "sounds": [
+   {
+    "name": "tod5:tablet_cerrar"
+   }
+  ]
+ },
+ "tablet_tocar": {
+  "sounds": [
+   {
+    "name": "tod5:tablet_tocar"
+   }
+  ]
+ },
+ "secreto_entrar": {
+  "sounds": [
+   {
+    "name": "tod5:secreto_entrar"
+   }
+  ]
+ },
+ "secreto_volver": {
+  "sounds": [
+   {
+    "name": "tod5:secreto_volver"
+   }
+  ]
+ },
+ "ruleta": {
+  "sounds": [
+   {
+    "name": "tod5:ruleta",
+    "stream": true
+   }
+  ]
+ },
+ "anuncio": {
+  "sounds": [
+   {
+    "name": "tod5:anuncio"
+   }
+  ]
+ },
+ "moneda_desafio": {
+  "sounds": [
+   "tod5:moneda_desafio"
+  ]
+ },
+ "desafio_completo": {
+  "sounds": [
+   "tod5:desafio_completo"
+  ]
+ }
 }
