@@ -3,6 +3,7 @@ package ar.tod5.menu.tablet;
 import java.util.*;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
@@ -25,17 +26,25 @@ import net.minecraft.util.Util;
 public class Tablet extends Screen {
 	// colores: marco de metal oscuro (el del logo) con luces verdes; pantalla oscura adentro
 	private static final int NEGRO = 0xFF000000, BLANCO = 0xFFFFFFFF;
-	private static final int PANTALLA = 0xFF0B100E, LINEA = 0xFF26302B;
+	static final int PANTALLA = 0xFF0B100E, LINEA = 0xFF26302B;
 	private static final int SLOT = 0xFF19201C, SLOT_OSCURO = 0xFF050706, SLOT_CLARO = 0xFF34403A, SOMBRA = 0xFF3A443F;
-	private static final int TEXTO = 0xFFD9E2DC, VERDE = 0xFF55FF55, AMARILLO = 0xFFFFE066, GRIS_TEXTO = 0xFF7D8A83;
+	static final int TEXTO = 0xFFD9E2DC, VERDE = 0xFF55FF55, AMARILLO = 0xFFFFE066, GRIS_TEXTO = 0xFF7D8A83, AMARILLO_ADMIN = 0xFFFFD23C;
 	private static final int M_BORDE = 0xFF0A0B0C, M_LUZ = 0xFF8D949C, M_CLARO = 0xFF5E646B, M_BASE = 0xFF3C4147, M_OSCURO = 0xFF24272B;
 
 	enum Seccion { INICIO("Inicio", Items.COMPASS), NOVEDADES("Novedades", Items.WRITABLE_BOOK), MISIONES("Misiones", Items.IRON_SWORD),
-		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD);
+		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD),
+		ANUNCIOS("Anuncios", Items.BELL);   // las del modo admin
 		final String nombre; final ItemStack icono;
 		Seccion(String n, net.minecraft.world.item.Item i) { nombre = n; icono = new ItemStack(i); } }
 
 	private static Seccion ultima = Seccion.INICIO;   // al reabrir, vuelve a donde estabas
+	/** Modo admin (solo editores): todo lo verde pasa a amarillo y las pestañas son las de editar. */
+	private static boolean admin = false;
+	private final PanelAnuncios anuncios = new PanelAnuncios(this);
+	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS; }
+	/** El color de las luces: verde normalmente, amarillo en modo admin. */
+	int acento() { return admin ? AMARILLO_ADMIN : VERDE; }
+	void zona(int x, int y, int w, int h, Runnable r) { this.zonas.add(new Zona(x, y, w, h, r)); }
 
 	private TabletDatos datos = TabletDatos.actual();   // se actualiza solo si el server manda algo nuevo
 	private Seccion seccion = ultima;
@@ -62,7 +71,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { this.anuncios.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -73,12 +82,38 @@ public class Tablet extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.tecla(event)) return true;   // escribiendo un anuncio
 		if (TeclaTablet.TECLA.matches(event)) { this.onClose(); return true; }   // la misma tecla la cierra
 		return super.keyPressed(event);
 	}
 
 	@Override
+	public boolean charTyped(CharacterEvent event) {
+		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.caracter(event)) return true;
+		return super.charTyped(event);
+	}
+
+	@Override
+	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
+		if (this.seccion == Seccion.ANUNCIOS) this.anuncios.arrastrar(event.x(), event.y());
+		return super.mouseDragged(event, dx, dy);
+	}
+
+	@Override
+	public boolean mouseReleased(MouseButtonEvent event) {
+		this.anuncios.soltar();
+		return super.mouseReleased(event);
+	}
+
+	@Override
+	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.ruedita(mx, my, sy)) return true;
+		return super.mouseScrolled(mx, my, sx, sy);
+	}
+
+	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.clic(event.x(), event.y(), event.hasShiftDown())) return true;
 		for (Zona z : List.copyOf(this.zonas)) {
 			if (z.adentro(event.x(), event.y())) {
 				sonido("tablet_tocar");
@@ -86,6 +121,7 @@ public class Tablet extends Screen {
 				return true;
 			}
 		}
+		this.anuncios.sinFoco();
 		return super.mouseClicked(event, doubleClick);
 	}
 
@@ -113,13 +149,13 @@ public class Tablet extends Screen {
 		g.fill(x + w - 1, y, x + w, y + h, SLOT_CLARO);
 	}
 	/** Boton oscuro; borde verde si esta elegido o con el mouse encima. Devuelve su ancho. */
-	private int boton(GuiGraphicsExtractor g, String t, int x, int y, boolean elegido, int mx, int my, Runnable accion) {
+	int boton(GuiGraphicsExtractor g, String t, int x, int y, boolean elegido, int mx, int my, Runnable accion) {
 		int bw = this.font.width(t) + 10, bh = 13;
 		boolean encima = mx >= x && my >= y && mx < x + bw && my < y + bh;
-		g.fill(x, y, x + bw, y + bh, elegido ? 0xFF2F9E46 : encima ? 0xFF55FF55 : 0xFF3A4840);
-		g.fill(x + 1, y + 1, x + bw - 1, y + bh - 1, elegido ? 0xFF143A1F : encima ? 0xFF1E2D24 : 0xFF1A211D);
-		g.fill(x + 1, y + 1, x + bw - 1, y + 2, elegido ? 0xFF1F5A2E : 0xFF27312C);
-		g.text(this.font, t, x + 5, y + 3, elegido || encima ? VERDE : TEXTO, true);
+		g.fill(x, y, x + bw, y + bh, elegido ? (admin ? 0xFF9E862F : 0xFF2F9E46) : encima ? acento() : 0xFF3A4840);
+		g.fill(x + 1, y + 1, x + bw - 1, y + bh - 1, elegido ? (admin ? 0xFF3A3214 : 0xFF143A1F) : encima ? (admin ? 0xFF2D2A1E : 0xFF1E2D24) : 0xFF1A211D);
+		g.fill(x + 1, y + 1, x + bw - 1, y + 2, elegido ? (admin ? 0xFF5A4E1F : 0xFF1F5A2E) : 0xFF27312C);
+		g.text(this.font, t, x + 5, y + 3, elegido || encima ? acento() : TEXTO, true);
 		this.zonas.add(new Zona(x, y, bw, bh, accion));
 		return bw;
 	}
@@ -136,7 +172,8 @@ public class Tablet extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float a) {
 		this.datos = TabletDatos.actual();
-		if (!this.datos.editor) this.editando = false;
+		if (!this.datos.editor) { this.editando = false; admin = false; }
+		if (admin != esAdmin(this.seccion)) this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
 		this.zonas.clear();
 		if (this.seccion == Seccion.EQUIPO && this.datos.equipo == null) this.seccion = Seccion.INICIO;
 		this.w = Math.min(470, this.width - 16);
@@ -157,9 +194,10 @@ public class Tablet extends Screen {
 		Seccion encima = null;
 		for (Seccion s : Seccion.values()) {
 			if (s == Seccion.EQUIPO && datos.equipo == null) continue;   // sin equipo, no aparece
+			if (esAdmin(s) != admin) continue;                            // en modo admin, solo las de editar
 			boolean act = s == this.seccion, sobre = mx >= tx && my >= ty && mx < tx + tam && my < ty + tam;
 			if (sobre) encima = s;
-			relieve(g, tx, ty, tam, tam, act ? 0xFF16301F : sobre ? 0xFF2A3230 : 0xFF1E2422, act ? 0xFF55FF55 : M_CLARO, act ? 0xFF1F7A33 : M_OSCURO);
+			relieve(g, tx, ty, tam, tam, act ? (admin ? 0xFF302A16 : 0xFF16301F) : sobre ? 0xFF2A3230 : 0xFF1E2422, act ? acento() : M_CLARO, act ? (admin ? 0xFF7A661F : 0xFF1F7A33) : M_OSCURO);
 			if (act) g.fill(tx - 3, ty + 6, tx - 1, ty + tam - 6, pulso(t, 0.6f, 1f));
 			g.pose().pushMatrix(); g.pose().translate(tx + 3, ty + 3); g.pose().scale(1.25f, 1.25f);
 			g.item(s.icono, 0, 0);
@@ -186,6 +224,21 @@ public class Tablet extends Screen {
 			case MISIONES -> misiones(g, cx, cy, cw, mx, my);
 			case CRAFTEOS -> crafteos(g, cx, cy, cw, mx, my);
 			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
+			case ANUNCIOS -> this.anuncios.dibujar(g, datos, cx, cy, cw, ch, mx, my);
+		}
+		// boton ADMIN en el marco (arriba a la derecha): solo lo ven los editores
+		if (datos.editor) {
+			String at = "ADMIN";
+			int aw = this.font.width(at) + 8, ax = x0 + w - aw - 12, ay = y0 + 2;
+			boolean sobre = mx >= ax && my >= ay && mx < ax + aw && my < ay + 11;
+			g.fill(ax, ay, ax + aw, ay + 11, admin ? AMARILLO_ADMIN : sobre ? 0xFF8A948E : M_BORDE);
+			g.fill(ax + 1, ay + 1, ax + aw - 1, ay + 10, admin ? 0xFF3A3214 : 0xFF14181A);
+			g.text(this.font, at, ax + 4, ay + 2, admin ? AMARILLO_ADMIN : sobre ? TEXTO : GRIS_TEXTO, false);
+			this.zonas.add(new Zona(ax, ay, aw, 11, () -> {
+				this.anuncios.guardarSiHaceFalta();
+				admin = !admin;
+				this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
+			}));
 		}
 		super.extractRenderState(g, mx, my, a);
 		if (encima != null) g.setTooltipForNextFrame(Component.literal(encima.nombre), mx, my);
@@ -196,7 +249,7 @@ public class Tablet extends Screen {
 	/** Verde que late despacito (para las luces del marco). */
 	private static int pulso(float t, float min, float max) {
 		float k = min + (max - min) * (0.5f + 0.5f * (float) Math.sin(t * 2.2));
-		int gr = (int) (0xFF * k), r = (int) (0x55 * k), b = (int) (0x55 * k);
+		int gr = (int) ((admin ? 0xD2 : 0xFF) * k), r = (int) ((admin ? 0xFF : 0x55) * k), b = (int) ((admin ? 0x3C : 0x55) * k);
 		return 0xFF000000 | (r << 16) | (gr << 8) | b;
 	}
 
@@ -232,7 +285,7 @@ public class Tablet extends Screen {
 		int[][] tor = { { x + 5, y + 5 }, { x2 - 8, y + 5 }, { x + 5, y2 - 8 }, { x2 - 8, y2 - 8 } };
 		for (int[] p : tor) { g.fill(p[0], p[1], p[0] + 3, p[1] + 3, M_LUZ); g.fill(p[0] + 1, p[1] + 1, p[0] + 2, p[1] + 2, M_BORDE); }
 		// lucecitas arriba a los costados (tipo "■■■ ■■")
-		for (int k = 0; k < 3; k++) { led(g, x + 14 + k * 4, y + 6, 3, 2, t, k * 0.4f); led(g, x2 - 26 + k * 4, y + 6, 3, 2, t, k * 0.4f + 1); }
+		for (int k = 0; k < 3; k++) { led(g, x + 14 + k * 4, y + 6, 3, 2, t, k * 0.4f); if (!datos.editor) led(g, x2 - 26 + k * 4, y + 6, 3, 2, t, k * 0.4f + 1); }   // a la derecha va el boton ADMIN
 		// tiras verdes en los costados
 		int mitad = (y + y2) / 2, largo = Math.min(60, h / 3);
 		g.fill(x + 3, mitad - largo / 2 - 1, x + 6, mitad + largo / 2 + 1, M_BORDE);
@@ -267,7 +320,7 @@ public class Tablet extends Screen {
 
 	private void irA(Seccion s) { this.seccion = s; this.dia = datos.hoy; }
 
-	private void titulo(GuiGraphicsExtractor g, String t, int x, int y) {
+	void titulo(GuiGraphicsExtractor g, String t, int x, int y) {
 		g.pose().pushMatrix();
 		g.pose().translate(x, y);
 		g.pose().scale(1.25f, 1.25f);

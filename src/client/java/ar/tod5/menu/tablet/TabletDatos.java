@@ -29,6 +29,8 @@ public class TabletDatos {
 		boolean nuevo() { return activo && !Vistos.visto("c:" + id); }
 		boolean soloSombra() { return !activo && nombre == null; }
 	}
+	/** Un anuncio guardado (solo lo ven los editores). grupo: un dia, 0 = General, -1 = Momento truco. */
+	public record Anuncio(String id, String tipo, String titulo, int grupo, boolean ruleta, boolean enviado, List<EditorTexto.Letra> texto) {}
 	public record Miembro(String nombre, boolean conectado) {}
 	public record Mensaje(String hora, String quien, String texto) {}
 	public record Nota(String titulo, String texto, String autor) {}
@@ -43,6 +45,7 @@ public class TabletDatos {
 	Map<Integer, Mision> diarias = new HashMap<>();
 	List<Mision> opcionales = new ArrayList<>();
 	List<Crafteo> crafteos = new ArrayList<>();
+	List<Anuncio> anuncios = new ArrayList<>();
 	Equipo equipo;   // null = no tiene equipo (la seccion no aparece)
 
 	int novedadesNuevas() { return (int) novedades.stream().filter(Novedad::nuevo).count(); }
@@ -106,6 +109,12 @@ public class TabletDatos {
 					c.has("categoria") ? c.get("categoria").getAsString() : null, c.has("dia_crafteo") ? c.get("dia_crafteo").getAsInt() : 0,
 					c.get("activo").getAsBoolean(), c.get("sombra").getAsBoolean(), item(c.get("icono").getAsString()),
 					c.has("cantidad") ? c.get("cantidad").getAsInt() : 1, grilla, c.has("nota") ? c.get("nota").getAsString() : ""));
+			}
+			if (o.has("anuncios")) for (JsonElement e : o.getAsJsonArray("anuncios")) {
+				JsonObject a = e.getAsJsonObject();
+				d.anuncios.add(new Anuncio(a.get("id").getAsString(), a.get("tipo").getAsString(), a.has("titulo") ? a.get("titulo").getAsString() : "",
+					a.has("grupo") ? a.get("grupo").getAsInt() : 0, !a.has("ruleta") || a.get("ruleta").getAsBoolean(),
+					a.has("enviado") && a.get("enviado").getAsBoolean(), EditorTexto.deJson(a.has("texto") ? a.getAsJsonArray("texto") : null)));
 			}
 			servidor = d;
 			LOG.info("TOD5 tablet: datos del server (día {}, {} novedades, {} crafteos, editor: {})", d.hoy, d.novedades.size(), d.crafteos.size(), d.editor);

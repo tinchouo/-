@@ -73,7 +73,9 @@ public class Tablero {
 	private final List<Novedad> novedades = new ArrayList<>();
 	private int dia = 1, proximaNovedad = 1;
 
-	Tablero(TOD5Servidor plugin) { this.plugin = plugin; }
+	final Anuncios anuncios;
+
+	Tablero(TOD5Servidor plugin) { this.plugin = plugin; this.anuncios = new Anuncios(plugin, this); }
 
 	// ================= cargar / guardar =================
 	void cargar() {
@@ -107,6 +109,7 @@ public class Tablero {
 		for (Map<?, ?> m : ny.getMapList("novedades"))
 			novedades.add(new Novedad(str(m, "id"), Integer.parseInt(str(m, "dia")), str(m, "tipo"), m.get("titulo") == null ? null : str(m, "titulo"), str(m, "texto")));
 		for (String id : activos) registrarReceta(id);
+		anuncios.cargar();
 		plugin.getLogger().info("Tablet: día " + dia + ", " + crafteos.size() + " crafteos (" + activos.size() + " activos), " + novedades.size() + " novedades");
 	}
 
@@ -181,7 +184,7 @@ public class Tablero {
 		for (String id : ids) if (crafteos.containsKey(id) && activos.add(id)) { registrarReceta(id); nuevos.add(crafteos.get(id).nombre()); }
 		if (!nuevos.isEmpty()) {
 			guardarEstado();
-			anunciar(Tipo.AVISO, "NUEVOS CRAFTEOS", "Se desbloquearon nuevos crafteos en tu tablet: " + String.join(", ", nuevos) + ".");
+			anunciar(Tipo.AVISO, "Nuevos crafteos", "Se desbloquearon nuevos crafteos en tu tablet: " + String.join(", ", nuevos) + ".");
 		}
 		return nuevos;
 	}
@@ -204,17 +207,31 @@ public class Tablero {
 	private final ArrayDeque<Runnable> cola = new ArrayDeque<>();
 	private boolean girando = false;
 
-	/** Un anuncio como en DeDSafio: primero la ruleta (en el mod), despues el mensaje en el chat. */
-	void anunciar(Tipo t, String titulo, String texto) {
+	/** La ruleta solo para algunos (los que tienen el mod). */
+	void girarRuleta(Collection<? extends Player> quienes, Tipo t) {
+		byte[] b = String.valueOf(t.gajo).getBytes(StandardCharsets.UTF_8);
+		for (Player p : quienes) if (plugin.tieneElMod(p)) p.sendPluginMessage(plugin, CANAL_RULETA, b);
+	}
+
+	/** Un anuncio a todos, en fila: si tiene ruleta, gira y recien al terminar se publica; si no, sale directo. */
+	void enFila(Tipo t, boolean ruleta, Runnable publicar) {
 		cola.add(() -> {
-			byte[] b = String.valueOf(t.gajo).getBytes(StandardCharsets.UTF_8);
-			for (Player p : Bukkit.getOnlinePlayers()) if (plugin.tieneElMod(p)) p.sendPluginMessage(plugin, CANAL_RULETA, b);
+			if (ruleta) girarRuleta(Bukkit.getOnlinePlayers(), t);
 			Bukkit.getScheduler().runTaskLater(plugin, () -> {
-				publicar(t, titulo, texto);
-				Bukkit.getScheduler().runTaskLater(plugin, this::siguiente, 10);   // medio segundo entre ruletas
-			}, DURACION_RULETA);
+				publicar.run();
+				sincronizarTodos();
+				Bukkit.getScheduler().runTaskLater(plugin, this::siguiente, 10);   // medio segundo entre anuncios
+			}, ruleta ? DURACION_RULETA : 1);
 		});
 		if (!girando) siguiente();
+	}
+
+	/** Un anuncio de texto simple (comandos, crafteos nuevos): mismo formato que los de la tablet. */
+	void anunciar(Tipo t, String titulo, String texto) {
+		enFila(t, true, () -> {
+			Anuncios.mostrar(Bukkit.getOnlinePlayers(), t, titulo, Anuncios.cortar(texto));
+			anotarNovedad(t, titulo, texto);
+		});
 	}
 	private void siguiente() {
 		Runnable r = cola.poll();
@@ -222,26 +239,19 @@ public class Tablero {
 		if (r != null) r.run();
 	}
 
-	/** El mensaje: titulo en negrita con ">" y abajo el texto, en el mismo color mas claro. */
-	private void publicar(Tipo t, String titulo, String texto) {
-		String tit = titulo == null || titulo.isBlank() ? t.titulo : titulo.toUpperCase(Locale.ROOT);
-		TextColor fuerte = TextColor.color(t.color), claro = TextColor.color(aclarar(t.color));
-		Component msg = Component.text("> " + tit + ":", fuerte).decorate(TextDecoration.BOLD)
-			.append(Component.newline())
-			.append(Component.text(texto, claro).decoration(TextDecoration.BOLD, false));
-		Bukkit.broadcast(msg);
-		if (t.enTablet) {
-			novedades.add(new Novedad("n" + (proximaNovedad++), dia, t.id, titulo == null || titulo.isBlank() ? null : tit, texto));
-			guardarNovedades();
-		}
-		sincronizarTodos();
+	/** Los tipos que quedan en la tablet (avisos, cambios, mobs, dungeons) se guardan como novedad del dia. */
+	void anotarNovedad(Tipo t, String titulo, String texto) {
+		if (!t.enTablet) return;
+		String tit = titulo == null || titulo.isBlank() ? null : titulo;
+		novedades.add(new Novedad("n" + (proximaNovedad++), dia, t.id, tit, texto));
+		guardarNovedades();
 	}
 	boolean borrarNovedad(String id) {
 		boolean ok = novedades.removeIf(n -> n.id().equals(id));
 		if (ok) { guardarNovedades(); sincronizarTodos(); }
 		return ok;
 	}
-	private static int aclarar(int c) {
+	static int aclarar(int c) {
 		int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
 		r += (int) ((255 - r) * 0.45); g += (int) ((255 - g) * 0.45); b += (int) ((255 - b) * 0.45);
 		return (r << 16) | (g << 8) | b;
@@ -284,6 +294,7 @@ public class Tablero {
 			cr.add(j);
 		}
 		o.add("crafteos", cr);
+		if (editor) o.add("anuncios", anuncios.paraTablet());   // los anuncios guardados: solo los editores
 		return GSON.toJson(o);
 	}
 
@@ -305,6 +316,14 @@ public class Tablero {
 			case "crafteo_activar" -> { var n = activar(ids); plugin.getLogger().info(p.getName() + " activo crafteos: " + n); }
 			case "crafteo_ocultar" -> { var n = ocultar(ids); plugin.getLogger().info(p.getName() + " oculto crafteos: " + n); }
 			case "crafteo_sombra" -> { for (String id : ids) sombra(id, o.has("v") && o.get("v").getAsBoolean()); }
+			case "anuncio_guardar" -> anuncios.guardar(o.getAsJsonObject("anuncio"));
+			case "anuncio_probar" -> { String id = anuncios.guardar(o.getAsJsonObject("anuncio")); anuncios.probar(p, id); }
+			case "anuncio_enviar" -> {
+				String id = anuncios.guardar(o.getAsJsonObject("anuncio"));
+				anuncios.enviar(id);
+				plugin.getLogger().info(p.getName() + " envio el anuncio " + id);
+			}
+			case "anuncio_borrar" -> { for (String id : ids) anuncios.borrar(id); }
 			default -> {}
 		}
 	}
@@ -344,7 +363,7 @@ public class Tablero {
 			case "anuncio" -> {
 				Tipo t = args.length > 1 ? Tipo.de(args[1]) : null;
 				if (t == null || args.length < 3) {
-					s.sendMessage(Component.text("Uso: /tod anuncio <diaria|aviso|cambio|sancion|truco|cuy|mob|dungeon> [TÍTULO |] texto", NamedTextColor.YELLOW));
+					s.sendMessage(Component.text("Uso: /tod anuncio <diaria|aviso|cambio|sancion|truco|cuy|mob|dungeon> [Título |] texto", NamedTextColor.YELLOW));
 					return true;
 				}
 				String resto = String.join(" ", Arrays.asList(args).subList(2, args.length));
