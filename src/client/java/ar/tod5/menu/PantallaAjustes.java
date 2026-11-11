@@ -1,18 +1,14 @@
 package ar.tod5.menu;
 
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
-import net.fabricmc.fabric.api.client.screen.v1.Screens;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
-import net.minecraft.client.gui.components.AbstractWidget;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.options.OptionsScreen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 
 /**
- * Opciones > TRUCOFDEATH...: los ajustes propios del mod (por ahora, donde sale la ruleta).
- * El boton va abajo de todo en Opciones, al lado de "Listo" (los dos del mismo ancho, simetricos).
+ * Opciones > Trucofdeath...: los ajustes propios del mod (por ahora, donde sale la ruleta).
+ * El boton lo agrega OpcionesMixin, abajo de los demas y en el medio.
  */
 public class PantallaAjustes extends Screen {
 	private final Screen anterior;
@@ -20,22 +16,6 @@ public class PantallaAjustes extends Screen {
 	public PantallaAjustes(Screen anterior) {
 		super(Component.literal("TRUCOFDEATH"));
 		this.anterior = anterior;
-	}
-
-	/** Agrega el boton "TRUCOFDEATH..." en Opciones (desde el menu y desde la pausa). */
-	public static void registrar() {
-		ScreenEvents.AFTER_INIT.register((mc, pantalla, w, h) -> {
-			if (!(pantalla instanceof OptionsScreen)) return;
-			for (AbstractWidget b : Screens.getWidgets(pantalla)) {
-				if (!(b instanceof Button) || !b.getMessage().getString().equals(CommonComponents.GUI_DONE.getString())) continue;
-				int x = b.getX(), y = b.getY(), ancho = b.getWidth(), mitad = (ancho - 4) / 2;
-				b.setWidth(mitad);
-				b.setX(x + ancho - mitad);
-				Screens.getWidgets(pantalla).add(Button.builder(Component.literal("TRUCOFDEATH..."), boton -> mc.gui.setScreen(new PantallaAjustes(pantalla)))
-					.bounds(x, y, mitad, b.getHeight()).build());
-				break;
-			}
-		});
 	}
 
 	private Component textoRuleta() { return Component.literal("Ruleta de anuncios: " + Ajustes.ruleta().texto); }
@@ -55,7 +35,7 @@ public class PantallaAjustes extends Screen {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
 		super.extractRenderState(g, mouseX, mouseY, a);
-		String t = "Opciones de TRUCOFDEATH";
+		String t = "Opciones de Trucofdeath";
 		g.text(this.font, t, (this.width - this.font.width(t)) / 2, 16, 0xFFFFFFFF, true);
 		String ayuda = switch (Ajustes.ruleta()) {
 			case CENTRO -> "La ruleta sale en el medio de la pantalla.";

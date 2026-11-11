@@ -11,7 +11,8 @@
 		"DisconnectedScreenAccessor",
 		"KeyCategoryAccessor",
 		"TecladoDebugMixin",
-		"MinecraftMixin"
+		"MinecraftMixin",
+		"OpcionesMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
