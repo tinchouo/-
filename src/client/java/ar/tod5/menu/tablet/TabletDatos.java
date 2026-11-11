@@ -41,6 +41,7 @@ public class TabletDatos {
 
 	int hoy;
 	boolean editor;      // es editor: ve lo oculto y tiene el modo edicion
+	boolean conAnuncios; // el plugin del server sabe guardar anuncios (0.15 o mas nuevo)
 	List<Novedad> novedades = new ArrayList<>();
 	Map<Integer, Mision> diarias = new HashMap<>();
 	List<Mision> opcionales = new ArrayList<>();
@@ -110,6 +111,7 @@ public class TabletDatos {
 					c.get("activo").getAsBoolean(), c.get("sombra").getAsBoolean(), item(c.get("icono").getAsString()),
 					c.has("cantidad") ? c.get("cantidad").getAsInt() : 1, grilla, c.has("nota") ? c.get("nota").getAsString() : ""));
 			}
+			d.conAnuncios = o.has("anuncios");
 			if (o.has("anuncios")) for (JsonElement e : o.getAsJsonArray("anuncios")) {
 				JsonObject a = e.getAsJsonObject();
 				d.anuncios.add(new Anuncio(a.get("id").getAsString(), a.get("tipo").getAsString(), a.has("titulo") ? a.get("titulo").getAsString() : "",

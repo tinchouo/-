@@ -41,6 +41,7 @@ final class PanelAnuncios {
 	private String aviso; private long avisoHasta, graciaHasta;
 	private int scroll;
 	private int lx, ly, lw, lh;        // la lista (para la ruedita)
+	private int simX, simY, simW, simH;  // el cartelito de simbolos (encima de todo)
 
 	PanelAnuncios(Tablet t) { this.t = t; }
 
@@ -102,6 +103,13 @@ final class PanelAnuncios {
 		// si el que estaba abierto ya no existe (lo borro otro editor), se cierra
 		if (this.id != null && !this.sucio && d.anuncios.stream().noneMatch(a -> a.id().equals(this.id)) && Util.getMillis() > this.graciaHasta) this.id = null;
 
+		if (!d.conAnuncios) {   // el plugin del server es viejo: no puede guardar ni mandar anuncios
+			t.titulo(g, "Anuncios", x, y);
+			g.text(f, "El plugin del server no tiene anuncios todavía.", x, y + 22, Tablet.AMARILLO_ADMIN, false);
+			g.text(f, "Actualizalo: tod5-plugin-servidor 0.15 o más nuevo,", x, y + 34, Tablet.TEXTO, false);
+			g.text(f, "en la carpeta plugins del server, y reinicialo.", x, y + 44, Tablet.TEXTO, false);
+			return;
+		}
 		// ===== lista =====
 		this.lw = 118; this.lx = x; this.ly = y + 16; this.lh = ch - 16;
 		t.titulo(g, "Anuncios", x, y);
@@ -128,7 +136,7 @@ final class PanelAnuncios {
 		g.disableScissor();
 		int total = yy + this.scroll - ly;
 		this.scroll = Math.max(0, Math.min(this.scroll, total - lh));
-		if (d.anuncios.isEmpty()) g.text(f, "Todavía no hay anuncios.", lx + 1, ly + 4, Tablet.GRIS_TEXTO, false);
+		if (d.anuncios.isEmpty()) { g.text(f, "Todavía no hay", lx + 1, ly + 4, Tablet.GRIS_TEXTO, false); g.text(f, "anuncios.", lx + 1, ly + 14, Tablet.GRIS_TEXTO, false); }
 		g.fill(x + lw + 6, y - 2, x + lw + 7, y + ch, Tablet.LINEA);
 
 		// ===== editor =====
@@ -214,7 +222,8 @@ final class PanelAnuncios {
 			bx += 12;
 		}
 		bx += 3;
-		t.boton(g, "★", bx, ey, this.verSimbolos, mx, my, () -> this.verSimbolos = !this.verSimbolos);
+		int estrellaX = bx, estrellaY = ey;
+		bx += t.boton(g, "★", bx, ey, this.verSimbolos, mx, my, () -> this.verSimbolos = !this.verSimbolos);
 		ey += 16;
 		// el texto
 		int alto = 64;
@@ -224,17 +233,6 @@ final class PanelAnuncios {
 		if (antesN != this.texto.letras().size() || !antesT.equals(this.texto.plano())) this.sucio = true;
 		if (this.texto.letras().isEmpty() && !this.texto.foco()) g.text(f, "Escribí el anuncio acá...", ex + 4, ey + 4, 0xFF5A6560, false);
 		if (rs > 6) g.text(f, "(más abajo)", ex + ew - f.width("(más abajo)") - 3, ey + alto - 10, Tablet.GRIS_TEXTO, false);
-		if (this.verSimbolos) {
-			int sx = ex, sy = ey + alto + 2;
-			g.fill(sx, sy, sx + SIMBOLOS.length * 14 + 4, sy + 16, 0xFF000000);
-			for (int k = 0; k < SIMBOLOS.length; k++) {
-				String s = SIMBOLOS[k]; int px = sx + 3 + k * 14;
-				boolean enc = mx >= px && my >= sy && mx < px + 13 && my < sy + 16;
-				if (enc) g.fill(px, sy + 1, px + 13, sy + 15, 0xFF2A3230);
-				g.text(f, s, px + (13 - f.width(s)) / 2, sy + 4, 0xFFFFFFFF, false);
-				t.zona(px, sy + 1, 13, 14, () -> { this.texto.foco(true); this.texto.escribir(s); this.sucio = true; });
-			}
-		}
 		ey += alto + 4;
 		// como sale en el chat
 		int by = y + ch - 14;
@@ -264,6 +262,24 @@ final class PanelAnuncios {
 			else { this.confirmar = "enviar"; this.confirmarHasta = Util.getMillis() + 3000; }
 		});
 		if (this.aviso != null && Util.getMillis() < this.avisoHasta) g.text(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
+
+		// los simbolos: un cartelito que se abre abajo de la estrella, encima de todo (no tapa nada cuando esta cerrado)
+		this.simW = 0;
+		if (this.verSimbolos) {
+			int cols = 5, cel = 16;
+			this.simW = cols * cel + 6; this.simH = ((SIMBOLOS.length + cols - 1) / cols) * cel + 6;
+			this.simX = Math.min(estrellaX, ex + ew - this.simW); this.simY = estrellaY + 15;
+			g.nextStratum();
+			g.fill(this.simX - 1, this.simY - 1, this.simX + this.simW + 1, this.simY + this.simH + 1, t.acento());
+			g.fill(this.simX, this.simY, this.simX + this.simW, this.simY + this.simH, 0xFF0B100E);
+			for (int k = 0; k < SIMBOLOS.length; k++) {
+				String s = SIMBOLOS[k]; int px = this.simX + 3 + (k % cols) * cel, py = this.simY + 3 + (k / cols) * cel;
+				boolean enc = mx >= px && my >= py && mx < px + cel && my < py + cel;
+				g.fill(px, py, px + cel - 1, py + cel - 1, enc ? 0xFF2A3230 : 0xFF161D1A);
+				g.text(f, s, px + (cel - 1 - f.width(s)) / 2 + 1, py + 4, 0xFFFFFFFF, false);
+				t.zona(px, py, cel - 1, cel - 1, () -> { this.texto.foco(true); this.texto.escribir(s); this.sucio = true; });
+			}
+		}
 	}
 	private void caja(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean foco) {
 		g.fill(x, y, x + w, y + h, foco ? t.acento() : 0xFF3A4840);
@@ -299,6 +315,7 @@ final class PanelAnuncios {
 	/** Clic: si cae en un cuadro de texto, lo agarra ese; si no, se les va el foco. */
 	boolean clic(double mx, double my, boolean shift) {
 		if (this.id == null) return false;
+		if (this.simW > 0 && mx >= this.simX && my >= this.simY && mx < this.simX + this.simW && my < this.simY + this.simH) return false;   // es un simbolo
 		if (this.texto.adentro(mx, my)) { this.titulo.foco(false); this.texto.clic(mx, my, shift); return true; }
 		if (this.titulo.adentro(mx, my)) { this.texto.foco(false); this.titulo.clic(mx, my, shift); return true; }
 		return false;
