@@ -165,9 +165,10 @@ public class Anuncios {
 
 	/** Borrar: se va de la lista y, si estaba enviado, tambien de la tablet de los jugadores. */
 	boolean borrar(String id) {
-		if (anuncios.remove(id) == null) return false;
+		Anuncio a = anuncios.remove(id);
+		if (a == null) return false;
 		guardar();
-		tablero.borrarNovedad(idNovedad(id));
+		if (a.enviado) sacarNovedad(a);
 		tablero.sincronizarTodos();
 		return true;
 	}
@@ -177,9 +178,13 @@ public class Anuncios {
 		if (a == null || !a.enviado) return false;
 		a.enviado = false;
 		guardar();
-		tablero.borrarNovedad(idNovedad(id));
+		sacarNovedad(a);
 		tablero.sincronizarTodos();
 		return true;
+	}
+	/** Saca la novedad de un anuncio. Los enviados con el plugin 0.15 no tenian el id atado: esos se buscan por titulo y texto. */
+	private void sacarNovedad(Anuncio a) {
+		if (!tablero.borrarNovedad(idNovedad(a.id))) tablero.borrarNovedadIgual(a.titulo, textoPlano(a));
 	}
 	/** Solo para el editor: la ruleta y el mensaje le llegan solo a el. */
 	void probar(Player p, String id) {

@@ -38,7 +38,8 @@ final class PanelAnuncios {
 	private final EditorTexto texto = new EditorTexto(true, 1000);
 	private String confirmar;          // "enviar", "retirar" o "borrar": esperando el segundo clic
 	private long confirmarHasta;
-	private String aviso; private long avisoHasta, graciaHasta;
+	private String aviso; private long avisoHasta, graciaHasta; private boolean avisoMal;
+	private String retirando; private long retirandoHasta;   // esperando que el server confirme el retiro
 	private int scroll;
 	private int lx, ly, lw, lh;        // la lista (para la ruedita)
 	private int simX, simY, simW, simH;  // el cartelito de simbolos (encima de todo)
@@ -94,7 +95,8 @@ final class PanelAnuncios {
 		this.graciaHasta = Util.getMillis() + 4000;   // hasta que el server lo devuelva en la lista
 	}
 	void guardarSiHaceFalta() { if (this.sucio && this.id != null) mandar("anuncio_guardar"); }
-	private void avisar(String s) { this.aviso = s; this.avisoHasta = Util.getMillis() + 2500; }
+	private void avisar(String s) { this.aviso = s; this.avisoHasta = Util.getMillis() + 2500; this.avisoMal = false; }
+	private void avisarMal(String s) { this.aviso = s; this.avisoHasta = Util.getMillis() + 6000; this.avisoMal = true; }
 
 	// ---------- dibujar ----------
 	void dibujar(GuiGraphicsExtractor g, TabletDatos d, int x, int y, int cw, int ch, int mx, int my) {
@@ -102,6 +104,12 @@ final class PanelAnuncios {
 		if (this.confirmar != null && Util.getMillis() > this.confirmarHasta) this.confirmar = null;
 		// si el que estaba abierto ya no existe (lo borro otro editor), se cierra
 		if (this.id != null && !this.sucio && d.anuncios.stream().noneMatch(a -> a.id().equals(this.id)) && Util.getMillis() > this.graciaHasta) this.id = null;
+		// retirar: recien cuando el server lo devuelve como borrador se dice que se retiro
+		if (this.retirando != null) {
+			final String rid = this.retirando;
+			if (d.anuncios.stream().noneMatch(a -> a.id().equals(rid) && a.enviado())) { avisar("Volvió a borrador."); this.retirando = null; }
+			else if (Util.getMillis() > this.retirandoHasta) { avisarMal(d.editor ? "No se retiró: el server no respondió." : "No se retiró: no sos editor."); this.retirando = null; }
+		}
 
 		if (!d.conAnuncios) {   // el plugin del server es viejo: no puede guardar ni mandar anuncios
 			t.titulo(g, "Anuncios", x, y);
@@ -264,13 +272,17 @@ final class PanelAnuncios {
 		if (yaEnviado) {
 			// ya salio: se puede retirar (sale de la tablet de los jugadores sin avisar a nadie y vuelve a ser borrador)
 			boolean confRet = "retirar".equals(this.confirmar);
-			t.boton(g, confRet ? "¿Retirar? Clic de nuevo" : "Retirar", bbx, by, confRet, mx, my, () -> {
+			String tr = this.retirando != null ? "Retirando…" : confRet ? "¿Retirar? Clic de nuevo" : "Retirar";
+			t.boton(g, tr, bbx, by, confRet, mx, my, () -> {
+				if (this.retirando != null) return;
+				if (!d.pluginAlMenos("0.16")) { avisarMal("Para retirar hace falta el plugin 0.16 en el server."); return; }
 				if (confRet) {
 					guardarSiHaceFalta();
+					this.retirando = this.id; this.retirandoHasta = Util.getMillis() + 4000;
 					JsonObject o = new JsonObject(); o.addProperty("a", "anuncio_retirar");
 					JsonArray ids = new JsonArray(); ids.add(this.id); o.add("ids", ids);
 					ar.tod5.menu.Conexion.accion(o.toString());
-					this.confirmar = null; avisar("Volvió a borrador.");
+					this.confirmar = null;
 				} else { this.confirmar = "retirar"; this.confirmarHasta = Util.getMillis() + 3000; }
 			});
 			if (mx >= bbx && my >= by && mx < bbx + f.width("Retirar") + 10 && my < by + 13 && !confRet)
@@ -282,7 +294,12 @@ final class PanelAnuncios {
 				else { this.confirmar = "enviar"; this.confirmarHasta = Util.getMillis() + 3000; }
 			});
 		}
-		if (this.aviso != null && Util.getMillis() < this.avisoHasta) g.text(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
+		if (this.aviso != null && Util.getMillis() < this.avisoHasta) {
+			if (this.avisoMal) {   // los errores son largos: van en una franja arriba de los botones
+				g.fill(ex, by - 15, ex + ew, by - 3, 0xFF3A1010);
+				g.text(f, f.plainSubstrByWidth(this.aviso, ew - 8), ex + 4, by - 13, 0xFFFF7070, false);
+			} else g.text(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
+		}
 
 		// los simbolos: un cartelito que se abre abajo de la estrella, encima de todo (no tapa nada cuando esta cerrado)
 		this.simW = 0;

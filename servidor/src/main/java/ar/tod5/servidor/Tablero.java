@@ -255,6 +255,12 @@ public class Tablero {
 		if (ok) { guardarNovedades(); sincronizarTodos(); }
 		return ok;
 	}
+	boolean borrarNovedadIgual(String titulo, String texto) {
+		String tit = titulo == null || titulo.isBlank() ? null : titulo;
+		boolean ok = novedades.removeIf(n -> Objects.equals(n.titulo(), tit) && Objects.equals(n.texto(), texto));
+		if (ok) { guardarNovedades(); sincronizarTodos(); }
+		return ok;
+	}
 	static int aclarar(int c) {
 		int r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
 		r += (int) ((255 - r) * 0.45); g += (int) ((255 - g) * 0.45); b += (int) ((255 - b) * 0.45);
@@ -267,6 +273,7 @@ public class Tablero {
 		JsonObject o = new JsonObject();
 		o.addProperty("dia", dia);
 		o.addProperty("editor", editor);
+		o.addProperty("plugin", plugin.getPluginMeta().getVersion());   // la tablet avisa si el plugin es viejo para algo
 		JsonArray nov = new JsonArray();
 		for (Novedad n : novedades) {
 			JsonObject j = new JsonObject();
@@ -310,7 +317,12 @@ public class Tablero {
 
 	/** Lo que pide la tablet en modo edicion. Solo para editores: si no, se ignora. */
 	void accion(Player p, byte[] datos) {
-		if (!esEditor(p)) { plugin.getLogger().warning(p.getName() + " intento editar la tablet sin ser editor"); return; }
+		if (!esEditor(p)) {
+			plugin.getLogger().warning(p.getName() + " intento editar la tablet sin ser editor");
+			p.sendMessage(Component.text("La tablet: no se guardó nada porque no sos editor. Desde la consola: tod editor agregar " + p.getName(), NamedTextColor.RED));
+			sincronizar(p);   // asi la tablet se entera y sale del modo admin
+			return;
+		}
 		JsonObject o;
 		try { o = JsonParser.parseString(new String(datos, StandardCharsets.UTF_8)).getAsJsonObject(); } catch (Exception e) { return; }
 		String a = o.has("a") ? o.get("a").getAsString() : "";

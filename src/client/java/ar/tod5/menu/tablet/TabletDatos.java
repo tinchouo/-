@@ -42,6 +42,17 @@ public class TabletDatos {
 	int hoy;
 	boolean editor;      // es editor: ve lo oculto y tiene el modo edicion
 	boolean conAnuncios; // el plugin del server sabe guardar anuncios (0.15 o mas nuevo)
+	String plugin = ""; // version del plugin del server (vacio = 0.15 o mas viejo)
+	/** El plugin del server es por lo menos esta version ("0.16"). */
+	public boolean pluginAlMenos(String v) {
+		String[] a = this.plugin.split("\\."), b = v.split("\\.");
+		for (int i = 0; i < b.length; i++) {
+			int x = i < a.length ? num(a[i]) : 0, y = num(b[i]);
+			if (x != y) return x > y;
+		}
+		return true;
+	}
+	private static int num(String s) { try { return Integer.parseInt(s.replaceAll("[^0-9]", "")); } catch (Exception e) { return 0; } }
 	List<Novedad> novedades = new ArrayList<>();
 	Map<Integer, Mision> diarias = new HashMap<>();
 	List<Mision> opcionales = new ArrayList<>();
@@ -112,6 +123,7 @@ public class TabletDatos {
 					c.has("cantidad") ? c.get("cantidad").getAsInt() : 1, grilla, c.has("nota") ? c.get("nota").getAsString() : ""));
 			}
 			d.conAnuncios = o.has("anuncios");
+			d.plugin = o.has("plugin") ? o.get("plugin").getAsString() : "";
 			if (o.has("anuncios")) for (JsonElement e : o.getAsJsonArray("anuncios")) {
 				JsonObject a = e.getAsJsonObject();
 				d.anuncios.add(new Anuncio(a.get("id").getAsString(), a.get("tipo").getAsString(), a.has("titulo") ? a.get("titulo").getAsString() : "",
