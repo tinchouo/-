@@ -11,7 +11,7 @@ import net.fabricmc.loader.api.FabricLoader;
 /** Ajustes del jugador (Opciones > TRUCOFDEATH). Se guardan en config/tod5.properties. */
 public final class Ajustes {
 	public enum PosRuleta {
-		CENTRO("Centro"), ESQUINA("Abajo a la derecha"), APAGADA("Apagada (solo chat)");
+		CENTRO("Centro"), ESQUINA("Abajo a la derecha");
 		public final String texto;
 		PosRuleta(String t) { texto = t; }
 		public PosRuleta siguiente() { return values()[(ordinal() + 1) % values().length]; }
@@ -33,7 +33,7 @@ public final class Ajustes {
 		Properties p = new Properties();
 		try (Reader r = Files.newBufferedReader(ARCHIVO)) {
 			p.load(r);
-			ruleta = PosRuleta.valueOf(p.getProperty("ruleta", "CENTRO"));
+			ruleta = PosRuleta.valueOf(p.getProperty("ruleta", "CENTRO"));   // si estaba "APAGADA" (version vieja) vuelve al centro
 		} catch (IOException | IllegalArgumentException e) { ruleta = PosRuleta.CENTRO; }
 	}
 

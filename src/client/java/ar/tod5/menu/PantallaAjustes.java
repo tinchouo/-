@@ -60,7 +60,6 @@ public class PantallaAjustes extends Screen {
 		String ayuda = switch (Ajustes.ruleta()) {
 			case CENTRO -> "La ruleta sale en el medio de la pantalla.";
 			case ESQUINA -> "La ruleta sale más chica, abajo a la derecha.";
-			case APAGADA -> "Sin ruleta: los anuncios salen solo en el chat.";
 		};
 		g.text(this.font, ayuda, (this.width - this.font.width(ayuda)) / 2, this.height / 2 + 2, 0xFFAAAAAA, false);
 	}

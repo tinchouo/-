@@ -90,7 +90,6 @@ public final class Ruleta {
 	/** Arranca la ruleta: va a frenar en ese color (0..7). */
 	public static void empezar(int color) {
 		pos = Ajustes.ruleta();
-		if (pos == Ajustes.PosRuleta.APAGADA) return;   // el jugador la apago: solo le llega el chat
 		sel = Math.floorMod(color, 8);
 		// arranca en un color al azar (que no sea el que va a salir); esos colores de mas los gira en la parte rapida,
 		// asi el arranque y el frenado son siempre iguales y el sonido va justo
