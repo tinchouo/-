@@ -1,6 +1,6 @@
 package ar.tod5.menu;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.network.chat.Component;
@@ -27,7 +27,7 @@ public class BotonTOD extends Button {
 	}
 
 	@Override
-	protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+	protected void renderContents(GuiGraphics g, int mouseX, int mouseY, float a) {
 		Identifier tex = this.active && this.isHovered() ? this.encima : this.normal;
 		int color = ((int) (Math.max(0, Math.min(1, this.alpha)) * 255) << 24) | 0xFFFFFF;
 		g.blit(RenderPipelines.GUI_TEXTURED, tex, this.getX(), this.getY(), 0, 0, this.getWidth(), this.getHeight(),

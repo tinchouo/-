@@ -8,7 +8,7 @@ import java.util.Comparator;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.renderer.RenderPipelines;
@@ -99,7 +99,7 @@ final class PanelAnuncios {
 	private void avisarMal(String s) { this.aviso = s; this.avisoHasta = Util.getMillis() + 6000; this.avisoMal = true; }
 
 	// ---------- dibujar ----------
-	void dibujar(GuiGraphicsExtractor g, TabletDatos d, int x, int y, int cw, int ch, int mx, int my) {
+	void dibujar(GuiGraphics g, TabletDatos d, int x, int y, int cw, int ch, int mx, int my) {
 		Font f = Minecraft.getInstance().font;
 		if (this.confirmar != null && Util.getMillis() > this.confirmarHasta) this.confirmar = null;
 		// si el que estaba abierto ya no existe (lo borro otro editor), se cierra
@@ -113,9 +113,9 @@ final class PanelAnuncios {
 
 		if (!d.conAnuncios) {   // el plugin del server es viejo: no puede guardar ni mandar anuncios
 			t.titulo(g, "Anuncios", x, y);
-			g.text(f, "El plugin del server no tiene anuncios todavía.", x, y + 22, Tablet.AMARILLO_ADMIN, false);
-			g.text(f, "Actualizalo: tod5-plugin-servidor 0.16 o más nuevo,", x, y + 34, Tablet.TEXTO, false);
-			g.text(f, "en la carpeta plugins del server, y reinicialo.", x, y + 44, Tablet.TEXTO, false);
+			g.drawString(f, "El plugin del server no tiene anuncios todavía.", x, y + 22, Tablet.AMARILLO_ADMIN, false);
+			g.drawString(f, "Actualizalo: tod5-plugin-servidor 0.16 o más nuevo,", x, y + 34, Tablet.TEXTO, false);
+			g.drawString(f, "en la carpeta plugins del server, y reinicialo.", x, y + 44, Tablet.TEXTO, false);
 			return;
 		}
 		// ===== lista =====
@@ -127,7 +127,7 @@ final class PanelAnuncios {
 		g.enableScissor(lx, ly, lx + lw, ly + lh);
 		int yy = ly - this.scroll; Integer grupoAnt = null;
 		for (TabletDatos.Anuncio a : orden) {
-			if (grupoAnt == null || grupoAnt != a.grupo()) { g.text(f, nombreGrupo(a.grupo()), lx + 1, yy + 2, Tablet.GRIS_TEXTO, false); yy += 12; grupoAnt = a.grupo(); }
+			if (grupoAnt == null || grupoAnt != a.grupo()) { g.drawString(f, nombreGrupo(a.grupo()), lx + 1, yy + 2, Tablet.GRIS_TEXTO, false); yy += 12; grupoAnt = a.grupo(); }
 			boolean sel = a.id().equals(this.id);
 			int k = gajo(a.tipo());
 			int alto = 22;
@@ -137,29 +137,29 @@ final class PanelAnuncios {
 			String tit = a.titulo().isBlank() ? TITULOS[k] : a.titulo();
 			String corto = f.plainSubstrByWidth(tit, lw - 14);
 			if (!corto.equals(tit)) corto = f.plainSubstrByWidth(tit, lw - 14 - f.width("…")) + "…";
-			g.text(f, corto, lx + 8, yy + 3, fuerte(k), false);
+			g.drawString(f, corto, lx + 8, yy + 3, fuerte(k), false);
 			if (!corto.equals(tit) && mx >= lx && my >= Math.max(yy, ly) && mx < lx + lw && my < Math.min(yy + alto, ly + lh)) g.setTooltipForNextFrame(Component.literal(tit), mx, my);
 			String est = a.enviado() ? "Enviado" : "Borrador";
-			g.text(f, est, lx + 8, yy + 12, a.enviado() ? 0xFF6FCF7F : Tablet.GRIS_TEXTO, false);
+			g.drawString(f, est, lx + 8, yy + 12, a.enviado() ? 0xFF6FCF7F : Tablet.GRIS_TEXTO, false);
 			if (yy + alto > ly && yy < ly + lh) t.zona(lx, Math.max(yy, ly), lw, Math.min(yy + alto, ly + lh) - Math.max(yy, ly), () -> abrir(a));
 			yy += alto + 3;
 		}
 		g.disableScissor();
 		int total = yy + this.scroll - ly;
 		this.scroll = Math.max(0, Math.min(this.scroll, total - lh));
-		if (d.anuncios.isEmpty()) { g.text(f, "Todavía no hay", lx + 1, ly + 4, Tablet.GRIS_TEXTO, false); g.text(f, "anuncios.", lx + 1, ly + 14, Tablet.GRIS_TEXTO, false); }
+		if (d.anuncios.isEmpty()) { g.drawString(f, "Todavía no hay", lx + 1, ly + 4, Tablet.GRIS_TEXTO, false); g.drawString(f, "anuncios.", lx + 1, ly + 14, Tablet.GRIS_TEXTO, false); }
 		g.fill(x + lw + 6, y - 2, x + lw + 7, y + ch, Tablet.LINEA);
 
 		// ===== editor =====
 		int ex = x + lw + 14, ew = cw - lw - 14;
 		if (this.id == null) {
-			g.text(f, "Elegí un anuncio de la lista", ex, y + 20, Tablet.GRIS_TEXTO, false);
-			g.text(f, "o creá uno con \"+ Nuevo\".", ex, y + 31, Tablet.GRIS_TEXTO, false);
+			g.drawString(f, "Elegí un anuncio de la lista", ex, y + 20, Tablet.GRIS_TEXTO, false);
+			g.drawString(f, "o creá uno con \"+ Nuevo\".", ex, y + 31, Tablet.GRIS_TEXTO, false);
 			return;
 		}
 		int ey = y;
 		// tipo: los 8 colores de la ruleta (el titulo cambia solo si no lo tocaste)
-		g.text(f, "Tipo", ex, ey + 2, Tablet.GRIS_TEXTO, false);
+		g.drawString(f, "Tipo", ex, ey + 2, Tablet.GRIS_TEXTO, false);
 		int cx = ex + 26;
 		for (int k = 0; k < 8; k++) {
 			final int kk = k;
@@ -196,18 +196,18 @@ final class PanelAnuncios {
 		if (this.id == null) return;
 		ey += 17;
 		// grupo: < Dia N / General / Momento truco >
-		g.text(f, "Va en", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+		g.drawString(f, "Va en", ex, ey + 3, Tablet.GRIS_TEXTO, false);
 		int gx = ex + 30;
 		gx += t.boton(g, "<", gx, ey, false, mx, my, () -> { this.grupo = Math.max(-1, this.grupo - 1); this.sucio = true; }) + 2;
 		String ng = nombreGrupo(this.grupo);
-		g.text(f, ng, gx + 4, ey + 3, Tablet.TEXTO, false);
+		g.drawString(f, ng, gx + 4, ey + 3, Tablet.TEXTO, false);
 		gx += Math.max(f.width("Momento truco"), f.width(ng)) + 8;
 		t.boton(g, ">", gx, ey, false, mx, my, () -> { this.grupo = Math.min(99, this.grupo + 1); this.sucio = true; });
 		String rt = "Ruleta: " + (this.ruleta ? "sí" : "no");
 		t.boton(g, rt, ex + ew - f.width(rt) - 10, ey, this.ruleta, mx, my, () -> { this.ruleta = !this.ruleta; this.sucio = true; });
 		ey += 17;
 		// titulo
-		g.text(f, "Título", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+		g.drawString(f, "Título", ex, ey + 3, Tablet.GRIS_TEXTO, false);
 		int tx = ex + 30, tw = ew - 30;
 		caja(g, tx, ey, tw, 14, this.titulo.foco());
 		String antes = this.titulo.plano();
@@ -242,24 +242,24 @@ final class PanelAnuncios {
 		int antesN = this.texto.letras().size(); String antesT = this.texto.plano();
 		int rs = this.texto.dibujar(g, ex + 4, ey + 4, ew - 8, alto - 6, claro(this.tipo));
 		if (antesN != this.texto.letras().size() || !antesT.equals(this.texto.plano())) this.sucio = true;
-		if (this.texto.letras().isEmpty() && !this.texto.foco()) g.text(f, "Escribí el anuncio acá...", ex + 4, ey + 4, 0xFF5A6560, false);
-		if (rs > 6) g.text(f, "(más abajo)", ex + ew - f.width("(más abajo)") - 3, ey + alto - 10, Tablet.GRIS_TEXTO, false);
+		if (this.texto.letras().isEmpty() && !this.texto.foco()) g.drawString(f, "Escribí el anuncio acá...", ex + 4, ey + 4, 0xFF5A6560, false);
+		if (rs > 6) g.drawString(f, "(más abajo)", ex + ew - f.width("(más abajo)") - 3, ey + alto - 10, Tablet.GRIS_TEXTO, false);
 		ey += alto + 4;
 		// como sale en el chat
 		int by = y + ch - 14;
 		int py = ey + 10, ph = by - 4 - py;
-		g.text(f, "Así sale en el chat", ex, ey, Tablet.GRIS_TEXTO, false);
+		g.drawString(f, "Así sale en el chat", ex, ey, Tablet.GRIS_TEXTO, false);
 		g.fill(ex, py, ex + ew, py + ph, 0xFF000000);
 		g.enableScissor(ex, py, ex + ew, py + ph);
 		// igual que en el chat: renglon vacio arriba, todo con dos espacios de sangria
 		int k = this.tipo, ry = py + 3 + 9, rx = ex + 2 + f.width("  ");
 		g.blit(RenderPipelines.GUI_TEXTURED, PIEDRAS, rx, ry - 1, k * 6, 0, 5, 9, 5, 9, 48, 9, 0xFFFFFFFF);
 		String tit = this.titulo.plano().trim().isEmpty() ? TITULOS[k] : this.titulo.plano().trim();
-		g.text(f, Component.literal(tit + ":").withStyle(Style.EMPTY.withBold(true).withColor(fuerte(k) & 0xFFFFFF)).getVisualOrderText(), rx + 9, ry, fuerte(k), true);
+		g.drawString(f, Component.literal(tit + ":").withStyle(Style.EMPTY.withBold(true).withColor(fuerte(k) & 0xFFFFFF)).getVisualOrderText(), rx + 9, ry, fuerte(k), true);
 		ry += 18;   // renglon vacio
 		for (List<EditorTexto.Letra> l : EditorTexto.renglones(this.texto.letras())) {
 			if (ry > py + ph) break;
-			g.text(f, EditorTexto.componente(l, 0, l.size(), claro(k)).getVisualOrderText(), rx, ry, claro(k), true);
+			g.drawString(f, EditorTexto.componente(l, 0, l.size(), claro(k)).getVisualOrderText(), rx, ry, claro(k), true);
 			ry += 9;
 		}
 		g.disableScissor();
@@ -297,8 +297,8 @@ final class PanelAnuncios {
 		if (this.aviso != null && Util.getMillis() < this.avisoHasta) {
 			if (this.avisoMal) {   // los errores son largos: van en una franja arriba de los botones
 				g.fill(ex, by - 15, ex + ew, by - 3, 0xFF3A1010);
-				g.text(f, f.plainSubstrByWidth(this.aviso, ew - 8), ex + 4, by - 13, 0xFFFF7070, false);
-			} else g.text(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
+				g.drawString(f, f.plainSubstrByWidth(this.aviso, ew - 8), ex + 4, by - 13, 0xFFFF7070, false);
+			} else g.drawString(f, this.aviso, ex + ew - f.width(this.aviso), by + 3, t.acento(), false);
 		}
 
 		// los simbolos: un cartelito que se abre abajo de la estrella, encima de todo (no tapa nada cuando esta cerrado)
@@ -314,24 +314,24 @@ final class PanelAnuncios {
 				String s = SIMBOLOS[q]; int qx = this.simX + 3 + (q % cols) * cel, qy = this.simY + 3 + (q / cols) * cel;
 				boolean enc = mx >= qx && my >= qy && mx < qx + cel && my < qy + cel;
 				g.fill(qx, qy, qx + cel - 1, qy + cel - 1, enc ? 0xFF2A3230 : 0xFF161D1A);
-				g.text(f, s, qx + (cel - 1 - f.width(s)) / 2 + 1, qy + 4, 0xFFFFFFFF, false);
+				g.drawString(f, s, qx + (cel - 1 - f.width(s)) / 2 + 1, qy + 4, 0xFFFFFFFF, false);
 				t.zona(qx, qy, cel - 1, cel - 1, () -> { this.texto.foco(true); this.texto.escribir(s); this.sucio = true; });
 			}
 		}
 	}
-	private void caja(GuiGraphicsExtractor g, int x, int y, int w, int h, boolean foco) {
+	private void caja(GuiGraphics g, int x, int y, int w, int h, boolean foco) {
 		g.fill(x, y, x + w, y + h, foco ? t.acento() : 0xFF3A4840);
 		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF070B09);
 	}
 	/** Boton chiquito con la letra en su estilo (B en negrita, I en cursiva...). */
-	private int boton(GuiGraphicsExtractor g, String s, Style st, int x, int y, boolean on, int mx, int my, Runnable r) {
+	private int boton(GuiGraphics g, String s, Style st, int x, int y, boolean on, int mx, int my, Runnable r) {
 		Font f = Minecraft.getInstance().font;
 		int w = 13, h = 13;
 		boolean enc = mx >= x && my >= y && mx < x + w && my < y + h;
 		g.fill(x, y, x + w, y + h, on ? t.acento() : enc ? 0xFF8A948E : 0xFF3A4840);
 		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, on ? 0xFF2A2610 : 0xFF1A211D);
 		Component c = Component.literal(s).withStyle(st);
-		g.text(f, c.getVisualOrderText(), x + (w - f.width(c)) / 2 + 1, y + 3, on ? t.acento() : Tablet.TEXTO, false);
+		g.drawString(f, c.getVisualOrderText(), x + (w - f.width(c)) / 2 + 1, y + 3, on ? t.acento() : Tablet.TEXTO, false);
 		t.zona(x, y, w, h, r);
 		return w;
 	}

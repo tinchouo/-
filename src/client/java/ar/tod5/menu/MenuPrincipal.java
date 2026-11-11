@@ -1,7 +1,7 @@
 package ar.tod5.menu;
 
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.options.OptionsScreen;
@@ -80,9 +80,9 @@ public class MenuPrincipal extends Screen {
 		// los botones van en la mitad de la pantalla (solo el logo va arriba)
 		int y = Math.min(this.height - 3 * 24 - 16, Math.max(logoY() + logoAlto() + 16, this.height / 2 + 30));
 		this.botonesY = y;
-		this.addRenderableWidget(new BotonTOD(ESTILO, "jugar", "Jugar", x, y, bw, bh, b -> this.minecraft.gui.setScreen(new PantallaEntrar())));
+		this.addRenderableWidget(new BotonTOD(ESTILO, "jugar", "Jugar", x, y, bw, bh, b -> this.minecraft.setScreen(new PantallaEntrar())));
 		this.addRenderableWidget(new BotonTOD(ESTILO, "opciones", "Opciones", x, y + 24, bw, bh,
-			b -> this.minecraft.gui.setScreen(new OptionsScreen(this, this.minecraft.options))));
+			b -> this.minecraft.setScreen(new OptionsScreen(this, this.minecraft.options))));
 		this.addRenderableWidget(new BotonTOD(ESTILO, "salir", "Salir", x, y + 48, bw, bh, b -> this.minecraft.stop()));
 	}
 
@@ -148,14 +148,14 @@ public class MenuPrincipal extends Screen {
 	public boolean isPauseScreen() { return false; }
 
 	@Override
-	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float a) {
 	}
 
 	private int logoAncho() { return Math.min(340, (int) (this.width * 0.7f)); }
 	private int logoAlto() { return logoAncho() * LOGO_H / LOGO_W; }
 	private int logoY() { return Math.max(10, Math.min(30, this.height / 10)); }
 
-	private void dibujarLogo(GuiGraphicsExtractor g, float t, float alfa) {
+	private void dibujarLogo(GuiGraphics g, float t, float alfa) {
 		int lw = logoAncho(), lh = logoAlto(), lx = this.width / 2 - lw / 2, ly = logoY();
 		float s = lw / (float) LOGO_W;
 		g.blit(RenderPipelines.GUI_TEXTURED, LOGO, lx, ly, 0, 0, lw, lh, LOGO_W, LOGO_H, LOGO_W, LOGO_H, argb(alfa, 0xFFFFFF));
@@ -185,7 +185,7 @@ public class MenuPrincipal extends Screen {
 	private static float lerp(float a, float b, float k) { return a + (b - a) * k; }
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+	public void render(GuiGraphics g, int mouseX, int mouseY, float a) {
 		arrancarSiHaceFalta();
 		float t = t();
 		boolean empezo = this.inicio != 0;
@@ -249,10 +249,10 @@ public class MenuPrincipal extends Screen {
 		if (alfaLogo > 0) dibujarLogo(g, t, alfaLogo);
 
 		// 3) los botones y los textos de abajo
-		super.extractRenderState(g, mouseX, mouseY, a);
+		super.render(g, mouseX, mouseY, a);
 		int gris = argb(alfaBotones * 0.6f, 0xFFFFFF);
-		g.text(this.font, NOMBRE + " v" + VERSION, 2, this.height - 10, gris);
-		g.text(this.font, CREDITO, this.width - this.font.width(CREDITO) - 2, this.height - 10, gris);
+		g.drawString(this.font, NOMBRE + " v" + VERSION, 2, this.height - 10, gris);
+		g.drawString(this.font, CREDITO, this.width - this.font.width(CREDITO) - 2, this.height - 10, gris);
 
 		// 4) entrando al agujero: va encima de todo y lo tapa
 		if (agujeroArriba) Fondo.agujero(g, Math.round(this.agX), Math.round(this.agY), this.agD);

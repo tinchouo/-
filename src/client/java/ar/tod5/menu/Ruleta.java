@@ -2,7 +2,7 @@ package ar.tod5.menu;
 
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.client.resources.sounds.SoundInstance;
@@ -162,7 +162,7 @@ public final class Ruleta {
 	private static int oscurecer(int c, float k) { return mezclar(c, 0, 1 - k); }
 	private static int argb(float a, int rgb) { return ((int) (clamp01(a) * 255) << 24) | (rgb & 0xFFFFFF); }
 
-	private static void dibujar(GuiGraphicsExtractor g) {
+	private static void dibujar(GuiGraphics g) {
 		if (inicio == 0) return;
 		float t = (Util.getMillis() - inicio) / 1000f;
 		if (t > T_FIN + 0.1f) { inicio = 0; return; }

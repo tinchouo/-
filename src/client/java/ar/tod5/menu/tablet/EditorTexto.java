@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
@@ -151,9 +151,9 @@ public class EditorTexto {
 		if (e.isCopy()) { if (haySeleccion()) mc.keyboardHandler.setClipboard(planoEntre(selIni(), selFin())); return true; }
 		if (e.isCut()) { if (haySeleccion()) { mc.keyboardHandler.setClipboard(planoEntre(selIni(), selFin())); guardarHistorial(); borrarSeleccion(); } return true; }
 		if (e.isPaste()) { escribir(mc.keyboardHandler.getClipboard()); return true; }
-		if (ctrl && e.shortcutKey() == 122) { deshacer(); return true; }          // Ctrl+Z
-		if (ctrl && e.shortcutKey() == 105) { alternar(1); return true; }        // Ctrl+I
-		if (ctrl && e.shortcutKey() == 117) { alternar(2); return true; }        // Ctrl+U
+		if (ctrl && e.key() == 90) { deshacer(); return true; }          // Ctrl+Z
+		if (ctrl && e.key() == 73) { alternar(1); return true; }        // Ctrl+I
+		if (ctrl && e.key() == 85) { alternar(2); return true; }        // Ctrl+U
 		switch (e.input()) {
 			case 42 -> {   // borrar para atras
 				guardarHistorial();
@@ -313,7 +313,7 @@ public class EditorTexto {
 
 	// ---------- dibujar y mouse ----------
 	/** Dibuja el texto (con sus renglones cortados), la seleccion y el cursor. alto = cuantos px hay; devuelve los renglones. */
-	public int dibujar(GuiGraphicsExtractor g, int x, int y, int ancho, int alto, int colorNormal) {
+	public int dibujar(GuiGraphics g, int x, int y, int ancho, int alto, int colorNormal) {
 		this.ultX = x; this.ultY = y; this.ultAncho = ancho; this.ultAlto = alto;
 		Font f = font();
 		this.renglones = this.multilinea ? cortar(this.texto, ANCHO) : List.of(new Renglon(0, this.texto.size(), this.texto.size()));
@@ -324,7 +324,7 @@ public class EditorTexto {
 				int a = Math.max(selIni(), r.desde()), b = Math.min(selFin(), r.hasta());
 				if (a < b) g.fill(x + xEn(r, a), ry - 1, x + xEn(r, b), ry + 9, 0xFF3C5A9A);
 			}
-			g.text(f, componente(this.texto, r.desde(), r.hasta(), colorNormal).getVisualOrderText(), x, ry, colorNormal, false);
+			g.drawString(f, componente(this.texto, r.desde(), r.hasta(), colorNormal).getVisualOrderText(), x, ry, colorNormal, false);
 			ry += 10;
 		}
 		if (this.foco && (Util.getMillis() - this.ultimoCambio) % 1000 < 600) {

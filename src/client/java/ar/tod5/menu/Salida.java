@@ -17,7 +17,7 @@ public final class Salida {
 
 	/** Lo llama el mixin de Minecraft.stop(): true = todavia no cerrar (arranca el fundido). */
 	public static boolean frenar(Minecraft mc) {
-		if (permitido || mc.level != null || !(mc.gui.screen() instanceof MenuPrincipal)) return false;
+		if (permitido || mc.level != null || !(mc.screen instanceof MenuPrincipal)) return false;
 		if (desde == 0) {
 			desde = Util.getMillis();
 			MusicaMenu.fundir(0f, DURA - 0.3f);

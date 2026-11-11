@@ -1,6 +1,6 @@
 package ar.tod5.menu;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
@@ -30,17 +30,17 @@ public class PantallaAjustes extends Screen {
 	}
 
 	@Override
-	public void onClose() { this.minecraft.gui.setScreen(this.anterior); }
+	public void onClose() { this.minecraft.setScreen(this.anterior); }
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
-		super.extractRenderState(g, mouseX, mouseY, a);
+	public void render(GuiGraphics g, int mouseX, int mouseY, float a) {
+		super.render(g, mouseX, mouseY, a);
 		String t = "Opciones de Trucofdeath";
-		g.text(this.font, t, (this.width - this.font.width(t)) / 2, 16, 0xFFFFFFFF, true);
+		g.drawString(this.font, t, (this.width - this.font.width(t)) / 2, 16, 0xFFFFFFFF, true);
 		String ayuda = switch (Ajustes.ruleta()) {
 			case CENTRO -> "La ruleta sale en el medio de la pantalla.";
 			case ESQUINA -> "La ruleta sale más chica, abajo a la derecha.";
 		};
-		g.text(this.font, ayuda, (this.width - this.font.width(ayuda)) / 2, this.height / 2 + 2, 0xFFAAAAAA, false);
+		g.drawString(this.font, ayuda, (this.width - this.font.width(ayuda)) / 2, this.height / 2 + 2, 0xFFAAAAAA, false);
 	}
 }

@@ -2,7 +2,6 @@ package ar.tod5.menu.mixin;
 
 import ar.tod5.menu.MenuPrincipal;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -14,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 /** Cada vez que Minecraft va a abrir su menu principal (o la lista de servers), abre el de TOD5 en su lugar. */
-@Mixin(Gui.class)
+@Mixin(Minecraft.class)
 public class GuiMixin {
 	private static boolean tieneMarca(Component c) {
 		if ("tod5:preparacion".equals(c.getStyle().getInsertion())) return true;

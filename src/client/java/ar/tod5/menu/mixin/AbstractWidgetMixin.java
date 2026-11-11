@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
 public abstract class AbstractWidgetMixin {
 	private static final TextColor VERDE = TextColor.fromRgb(0x7DFFA0);
 
-	@ModifyVariable(method = "extractScrollingStringOverContents", at = @At("HEAD"), argsOnly = true)
+	@ModifyVariable(method = "renderScrollingStringOverContents", at = @At("HEAD"), argsOnly = true)
 	private Component tod5$textoVerde(Component message) {
 		AbstractWidget self = (AbstractWidget) (Object) this;
 		if (self.active && self.isHoveredOrFocused()) return message.copy().withStyle(s -> s.withColor(VERDE));

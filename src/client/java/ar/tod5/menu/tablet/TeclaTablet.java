@@ -3,7 +3,7 @@ package ar.tod5.menu.tablet;
 import ar.tod5.menu.mixin.KeyCategoryAccessor;
 import java.util.List;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
+import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.resources.Identifier;
@@ -25,13 +25,13 @@ public final class TeclaTablet {
 		orden.add(0, CATEGORIA);
 
 		org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 secciones de controles: {}", orden.stream().limit(3).map(c -> c.id().toString()).toList());
-		TECLA = KeyMappingHelper.registerKeyMapping(new KeyMapping("key.tod5.tablet", InputConstants.getKey("key.keyboard.j").getValue(), CATEGORIA));
+		TECLA = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.tod5.tablet", InputConstants.getKey("key.keyboard.j").getValue(), CATEGORIA));
 		org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla de la tablet: {}", TECLA.saveString());
 		ClientTickEvents.END_CLIENT_TICK.register(mc -> {
 			while (TECLA.consumeClick()) {
-				boolean puede = mc.player != null && mc.level != null && mc.gui.screen() == null;
-				if (Boolean.getBoolean("tod5.debugTeclas")) org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla tablet (abre: {}, pantalla: {})", puede, mc.gui.screen());
-				if (puede) mc.gui.setScreen(new Tablet());
+				boolean puede = mc.player != null && mc.level != null && mc.screen == null;
+				if (Boolean.getBoolean("tod5.debugTeclas")) org.slf4j.LoggerFactory.getLogger("TOD5").info("TOD5 tecla tablet (abre: {}, pantalla: {})", puede, mc.screen);
+				if (puede) mc.setScreen(new Tablet());
 			}
 		});
 	}

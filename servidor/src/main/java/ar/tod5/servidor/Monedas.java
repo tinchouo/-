@@ -48,7 +48,7 @@ final class Monedas implements Listener {
 		ItemStack it = new ItemStack(Material.GOLD_NUGGET, Math.max(1, Math.min(64, cantidad)));
 		ItemMeta m = it.getItemMeta();
 		m.setItemModel(new NamespacedKey("tod5", t.modelo));
-		m.itemName(Component.translatable("item.tod5." + t.modelo, t.nombre));   // el nombre lo pone el mod (como un item de verdad)
+		m.itemName(Component.translatable("item.tod5." + t.modelo));   // el nombre lo pone el mod (como un item de verdad)
 		m.getPersistentDataContainer().set(marca, PersistentDataType.STRING, t.name().toLowerCase(Locale.ROOT));
 		it.setItemMeta(m);
 		return it;

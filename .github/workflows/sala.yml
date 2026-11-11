@@ -7,7 +7,7 @@ permissions:
   contents: write
 jobs:
   sala:
-    if: "!contains(github.event.head_commit.message, '[ref]')"
+    if: "!contains(github.event.head_commit.message, '[ref]') && !contains(github.event.head_commit.message, '[wip]')"
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:

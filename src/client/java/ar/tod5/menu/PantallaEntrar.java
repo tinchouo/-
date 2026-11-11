@@ -1,6 +1,6 @@
 package ar.tod5.menu;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.Screen;
@@ -61,7 +61,7 @@ public class PantallaEntrar extends Screen {
 	private void volver() {
 		EstadoServer.enFila = false;
 		EstadoServer.parar();
-		this.minecraft.gui.setScreen(new MenuPrincipal());
+		this.minecraft.setScreen(new MenuPrincipal());
 	}
 
 	private void conectar() {
@@ -108,21 +108,21 @@ public class PantallaEntrar extends Screen {
 	@Override public boolean isPauseScreen() { return false; }
 
 	@Override
-	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
+	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float a) {
 		Fondo.dibujarSinAgujero(g, this.width, this.height);   // el mismo fondo oscuro de Opciones
 	}
 
-	private void centrado(GuiGraphicsExtractor g, String t, int y, int color, float escala) {
+	private void centrado(GuiGraphics g, String t, int y, int color, float escala) {
 		g.pose().pushMatrix();
 		g.pose().translate(this.width / 2f, y);
 		g.pose().scale(escala, escala);
-		g.text(this.font, t, -this.font.width(t) / 2, 0, color);
+		g.drawString(this.font, t, -this.font.width(t) / 2, 0, color);
 		g.pose().popMatrix();
 	}
 
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mouseX, int mouseY, float a) {
-		super.extractRenderState(g, mouseX, mouseY, a);
+	public void render(GuiGraphics g, int mouseX, int mouseY, float a) {
+		super.render(g, mouseX, mouseY, a);
 		int y = this.height / 2 - 30;
 		switch (this.paso) {
 			case CONECTANDO -> centrado(g, "Conectando" + ".".repeat((int) (Util.getMillis() / 400 % 4)), y + 10, 0xFFFFFFFF, 1f);

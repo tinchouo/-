@@ -8,7 +8,7 @@ import java.util.Set;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Util;
@@ -55,9 +55,9 @@ public final class TabletHud {
 
 	private static int alfa(int argb, float a) { return ((int) (((argb >>> 24) & 255) * a) << 24) | (argb & 0xFFFFFF); }
 
-	private static void dibujar(GuiGraphicsExtractor g) {
+	private static void dibujar(GuiGraphics g) {
 		Minecraft mc = Minecraft.getInstance();
-		if (mc.player == null || mc.getDebugOverlay().showDebugScreen() || mc.gui.screen() instanceof Tablet) return;   // con F3 no se encima
+		if (mc.player == null || mc.getDebugOverlay().showDebugScreen() || mc.screen instanceof Tablet) return;   // con F3 no se encima
 		Font f = mc.font;
 		long ahora = Util.getMillis();
 		TabletDatos d = TabletDatos.actual();
@@ -71,7 +71,7 @@ public final class TabletHud {
 		g.fill(tx, ty, tx + tw, ty + 12, 0xFF141618);                       // tecla: borde
 		g.fill(tx + 1, ty + 1, tx + tw - 1, ty + 11, 0xFF3C4045);           // lado
 		g.fill(tx + 1, ty + 1, tx + tw - 1, ty + 9, 0xFF5A5F66);            // cara de arriba
-		g.text(f, tecla, tx + (tw - f.width(tecla) + 1) / 2, ty + 1, 0xFFE8E8E8, false);
+		g.drawString(f, tecla, tx + (tw - f.width(tecla) + 1) / 2, ty + 1, 0xFFE8E8E8, false);
 
 		// numerito rojo con lo que no viste
 		int nuevos = d.novedadesNuevas() + d.crafteosNuevos();
@@ -80,7 +80,7 @@ public final class TabletHud {
 			int bw = Math.max(10, f.width(n) + 4), bx = x + 16 - bw / 2 + 1, by = y - 3;
 			g.blit(RenderPipelines.GUI_TEXTURED, PUNTO, bx, by, 0, 0, bw, 10, 32, 32, 32, 32, 0xFF4A0A0A);
 			g.blit(RenderPipelines.GUI_TEXTURED, PUNTO, bx + 1, by + 1, 0, 0, bw - 2, 8, 32, 32, 32, 32, 0xFFE03232);
-			g.text(f, n, bx + (bw - f.width(n)) / 2 + 1, by + 1, 0xFFFFFFFF, false);
+			g.drawString(f, n, bx + (bw - f.width(n)) / 2 + 1, by + 1, 0xFFFFFFFF, false);
 		}
 
 		// lo que llego recien, abajo de la tablet
@@ -93,12 +93,12 @@ public final class TabletHud {
 			int alto = a.texto().isEmpty() ? 14 : 24;
 			g.fill(x, ay, x + ANCHO_AVISO, ay + alto, alfa(0xC00A0E0C, al));
 			g.fill(x + 3, ay + 3, x + 5, ay + alto - 3, alfa(a.color(), al));
-			g.text(f, recortar(f, a.titulo(), ANCHO_AVISO - 12), x + 9, ay + 3, alfa(a.color(), al), true);
-			if (!a.texto().isEmpty()) g.text(f, recortar(f, a.texto(), ANCHO_AVISO - 12), x + 9, ay + 13, alfa(0xFFBFC8C2, al), false);
+			g.drawString(f, recortar(f, a.titulo(), ANCHO_AVISO - 12), x + 9, ay + 3, alfa(a.color(), al), true);
+			if (!a.texto().isEmpty()) g.drawString(f, recortar(f, a.texto(), ANCHO_AVISO - 12), x + 9, ay + 13, alfa(0xFFBFC8C2, al), false);
 			ay += alto + 2;
 			mostrados++;
 		}
 		int resto = (int) avisos.stream().filter(a -> ahora - a.desde() < DURA).count() - mostrados;
-		if (resto > 0) g.text(f, "y " + resto + " más en la tablet", x + 2, ay + 1, 0xFFAAAAAA, true);
+		if (resto > 0) g.drawString(f, "y " + resto + " más en la tablet", x + 2, ay + 1, 0xFFAAAAAA, true);
 	}
 }

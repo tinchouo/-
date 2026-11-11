@@ -1,6 +1,6 @@
 package ar.tod5.menu;
 
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.resources.Identifier;
 import org.joml.Matrix3x2fStack;
@@ -40,13 +40,13 @@ public final class Fondo {
 	}
 
 	/** El mismo fondo para los otros menus (Opciones, etc.), sin el agujero negro. */
-	public static void dibujarSinAgujero(GuiGraphicsExtractor g, int ancho, int alto) {
+	public static void dibujarSinAgujero(GuiGraphics g, int ancho, int alto) {
 		float t = tiempo();
 		capas(g, ancho, alto, t);
 		g.fill(0, 0, ancho, alto, 0x8C000000);   // mas oscuro, para que se lean bien los botones
 	}
 
-	private static void capas(GuiGraphicsExtractor g, int ancho, int alto, float t) {
+	private static void capas(GuiGraphics g, int ancho, int alto, float t) {
 		g.fill(0, 0, ancho, alto, 0xFF000000);
 		capa(g, NEBULOSA, NEB_W, NEB_H, t * V_NEB, ancho, alto, 0xFFFFFFFF);
 		capa(g, ESTRELLAS_A, EST_W, EST_H, t * V_EST_A, ancho, alto, argb(0.75f + 0.25f * (float) Math.sin(t * 0.9), 0xFFFFFF));
@@ -61,7 +61,7 @@ public final class Fondo {
 	 * Se dibujan copias enteras de la imagen corridas con posicion con decimales: el tamano no cambia nunca
 	 * de un cuadro al otro, asi el movimiento es parejo (antes el redondeo hacia temblar las estrellas).
 	 */
-	private static void capa(GuiGraphicsExtractor g, Identifier t, int texW, int texH, float desplazamiento, int ancho, int alto, int color) {
+	private static void capa(GuiGraphics g, Identifier t, int texW, int texH, float desplazamiento, int ancho, int alto, int color) {
 		float s = alto / (float) texH;
 		int w = Math.round(texW * s);                 // ancho de una copia en pantalla (fijo)
 		float x0 = -((desplazamiento % texW) / texW) * w;
@@ -77,16 +77,16 @@ public final class Fondo {
 	 * @param cx,cy  centro del agujero negro en la pantalla
 	 * @param diametro  diametro del agujero (sin el disco) en pixeles de pantalla
 	 */
-	public static void dibujar(GuiGraphicsExtractor g, int ancho, int alto, int cx, int cy, float diametro) {
+	public static void dibujar(GuiGraphics g, int ancho, int alto, int cx, int cy, float diametro) {
 		capas(g, ancho, alto, tiempo());
 		agujero(g, cx, cy, diametro);
 	}
 
 	/** Solo el cielo (nebulosa, estrellas, fugaz), sin oscurecer ni agujero. */
-	public static void cielo(GuiGraphicsExtractor g, int ancho, int alto) { capas(g, ancho, alto, tiempo()); }
+	public static void cielo(GuiGraphics g, int ancho, int alto) { capas(g, ancho, alto, tiempo()); }
 
 	/** Solo el agujero negro, en cualquier tamaño (para el secreto lo agranda hasta tapar todo). */
-	public static void agujero(GuiGraphicsExtractor g, int cx, int cy, float diametro) {
+	public static void agujero(GuiGraphics g, int cx, int cy, float diametro) {
 		float t = tiempo();
 		// agujero negro: el disco gira (lo gira el juego, sin cuadros) y el brillo late despacio
 		float rs = diametro / 2f;                                   // radio del agujero en pantalla
@@ -111,7 +111,7 @@ public final class Fondo {
 	}
 
 	/** Cada 13 segundos, una estrella fugaz en un lugar distinto. */
-	private static void fugaz(GuiGraphicsExtractor g, int ancho, int alto, float t) {
+	private static void fugaz(GuiGraphics g, int ancho, int alto, float t) {
 		final float ciclo = 13f, dura = 1.1f;
 		int n = (int) (t / ciclo);
 		float f = (t - n * ciclo - 4f) / dura;   // arranca 4 s despues de empezar cada ciclo

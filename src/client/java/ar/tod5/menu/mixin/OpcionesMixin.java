@@ -20,7 +20,7 @@ public class OpcionesMixin {
 	private LayoutElement tod5$boton(LayoutElement contenido) {
 		if (contenido instanceof GridLayout grilla) {
 			Screen opciones = (Screen) (Object) this;
-			grilla.addChild(Button.builder(Component.literal("Trucofdeath..."), b -> Minecraft.getInstance().gui.setScreen(new PantallaAjustes(opciones))).build(), 5, 0, 1, 2);
+			grilla.addChild(Button.builder(Component.literal("Trucofdeath..."), b -> Minecraft.getInstance().setScreen(new PantallaAjustes(opciones))).build(), 5, 0, 1, 2);
 		}
 		return contenido;
 	}

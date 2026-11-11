@@ -1,7 +1,7 @@
 package ar.tod5.menu.tablet;
 
 import java.util.*;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
@@ -72,7 +72,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { if (this.textoActivo) { this.minecraft.textInputManager().stopTextInput(this); this.textoActivo = false; } this.anuncios.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { this.anuncios.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -127,7 +127,7 @@ public class Tablet extends Screen {
 	}
 
 	// ---------- piezas ----------
-	private static void relieve(GuiGraphicsExtractor g, int x, int y, int w, int h, int fondo, int claro, int oscuro) {
+	private static void relieve(GuiGraphics g, int x, int y, int w, int h, int fondo, int claro, int oscuro) {
 		g.fill(x, y, x + w, y + h, NEGRO);
 		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fondo);
 		g.fill(x + 1, y + 1, x + w - 1, y + 2, claro);
@@ -136,13 +136,13 @@ public class Tablet extends Screen {
 		g.fill(x + w - 2, y + 1, x + w - 1, y + h - 1, oscuro);
 	}
 	/** Fila oscura con borde fino: para las tarjetas con texto. */
-	private static void tarjeta(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+	private static void tarjeta(GuiGraphics g, int x, int y, int w, int h) {
 		g.fill(x, y, x + w, y + h, LINEA);
 		g.fill(x + 1, y + 1, x + w - 1, y + h - 1, 0xFF141B18);
 		g.fill(x + 1, y + 1, x + w - 1, y + 2, 0xFF1D2622);
 	}
 	/** Casilla hundida (como las del inventario, pero oscura). */
-	private static void hundido(GuiGraphicsExtractor g, int x, int y, int w, int h) {
+	private static void hundido(GuiGraphics g, int x, int y, int w, int h) {
 		g.fill(x, y, x + w, y + h, SLOT);
 		g.fill(x, y, x + w, y + 1, SLOT_OSCURO);
 		g.fill(x, y, x + 1, y + h, SLOT_OSCURO);
@@ -150,33 +150,33 @@ public class Tablet extends Screen {
 		g.fill(x + w - 1, y, x + w, y + h, SLOT_CLARO);
 	}
 	/** Boton oscuro; borde verde si esta elegido o con el mouse encima. Devuelve su ancho. */
-	int boton(GuiGraphicsExtractor g, String t, int x, int y, boolean elegido, int mx, int my, Runnable accion) {
+	int boton(GuiGraphics g, String t, int x, int y, boolean elegido, int mx, int my, Runnable accion) {
 		int bw = this.font.width(t) + 10, bh = 13;
 		boolean encima = mx >= x && my >= y && mx < x + bw && my < y + bh;
 		g.fill(x, y, x + bw, y + bh, elegido ? (admin ? 0xFF9E862F : 0xFF2F9E46) : encima ? acento() : 0xFF3A4840);
 		g.fill(x + 1, y + 1, x + bw - 1, y + bh - 1, elegido ? (admin ? 0xFF3A3214 : 0xFF143A1F) : encima ? (admin ? 0xFF2D2A1E : 0xFF1E2D24) : 0xFF1A211D);
 		g.fill(x + 1, y + 1, x + bw - 1, y + 2, elegido ? (admin ? 0xFF5A4E1F : 0xFF1F5A2E) : 0xFF27312C);
-		g.text(this.font, t, x + 5, y + 3, elegido || encima ? acento() : TEXTO, true);
+		g.drawString(this.font, t, x + 5, y + 3, elegido || encima ? acento() : TEXTO, true);
 		this.zonas.add(new Zona(x, y, bw, bh, accion));
 		return bw;
 	}
-	private void numerito(GuiGraphicsExtractor g, int n, int x, int y) {
+	private void numerito(GuiGraphics g, int n, int x, int y) {
 		String s = String.valueOf(n);
 		int bw = Math.max(10, this.font.width(s) + 5);
 		int bh = 11;
 		g.fill(x, y - 1, x + bw, y - 1 + bh, NEGRO);
 		g.fill(x + 1, y, x + bw - 1, y - 2 + bh, VERDE);
-		g.text(this.font, s, x + (bw - this.font.width(s)) / 2 + 1, y + 1, 0xFF0B2A0B, false);
+		g.drawString(this.font, s, x + (bw - this.font.width(s)) / 2 + 1, y + 1, 0xFF0B2A0B, false);
 	}
 
 	// ---------- pantalla ----------
 	@Override
-	public void extractRenderState(GuiGraphicsExtractor g, int mx, int my, float a) {
+	public void render(GuiGraphics g, int mx, int my, float a) {
 		this.datos = TabletDatos.actual();
 		if (!this.datos.editor) { this.editando = false; admin = false; }
 		boolean escribe = this.seccion == Seccion.ANUNCIOS && this.anuncios.escribiendo();
 		if (escribe != this.textoActivo) {
-			if (escribe) this.minecraft.textInputManager().startTextInput(this); else this.minecraft.textInputManager().stopTextInput(this);
+			// en 1.21.11 las letras llegan solas (no hace falta avisar que hay un cuadro de texto)
 			this.textoActivo = escribe;
 		}
 		if (admin != esAdmin(this.seccion)) this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
@@ -206,7 +206,7 @@ public class Tablet extends Screen {
 			relieve(g, tx, ty, tam, tam, act ? (admin ? 0xFF302A16 : 0xFF16301F) : sobre ? 0xFF2A3230 : 0xFF1E2422, act ? acento() : M_CLARO, act ? (admin ? 0xFF7A661F : 0xFF1F7A33) : M_OSCURO);
 			if (act) g.fill(tx - 3, ty + 6, tx - 1, ty + tam - 6, pulso(t, 0.6f, 1f));
 			g.pose().pushMatrix(); g.pose().translate(tx + 3, ty + 3); g.pose().scale(1.25f, 1.25f);
-			g.item(s.icono, 0, 0);
+			g.renderItem(s.icono, 0, 0);
 			g.pose().popMatrix();
 			int badge = switch (s) {
 				case NOVEDADES -> datos.novedadesNuevas();
@@ -239,14 +239,14 @@ public class Tablet extends Screen {
 			boolean sobre = mx >= ax && my >= ay && mx < ax + aw && my < ay + 11;
 			g.fill(ax, ay, ax + aw, ay + 11, admin ? AMARILLO_ADMIN : sobre ? 0xFF8A948E : M_BORDE);
 			g.fill(ax + 1, ay + 1, ax + aw - 1, ay + 10, admin ? 0xFF3A3214 : 0xFF14181A);
-			g.text(this.font, at, ax + 4, ay + 2, admin ? AMARILLO_ADMIN : sobre ? TEXTO : GRIS_TEXTO, false);
+			g.drawString(this.font, at, ax + 4, ay + 2, admin ? AMARILLO_ADMIN : sobre ? TEXTO : GRIS_TEXTO, false);
 			this.zonas.add(new Zona(ax, ay, aw, 11, () -> {
 				this.anuncios.guardarSiHaceFalta();
 				admin = !admin;
 				this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
 			}));
 		}
-		super.extractRenderState(g, mx, my, a);
+		super.render(g, mx, my, a);
 		if (encima != null) g.setTooltipForNextFrame(Component.literal(encima.nombre), mx, my);
 	}
 
@@ -260,7 +260,7 @@ public class Tablet extends Screen {
 	}
 
 	/** El marco de metal: bisel, esquinas cortadas, tornillos, muesca arriba con el dia y luces verdes. */
-	private void marco(GuiGraphicsExtractor g, float t) {
+	private void marco(GuiGraphics g, float t) {
 		int x = x0, y = y0, x2 = x0 + w, y2 = y0 + h, c = 4;   // c = cuanto se cortan las esquinas
 		// silueta con esquinas cortadas (por escalones)
 		for (int i = 0; i < h; i++) {
@@ -312,7 +312,7 @@ public class Tablet extends Screen {
 		g.pose().pushMatrix();
 		g.pose().translate((x + x2) / 2f, my0 + 5);
 		g.pose().scale(1.25f, 1.25f);
-		g.text(this.font, dia, -this.font.width(dia) / 2, 0, pulso(t, 0.8f, 1f), true);
+		g.drawString(this.font, dia, -this.font.width(dia) / 2, 0, pulso(t, 0.8f, 1f), true);
 		g.pose().popMatrix();
 		// luces abajo al centro
 		int bw = 60, bx = (x + x2) / 2 - bw / 2;
@@ -320,22 +320,22 @@ public class Tablet extends Screen {
 		for (int i = 0; i < bw; i += 4) led(g, bx + i + 1, y2 - 5, 2, 2, t, i * 0.05f);
 	}
 
-	private static void led(GuiGraphicsExtractor g, int x, int y, int lw, int lh, float t, float fase) {
+	private static void led(GuiGraphics g, int x, int y, int lw, int lh, float t, float fase) {
 		g.fill(x, y, x + lw, y + lh, pulso(t + fase, 0.35f, 1f));
 	}
 
 	private void irA(Seccion s) { this.seccion = s; this.dia = datos.hoy; }
 
-	void titulo(GuiGraphicsExtractor g, String t, int x, int y) {
+	void titulo(GuiGraphics g, String t, int x, int y) {
 		g.pose().pushMatrix();
 		g.pose().translate(x, y);
 		g.pose().scale(1.25f, 1.25f);
-		g.text(this.font, t, 0, 0, TEXTO, false);
+		g.drawString(this.font, t, 0, 0, TEXTO, false);
 		g.pose().popMatrix();
 	}
 
 	/** Fila de dias: los ultimos 7, arranca en hoy. Devuelve la altura usada. */
-	private int filaDeDias(GuiGraphicsExtractor g, int x, int y, int maxX, int mx, int my, boolean puntitos) {
+	private int filaDeDias(GuiGraphics g, int x, int y, int maxX, int mx, int my, boolean puntitos) {
 		int bx = x, by = y;
 		for (int n = Math.max(1, datos.hoy - 6); n <= datos.hoy; n++) {
 			String t = n == datos.hoy ? "Día " + n + " (hoy)" : "Día " + n;
@@ -350,7 +350,7 @@ public class Tablet extends Screen {
 	}
 
 	// ---------- INICIO ----------
-	private void inicio(GuiGraphicsExtractor g, int x, int y, int cw, int mx, int my) {
+	private void inicio(GuiGraphics g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Hoy, día " + datos.hoy, x, y);
 		int colW = (cw - 6) / 2, alto = 46;
 		String[][] tarjetas = datos.resumen(reclamadas);
@@ -360,20 +360,20 @@ public class Tablet extends Screen {
 			tarjeta(g, tx, ty, colW, alto);
 			boolean encima = mx >= tx && my >= ty && mx < tx + colW && my < ty + alto;
 			if (encima) g.fill(tx + 1, ty + 1, tx + colW - 1, ty + alto - 1, 0x33FFFFFF);
-			g.text(this.font, tarjetas[i][0], tx + 6, ty + 5, 0xFFE0E0E0, true);
+			g.drawString(this.font, tarjetas[i][0], tx + 6, ty + 5, 0xFFE0E0E0, true);
 			g.pose().pushMatrix(); g.pose().translate(tx + 6, ty + 16); g.pose().scale(1.5f, 1.5f);
-			g.text(this.font, tarjetas[i][1], 0, 0, VERDE, true);
+			g.drawString(this.font, tarjetas[i][1], 0, 0, VERDE, true);
 			g.pose().popMatrix();
 			String linea = tarjetas[i][2];
 			if (this.font.width(linea) > colW - 12) linea = this.font.plainSubstrByWidth(linea, colW - 12 - this.font.width("...")) + "...";
-			g.text(this.font, linea, tx + 6, ty + 34, BLANCO, true);
+			g.drawString(this.font, linea, tx + 6, ty + 34, BLANCO, true);
 			final Seccion d = destino[i]; final boolean cambios = i == 2;
 			this.zonas.add(new Zona(tx, ty, colW, alto, () -> { irA(d); if (cambios) this.filtro = "cambio"; }));
 		}
 	}
 
 	// ---------- NOVEDADES ----------
-	private void novedades(GuiGraphicsExtractor g, int x, int y, int cw, int ch, int mx, int my) {
+	private void novedades(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
 		titulo(g, "Novedades", x, y);
 		int fx = x + cw;
 		String[][] fs = { { "cambio", "Cambios" }, { "aviso", "Avisos" }, { "todo", "Todo" } };
@@ -381,7 +381,7 @@ public class Tablet extends Screen {
 		int yy = y + 16;
 		yy += filaDeDias(g, x, yy, x + cw, mx, my, true) + 4;
 		List<TabletDatos.Novedad> lista = datos.novedadesDe(this.dia, this.filtro);
-		if (lista.isEmpty()) { g.text(this.font, "Ese día no hubo novedades de este tipo.", x, yy + 6, GRIS_TEXTO, false); return; }
+		if (lista.isEmpty()) { g.drawString(this.font, "Ese día no hubo novedades de este tipo.", x, yy + 6, GRIS_TEXTO, false); return; }
 		for (TabletDatos.Novedad n : lista) {
 			boolean conTitulo = n.titulo() != null;
 			List<FormattedCharSequence> renglones = this.font.split(Component.literal(n.texto()), cw - 66);
@@ -391,11 +391,11 @@ public class Tablet extends Screen {
 			int[] c = colorDe(n.tipo());
 			String et = etiquetaDe(n.tipo());
 			relieve(g, x + 4, yy + 4, 52, 11, c[1], c[2], c[3]);
-			g.text(this.font, et, x + 4 + (52 - this.font.width(et)) / 2, yy + 6, c[0], true);
+			g.drawString(this.font, et, x + 4 + (52 - this.font.width(et)) / 2, yy + 6, c[0], true);
 			if (n.nuevo()) g.fill(x + cw - 6, yy + 3, x + cw - 3, yy + 6, VERDE);
 			int ry = yy + 5;
-			if (conTitulo) { g.text(this.font, n.titulo(), x + 62, ry, c[0], true); ry += 11; }
-			for (FormattedCharSequence r : renglones) { g.text(this.font, r, x + 62, ry, 0xFFECECEC, true); ry += 10; }
+			if (conTitulo) { g.drawString(this.font, n.titulo(), x + 62, ry, c[0], true); ry += 11; }
+			for (FormattedCharSequence r : renglones) { g.drawString(this.font, r, x + 62, ry, 0xFFECECEC, true); ry += 10; }
 			Vistos.marcar("n:" + n.id());   // ya la vio
 			yy += alto + 3;
 		}
@@ -421,43 +421,43 @@ public class Tablet extends Screen {
 	// ---------- MISIONES: la diaria arriba, las opcionales abajo ----------
 	private final Set<String> abiertas = new HashSet<>();   // misiones con las recompensas desplegadas
 
-	private void misiones(GuiGraphicsExtractor g, int x, int y, int cw, int mx, int my) {
+	private void misiones(GuiGraphics g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Misiones", x, y);
 		int yy = y + 16;
 		yy += filaDeDias(g, x, yy, x + cw, mx, my, false) + 4;
-		g.text(this.font, "MISIÓN DIARIA", x, yy, GRIS_TEXTO, false);
+		g.drawString(this.font, "MISIÓN DIARIA", x, yy, GRIS_TEXTO, false);
 		yy += 11;
 		TabletDatos.Mision d = datos.diarias.get(this.dia);
-		if (d == null) { g.text(this.font, "Ese día no hubo misión diaria.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
+		if (d == null) { g.drawString(this.font, "Ese día no hubo misión diaria.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
 		else {
 			int extra = this.abiertas.contains(d.id()) ? altoRecompensas(d, cw) : 0;
 			int alto = 34 + extra;
 			tarjeta(g, x, yy, cw, alto);
 			g.pose().pushMatrix(); g.pose().translate(x + 6, yy + 5); g.pose().scale(1.25f, 1.25f);
-			g.text(this.font, d.titulo(), 0, 0, BLANCO, true);
+			g.drawString(this.font, d.titulo(), 0, 0, BLANCO, true);
 			g.pose().popMatrix();
 			int barW = cw - 150;
 			g.fill(x + 6, yy + 21, x + 6 + barW, yy + 27, NEGRO);
 			g.fill(x + 7, yy + 22, x + 5 + barW, yy + 26, SLOT_OSCURO);
 			int lleno = (int) ((barW - 2) * Math.min(1, d.hecho() / (float) d.total()));
 			g.fill(x + 7, yy + 22, x + 7 + lleno, yy + 26, VERDE);
-			g.text(this.font, d.hecho() + " / " + d.total(), x + 10 + barW, yy + 20, BLANCO, true);
+			g.drawString(this.font, d.hecho() + " / " + d.total(), x + 10 + barW, yy + 20, BLANCO, true);
 			botonRecompensas(g, d, x + cw - 5, yy + 3, mx, my);
 			boolean hecha = this.reclamadas.contains(d.id());
-			if (hecha) g.text(this.font, "Reclamada", x + cw - 58, yy + 20, VERDE, true);
+			if (hecha) g.drawString(this.font, "Reclamada", x + cw - 58, yy + 20, VERDE, true);
 			else if (d.hecho() >= d.total()) boton(g, "Reclamar", x + cw - 58, yy + 18, false, mx, my, () -> this.reclamadas.add(d.id()));
 			if (extra > 0) dibujarRecompensas(g, d, x + 6, yy + 33, cw - 12, mx, my);
 			yy += alto + 6;
 		}
-		g.text(this.font, "MISIONES OPCIONALES", x, yy, GRIS_TEXTO, false);
+		g.drawString(this.font, "MISIONES OPCIONALES", x, yy, GRIS_TEXTO, false);
 		yy += 11;
-		if (datos.opcionales.isEmpty()) g.text(this.font, "Todavía no hay misiones opcionales.", x, yy + 2, GRIS_TEXTO, false);
+		if (datos.opcionales.isEmpty()) g.drawString(this.font, "Todavía no hay misiones opcionales.", x, yy + 2, GRIS_TEXTO, false);
 		for (TabletDatos.Mision m : datos.opcionales) {
 			int extra = this.abiertas.contains(m.id()) ? altoRecompensas(m, cw) : 0;
 			tarjeta(g, x, yy, cw, 18 + extra);
-			g.text(this.font, this.font.plainSubstrByWidth(m.titulo(), cw - 170), x + 5, yy + 5, BLANCO, true);
+			g.drawString(this.font, this.font.plainSubstrByWidth(m.titulo(), cw - 170), x + 5, yy + 5, BLANCO, true);
 			String p = m.hecho() + " / " + m.total();
-			g.text(this.font, p, x + cw - 150, yy + 5, BLANCO, true);
+			g.drawString(this.font, p, x + cw - 150, yy + 5, BLANCO, true);
 			botonRecompensas(g, m, x + cw - 3, yy + 2, mx, my);
 			if (extra > 0) dibujarRecompensas(g, m, x + 5, yy + 17, cw - 10, mx, my);
 			yy += 20 + extra;
@@ -465,7 +465,7 @@ public class Tablet extends Screen {
 	}
 
 	/** "Ver recompensas" / "Ocultar": despliega la cajita con todas las recompensas. x = borde derecho. */
-	private void botonRecompensas(GuiGraphicsExtractor g, TabletDatos.Mision m, int derecha, int y, int mx, int my) {
+	private void botonRecompensas(GuiGraphics g, TabletDatos.Mision m, int derecha, int y, int mx, int my) {
 		boolean abierta = this.abiertas.contains(m.id());
 		String t = abierta ? "Ocultar" : "Ver recompensas";
 		int bw = this.font.width(t) + 10;
@@ -479,14 +479,14 @@ public class Tablet extends Screen {
 		return 6 + filas * (CASILLA + 1);
 	}
 	/** Las recompensas como casillas de inventario (con cantidad y el nombre al pasar el mouse). */
-	private void dibujarRecompensas(GuiGraphicsExtractor g, TabletDatos.Mision m, int x, int y, int ancho, int mx, int my) {
+	private void dibujarRecompensas(GuiGraphics g, TabletDatos.Mision m, int x, int y, int ancho, int mx, int my) {
 		g.fill(x, y, x + ancho, y + 1, LINEA);
 		int pf = porFila(ancho), i = 0;
 		for (ItemStack st : m.recompensas()) {
 			int sx = x + (i % pf) * (CASILLA + 1), sy = y + 4 + (i / pf) * (CASILLA + 1);
 			hundido(g, sx, sy, CASILLA, CASILLA);
-			g.item(st, sx + 1, sy + 1);
-			if (st.getCount() > 1) g.itemDecorations(this.font, st, sx + 1, sy + 1, String.valueOf(st.getCount()));
+			g.renderItem(st, sx + 1, sy + 1);
+			if (st.getCount() > 1) g.renderItemDecorations(this.font, st, sx + 1, sy + 1, String.valueOf(st.getCount()));
 			if (mx >= sx && my >= sy && mx < sx + CASILLA && my < sy + CASILLA)
 				g.setTooltipForNextFrame(Component.literal(st.getCount() + " × ").append(st.getHoverName()), mx, my);
 			i++;
@@ -498,7 +498,7 @@ public class Tablet extends Screen {
 	private final Set<String> marcados = new LinkedHashSet<>();
 	private final Map<Identifier, Boolean> tieneTextura = new HashMap<>();
 
-	private void crafteos(GuiGraphicsExtractor g, int x, int y, int cw, int mx, int my) {
+	private void crafteos(GuiGraphics g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Crafteos", x, y);
 		int fx = x + 70;
 		String[][] cs = { { "todos", "Todos" }, { "general", "General" }, { "aether", "Aether" } };
@@ -521,7 +521,7 @@ public class Tablet extends Screen {
 			boolean marcado = this.editando && this.marcados.contains(c.id());
 			if (i == this.itemElegido && !sombra) { g.fill(sx, sy, sx + t, sy + t, VERDE); g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0xFF1F3A27); }
 			if (sombra) silueta(g, c.icono(), sx + 1, sy + 1);
-			else g.item(c.icono(), sx + 1, sy + 1);
+			else g.renderItem(c.icono(), sx + 1, sy + 1);
 			if (this.editando && !c.activo()) {                       // oculto: oscurecido, con una marquita roja
 				g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x99000000);
 				g.fill(sx + 1, sy + t - 4, sx + 4, sy + t - 1, 0xFFE04040);
@@ -538,7 +538,7 @@ public class Tablet extends Screen {
 				if (this.editando && !this.marcados.remove(c.id())) this.marcados.add(c.id());
 			}));
 		}
-		if (visibles.isEmpty()) g.text(this.font, "Todavía no hay crafteos.", gx + 4, gy + filas * t + 6, GRIS_TEXTO, false);
+		if (visibles.isEmpty()) g.drawString(this.font, "Todavía no hay crafteos.", gx + 4, gy + filas * t + 6, GRIS_TEXTO, false);
 
 		// editando: activar / ocultar los marcados (varios de una: un solo anuncio en el chat)
 		if (this.editando) {
@@ -554,10 +554,10 @@ public class Tablet extends Screen {
 		TabletDatos.Crafteo c = visibles.isEmpty() ? null : visibles.get(Math.min(this.itemElegido, visibles.size() - 1));
 		if (c != null && !c.soloSombra() && (this.editando || c.activo())) {
 			int rx = gx + cols * t + 14, ry = gy;
-			g.text(this.font, c.nombre(), rx, ry, TEXTO, false);
+			g.drawString(this.font, c.nombre(), rx, ry, TEXTO, false);
 			if (this.editando) {
 				String estado = c.activo() ? "Activo" : "Oculto";
-				g.text(this.font, estado, x + cw - this.font.width(estado), ry, c.activo() ? VERDE : 0xFFE06060, false);
+				g.drawString(this.font, estado, x + cw - this.font.width(estado), ry, c.activo() ? VERDE : 0xFFE06060, false);
 			}
 			int mgx = rx, mgy = ry + 12;
 			for (int i = 0; i < 9; i++) {
@@ -565,7 +565,7 @@ public class Tablet extends Screen {
 				hundido(g, sx, sy, t, t);
 				ItemStack st = c.grilla()[i];
 				if (st != null && !st.isEmpty()) {
-					g.item(st, sx + 1, sy + 1);
+					g.renderItem(st, sx + 1, sy + 1);
 					if (mx >= sx && my >= sy && mx < sx + t && my < sy + t) g.setTooltipForNextFrame(st.getHoverName(), mx, my);
 				}
 			}
@@ -576,11 +576,11 @@ public class Tablet extends Screen {
 			// resultado
 			int ox = ax + 22, oy = mgy + t - 4;
 			hundido(g, ox, oy, 26, 26);
-			g.item(c.icono(), ox + 5, oy + 5);
-			if (c.cantidad() > 1) g.itemDecorations(this.font, c.icono(), ox + 5, oy + 5, String.valueOf(c.cantidad()));
+			g.renderItem(c.icono(), ox + 5, oy + 5);
+			if (c.cantidad() > 1) g.renderItemDecorations(this.font, c.icono(), ox + 5, oy + 5, String.valueOf(c.cantidad()));
 			int ny = mgy + 3 * t + 6;
-			g.text(this.font, "Desde el día " + c.dia(), rx, ny, GRIS_TEXTO, false);
-			for (FormattedCharSequence r : this.font.split(Component.literal(c.nota()), x + cw - rx)) { ny += 10; g.text(this.font, r, rx, ny, TEXTO, false); }
+			g.drawString(this.font, "Desde el día " + c.dia(), rx, ny, GRIS_TEXTO, false);
+			for (FormattedCharSequence r : this.font.split(Component.literal(c.nota()), x + cw - rx)) { ny += 10; g.drawString(this.font, r, rx, ny, TEXTO, false); }
 			if (this.editando) {   // la sombra: si esta oculto, los jugadores ven (o no) su silueta
 				String sb = "Sombra: " + (c.sombra() ? "sí" : "no");
 				boton(g, sb, rx, ny + 14, c.sombra(), mx, my, () -> enviar("crafteo_sombra", List.of(c.id()), !c.sombra()));
@@ -596,12 +596,12 @@ public class Tablet extends Screen {
 	}
 
 	/** La silueta negra de un item (para los crafteos que todavia no salieron, si tienen sombra). */
-	private void silueta(GuiGraphicsExtractor g, ItemStack st, int x, int y) {
+	private void silueta(GuiGraphics g, ItemStack st, int x, int y) {
 		Identifier key = BuiltInRegistries.ITEM.getKey(st.getItem());
 		Identifier tex = Identifier.fromNamespaceAndPath(key.getNamespace(), "textures/item/" + key.getPath() + ".png");
 		boolean hay = this.tieneTextura.computeIfAbsent(tex, k -> this.minecraft.getResourceManager().getResource(k).isPresent());
 		if (hay) g.blit(RenderPipelines.GUI_TEXTURED, tex, x, y, 0, 0, 16, 16, 16, 16, 16, 16, 0xFF000000);
-		else { g.fill(x + 2, y + 2, x + 14, y + 14, 0xFF000000); g.text(this.font, "?", x + 6, y + 4, 0xFF3A3A3A, false); }
+		else { g.fill(x + 2, y + 2, x + 14, y + 14, 0xFF000000); g.drawString(this.font, "?", x + 6, y + 4, 0xFF3A3A3A, false); }
 	}
 
 	/** Lo que hace el editor: se lo mando al server, que lo aplica y le manda a todos la tablet actualizada. */
@@ -616,10 +616,10 @@ public class Tablet extends Screen {
 	}
 
 	// ---------- EQUIPO ----------
-	private void equipo(GuiGraphicsExtractor g, int x, int y, int cw, int ch, int mx, int my) {
+	private void equipo(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
 		TabletDatos.Equipo eq = datos.equipo;
 		g.pose().pushMatrix(); g.pose().translate(x, y); g.pose().scale(1.25f, 1.25f);
-		g.text(this.font, eq.nombre, 0, 0, eq.color, false);
+		g.drawString(this.font, eq.nombre, 0, 0, eq.color, false);
 		g.pose().popMatrix();
 		int fx = x + cw;
 		fx -= this.font.width("Notas") + 12; boton(g, "Notas", fx, y - 1, verNotas, mx, my, () -> verNotas = true);
@@ -628,7 +628,7 @@ public class Tablet extends Screen {
 		int yy = y + 17, lw = 110;
 		for (TabletDatos.Miembro m : eq.miembros) {
 			hundido(g, x, yy, lw, 14);
-			g.text(this.font, this.font.plainSubstrByWidth(m.nombre(), lw - 18), x + 4, yy + 3, m.conectado() ? BLANCO : GRIS_TEXTO, true);
+			g.drawString(this.font, this.font.plainSubstrByWidth(m.nombre(), lw - 18), x + 4, yy + 3, m.conectado() ? BLANCO : GRIS_TEXTO, true);
 			g.fill(x + lw - 9, yy + 4, x + lw - 3, yy + 10, NEGRO);
 			g.fill(x + lw - 8, yy + 5, x + lw - 4, yy + 9, m.conectado() ? VERDE : SOMBRA);
 			yy += 15;
@@ -638,7 +638,7 @@ public class Tablet extends Screen {
 		if (!verNotas) {
 			// chat: fondo negro como el de Minecraft; los mensajes largos bajan de renglon
 			g.fill(bx, bt, bx + bw, bt + bh, 0xFF000000);
-			g.outline(bx, bt, bw, bh, SLOT_OSCURO);
+			g.renderOutline(bx, bt, bw, bh, SLOT_OSCURO);
 			int caja = 16;
 			List<FormattedCharSequence> renglones = new ArrayList<>();
 			for (TabletDatos.Mensaje msj : eq.chat) {
@@ -648,10 +648,10 @@ public class Tablet extends Screen {
 			int maxRenglones = (bh - caja - 8) / 10;
 			int desde = Math.max(0, renglones.size() - maxRenglones);
 			int ry = bt + bh - caja - 6 - (renglones.size() - desde) * 10;
-			for (int i = desde; i < renglones.size(); i++) { g.text(this.font, renglones.get(i), bx + 5, ry, BLANCO, true); ry += 10; }
+			for (int i = desde; i < renglones.size(); i++) { g.drawString(this.font, renglones.get(i), bx + 5, ry, BLANCO, true); ry += 10; }
 			g.fill(bx + 3, bt + bh - caja - 2, bx + bw - 3, bt + bh - 3, 0xFF000000);
-			g.outline(bx + 3, bt + bh - caja - 2, bw - 6, caja - 1, 0xFFA0A0A0);
-			g.text(this.font, "Escribí al equipo... (máx. 120 letras)", bx + 7, bt + bh - caja + 2, 0xFF707070, false);
+			g.renderOutline(bx + 3, bt + bh - caja - 2, bw - 6, caja - 1, 0xFFA0A0A0);
+			g.drawString(this.font, "Escribí al equipo... (máx. 120 letras)", bx + 7, bt + bh - caja + 2, 0xFF707070, false);
 		} else {
 			int ny = bt;
 			for (TabletDatos.Nota n : eq.notas) {
@@ -659,10 +659,10 @@ public class Tablet extends Screen {
 				int alto = 26 + rs.size() * 10;
 				g.fill(bx, ny, bx + bw, ny + alto, 0xFF6B5A3A);
 				g.fill(bx + 1, ny + 1, bx + bw - 1, ny + alto - 1, 0xFFE9E1C4);
-				g.text(this.font, n.titulo(), bx + 6, ny + 5, 0xFF3B2F1C, false);
+				g.drawString(this.font, n.titulo(), bx + 6, ny + 5, 0xFF3B2F1C, false);
 				int ry = ny + 16;
-				for (FormattedCharSequence r : rs) { g.text(this.font, r, bx + 6, ry, 0xFF3B2F1C, false); ry += 10; }
-				g.text(this.font, n.autor(), bx + 6, ry, 0xFF6B5A3A, false);
+				for (FormattedCharSequence r : rs) { g.drawString(this.font, r, bx + 6, ry, 0xFF3B2F1C, false); ry += 10; }
+				g.drawString(this.font, n.autor(), bx + 6, ry, 0xFF6B5A3A, false);
 				ny += alto + 4;
 			}
 			boton(g, "+ Nueva nota", bx, ny, false, mx, my, () -> {});
