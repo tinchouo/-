@@ -20,7 +20,7 @@ import net.minecraft.util.Util;
  *
  * Los renglones se cortan solos a un ancho fijo (ANCHO): lo que se ve aca es exactamente como sale en el chat.
  * Enter = renglon nuevo a mano (para separar parrafos).
- * Teclas: flechas, Inicio/Fin, Shift para seleccionar, Ctrl+A/C/X/V, Ctrl+Z (deshacer), Ctrl+B/I/U (estilos).
+ * Teclas: flechas, Inicio/Fin, Shift para seleccionar, Ctrl+A/C/X/V, Ctrl+Z (deshacer), Ctrl+I/U (estilos; Ctrl+B no, es el narrador).
  */
 public class EditorTexto {
 	/** Ancho de los renglones en pixeles (el mismo que usa el server para los avisos simples). */
@@ -152,7 +152,6 @@ public class EditorTexto {
 		if (e.isCut()) { if (haySeleccion()) { mc.keyboardHandler.setClipboard(planoEntre(selIni(), selFin())); guardarHistorial(); borrarSeleccion(); } return true; }
 		if (e.isPaste()) { escribir(mc.keyboardHandler.getClipboard()); return true; }
 		if (ctrl && e.shortcutKey() == 122) { deshacer(); return true; }          // Ctrl+Z
-		if (ctrl && e.shortcutKey() == 98) { alternar(0); return true; }         // Ctrl+B
 		if (ctrl && e.shortcutKey() == 105) { alternar(1); return true; }        // Ctrl+I
 		if (ctrl && e.shortcutKey() == 117) { alternar(2); return true; }        // Ctrl+U
 		switch (e.input()) {
