@@ -1,0 +1,77 @@
+package ar.tod5.servidor;
+
+import java.util.List;
+import java.util.Locale;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
+
+/**
+ * Las monedas de TOD5: amarilla, roja, morada y la ficha de casino.
+ * Son pepitas de oro con otro dibujo (el dibujo lo pone el mod: tod5:moneda_amarilla, etc.) y una marca propia,
+ * asi no se pueden usar como pepitas en la mesa de crafteo.
+ * Por ahora solo existen: para que sirve cada una se decide despues.
+ *
+ * /tod moneda <amarilla|roja|morada|ficha> [cantidad] [jugador]   (solo editores, para probar)
+ */
+final class Monedas implements Listener {
+	enum Tipo {
+		AMARILLA("moneda_amarilla", "Moneda amarilla", 0xF2C21C),
+		ROJA("moneda_roja", "Moneda roja", 0xD8382E),
+		MORADA("moneda_morada", "Moneda morada", 0xA050D8),
+		FICHA("ficha_casino", "Ficha de casino", 0x3AD86A);
+		final String modelo, nombre; final int color;
+		Tipo(String modelo, String nombre, int color) { this.modelo = modelo; this.nombre = nombre; this.color = color; }
+		static Tipo de(String s) {
+			for (Tipo t : values()) if (t.name().equalsIgnoreCase(s) || t.modelo.equalsIgnoreCase(s)) return t;
+			return null;
+		}
+	}
+
+	private final NamespacedKey marca;
+	Monedas(TOD5Servidor plugin) { this.marca = new NamespacedKey(plugin, "moneda"); }
+
+	ItemStack crear(Tipo t, int cantidad) {
+		ItemStack it = new ItemStack(Material.GOLD_NUGGET, Math.max(1, Math.min(64, cantidad)));
+		ItemMeta m = it.getItemMeta();
+		m.setItemModel(new NamespacedKey("tod5", t.modelo));
+		m.itemName(Component.text(t.nombre, TextColor.color(t.color)).decoration(TextDecoration.ITALIC, false));
+		m.getPersistentDataContainer().set(marca, PersistentDataType.STRING, t.name().toLowerCase(Locale.ROOT));
+		it.setItemMeta(m);
+		return it;
+	}
+	boolean esMoneda(ItemStack it) {
+		return it != null && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(marca, PersistentDataType.STRING);
+	}
+
+	/** Que no se puedan usar como pepitas de oro (9 pepitas = lingote). */
+	@EventHandler
+	public void alCraftear(PrepareItemCraftEvent e) {
+		for (ItemStack it : e.getInventory().getMatrix()) if (esMoneda(it)) { e.getInventory().setResult(null); return; }
+	}
+
+	/** /tod moneda <tipo> [cantidad] [jugador] */
+	void comando(CommandSender s, String[] args) {
+		Tipo t = args.length > 1 ? Tipo.de(args[1]) : null;
+		if (t == null) { s.sendMessage(Component.text("Uso: /tod moneda <amarilla|roja|morada|ficha> [cantidad] [jugador]", NamedTextColor.YELLOW)); return; }
+		int n = 1;
+		if (args.length > 2) try { n = Integer.parseInt(args[2]); } catch (NumberFormatException ex) { s.sendMessage(Component.text("La cantidad tiene que ser un número.", NamedTextColor.RED)); return; }
+		Player p = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : (s instanceof Player yo ? yo : null);
+		if (p == null) { s.sendMessage(Component.text("¿A quién? Poné el nombre del jugador.", NamedTextColor.RED)); return; }
+		p.getInventory().addItem(crear(t, n)).values().forEach(sobra -> p.getWorld().dropItem(p.getLocation(), sobra));
+		s.sendMessage(Component.text("Le di " + Math.max(1, Math.min(64, n)) + " × " + t.nombre + " a " + p.getName() + ".", NamedTextColor.GREEN));
+	}
+	static List<String> tipos() { return List.of("amarilla", "roja", "morada", "ficha"); }
+}

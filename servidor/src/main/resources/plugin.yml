@@ -7,7 +7,7 @@ authors: [tinchooide, Trick]
 commands:
   tod:
     description: Comandos de TOD
-    usage: /tod <abrir|cerrar|estado|recargar|dia|crafteo|anuncio|novedad|editor>
+    usage: /tod <abrir|cerrar|estado|recargar|dia|crafteo|anuncio|novedad|editor|moneda>
 permissions:
   tod5.admin:
     description: Admins de TOD (entran aunque este cerrado y usan /tod)
