@@ -119,6 +119,12 @@ jobs:
           xdotool key 1; sleep 1; xdotool mousemove 1200 700; import -window root cap/m1_mano.png
           xdotool key 4; sleep 1; import -window root cap/m2_ficha_mano.png
           xdotool key e; sleep 1.5; import -window root cap/m3_inventario.png; xdotool key Escape; sleep 1
+          # 10) la pestaña Trucofdeath del creativo (solo mirar: el server no conoce los items del mod)
+          echo "gamemode creative $N" >> srv/cmds.txt; sleep 2
+          xdotool key e; sleep 2; xdotool mousemove 1200 700; import -window root cap/k1_creativo.png
+          xdotool mousemove 806 196 click 1; sleep 1; xdotool type --delay 60 "oin"; sleep 1; xdotool mousemove 1200 700; import -window root cap/k2_buscar_oin.png
+          xdotool key ctrl+a; xdotool type --delay 60 "truquita"; sleep 1; import -window root cap/k3_buscar_truquita.png
+          xdotool key Escape; sleep 1
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs
