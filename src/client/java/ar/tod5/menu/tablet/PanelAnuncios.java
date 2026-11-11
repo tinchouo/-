@@ -272,12 +272,12 @@ final class PanelAnuncios {
 			g.nextStratum();
 			g.fill(this.simX - 1, this.simY - 1, this.simX + this.simW + 1, this.simY + this.simH + 1, t.acento());
 			g.fill(this.simX, this.simY, this.simX + this.simW, this.simY + this.simH, 0xFF0B100E);
-			for (int k = 0; k < SIMBOLOS.length; k++) {
-				String s = SIMBOLOS[k]; int px = this.simX + 3 + (k % cols) * cel, py = this.simY + 3 + (k / cols) * cel;
-				boolean enc = mx >= px && my >= py && mx < px + cel && my < py + cel;
-				g.fill(px, py, px + cel - 1, py + cel - 1, enc ? 0xFF2A3230 : 0xFF161D1A);
-				g.text(f, s, px + (cel - 1 - f.width(s)) / 2 + 1, py + 4, 0xFFFFFFFF, false);
-				t.zona(px, py, cel - 1, cel - 1, () -> { this.texto.foco(true); this.texto.escribir(s); this.sucio = true; });
+			for (int q = 0; q < SIMBOLOS.length; q++) {
+				String s = SIMBOLOS[q]; int qx = this.simX + 3 + (q % cols) * cel, qy = this.simY + 3 + (q / cols) * cel;
+				boolean enc = mx >= qx && my >= qy && mx < qx + cel && my < qy + cel;
+				g.fill(qx, qy, qx + cel - 1, qy + cel - 1, enc ? 0xFF2A3230 : 0xFF161D1A);
+				g.text(f, s, qx + (cel - 1 - f.width(s)) / 2 + 1, qy + 4, 0xFFFFFFFF, false);
+				t.zona(qx, qy, cel - 1, cel - 1, () -> { this.texto.foco(true); this.texto.escribir(s); this.sucio = true; });
 			}
 		}
 	}
