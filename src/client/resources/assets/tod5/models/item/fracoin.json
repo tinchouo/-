@@ -1,6 +1,6 @@
 {
   "parent": "minecraft:item/generated",
-  "textures": { "layer0": "tod5:item/ficha_casino" },
+  "textures": { "layer0": "tod5:item/fracoin" },
   "display": {
     "thirdperson_righthand": { "rotation": [0, 0, 0], "translation": [0, 2.5, 1], "scale": [0.3, 0.3, 0.3] },
     "thirdperson_lefthand":  { "rotation": [0, 0, 0], "translation": [0, 2.5, 1], "scale": [0.3, 0.3, 0.3] },

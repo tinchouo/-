@@ -19,24 +19,25 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * Las monedas de TOD5: amarilla, roja, morada y la ficha de casino.
- * Son pepitas de oro con otro dibujo (el dibujo lo pone el mod: tod5:moneda_amarilla, etc.) y una marca propia,
+ * Las monedas de TOD5: Trucoin (amarilla), Fracoin (roja), Tinchoin (morada) y Truquita (la ficha de casino).
+ * El server es Paper y no conoce items de mods: son pepitas de oro con el dibujo y el nombre del mod
+ * (tod5:trucoin, item.tod5.trucoin...) y una marca propia,
  * asi no se pueden usar como pepitas en la mesa de crafteo.
  * Por ahora solo existen: para que sirve cada una se decide despues.
  *
- * /tod moneda <amarilla|roja|morada|ficha> [cantidad] [jugador]   (solo editores, para probar)
+ * /tod moneda <trucoin|fracoin|tinchoin|truquita> [cantidad] [jugador]   (solo editores, para probar)
  */
 final class Monedas implements Listener {
 	enum Tipo {
-		AMARILLA("moneda_amarilla", "Moneda amarilla", 0xF2C21C),
-		ROJA("moneda_roja", "Moneda roja", 0xD8382E),
-		MORADA("moneda_morada", "Moneda morada", 0xA050D8),
-		FICHA("ficha_casino", "Ficha de casino", 0x3AD86A);
+		TRUCOIN("trucoin", "Trucoin", 0xF2C21C),     // amarilla
+		FRACOIN("fracoin", "Fracoin", 0xD8382E),     // roja
+		TINCHOIN("tinchoin", "Tinchoin", 0xA050D8),  // morada
+		TRUQUITA("truquita", "Truquita", 0x3AD86A);  // la ficha de casino (verde)
 		final String modelo, nombre; final int color;
 		Tipo(String modelo, String nombre, int color) { this.modelo = modelo; this.nombre = nombre; this.color = color; }
 		static Tipo de(String s) {
 			for (Tipo t : values()) if (t.name().equalsIgnoreCase(s) || t.modelo.equalsIgnoreCase(s)) return t;
-			return null;
+			return switch (s.toLowerCase(Locale.ROOT)) { case "amarilla" -> TRUCOIN; case "roja" -> FRACOIN; case "morada" -> TINCHOIN; case "ficha", "verde" -> TRUQUITA; default -> null; };
 		}
 	}
 
@@ -47,7 +48,7 @@ final class Monedas implements Listener {
 		ItemStack it = new ItemStack(Material.GOLD_NUGGET, Math.max(1, Math.min(64, cantidad)));
 		ItemMeta m = it.getItemMeta();
 		m.setItemModel(new NamespacedKey("tod5", t.modelo));
-		m.itemName(Component.text(t.nombre, TextColor.color(t.color)).decoration(TextDecoration.ITALIC, false));
+		m.itemName(Component.translatable("item.tod5." + t.modelo, t.nombre));   // el nombre lo pone el mod (como un item de verdad)
 		m.getPersistentDataContainer().set(marca, PersistentDataType.STRING, t.name().toLowerCase(Locale.ROOT));
 		it.setItemMeta(m);
 		return it;
@@ -65,7 +66,7 @@ final class Monedas implements Listener {
 	/** /tod moneda <tipo> [cantidad] [jugador] */
 	void comando(CommandSender s, String[] args) {
 		Tipo t = args.length > 1 ? Tipo.de(args[1]) : null;
-		if (t == null) { s.sendMessage(Component.text("Uso: /tod moneda <amarilla|roja|morada|ficha> [cantidad] [jugador]", NamedTextColor.YELLOW)); return; }
+		if (t == null) { s.sendMessage(Component.text("Uso: /tod moneda <trucoin|fracoin|tinchoin|truquita> [cantidad] [jugador]", NamedTextColor.YELLOW)); return; }
 		int n = 1;
 		if (args.length > 2) try { n = Integer.parseInt(args[2]); } catch (NumberFormatException ex) { s.sendMessage(Component.text("La cantidad tiene que ser un número.", NamedTextColor.RED)); return; }
 		Player p = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : (s instanceof Player yo ? yo : null);
@@ -73,5 +74,5 @@ final class Monedas implements Listener {
 		p.getInventory().addItem(crear(t, n)).values().forEach(sobra -> p.getWorld().dropItem(p.getLocation(), sobra));
 		s.sendMessage(Component.text("Le di " + Math.max(1, Math.min(64, n)) + " × " + t.nombre + " a " + p.getName() + ".", NamedTextColor.GREEN));
 	}
-	static List<String> tipos() { return List.of("amarilla", "roja", "morada", "ficha"); }
+	static List<String> tipos() { return List.of("trucoin", "fracoin", "tinchoin", "truquita"); }
 }

@@ -1,5 +1,10 @@
 {
  "tod5.musica": "TRUCOFDEATH: Revenants - Tema del menú (prueba)",
  "key.category.tod5.trucofdeath": "TRUCOFDEATH",
- "key.tod5.tablet": "Abrir la tablet"
+ "key.tod5.tablet": "Abrir la tablet",
+ "item.tod5.trucoin": "Trucoin",
+ "item.tod5.fracoin": "Fracoin",
+ "item.tod5.tinchoin": "Tinchoin",
+ "item.tod5.truquita": "Truquita",
+ "itemGroup.tod5.trucofdeath": "Trucofdeath"
 }
