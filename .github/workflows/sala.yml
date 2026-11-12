@@ -129,20 +129,22 @@ jobs:
           xdotool key Escape; sleep 2; import -window root cap/k5_sigo_adentro.png
           grep -iE "disconnect|lost connection|kicked" srv/server.log | tail -3 || true
           # 11) zona de monedas: area automatica (aparecen antes de llegar), progreso que no se pierde, recompensa en la bandeja
-          echo "gamemode survival $N" >> srv/cmds.txt; echo "tp $N -8.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
+          echo "gamemode survival $N" >> srv/cmds.txt; echo "tp $N 0.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
           echo "tod zona crear prueba 4 $N" >> srv/cmds.txt; echo "give $N diamond 3" >> srv/cmds.txt; sleep 1
           for d in "3 0 0" "5 0 0" "7 0 0" "9 1 0" "12 0 0"; do echo "tod zona moneda prueba $N $d" >> srv/cmds.txt; done
-          echo "tod zona premioprueba prueba $N" >> srv/cmds.txt; sleep 2; import -window root cap/z0_afuera.png
-          echo "tp $N -3.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z1_aparecen_antes.png
+          echo "tod zona premioprueba prueba $N" >> srv/cmds.txt; sleep 1
+          echo "tp $N -8.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z0_afuera.png
+          echo "tp $N 0.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z1_aparecen_antes.png
           echo "tp $N 3.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.7; import -window root cap/z2_una.png
           echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1.5; import -window root cap/z3_salgo.png
-          echo "tp $N -2.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z4_vuelvo_sigue_1.png
+          echo "tp $N 0.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z4_vuelvo_sigue_1.png
           for x in 5.5 7.5 9.5; do echo "tp $N $x -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.6; done; import -window root cap/z5_desde_el_piso.png
           echo "tp $N 12.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1.2; import -window root cap/z6_completa_aviso.png
           grep -iE "completo la zona" srv/server.log || echo "NO SE COMPLETO"
           cat srv/plugins/TOD5/datos/zonas_progreso.json 2>/dev/null | head -20 || true
           # la bandeja: pestaña Recompensas en la tablet, abrir el cofre, sacar uno y cerrar con el item en la mano (vuelve)
-          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2; xdotool mousemove 1200 700; import -window root cap/z7_tablet_pestana.png
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/z7_tablet_pestana.png
           xdotool mousemove 224 396 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/z8_recompensas.png
           xdotool mousemove 862 195 click 1; sleep 2; xdotool mousemove 1200 700; import -window root cap/z9_cofre.png
           xdotool mousemove 496 226 click 1; sleep 0.5; xdotool mousemove 700 500; sleep 0.3; import -window root cap/z10_en_la_mano.png
@@ -158,7 +160,8 @@ jobs:
           echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1.5; echo "tp $N 0.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z13_sin_activar.png
           echo "tod zona activar prueba $N" >> srv/cmds.txt; sleep 1.5; import -window root cap/z14_activada.png
           grep -iE "zona|moneda|recompensa" srv/server.log | tail -10 || true
-          # dejo el inventario como antes (para los crafteos)
+          # dejo el inventario como antes (para los crafteos) y la tablet en modo admin
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2; xdotool mousemove 1050 88 click 1; sleep 1; xdotool key Escape; sleep 1
           echo "clear $N" >> srv/cmds.txt; for m in trucoin fracoin tinchoin truquita; do echo "tod moneda $m 12 $N" >> srv/cmds.txt; done
           echo "tod zona crear prueba 4 $N" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
           # 12) crafteos: modo admin > Crafteos, uno nuevo, armar la receta en la mesa del server, activarlo y verlo en la tablet normal
