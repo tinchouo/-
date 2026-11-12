@@ -242,10 +242,12 @@ final class Crafteos implements Listener {
 	 */
 	private final Set<UUID> crafteando = new HashSet<>();
 
+	// Ojo: sin receta de Minecraft detras, sacar el resultado NO dispara CraftItemEvent sino un clic comun:
+	// por eso escucho el clic en la casilla del resultado (la 0 de la mesa).
 	@EventHandler(priority = EventPriority.HIGH)
-	public void alCraftear(CraftItemEvent e) {
-		CraftingInventory inv = e.getInventory();
-		if (inv.getType() != InventoryType.WORKBENCH || !(e.getWhoClicked() instanceof Player p)) return;
+	public void alCraftear(InventoryClickEvent e) {
+		if (!(e.getInventory() instanceof CraftingInventory inv) || inv.getType() != InventoryType.WORKBENCH) return;
+		if (e.getRawSlot() != 0 || !(e.getWhoClicked() instanceof Player p)) return;
 		if (buscar(inv.getMatrix()) == null) return;
 		e.setCancelled(true);
 		ClickType ct = e.getClick();
