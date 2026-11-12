@@ -1,0 +1,211 @@
+Downloading mojang_1.21.11.jar
+Applying patches
+Starting org.bukkit.craftbukkit.Main
+2026-11-12T06:57:53.631296267Z ServerMain WARN Advanced terminal features are not available in this environment
+[06:57:53 INFO]: [bootstrap] Running Java 21 (OpenJDK 64-Bit Server VM 21.0.13+9-LTS; Eclipse Adoptium Temurin-21.0.13+9) on Linux 7.0.0-1019-azure (amd64)
+[06:57:53 INFO]: [bootstrap] Loading Paper 1.21.11-132-ver/1.21.11@c5eb079 (2026-05-11T11:43:09Z) for Minecraft 1.21.11
+[06:57:54 INFO]: [PluginInitializerManager] Initializing plugins...
+[06:57:55 INFO]: [ReobfServer] Remapping server...
+[06:58:01 INFO]: [ReobfServer] Done remapping server in 6136ms.
+[06:58:01 INFO]: [PluginRemapper] Remapping plugin 'plugins/tod5-servidor-0.22.0.jar'...
+[06:58:01 INFO]: [PluginRemapper] Done remapping plugin 'plugins/tod5-servidor-0.22.0.jar' in 114ms.
+[06:58:02 INFO]: [PluginInitializerManager] Initialized 1 plugin
+[06:58:02 INFO]: [PluginInitializerManager] Bukkit plugins (1):
+ - TOD5 (0.22.0)
+[06:58:07 INFO]: Environment: Environment[sessionHost=https://sessionserver.mojang.com, servicesHost=https://api.minecraftservices.com, profilesHost=https://api.mojang.com, name=PROD]
+[06:58:07 INFO]: Found new data pack file/bukkit, loading it automatically
+[06:58:07 INFO]: Found new data pack paper, loading it automatically
+[06:58:08 INFO]: No existing world data, creating new world
+[06:58:08 ERROR]: No key layers in MapLike[{}]
+[06:58:09 INFO]: Loaded 1470 recipes
+[06:58:09 INFO]: Loaded 1584 advancements
+[06:58:09 INFO]: [ca.spottedleaf.dataconverter.minecraft.datatypes.MCTypeRegistry] Initialising converters for DataConverter...
+[06:58:09 INFO]: [ca.spottedleaf.dataconverter.minecraft.datatypes.MCTypeRegistry] Finished initialising converters for DataConverter in 430.0ms
+[06:58:10 INFO]: Starting minecraft server version 1.21.11
+[06:58:10 INFO]: Loading properties
+[06:58:10 INFO]: This server is running Paper version 1.21.11-132-ver/1.21.11@c5eb079 (2026-05-11T11:43:09Z) (Implementing API version 1.21.11-R0.1-SNAPSHOT)
+[06:58:10 INFO]: [spark] This server bundles the spark profiler. For more information please visit https://docs.papermc.io/paper/profiling
+[06:58:10 INFO]: Server Ping Player Sample Count: 12
+[06:58:10 INFO]: Using 4 threads for Netty based IO
+[06:58:11 INFO]: [MoonriseCommon] Paper is using 1 worker threads, 1 I/O threads
+[06:58:11 INFO]: Default game type: SURVIVAL
+[06:58:11 INFO]: Generating keypair
+[06:58:11 INFO]: Starting Minecraft server on *:25565
+[06:58:11 INFO]: Paper: Using libdeflate (Linux x86_64) compression from Velocity.
+[06:58:11 INFO]: Paper: Using OpenSSL 3.x.x (Linux x86_64) cipher from Velocity.
+[06:58:11 INFO]: [TOD5] Loading server plugin TOD5 v0.22.0
+[06:58:11 WARN]: **** SERVER IS RUNNING IN OFFLINE/INSECURE MODE!
+[06:58:11 WARN]: The server will make no attempt to authenticate usernames. Beware.
+[06:58:11 WARN]: While this makes the game possible to play without internet access, it also opens up the ability for hackers to connect with any username they choose.
+[06:58:11 WARN]: To change this, set "online-mode" to "true" in the server.properties file.
+[06:58:11 INFO]: Preparing level "world"
+[06:58:11 ERROR]: No key layers in MapLike[{}]
+[06:58:12 INFO]: [ca.spottedleaf.moonrise.common.util.MoonriseConstants] NUMA enable flag is not set; however there is NUMA interaction support for this OS.
+[06:58:12 INFO]: [ca.spottedleaf.moonrise.common.util.MoonriseConstants] Detected 1 NUMA nodes.
+[06:58:12 INFO]: Selecting spawn point for world 'minecraft:overworld'...
+[06:58:12 ERROR]: No key layers in MapLike[{}]
+[06:58:12 INFO]: Selecting spawn point for world 'minecraft:the_nether'...
+[06:58:13 ERROR]: No key layers in MapLike[{}]
+[06:58:14 INFO]: Selecting spawn point for world 'minecraft:the_end'...
+[06:58:14 INFO]: Loading 0 persistent chunks for world 'minecraft:overworld'...
+[06:58:14 INFO]: Preparing spawn area: 100%
+[06:58:14 INFO]: Prepared spawn area in 2103 ms
+[06:58:14 INFO]: Loading 0 persistent chunks for world 'minecraft:the_nether'...
+[06:58:14 INFO]: Preparing spawn area: 100%
+[06:58:14 INFO]: Prepared spawn area in 1544 ms
+[06:58:14 INFO]: Loading 0 persistent chunks for world 'minecraft:the_end'...
+[06:58:14 INFO]: Preparing spawn area: 100%
+[06:58:14 INFO]: Prepared spawn area in 295 ms
+[06:58:14 INFO]: Done preparing level "world" (2.453s)
+[06:58:14 INFO]: [TOD5] Enabling TOD5 v0.22.0
+[06:58:14 INFO]: [TOD5] Crafteos: 1 (1 activos), items propios: 0
+[06:58:14 INFO]: [TOD5] Tablet: día 1, 0 novedades
+[06:58:14 INFO]: [TOD5] TOD5 listo. Server EN PREPARACION (solo admins)
+[06:58:14 INFO]: [spark] Starting background profiler...
+[06:58:15 INFO]: Running delayed init tasks
+[06:58:15 INFO]: Done (22.309s)! For help, type "help"
+[06:58:15 INFO]: *************************************************************************************
+[06:58:15 INFO]: This is the first time you're starting this server.
+[06:58:15 INFO]: It's recommended you read our 'Getting Started' documentation for guidance.
+[06:58:15 INFO]: View this and more helpful information here: https://docs.papermc.io/paper/next-steps
+[06:58:15 INFO]: *************************************************************************************
+[06:58:15 WARN]: *************************************************************************************
+[06:58:15 WARN]: You are running the latest build for your Minecraft version (1.21.11)
+[06:58:15 WARN]: However, you are 6 release(s) behind the latest stable release (26.3)!
+[06:58:15 WARN]: It is recommended that you update as soon as possible
+[06:58:15 WARN]: https://papermc.io/downloads/paper
+[06:58:15 WARN]: *************************************************************************************
+[06:58:16 INFO]: The difficulty has been set to Peaceful
+[06:58:16 INFO]: Disconnecting Player144 (/127.0.0.1:52832): TRUCOFDEATH: Revenants
+El server está en preparación.
+Esperá en el menú: cuando abra vas a entrar solo.
+[06:58:16 INFO]: UUID of player Player144 is cab6b092-7bf9-3f8d-869f-9bdf8f98866f
+[06:58:16 INFO]: Player144 (/127.0.0.1:52832) lost connection: TRUCOFDEATH: Revenants
+El server está en preparación.
+Esperá en el menú: cuando abra vas a entrar solo.
+[06:58:28 INFO]: Server EN PREPARACIÓN</green> - en la fila: 1 - conectados: 0
+[06:58:30 INFO]: Server ABIERTO. Los 1 de la fila van a entrar solos en unos segundos.
+[06:58:39 INFO]: UUID of player Player144 is cab6b092-7bf9-3f8d-869f-9bdf8f98866f
+[06:58:41 INFO]: Player144 joined the game
+[06:58:41 INFO]: Player144[/127.0.0.1:48188] logged in with entity id 1 at ([world]-5.5, -60.0, -6.5)
+[06:58:42 INFO]: [TOD5] Player144 tiene el mod de TOD v0.35.0 - mods: [fabric-api, fabricloader, java, minecraft, mixinextras, tod5]
+[06:58:51 INFO]: Made Player144 a server operator
+[06:58:51 INFO]: Server EN PREPARACIÓN. Solo entran los admins. Los que ya estan adentro siguen jugando.
+[06:58:53 INFO]: Player144 lost connection: Prueba
+[06:58:53 INFO]: Player144 left the game
+[06:58:53 INFO]: Kicked Player144: Prueba
+[06:59:02 INFO]: UUID of player Player144 is cab6b092-7bf9-3f8d-869f-9bdf8f98866f
+[06:59:02 INFO]: Player144 joined the game
+[06:59:02 INFO]: Player144[/127.0.0.1:41838] logged in with entity id 2 at ([world]-5.5, -60.0, -6.5)
+[06:59:02 INFO]: [TOD5] Player144 tiene el mod de TOD v0.35.0 - mods: [fabric-api, fabricloader, java, minecraft, mixinextras, tod5]
+[06:59:27 INFO]: Editores: [Player144]
+[06:59:39 INFO]:  
+   Cambio de dificultad:
+ 
+  Los creepers dejan veneno al morir.
+ 
+[06:59:49 INFO]:  
+   Aviso:
+ 
+  Hoy a las 20:00 hay evento en el Nether.
+ 
+[06:59:59 INFO]:  
+   Momento truco:
+ 
+  Todos con un solo corazón por 10 minutos.
+ 
+[07:00:07 INFO]: Los crafteos se arman en la tablet: modo admin > Crafteos. Hay 1.
+[07:00:07 INFO]:  billetera · Billetera · mesa · activo
+[07:00:09 INFO]:  
+   NUEVA DIMENSIÓN:
+ 
+  Se abrió el Aether.
+ 
+[07:01:02 INFO]: [TOD5] Player144 envio el anuncio amwd78aow896
+[07:01:12 INFO]:  
+   Cambio de dificultad:
+ 
+  Desde hoy, los creepers dejan veneno al morir.
+  Usa escudo o quedate lejos hasta el dia 4, porque
+  el veneno dura bastante.
+ 
+[07:01:20 INFO]: [TOD5] Player144 retiro el anuncio amwd78aow896
+[07:01:25 INFO]: Le di 12 × Trucoin a Player144.
+[07:01:25 INFO]: Le di 12 × Fracoin a Player144.
+[07:01:25 INFO]: Le di 12 × Tinchoin a Player144.
+[07:01:25 INFO]: Le di 12 × Truquita a Player144.
+[07:01:32 INFO]: Set Player144's game mode to Creative Mode
+[07:01:43 INFO]: Set Player144's game mode to Survival Mode
+[07:01:43 INFO]: Teleported Player144 to 0.500000, -60.000000, 0.500000
+[07:01:45 INFO]: Zona "prueba" creada (margen 4). Con la varita poné las monedas: el área se arma sola alrededor de ellas.
+[07:01:45 INFO]: Player144 has made the advancement [Diamonds!]
+[07:01:45 INFO]: Gave 3 [Diamond] to Player144
+[07:01:46 INFO]: Moneda puesta en "prueba" (1).
+[07:01:46 INFO]: Moneda puesta en "prueba" (2).
+[07:01:46 INFO]: Moneda puesta en "prueba" (3).
+[07:01:46 INFO]: Moneda puesta en "prueba" (4).
+[07:01:46 INFO]: Moneda puesta en "prueba" (5).
+[07:01:46 INFO]: Recompensa de prueba cargada.
+[07:01:47 INFO]: Teleported Player144 to -8.500000, -60.000000, 0.500000
+[07:01:50 INFO]: Teleported Player144 to 0.500000, -60.000000, 0.500000
+[07:01:52 INFO]: Teleported Player144 to 3.500000, -60.000000, 0.500000
+[07:01:53 INFO]: Teleported Player144 to 60.500000, -60.000000, 0.500000
+[07:01:55 INFO]: Teleported Player144 to 0.500000, -60.000000, 0.500000
+[07:01:57 INFO]: Teleported Player144 to 5.500000, -60.000000, 0.500000
+[07:01:57 INFO]: Teleported Player144 to 7.500000, -60.000000, 0.500000
+[07:01:58 INFO]: Teleported Player144 to 9.500000, -60.000000, 0.500000
+[07:01:59 INFO]: Teleported Player144 to 12.500000, -60.000000, 0.500000
+[07:01:59 INFO]: [TOD5] Player144 completo la zona prueba
+[07:02:22 INFO]: "prueba": cada vez que se activa
+[07:02:22 INFO]: "prueba" se activa: comando.
+[07:02:22 INFO]: Teleported Player144 to 60.500000, -60.000000, 0.500000
+[07:02:23 INFO]: Teleported Player144 to 0.500000, -60.000000, 0.500000
+[07:02:26 INFO]: Zona "prueba" activada para 1 jugador(es).
+[07:02:32 INFO]: Removed 53 item(s) from player Player144
+[07:02:32 INFO]: Le di 12 × Trucoin a Player144.
+[07:02:32 INFO]: Le di 12 × Fracoin a Player144.
+[07:02:32 INFO]: Le di 12 × Tinchoin a Player144.
+[07:02:32 INFO]: Le di 12 × Truquita a Player144.
+[07:02:32 INFO]: Zona "prueba" creada (margen 4). Con la varita poné las monedas: el área se arma sola alrededor de ellas.
+[07:02:32 INFO]: Teleported Player144 to 60.500000, -60.000000, 0.500000
+[07:02:34 INFO]: Set Player144's game mode to Creative Mode
+[07:02:54 INFO]: [TOD5] Player144 puso el crafteo cmwd7angl en activo
+[07:03:01 INFO]: Changed the block at 4, -60, 0
+[07:03:01 INFO]: Teleported Player144 to 2.500000, -60.000000, 0.500000
+[07:03:09 INFO]: Server EN PREPARACIÓN</green> - en la fila: 0 - conectados: 1
+[07:03:11 INFO]: Stopping the server
+[07:03:11 INFO]: Stopping server
+[07:03:11 INFO]: [TOD5] Disabling TOD5 v0.22.0
+[07:03:11 INFO]: Saving players
+[07:03:11 INFO]: Player144 lost connection: Server closed
+[07:03:11 INFO]: Player144 left the game
+[07:03:11 INFO]: Saving worlds
+[07:03:11 INFO]: Saving chunks for level 'ServerLevel[world]'/minecraft:overworld
+[07:03:11 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world'
+[07:03:11 INFO]: [ChunkHolderManager] Halted chunk system for world 'world'
+[07:03:11 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world'
+[07:03:12 INFO]: [ChunkHolderManager] Saved 1116 block chunks, 234 entity chunks, 0 poi chunks in world 'world' in 0.37s
+[07:03:12 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world'
+[07:03:12 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world'
+[07:03:12 INFO]: Saving chunks for level 'ServerLevel[world_nether]'/minecraft:the_nether
+[07:03:12 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world_nether'
+[07:03:12 INFO]: [ChunkHolderManager] Halted chunk system for world 'world_nether'
+[07:03:12 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world_nether'
+[07:03:12 INFO]: [ChunkHolderManager] Saved 0 block chunks, 0 entity chunks, 0 poi chunks in world 'world_nether' in 0.00s
+[07:03:12 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world_nether'
+[07:03:12 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world_nether'
+[07:03:12 INFO]: Saving chunks for level 'ServerLevel[world_the_end]'/minecraft:the_end
+[07:03:12 INFO]: [ChunkHolderManager] Waiting 60s for chunk system to halt for world 'world_the_end'
+[07:03:12 INFO]: [ChunkHolderManager] Halted chunk system for world 'world_the_end'
+[07:03:12 INFO]: [ChunkHolderManager] Saving all chunkholders for world 'world_the_end'
+[07:03:12 INFO]: [ChunkHolderManager] Saved 0 block chunks, 0 entity chunks, 0 poi chunks in world 'world_the_end' in 0.00s
+[07:03:12 INFO]: [ChunkHolderManager] Waiting 60s for chunk I/O to halt for world 'world_the_end'
+[07:03:12 INFO]: [ChunkHolderManager] Halted I/O scheduler for world 'world_the_end'
+[07:03:12 INFO]: ThreadedAnvilChunkStorage (world): All chunks are saved
+[07:03:12 INFO]: ThreadedAnvilChunkStorage (DIM-1): All chunks are saved
+[07:03:12 INFO]: ThreadedAnvilChunkStorage (DIM1): All chunks are saved
+[07:03:12 INFO]: ThreadedAnvilChunkStorage: All dimensions are saved
+[07:03:12 INFO]: Waiting for all RegionFile I/O tasks to complete...
+[07:03:12 INFO]: All RegionFile I/O tasks to complete
+[07:03:12 INFO]: [MoonriseCommon] Awaiting termination of worker pool for up to 60s...
+[07:03:12 INFO]: [MoonriseCommon] Awaiting termination of I/O pool for up to 60s...
