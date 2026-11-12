@@ -37,12 +37,34 @@ public final class ItemsTOD {
 		return it;
 	}
 
+	private static CreativeModeTab pestana;
+	/** Los items propios del evento que manda el server (los crea un editor en la tablet, modo admin > Items). */
+	private static java.util.List<ItemStack> propios = java.util.List.of();
+
 	public static void registrar() {
-		CreativeModeTab pestana = CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0)
+		pestana = CreativeModeTab.builder(CreativeModeTab.Row.TOP, 0)
 			.title(Component.translatable("itemGroup.tod5.trucofdeath"))
 			.icon(() -> moneda("trucoin"))
-			.displayItems((params, out) -> { for (String m : MONEDAS) out.accept(moneda(m)); })
+			.displayItems((params, out) -> {
+				for (String m : MONEDAS) out.accept(moneda(m));
+				for (ItemStack it : propios) if (!it.isEmpty()) out.accept(it.copy());
+			})
 			.build();
 		Registry.register(BuiltInRegistries.CREATIVE_MODE_TAB, Identifier.fromNamespaceAndPath("tod5", "trucofdeath"), pestana);
+	}
+
+	/** Llegaron items propios nuevos: rearmo la pestaña del creativo. */
+	public static void actualizar(java.util.List<ar.tod5.menu.tablet.TabletDatos.ItemPropio> items) {
+		java.util.List<ItemStack> l = new java.util.ArrayList<>();
+		for (var i : items) l.add(i.item());
+		boolean igual = l.size() == propios.size();
+		for (int k = 0; igual && k < l.size(); k++) igual = ItemStack.matches(l.get(k), propios.get(k));
+		if (igual) return;
+		propios = l;
+		var mc = net.minecraft.client.Minecraft.getInstance();
+		if (pestana != null && mc.level != null && mc.player != null) {
+			try { pestana.buildContents(new CreativeModeTab.ItemDisplayParameters(mc.level.enabledFeatures(), mc.player.canUseGameMasterBlocks(), mc.level.registryAccess())); }
+			catch (RuntimeException e) { org.slf4j.LoggerFactory.getLogger("TOD5").warn("TOD5 no pude rearmar la pestaña del creativo: {}", e.toString()); }
+		}
 	}
 }

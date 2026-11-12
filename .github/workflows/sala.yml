@@ -139,6 +139,22 @@ jobs:
           echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1.5; import -window root cap/z4_afuera.png
           echo "tp $N 2.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z5_de_nuevo.png
           grep -iE "zona|moneda" srv/server.log | tail -8 || true
+          # 12) crafteos: modo admin > Crafteos, uno nuevo, armar la receta en la mesa del server, activarlo y verlo en la tablet normal
+          echo "gamemode creative $N" >> srv/cmds.txt; sleep 1
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f1_admin_crafteos.png
+          xdotool mousemove 462 128 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f2_nuevo.png
+          xdotool mousemove 788 300 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f3_mesa.png
+          xdotool mousemove 482 571 click 1; sleep 0.4; xdotool mousemove 534 228 click 1; sleep 0.3; xdotool mousemove 570 228 click 3; sleep 0.3
+          xdotool mousemove 714 264 click 1; sleep 0.3; xdotool mousemove 482 571 click 1; sleep 0.4; xdotool mousemove 1200 700; sleep 0.3; import -window root cap/f4_receta.png
+          xdotool mousemove 642 372 click 1; sleep 1.5; import -window root cap/f5_guardada.png
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 376 194 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f6_elegido.png
+          xdotool mousemove 830 246 click 1; sleep 1.5; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f7_activo.png
+          xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 224 332 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f8_tablet_normal.png
+          xdotool key Escape; sleep 1
+          cat srv/plugins/TOD5/datos/crafteos.json 2>/dev/null | head -40 || true
+          grep -iE "crafteo|Crafteos" srv/server.log | tail -8 || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs

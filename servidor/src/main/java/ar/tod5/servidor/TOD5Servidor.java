@@ -54,6 +54,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		getServer().getPluginManager().registerEvents(this, this);
 		monedas = new Monedas(this);
 		getServer().getPluginManager().registerEvents(monedas, this);
+		getServer().getPluginManager().registerEvents(tablero.crafteos, this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Desafios.CANAL);
 		desafios = new Desafios(this);
 		desafios.cargar();

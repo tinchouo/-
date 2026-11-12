@@ -22,7 +22,7 @@ import net.minecraft.util.Util;
  * a la derecha el editor y abajo como sale en el chat.
  * Todo se guarda en el server (lo ven todos los editores).
  */
-final class PanelAnuncios {
+final class PanelAnuncios extends Panel {
 	/** Tipos en el orden de la ruleta (el numero es el gajo). */
 	static final String[] TIPOS = { "diaria", "aviso", "dungeon", "sancion", "cuy", "truco", "cambio", "mob" };
 	static final String[] TITULOS = { "Misión diaria", "Aviso", "Nueva dungeon", "Sanción", "Momento cuy", "Momento truco", "Cambio de dificultad", "Nuevo mob" };
@@ -34,6 +34,7 @@ final class PanelAnuncios {
 	private String id;                 // el que se esta editando (null = ninguno)
 	private int tipo = 1, grupo = 1;
 	private boolean ruleta = true, sucio, verSimbolos;
+	private String crafteo = "";       // el crafteo que se activa al enviar este anuncio ("" = ninguno)
 	private final EditorTexto titulo = new EditorTexto(false, 40);
 	private final EditorTexto texto = new EditorTexto(true, 1000);
 	private String confirmar;          // "enviar", "retirar" o "borrar": esperando el segundo clic
@@ -58,7 +59,7 @@ final class PanelAnuncios {
 	// ---------- abrir / guardar ----------
 	private void abrir(TabletDatos.Anuncio a) {
 		guardarSiHaceFalta();
-		this.id = a.id(); this.tipo = gajo(a.tipo()); this.grupo = a.grupo(); this.ruleta = a.ruleta();
+		this.id = a.id(); this.tipo = gajo(a.tipo()); this.grupo = a.grupo(); this.ruleta = a.ruleta(); this.crafteo = a.crafteo();
 		this.titulo.ponerPlano(a.titulo()); this.texto.poner(a.texto());
 		this.titulo.foco(false); this.texto.foco(false);
 		this.sucio = false; this.confirmar = null;
@@ -66,7 +67,7 @@ final class PanelAnuncios {
 	private void nuevo(TabletDatos d) {
 		guardarSiHaceFalta();
 		this.id = "a" + Long.toString(System.currentTimeMillis(), 36) + (int) (Math.random() * 1000);
-		this.tipo = 1; this.grupo = Math.max(1, d.hoy); this.ruleta = true;
+		this.tipo = 1; this.grupo = Math.max(1, d.hoy); this.ruleta = true; this.crafteo = "";
 		this.titulo.ponerPlano(TITULOS[1]); this.texto.poner(List.of());
 		this.texto.foco(true); this.titulo.foco(false);
 		this.sucio = true;
@@ -79,6 +80,7 @@ final class PanelAnuncios {
 		a.addProperty("titulo", this.titulo.plano().trim());
 		a.addProperty("grupo", this.grupo);
 		a.addProperty("ruleta", this.ruleta);
+		a.addProperty("crafteo", this.crafteo);
 		a.add("texto", EditorTexto.json(this.texto.letras()));
 		JsonArray ls = new JsonArray();
 		for (List<EditorTexto.Letra> l : EditorTexto.renglones(this.texto.letras())) ls.add(EditorTexto.json(l));
@@ -204,7 +206,24 @@ final class PanelAnuncios {
 		gx += Math.max(f.width("Momento truco"), f.width(ng)) + 8;
 		t.boton(g, ">", gx, ey, false, mx, my, () -> { this.grupo = Math.min(99, this.grupo + 1); this.sucio = true; });
 		String rt = "Ruleta: " + (this.ruleta ? "sí" : "no");
-		t.boton(g, rt, ex + ew - f.width(rt) - 10, ey, this.ruleta, mx, my, () -> { this.ruleta = !this.ruleta; this.sucio = true; });
+		int rtx = ex + ew - f.width(rt) - 10;
+		t.boton(g, rt, rtx, ey, this.ruleta, mx, my, () -> { this.ruleta = !this.ruleta; this.sucio = true; });
+		// el crafteo que activa al enviarse (clic: pasa al siguiente; "ninguno" al final)
+		{
+			List<TabletDatos.Crafteo> cs = d.crafteos;
+			TabletDatos.Crafteo actual = cs.stream().filter(c -> c.id().equals(this.crafteo)).findFirst().orElse(null);
+			int cbx = gx + 20, cbw = rtx - 4 - cbx - 10;
+			String ct = actual == null ? "Crafteo: ninguno" : f.plainSubstrByWidth("⚒ " + (actual.nombre() == null ? actual.id() : actual.nombre()), Math.max(20, cbw));
+			if (cbw > 30) {
+				t.boton(g, ct, cbx, ey, actual != null, mx, my, () -> {
+					int i = cs.indexOf(actual);
+					this.crafteo = i + 1 < cs.size() ? cs.get(i + 1).id() : "";
+					this.sucio = true;
+				});
+				if (mx >= cbx && my >= ey && mx < cbx + f.width(ct) + 10 && my < ey + 13)
+					g.setTooltipForNextFrame(Component.literal(actual == null ? "Clic: elegir un crafteo que se active al enviar este anuncio" : "Al enviarlo se activa este crafteo (si lo retirás, vuelve a quedar oculto). Clic: cambiar"), mx, my);
+			}
+		}
 		ey += 17;
 		// titulo
 		g.drawString(f, "Título", ex, ey + 3, Tablet.GRIS_TEXTO, false);

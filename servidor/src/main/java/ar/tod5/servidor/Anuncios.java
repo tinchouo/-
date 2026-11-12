@@ -52,7 +52,7 @@ public class Anuncios {
 	/** Un pedacito de texto con su estilo. color null = el color claro del tipo. */
 	record Trozo(String t, Integer color, boolean b, boolean i, boolean u, boolean s) {}
 	static final class Anuncio {
-		String id, tipo, titulo; int grupo; boolean ruleta = true, enviado;
+		String id, tipo, titulo, crafteo = ""; int grupo; boolean ruleta = true, enviado;   // crafteo: el que se activa al enviarlo
 		List<Trozo> texto = new ArrayList<>();
 		List<List<Trozo>> lineas = new ArrayList<>();
 	}
@@ -124,6 +124,7 @@ public class Anuncios {
 		a.grupo = o.has("grupo") ? o.get("grupo").getAsInt() : GENERAL;
 		a.ruleta = !o.has("ruleta") || o.get("ruleta").getAsBoolean();
 		a.enviado = bool(o, "enviado");
+		a.crafteo = o.has("crafteo") && !o.get("crafteo").isJsonNull() ? o.get("crafteo").getAsString() : "";
 		a.texto = trozos(o.has("texto") ? o.getAsJsonArray("texto") : null);
 		if (o.has("lineas")) for (JsonElement e : o.getAsJsonArray("lineas")) a.lineas.add(trozos(e.getAsJsonArray()));
 		return a;
@@ -132,6 +133,7 @@ public class Anuncios {
 		JsonObject o = new JsonObject();
 		o.addProperty("id", a.id); o.addProperty("tipo", a.tipo); o.addProperty("titulo", a.titulo);
 		o.addProperty("grupo", a.grupo); o.addProperty("ruleta", a.ruleta); o.addProperty("enviado", a.enviado);
+		o.addProperty("crafteo", a.crafteo);
 		o.add("texto", json(a.texto));
 		JsonArray ls = new JsonArray();
 		for (List<Trozo> l : a.lineas) ls.add(json(l));
@@ -179,6 +181,7 @@ public class Anuncios {
 		a.enviado = false;
 		guardar();
 		sacarNovedad(a);
+		if (!a.crafteo.isEmpty()) tablero.crafteos.estado(a.crafteo, "oculto");   // el crafteo que activo, vuelve a quedar oculto
 		tablero.sincronizarTodos();
 		return true;
 	}
@@ -209,6 +212,7 @@ public class Anuncios {
 		tablero.enFila(t, a.ruleta, () -> {
 			Anuncio act = anuncios.get(id);   // si lo retiraron o borraron mientras giraba la ruleta, no sale
 			if (act == null || !act.enviado) return;
+			if (!act.crafteo.isEmpty()) tablero.crafteos.estado(act.crafteo, "activo");   // se activa justo cuando sale el anuncio
 			mostrar(Bukkit.getOnlinePlayers(), t, act.titulo, act.lineas);
 			tablero.anotarNovedad(t, act.titulo, textoPlano(act), idNovedad(id));
 		});

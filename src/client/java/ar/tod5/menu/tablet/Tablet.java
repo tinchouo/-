@@ -33,7 +33,7 @@ public class Tablet extends Screen {
 
 	enum Seccion { INICIO("Inicio", Items.COMPASS), NOVEDADES("Novedades", Items.WRITABLE_BOOK), MISIONES("Misiones", Items.IRON_SWORD),
 		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD),
-		ANUNCIOS("Anuncios", Items.BELL);   // las del modo admin
+		ANUNCIOS("Anuncios", Items.BELL), ADMIN_CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), ITEMS("Ítems", Items.NAME_TAG);   // las del modo admin
 		final String nombre; final ItemStack icono;
 		Seccion(String n, net.minecraft.world.item.Item i) { nombre = n; icono = new ItemStack(i); } }
 
@@ -41,8 +41,14 @@ public class Tablet extends Screen {
 	/** Modo admin (solo editores): todo lo verde pasa a amarillo y las pestañas son las de editar. */
 	private static boolean admin = false;
 	private final PanelAnuncios anuncios = new PanelAnuncios(this);
+	private final PanelCrafteos crafteosAdmin = new PanelCrafteos(this);
+	private final PanelItems itemsAdmin = new PanelItems(this);
+	/** El panel del modo admin que se esta mostrando (null si no es una seccion de admin). */
+	private Panel panel() {
+		return switch (this.seccion) { case ANUNCIOS -> this.anuncios; case ADMIN_CRAFTEOS -> this.crafteosAdmin; case ITEMS -> this.itemsAdmin; default -> null; };
+	}
 	private boolean textoActivo;   // Minecraft solo manda letras si se le avisa que hay un cuadro de texto activo
-	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS; }
+	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS || s == Seccion.ADMIN_CRAFTEOS || s == Seccion.ITEMS; }
 	/** El color de las luces: verde normalmente, amarillo en modo admin. */
 	int acento() { return admin ? AMARILLO_ADMIN : VERDE; }
 	void zona(int x, int y, int w, int h, Runnable r) { this.zonas.add(new Zona(x, y, w, h, r)); }
@@ -72,7 +78,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { this.anuncios.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -83,38 +89,38 @@ public class Tablet extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
-		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.tecla(event)) return true;   // escribiendo un anuncio
+		if (panel() != null && panel().tecla(event)) return true;   // escribiendo un anuncio
 		if (TeclaTablet.TECLA.matches(event)) { this.onClose(); return true; }   // la misma tecla la cierra
 		return super.keyPressed(event);
 	}
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
-		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.caracter(event)) return true;
+		if (panel() != null && panel().caracter(event)) return true;
 		return super.charTyped(event);
 	}
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dx, double dy) {
-		if (this.seccion == Seccion.ANUNCIOS) this.anuncios.arrastrar(event.x(), event.y());
+		if (panel() != null) panel().arrastrar(event.x(), event.y());
 		return super.mouseDragged(event, dx, dy);
 	}
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
-		this.anuncios.soltar();
+		if (panel() != null) panel().soltar();
 		return super.mouseReleased(event);
 	}
 
 	@Override
 	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
-		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.ruedita(mx, my, sy)) return true;
+		if (panel() != null && panel().ruedita(mx, my, sy)) return true;
 		return super.mouseScrolled(mx, my, sx, sy);
 	}
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-		if (this.seccion == Seccion.ANUNCIOS && this.anuncios.clic(event.x(), event.y(), event.hasShiftDown())) return true;
+		if (panel() != null && panel().clic(event.x(), event.y(), event.hasShiftDown())) return true;
 		for (Zona z : List.copyOf(this.zonas)) {
 			if (z.adentro(event.x(), event.y())) {
 				sonido("tablet_tocar");
@@ -122,7 +128,7 @@ public class Tablet extends Screen {
 				return true;
 			}
 		}
-		this.anuncios.sinFoco();
+		if (panel() != null) panel().sinFoco();
 		return super.mouseClicked(event, doubleClick);
 	}
 
@@ -173,8 +179,8 @@ public class Tablet extends Screen {
 	@Override
 	public void render(GuiGraphics g, int mx, int my, float a) {
 		this.datos = TabletDatos.actual();
-		if (!this.datos.editor) { this.editando = false; admin = false; }
-		boolean escribe = this.seccion == Seccion.ANUNCIOS && this.anuncios.escribiendo();
+		if (!this.datos.editor) admin = false;
+		boolean escribe = panel() != null && panel().escribiendo();
 		if (escribe != this.textoActivo) {
 			// en 1.21.11 las letras llegan solas (no hace falta avisar que hay un cuadro de texto)
 			this.textoActivo = escribe;
@@ -230,7 +236,7 @@ public class Tablet extends Screen {
 			case MISIONES -> misiones(g, cx, cy, cw, mx, my);
 			case CRAFTEOS -> crafteos(g, cx, cy, cw, mx, my);
 			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
-			case ANUNCIOS -> this.anuncios.dibujar(g, datos, cx, cy, cw, ch, mx, my);
+			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS -> panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
 		}
 		// boton ADMIN en el marco (arriba a la derecha): solo lo ven los editores
 		if (datos.editor) {
@@ -241,7 +247,7 @@ public class Tablet extends Screen {
 			g.fill(ax + 1, ay + 1, ax + aw - 1, ay + 10, admin ? 0xFF3A3214 : 0xFF14181A);
 			g.drawString(this.font, at, ax + 4, ay + 2, admin ? AMARILLO_ADMIN : sobre ? TEXTO : GRIS_TEXTO, false);
 			this.zonas.add(new Zona(ax, ay, aw, 11, () -> {
-				this.anuncios.guardarSiHaceFalta();
+				if (panel() != null) panel().guardarSiHaceFalta();
 				admin = !admin;
 				this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
 			}));
@@ -493,22 +499,24 @@ public class Tablet extends Screen {
 		}
 	}
 
-	// ---------- CRAFTEOS: los items como en el creativo ----------
-	private boolean editando = false;                  // modo edicion (solo editores)
-	private final Set<String> marcados = new LinkedHashSet<>();
+	// ---------- CRAFTEOS: los items como en el creativo (solo lo que salio; los que tienen sombra, como silueta) ----------
 	private final Map<Identifier, Boolean> tieneTextura = new HashMap<>();
 
 	private void crafteos(GuiGraphics g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Crafteos", x, y);
+		// categorias: solo las que tienen algo (las crea el admin)
+		List<String> cats = datos.categorias();
+		if (!this.categoria.equals("todos") && !cats.contains(this.categoria)) this.categoria = "todos";
 		int fx = x + 70;
-		String[][] cs = { { "todos", "Todos" }, { "general", "General" }, { "aether", "Aether" } };
-		for (String[] c : cs) fx += boton(g, c[1], fx, y - 1, this.categoria.equals(c[0]), mx, my, () -> { this.categoria = c[0]; this.itemElegido = 0; }) + 2;
-		if (datos.editor) {
-			String t = this.editando ? "Listo" : "Editar";
-			boton(g, t, x + cw - this.font.width(t) - 10, y - 1, this.editando, mx, my, () -> { this.editando = !this.editando; this.marcados.clear(); });
+		if (cats.size() > 1) {
+			fx += boton(g, "Todos", fx, y - 1, this.categoria.equals("todos"), mx, my, () -> { this.categoria = "todos"; this.itemElegido = 0; }) + 2;
+			for (String c : cats) {
+				if (fx + this.font.width(c) + 10 > x + cw) break;
+				fx += boton(g, c, fx, y - 1, this.categoria.equals(c), mx, my, () -> { this.categoria = c; this.itemElegido = 0; }) + 2;
+			}
 		}
 
-		List<TabletDatos.Crafteo> visibles = datos.crafteosDe(this.categoria, this.editando);
+		List<TabletDatos.Crafteo> visibles = datos.crafteosDe(this.categoria);
 		int gx = x, gy = y + 17, cols = 9, filas = 4, t = 18;
 		g.fill(gx - 1, gy - 1, gx + cols * t + 1, gy + filas * t + 1, SLOT_OSCURO);
 		TabletDatos.Crafteo hover = null;
@@ -517,80 +525,36 @@ public class Tablet extends Screen {
 			hundido(g, sx, sy, t, t);
 			if (i >= visibles.size()) continue;
 			TabletDatos.Crafteo c = visibles.get(i);
-			boolean sombra = !this.editando && !c.activo();          // lo ve como silueta negra, sin nombre
-			boolean marcado = this.editando && this.marcados.contains(c.id());
+			boolean sombra = !c.activo();          // lo ve como silueta negra, sin nombre
 			if (i == this.itemElegido && !sombra) { g.fill(sx, sy, sx + t, sy + t, VERDE); g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0xFF1F3A27); }
 			if (sombra) silueta(g, c.icono(), sx + 1, sy + 1);
 			else g.renderItem(c.icono(), sx + 1, sy + 1);
-			if (this.editando && !c.activo()) {                       // oculto: oscurecido, con una marquita roja
-				g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x99000000);
-				g.fill(sx + 1, sy + t - 4, sx + 4, sy + t - 1, 0xFFE04040);
-			}
-			if (marcado) { g.fill(sx, sy, sx + t, sy + 1, VERDE); g.fill(sx, sy + t - 1, sx + t, sy + t, VERDE); g.fill(sx, sy, sx + 1, sy + t, VERDE); g.fill(sx + t - 1, sy, sx + t, sy + t, VERDE); }
-			if (c.nuevo() && !this.editando) g.fill(sx + t - 4, sy + 1, sx + t - 1, sy + 4, VERDE);
+			if (c.nuevo()) g.fill(sx + t - 4, sy + 1, sx + t - 1, sy + 4, VERDE);
 			boolean encima = mx >= sx && my >= sy && mx < sx + t && my < sy + t;
-			if (sombra) continue;                                      // la sombra no dice nada ni se puede tocar
+			if (sombra) continue;                  // la sombra no dice nada ni se puede tocar
 			if (encima) { g.fill(sx + 1, sy + 1, sx + t - 1, sy + t - 1, 0x50FFFFFF); hover = c; Vistos.marcar("c:" + c.id()); }
 			final int k = i;
-			this.zonas.add(new Zona(sx, sy, t, t, () -> {
-				this.itemElegido = k;
-				Vistos.marcar("c:" + c.id());
-				if (this.editando && !this.marcados.remove(c.id())) this.marcados.add(c.id());
-			}));
+			this.zonas.add(new Zona(sx, sy, t, t, () -> { this.itemElegido = k; Vistos.marcar("c:" + c.id()); }));
 		}
 		if (visibles.isEmpty()) g.drawString(this.font, "Todavía no hay crafteos.", gx + 4, gy + filas * t + 6, GRIS_TEXTO, false);
 
-		// editando: activar / ocultar los marcados (varios de una: un solo anuncio en el chat)
-		if (this.editando) {
-			int by = gy + filas * t + 5, bx = gx;
-			List<String> ids = List.copyOf(this.marcados);
-			if (!ids.isEmpty()) {
-				bx += boton(g, "Activar (" + ids.size() + ")", bx, by, false, mx, my, () -> { enviar("crafteo_activar", ids, null); this.marcados.clear(); }) + 3;
-				boton(g, "Ocultar (" + ids.size() + ")", bx, by, false, mx, my, () -> { enviar("crafteo_ocultar", ids, null); this.marcados.clear(); });
-			}
-		}
-
-		// el crafteo del elegido, como una mesa de crafteo
+		// el crafteo elegido: la receta tal cual, en la estacion que corresponde
 		TabletDatos.Crafteo c = visibles.isEmpty() ? null : visibles.get(Math.min(this.itemElegido, visibles.size() - 1));
-		if (c != null && !c.soloSombra() && (this.editando || c.activo())) {
+		if (c != null && c.activo()) {
 			int rx = gx + cols * t + 14, ry = gy;
 			g.drawString(this.font, c.nombre(), rx, ry, TEXTO, false);
-			if (this.editando) {
-				String estado = c.activo() ? "Activo" : "Oculto";
-				g.drawString(this.font, estado, x + cw - this.font.width(estado), ry, c.activo() ? VERDE : 0xFFE06060, false);
-			}
-			int mgx = rx, mgy = ry + 12;
-			for (int i = 0; i < 9; i++) {
-				int sx = mgx + (i % 3) * t, sy = mgy + (i / 3) * t;
-				hundido(g, sx, sy, t, t);
-				ItemStack st = c.grilla()[i];
-				if (st != null && !st.isEmpty()) {
-					g.renderItem(st, sx + 1, sy + 1);
-					if (mx >= sx && my >= sy && mx < sx + t && my < sy + t) g.setTooltipForNextFrame(st.getHoverName(), mx, my);
-				}
-			}
-			// flecha
-			int ax = mgx + 3 * t + 6, ay = mgy + t + 5;
-			g.fill(ax, ay + 3, ax + 12, ay + 6, 0xFF5A6A62);
-			for (int k = 0; k < 5; k++) g.fill(ax + 11 + k, ay + k, ax + 12 + k, ay + 9 - k, 0xFF5A6A62);
-			// resultado
-			int ox = ax + 22, oy = mgy + t - 4;
-			hundido(g, ox, oy, 26, 26);
-			g.renderItem(c.icono(), ox + 5, oy + 5);
-			if (c.cantidad() > 1) g.renderItemDecorations(this.font, c.icono(), ox + 5, oy + 5, String.valueOf(c.cantidad()));
-			int ny = mgy + 3 * t + 6;
-			g.drawString(this.font, "Desde el día " + c.dia(), rx, ny, GRIS_TEXTO, false);
+			g.renderItem(VistaReceta.iconoTipo(c.tipo()), x + cw - 16, ry - 4);
+			if (mx >= x + cw - 16 && my >= ry - 4 && mx < x + cw && my < ry + 12) g.setTooltipForNextFrame(Component.literal(VistaReceta.nombreTipo(c.tipo())), mx, my);
+			int alto = VistaReceta.dibujar(g, c, rx, ry + 14, mx, my);
+			int ny = ry + 14 + alto + 6;
+			g.drawString(this.font, VistaReceta.nombreTipo(c.tipo()) + " · desde el día " + c.dia(), rx, ny, GRIS_TEXTO, false);
+			if (c.tipo().equals("mesa") && !c.forma()) { ny += 10; g.drawString(this.font, "En cualquier orden", rx, ny, GRIS_TEXTO, false); }
 			for (FormattedCharSequence r : this.font.split(Component.literal(c.nota()), x + cw - rx)) { ny += 10; g.drawString(this.font, r, rx, ny, TEXTO, false); }
-			if (this.editando) {   // la sombra: si esta oculto, los jugadores ven (o no) su silueta
-				String sb = "Sombra: " + (c.sombra() ? "sí" : "no");
-				boton(g, sb, rx, ny + 14, c.sombra(), mx, my, () -> enviar("crafteo_sombra", List.of(c.id()), !c.sombra()));
-			}
 		}
 		if (hover != null) {
 			List<FormattedCharSequence> tip = new ArrayList<>();
 			tip.add(Component.literal(hover.nombre()).getVisualOrderText());
 			if (hover.nuevo()) tip.add(Component.literal("§aNuevo · día " + hover.dia()).getVisualOrderText());
-			if (this.editando && !hover.activo()) tip.add(Component.literal("§cOculto").getVisualOrderText());
 			g.setTooltipForNextFrame(tip, mx, my);
 		}
 	}

@@ -30,8 +30,8 @@ import org.bukkit.persistence.PersistentDataType;
  * Nada es automatico: los crafteos y los anuncios los activa un editor a mano.
  *
  * Archivos:
- *   plugins/TOD5/crafteos.yml          las recetas (las defino en el plugin; se pueden agregar a mano)
- *   plugins/TOD5/datos/estado.yml      dia actual, crafteos activos, crafteos con sombra
+ *   plugins/TOD5/datos/crafteos.json   los crafteos y los items propios (se arman en la tablet, ver Crafteos)
+ *   plugins/TOD5/datos/estado.yml      el dia actual
  *   plugins/TOD5/datos/novedades.yml   las novedades publicadas
  */
 public class Tablero {
@@ -56,61 +56,29 @@ public class Tablero {
 		static Tipo de(String s) { for (Tipo t : values()) if (t.id.equalsIgnoreCase(s)) return t; return null; }
 	}
 
-	record Crafteo(String id, String nombre, String categoria, int dia, String nota, Material resultado, int cantidad,
-	               String[] forma, Map<Character, Material> ingredientes) {
-		Material[] grilla() {
-			Material[] g = new Material[9];
-			for (int f = 0; f < 3 && f < forma.length; f++)
-				for (int c = 0; c < 3 && c < forma[f].length(); c++) g[f * 3 + c] = ingredientes.get(forma[f].charAt(c));
-			return g;
-		}
-	}
 	record Novedad(String id, int dia, String tipo, String titulo, String texto) {}
 
 	private final TOD5Servidor plugin;
-	private final Map<String, Crafteo> crafteos = new LinkedHashMap<>();
-	private final Set<String> activos = new LinkedHashSet<>(), sombras = new HashSet<>();
 	private final List<Novedad> novedades = new ArrayList<>();
 	private int dia = 1, proximaNovedad = 1;
 
 	final Anuncios anuncios;
+	final Crafteos crafteos;
 
-	Tablero(TOD5Servidor plugin) { this.plugin = plugin; this.anuncios = new Anuncios(plugin, this); }
+	Tablero(TOD5Servidor plugin) { this.plugin = plugin; this.anuncios = new Anuncios(plugin, this); this.crafteos = new Crafteos(plugin, this); }
 
 	// ================= cargar / guardar =================
 	void cargar() {
-		if (!new File(plugin.getDataFolder(), "crafteos.yml").exists()) plugin.saveResource("crafteos.yml", false);
-		crafteos.clear();
-		YamlConfiguration cy = YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), "crafteos.yml"));
-		ConfigurationSection cs = cy.getConfigurationSection("crafteos");
-		if (cs != null) for (String id : cs.getKeys(false)) {
-			ConfigurationSection c = cs.getConfigurationSection(id);
-			try {
-				Map<Character, Material> ing = new HashMap<>();
-				ConfigurationSection is = c.getConfigurationSection("ingredientes");
-				if (is != null) for (String k : is.getKeys(false)) ing.put(k.charAt(0), material(is.getString(k)));
-				List<String> forma = c.getStringList("forma");
-				crafteos.put(id, new Crafteo(id, c.getString("nombre", id), c.getString("categoria", "general"), c.getInt("dia", 1),
-					c.getString("nota", ""), material(c.getString("resultado", "stone")), c.getInt("cantidad", 1), forma.toArray(new String[0]), ing));
-			} catch (Exception e) { plugin.getLogger().warning("Crafteo '" + id + "' mal escrito en crafteos.yml: " + e.getMessage()); }
-		}
 		YamlConfiguration est = yml("estado");
-		boolean primeraVez = !est.contains("dia");
 		dia = est.getInt("dia", 1);
-		activos.clear(); activos.addAll(est.getStringList("crafteos_activos"));
-		sombras.clear(); sombras.addAll(est.getStringList("crafteos_sombra"));
-		if (primeraVez) { // la primera vez, los que dicen "activo: true" en crafteos.yml arrancan activos (la billetera)
-			for (String id : crafteos.keySet()) if (cy.getBoolean("crafteos." + id + ".activo", false)) activos.add(id);
-			guardarEstado();
-		}
 		novedades.clear();
 		YamlConfiguration ny = yml("novedades");
 		proximaNovedad = ny.getInt("proxima", 1);
 		for (Map<?, ?> m : ny.getMapList("novedades"))
 			novedades.add(new Novedad(str(m, "id"), Integer.parseInt(str(m, "dia")), str(m, "tipo"), m.get("titulo") == null ? null : str(m, "titulo"), str(m, "texto")));
-		for (String id : activos) registrarReceta(id);
+		crafteos.cargar();
 		anuncios.cargar();
-		plugin.getLogger().info("Tablet: día " + dia + ", " + crafteos.size() + " crafteos (" + activos.size() + " activos), " + novedades.size() + " novedades");
+		plugin.getLogger().info("Tablet: día " + dia + ", " + novedades.size() + " novedades");
 	}
 
 	private static String str(Map<?, ?> m, String k) { return String.valueOf(m.get(k)); }
@@ -125,8 +93,6 @@ public class Tablero {
 	private void guardarEstado() {
 		YamlConfiguration y = new YamlConfiguration();
 		y.set("dia", dia);
-		y.set("crafteos_activos", new ArrayList<>(activos));
-		y.set("crafteos_sombra", new ArrayList<>(sombras));
 		guardar(y, "estado");
 	}
 	private void guardarNovedades() {
@@ -155,51 +121,6 @@ public class Tablero {
 		return plugin.getConfig().getStringList("editores").stream().anyMatch(n -> n.equalsIgnoreCase(p.getName()));
 	}
 
-	// ================= recetas =================
-	private NamespacedKey clave(String id) { return new NamespacedKey(plugin, id); }
-
-	ItemStack resultado(Crafteo c) {
-		ItemStack it = new ItemStack(c.resultado(), Math.max(1, c.cantidad()));
-		ItemMeta m = it.getItemMeta();
-		m.itemName(Component.text(c.nombre()));
-		m.getPersistentDataContainer().set(clave("item"), PersistentDataType.STRING, c.id());
-		it.setItemMeta(m);
-		return it;
-	}
-
-	private void registrarReceta(String id) {
-		Crafteo c = crafteos.get(id);
-		if (c == null || Bukkit.getRecipe(clave(id)) != null) return;
-		ShapedRecipe r = new ShapedRecipe(clave(id), resultado(c));
-		r.shape(c.forma());
-		for (var e : c.ingredientes().entrySet()) r.setIngredient(e.getKey(), e.getValue());
-		Bukkit.addRecipe(r, true);
-	}
-	private void sacarReceta(String id) { Bukkit.removeRecipe(clave(id), true); }
-
-	// ================= acciones (desde la tablet o desde comandos) =================
-	/** Activa uno o varios crafteos: receta real en el server, un solo anuncio general y se actualizan las tablets. */
-	List<String> activar(Collection<String> ids) {
-		List<String> nuevos = new ArrayList<>();
-		for (String id : ids) if (crafteos.containsKey(id) && activos.add(id)) { registrarReceta(id); nuevos.add(crafteos.get(id).nombre()); }
-		if (!nuevos.isEmpty()) {
-			guardarEstado();
-			anunciar(Tipo.AVISO, "Nuevos crafteos", "Se desbloquearon nuevos crafteos en tu tablet: " + String.join(", ", nuevos) + ".");
-		}
-		return nuevos;
-	}
-	List<String> ocultar(Collection<String> ids) {
-		List<String> sacados = new ArrayList<>();
-		for (String id : ids) if (activos.remove(id)) { sacarReceta(id); sacados.add(id); }
-		if (!sacados.isEmpty()) { guardarEstado(); sincronizarTodos(); }
-		return sacados;
-	}
-	boolean sombra(String id, boolean v) {
-		if (!crafteos.containsKey(id)) return false;
-		if (v) sombras.add(id); else sombras.remove(id);
-		guardarEstado(); sincronizarTodos();
-		return true;
-	}
 	void cambiarDia(int n) { dia = Math.max(1, n); guardarEstado(); sincronizarTodos(); }
 	int dia() { return dia; }
 
@@ -283,28 +204,8 @@ public class Tablero {
 			nov.add(j);
 		}
 		o.add("novedades", nov);
-		JsonArray cr = new JsonArray();
-		for (Crafteo c : crafteos.values()) {
-			boolean activo = activos.contains(c.id()), sombra = sombras.contains(c.id());
-			if (!activo && !editor && !sombra) continue;               // oculto: ni se manda
-			JsonObject j = new JsonObject();
-			j.addProperty("id", c.id());
-			j.addProperty("activo", activo);
-			j.addProperty("sombra", sombra);
-			j.addProperty("icono", c.resultado().getKey().toString());
-			if (activo || editor) {                                    // la sombra sola no dice nada mas
-				j.addProperty("nombre", c.nombre());
-				j.addProperty("categoria", c.categoria());
-				j.addProperty("dia_crafteo", c.dia());
-				j.addProperty("nota", c.nota());
-				j.addProperty("cantidad", c.cantidad());
-				JsonArray g = new JsonArray();
-				for (Material m : c.grilla()) g.add(m == null ? "" : m.getKey().toString());
-				j.add("grilla", g);
-			}
-			cr.add(j);
-		}
-		o.add("crafteos", cr);
+		o.add("crafteos", crafteos.paraTablet(editor));
+		if (editor) o.add("items", crafteos.itemsParaTablet());   // los items propios (para el creativo de los editores)
 		if (editor) o.add("anuncios", anuncios.paraTablet());   // los anuncios guardados: solo los editores
 		return GSON.toJson(o);
 	}
@@ -329,9 +230,22 @@ public class Tablero {
 		List<String> ids = new ArrayList<>();
 		if (o.has("ids")) o.getAsJsonArray("ids").forEach(e -> ids.add(e.getAsString()));
 		switch (a) {
-			case "crafteo_activar" -> { var n = activar(ids); plugin.getLogger().info(p.getName() + " activo crafteos: " + n); }
-			case "crafteo_ocultar" -> { var n = ocultar(ids); plugin.getLogger().info(p.getName() + " oculto crafteos: " + n); }
-			case "crafteo_sombra" -> { for (String id : ids) sombra(id, o.has("v") && o.get("v").getAsBoolean()); }
+			case "crafteo_guardar" -> { crafteos.guardarDesdeTablet(o.getAsJsonObject("crafteo")); sincronizarTodos(); }
+			case "crafteo_estado" -> {
+				String est = o.has("estado") ? o.get("estado").getAsString() : "";
+				for (String id : ids) { crafteos.estado(id, est); plugin.getLogger().info(p.getName() + " puso el crafteo " + id + " en " + est); }
+				sincronizarTodos();
+			}
+			case "crafteo_receta" -> { if (!ids.isEmpty()) crafteos.abrirMesa(p, ids.get(0)); }
+			case "crafteo_borrar" -> { for (String id : ids) crafteos.borrar(id); sincronizarTodos(); }
+			case "crafteo_duplicar" -> { for (String id : ids) crafteos.duplicar(id); sincronizarTodos(); }
+			case "item_guardar" -> { crafteos.guardarItem(o.getAsJsonObject("item")); sincronizarTodos(); }
+			case "item_mano" -> {
+				if (crafteos.itemDeLaMano(p) == null) p.sendMessage(Component.text("Tené en la mano el item que querés guardar.", NamedTextColor.RED));
+				else p.sendMessage(Component.text("Item guardado: ya está en la pestaña Trucofdeath del creativo.", NamedTextColor.GREEN));
+				sincronizarTodos();
+			}
+			case "item_borrar" -> { for (String id : ids) crafteos.borrarItem(id); sincronizarTodos(); }
 			case "anuncio_guardar" -> anuncios.guardar(o.getAsJsonObject("anuncio"));
 			case "anuncio_probar" -> { String id = anuncios.guardar(o.getAsJsonObject("anuncio")); anuncios.probar(p, id); }
 			case "anuncio_enviar" -> {
@@ -361,23 +275,8 @@ public class Tablero {
 				s.sendMessage(Component.text("Ahora es el día " + dia + ".", NamedTextColor.GREEN));
 			}
 			case "crafteo" -> {
-				String que = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "lista";
-				List<String> ids = args.length > 2 ? Arrays.asList(args).subList(2, args.length) : List.of();
-				switch (que) {
-					case "activar" -> s.sendMessage(Component.text("Activados: " + activar(ids), NamedTextColor.GREEN));
-					case "ocultar" -> s.sendMessage(Component.text("Ocultos: " + ocultar(ids), NamedTextColor.YELLOW));
-					case "sombra" -> {
-						if (ids.isEmpty()) return true;
-						boolean v = !sombras.contains(ids.get(0));
-						s.sendMessage(Component.text(sombra(ids.get(0), v) ? "Sombra de " + ids.get(0) + ": " + (v ? "sí" : "no") : "No existe ese crafteo.", NamedTextColor.GREEN));
-					}
-					default -> {
-						s.sendMessage(Component.text("Crafteos (" + crafteos.size() + "):", NamedTextColor.GREEN));
-						for (Crafteo c : crafteos.values())
-							s.sendMessage(Component.text(" " + c.id() + " - " + c.nombre() + (activos.contains(c.id()) ? "  [activo]" : "  [oculto]") + (sombras.contains(c.id()) ? " [sombra]" : ""),
-								activos.contains(c.id()) ? NamedTextColor.WHITE : NamedTextColor.GRAY));
-					}
-				}
+				s.sendMessage(Component.text("Los crafteos se arman en la tablet: modo admin > Crafteos. Hay " + crafteos.recetas.size() + ".", NamedTextColor.YELLOW));
+				for (Crafteos.Receta r : crafteos.recetas.values()) s.sendMessage(Component.text(" " + r.id + " · " + r.nombre + " · " + r.tipo + " · " + r.estado, NamedTextColor.GRAY));
 			}
 			case "anuncio" -> {
 				Tipo t = args.length > 1 ? Tipo.de(args[1]) : null;
@@ -416,14 +315,12 @@ public class Tablero {
 		if (sub.equals("zona")) return plugin.desafios.completar(args);
 		if (args.length == 2) return switch (sub) {
 			case "dia" -> List.of("siguiente");
-			case "crafteo" -> List.of("lista", "activar", "ocultar", "sombra");
 			case "anuncio" -> Arrays.stream(Tipo.values()).map(t -> t.id).toList();
 			case "novedad" -> List.of("borrar");
 			case "editor" -> List.of("agregar", "sacar");
 			case "moneda" -> Monedas.tipos();
 			default -> List.of();
 		};
-		if (args.length >= 3 && sub.equals("crafteo")) return new ArrayList<>(crafteos.keySet());
 		return List.of();
 	}
 }
