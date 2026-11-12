@@ -40,6 +40,8 @@ public class TabletDatos {
 	public record ItemPropio(String id, ItemStack item) {}
 	/** Un anuncio guardado (solo lo ven los editores). grupo: un dia, 0 = General, -1 = Momento truco. */
 	public record Anuncio(String id, String tipo, String titulo, int grupo, boolean ruleta, boolean enviado, String crafteo, List<EditorTexto.Letra> texto) {}
+	/** Un premio sin reclamar de la bandeja de Recompensas (zonas de monedas, desafios...). */
+	public record Paquete(String id, String titulo, List<ItemStack> items) {}
 	public record Miembro(String nombre, boolean conectado) {}
 	public record Mensaje(String hora, String quien, String texto) {}
 	public record Nota(String titulo, String texto, String autor) {}
@@ -68,6 +70,7 @@ public class TabletDatos {
 	List<Crafteo> crafteos = new ArrayList<>();
 	List<ItemPropio> items = new ArrayList<>();
 	List<Anuncio> anuncios = new ArrayList<>();
+	List<Paquete> recompensas = new ArrayList<>();
 	Equipo equipo;   // null = no tiene equipo (la seccion no aparece)
 
 	int novedadesNuevas() { return (int) novedades.stream().filter(Novedad::nuevo).count(); }

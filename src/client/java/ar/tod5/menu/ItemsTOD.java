@@ -29,6 +29,7 @@ public final class ItemsTOD {
 		ItemStack it = new ItemStack(Items.GOLD_NUGGET);
 		it.set(DataComponents.ITEM_MODEL, Identifier.fromNamespaceAndPath("tod5", nombre));
 		it.set(DataComponents.ITEM_NAME, Component.translatable("item.tod5." + nombre));
+		it.set(DataComponents.MAX_STACK_SIZE, 99);   // se apilan hasta 99 (igual que las que da el plugin)
 		CompoundTag bukkit = new CompoundTag();
 		bukkit.putString("tod5:moneda", nombre);
 		CompoundTag raiz = new CompoundTag();

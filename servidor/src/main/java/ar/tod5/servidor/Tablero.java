@@ -205,6 +205,7 @@ public class Tablero {
 		}
 		o.add("novedades", nov);
 		o.add("crafteos", crafteos.paraTablet(editor));
+		if (plugin.recompensas != null) o.add("recompensas", plugin.recompensas.paraTablet(p));   // la bandeja de este jugador
 		if (editor) o.add("items", crafteos.itemsParaTablet());   // los items propios (para el creativo de los editores)
 		if (editor) o.add("anuncios", anuncios.paraTablet());   // los anuncios guardados: solo los editores
 		return GSON.toJson(o);
@@ -218,6 +219,14 @@ public class Tablero {
 
 	/** Lo que pide la tablet en modo edicion. Solo para editores: si no, se ignora. */
 	void accion(Player p, byte[] datos) {
+		// la bandeja de recompensas la usa cualquiera (no solo los editores)
+		try {
+			JsonObject r = JsonParser.parseString(new String(datos, StandardCharsets.UTF_8)).getAsJsonObject();
+			String ar = r.has("a") ? r.get("a").getAsString() : "";
+			String rid = r.has("ids") && r.getAsJsonArray("ids").size() > 0 ? r.getAsJsonArray("ids").get(0).getAsString() : "";
+			if (ar.equals("recompensa_abrir")) { plugin.recompensas.abrir(p, rid); return; }
+			if (ar.equals("recompensa_todo")) { plugin.recompensas.reclamarTodo(p, rid); return; }
+		} catch (Exception e) { return; }
 		if (!esEditor(p)) {
 			plugin.getLogger().warning(p.getName() + " intento editar la tablet sin ser editor");
 			p.sendMessage(Component.text("La tablet: no se guardó nada porque no sos editor. Desde la consola: tod editor agregar " + p.getName(), NamedTextColor.RED));

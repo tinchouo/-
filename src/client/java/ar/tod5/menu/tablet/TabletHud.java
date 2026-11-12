@@ -23,7 +23,12 @@ public final class TabletHud {
 	private static final long DURA = 7000, FUNDE = 600;
 	private static final int MARGEN = 4, ANCHO_AVISO = 170, MAX_AVISOS = 3;
 
-	private record Aviso(String titulo, String texto, int color, long desde) {}
+	private record Aviso(String titulo, String texto, int color, long desde, boolean premio) {
+		Aviso(String titulo, String texto, int color, long desde) { this(titulo, texto, color, desde, false); }
+	}
+	/** El color de los avisos de recompensa (distinto a los demas). */
+	public static final int COLOR_PREMIO = 0xFF3DE0A0;
+	private static net.minecraft.world.item.ItemStack moneda;
 	private static final List<Aviso> avisos = new ArrayList<>();
 	private static final Set<String> avisados = new HashSet<>();
 
@@ -43,6 +48,10 @@ public final class TabletHud {
 		for (TabletDatos.Crafteo c : d.crafteos) {
 			if (!c.nuevo() || !avisados.add("c:" + c.id())) continue;
 			avisos.add(new Aviso("NUEVO CRAFTEO", c.nombre() != null ? c.nombre() : "", 0xFF55FFFF, ahora));
+		}
+		for (TabletDatos.Paquete r : d.recompensas) {
+			if (!avisados.add("r:" + r.id())) continue;
+			avisos.add(new Aviso("RECOMPENSA SIN RECLAMAR", r.titulo(), COLOR_PREMIO, ahora, true));
 		}
 		avisos.removeIf(a -> ahora - a.desde() > DURA);
 	}
@@ -74,7 +83,7 @@ public final class TabletHud {
 		g.drawString(f, tecla, tx + (tw - f.width(tecla) + 1) / 2, ty + 1, 0xFFE8E8E8, false);
 
 		// numerito rojo con lo que no viste
-		int nuevos = d.novedadesNuevas() + d.crafteosNuevos();
+		int nuevos = d.novedadesNuevas() + d.crafteosNuevos() + d.recompensas.size();
 		if (nuevos > 0) {
 			String n = nuevos > 9 ? "9+" : String.valueOf(nuevos);
 			int bw = Math.max(10, f.width(n) + 4), bx = x + 16 - bw / 2 + 1, by = y - 3;
@@ -91,6 +100,17 @@ public final class TabletHud {
 			float al = t > DURA - FUNDE ? (DURA - t) / (float) FUNDE : Math.min(1, t / 200f);
 			if (al <= 0) continue;
 			int alto = a.texto().isEmpty() ? 14 : 24;
+			if (a.premio()) {   // el de recompensa: con borde de su color y la monedita
+				if (moneda == null) moneda = ar.tod5.menu.ItemsTOD.moneda("trucoin");
+				alto = 26;
+				g.fill(x, ay, x + ANCHO_AVISO, ay + alto, alfa(a.color(), al));
+				g.fill(x + 1, ay + 1, x + ANCHO_AVISO - 1, ay + alto - 1, alfa(0xE00A1712, al));
+				if (al > 0.5f) g.renderItem(moneda, x + 4, ay + 5);
+				g.drawString(f, recortar(f, a.titulo(), ANCHO_AVISO - 28), x + 24, ay + 4, alfa(a.color(), al), true);
+				g.drawString(f, recortar(f, a.texto(), ANCHO_AVISO - 28), x + 24, ay + 14, alfa(0xFFDDEFE6, al), false);
+				ay += alto + 2; mostrados++;
+				continue;
+			}
 			g.fill(x, ay, x + ANCHO_AVISO, ay + alto, alfa(0xC00A0E0C, al));
 			g.fill(x + 3, ay + 3, x + 5, ay + alto - 3, alfa(a.color(), al));
 			g.drawString(f, recortar(f, a.titulo(), ANCHO_AVISO - 12), x + 9, ay + 3, alfa(a.color(), al), true);

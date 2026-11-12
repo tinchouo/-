@@ -41,16 +41,19 @@ final class Monedas implements Listener {
 		}
 	}
 
+	static final int MAX = 99;
 	private final NamespacedKey marca;
 	Monedas(TOD5Servidor plugin) { this.marca = new NamespacedKey(plugin, "moneda"); }
 
 	ItemStack crear(Tipo t, int cantidad) {
-		ItemStack it = new ItemStack(Material.GOLD_NUGGET, Math.max(1, Math.min(64, cantidad)));
+		ItemStack it = new ItemStack(Material.GOLD_NUGGET);
 		ItemMeta m = it.getItemMeta();
 		m.setItemModel(new NamespacedKey("tod5", t.modelo));
+		m.setMaxStackSize(MAX);   // se apilan hasta 99 (igual que las del creativo del mod)
 		m.itemName(Component.translatable("item.tod5." + t.modelo));   // el nombre lo pone el mod (como un item de verdad)
 		m.getPersistentDataContainer().set(marca, PersistentDataType.STRING, t.name().toLowerCase(Locale.ROOT));
 		it.setItemMeta(m);
+		it.setAmount(Math.max(1, Math.min(MAX, cantidad)));   // despues de subir el tope a 99
 		return it;
 	}
 	boolean esMoneda(ItemStack it) {
@@ -72,7 +75,7 @@ final class Monedas implements Listener {
 		Player p = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : (s instanceof Player yo ? yo : null);
 		if (p == null) { s.sendMessage(Component.text("¿A quién? Poné el nombre del jugador.", NamedTextColor.RED)); return; }
 		p.getInventory().addItem(crear(t, n)).values().forEach(sobra -> p.getWorld().dropItem(p.getLocation(), sobra));
-		s.sendMessage(Component.text("Le di " + Math.max(1, Math.min(64, n)) + " × " + t.nombre + " a " + p.getName() + ".", NamedTextColor.GREEN));
+		s.sendMessage(Component.text("Le di " + Math.max(1, Math.min(MAX, n)) + " × " + t.nombre + " a " + p.getName() + ".", NamedTextColor.GREEN));
 	}
 	static List<String> tipos() { return List.of("trucoin", "fracoin", "tinchoin", "truquita"); }
 }

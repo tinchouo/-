@@ -38,6 +38,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	private Tablero tablero;
 	Monedas monedas;
 	Desafios desafios;
+	Recompensas recompensas;
 	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
@@ -55,6 +56,9 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		monedas = new Monedas(this);
 		getServer().getPluginManager().registerEvents(monedas, this);
 		getServer().getPluginManager().registerEvents(tablero.crafteos, this);
+		recompensas = new Recompensas(this);
+		recompensas.cargar();
+		getServer().getPluginManager().registerEvents(recompensas, this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Desafios.CANAL);
 		desafios = new Desafios(this);
 		desafios.cargar();

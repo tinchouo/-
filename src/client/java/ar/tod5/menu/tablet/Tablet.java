@@ -32,7 +32,7 @@ public class Tablet extends Screen {
 	private static final int M_BORDE = 0xFF0A0B0C, M_LUZ = 0xFF8D949C, M_CLARO = 0xFF5E646B, M_BASE = 0xFF3C4147, M_OSCURO = 0xFF24272B;
 
 	enum Seccion { INICIO("Inicio", Items.COMPASS), NOVEDADES("Novedades", Items.WRITABLE_BOOK), MISIONES("Misiones", Items.IRON_SWORD),
-		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD),
+		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD), RECOMPENSAS("Recompensas", Items.GOLD_NUGGET),
 		ANUNCIOS("Anuncios", Items.BELL), ADMIN_CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), ITEMS("Ítems", Items.NAME_TAG);   // las del modo admin
 		final String nombre; final ItemStack icono;
 		Seccion(String n, net.minecraft.world.item.Item i) { nombre = n; icono = new ItemStack(i); } }
@@ -188,6 +188,7 @@ public class Tablet extends Screen {
 		if (admin != esAdmin(this.seccion)) this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
 		this.zonas.clear();
 		if (this.seccion == Seccion.EQUIPO && this.datos.equipo == null) this.seccion = Seccion.INICIO;
+		if (this.seccion == Seccion.RECOMPENSAS && this.datos.recompensas.isEmpty()) this.seccion = Seccion.INICIO;
 		this.w = Math.min(470, this.width - 16);
 		this.h = Math.min(290, this.height - 24);
 		this.x0 = (this.width - this.w) / 2;
@@ -206,19 +207,21 @@ public class Tablet extends Screen {
 		Seccion encima = null;
 		for (Seccion s : Seccion.values()) {
 			if (s == Seccion.EQUIPO && datos.equipo == null) continue;   // sin equipo, no aparece
+			if (s == Seccion.RECOMPENSAS && datos.recompensas.isEmpty()) continue;   // solo si tenes algo para reclamar
 			if (esAdmin(s) != admin) continue;                            // en modo admin, solo las de editar
 			boolean act = s == this.seccion, sobre = mx >= tx && my >= ty && mx < tx + tam && my < ty + tam;
 			if (sobre) encima = s;
 			relieve(g, tx, ty, tam, tam, act ? (admin ? 0xFF302A16 : 0xFF16301F) : sobre ? 0xFF2A3230 : 0xFF1E2422, act ? acento() : M_CLARO, act ? (admin ? 0xFF7A661F : 0xFF1F7A33) : M_OSCURO);
 			if (act) g.fill(tx - 3, ty + 6, tx - 1, ty + tam - 6, pulso(t, 0.6f, 1f));
 			g.pose().pushMatrix(); g.pose().translate(tx + 3, ty + 3); g.pose().scale(1.25f, 1.25f);
-			g.renderItem(s.icono, 0, 0);
+			g.renderItem(s == Seccion.RECOMPENSAS ? moneda() : s.icono, 0, 0);
 			g.pose().popMatrix();
 			int badge = switch (s) {
 				case NOVEDADES -> datos.novedadesNuevas();
 				case MISIONES -> datos.diariaParaReclamar(reclamadas);
 				case CRAFTEOS -> datos.crafteosNuevos();
 				case EQUIPO -> datos.equipo.mensajesNuevos;
+				case RECOMPENSAS -> datos.recompensas.size();
 				default -> 0;
 			};
 			if (badge > 0) numerito(g, badge, tx + tam - 7, ty - 2);
@@ -236,6 +239,7 @@ public class Tablet extends Screen {
 			case MISIONES -> misiones(g, cx, cy, cw, mx, my);
 			case CRAFTEOS -> crafteos(g, cx, cy, cw, mx, my);
 			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
+			case RECOMPENSAS -> recompensas(g, cx, cy, cw, ch, mx, my);
 			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS -> panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
 		}
 		// boton ADMIN en el marco (arriba a la derecha): solo lo ven los editores
@@ -490,6 +494,59 @@ public class Tablet extends Screen {
 		int pf = porFila(ancho), i = 0;
 		for (ItemStack st : m.recompensas()) {
 			int sx = x + (i % pf) * (CASILLA + 1), sy = y + 4 + (i / pf) * (CASILLA + 1);
+			hundido(g, sx, sy, CASILLA, CASILLA);
+			g.renderItem(st, sx + 1, sy + 1);
+			if (st.getCount() > 1) g.renderItemDecorations(this.font, st, sx + 1, sy + 1, String.valueOf(st.getCount()));
+			if (mx >= sx && my >= sy && mx < sx + CASILLA && my < sy + CASILLA)
+				g.setTooltipForNextFrame(Component.literal(st.getCount() + " × ").append(st.getHoverName()), mx, my);
+			i++;
+		}
+	}
+
+	// ---------- RECOMPENSAS: la bandeja (zonas de monedas, desafios...). Las misiones tienen su propio Reclamar ----------
+	private static ItemStack moneda;
+	private static ItemStack moneda() { if (moneda == null) moneda = ar.tod5.menu.ItemsTOD.moneda("trucoin"); return moneda; }
+	private static final int PREMIO = TabletHud.COLOR_PREMIO;
+
+	private void recompensas(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
+		titulo(g, "Recompensas", x, y);
+		g.drawString(this.font, "Reclamalas cuando quieras: lo que no te entre queda guardado acá.", x, y + 14, GRIS_TEXTO, false);
+		int yy = y + 28, fin = y + ch, mostrados = 0;
+		for (TabletDatos.Paquete r : datos.recompensas) {
+			int pf = porFila(cw - 12), filas = Math.max(1, (r.items().size() + pf - 1) / pf);
+			int alto = 22 + filas * (CASILLA + 1) + 4;
+			if (yy + alto > fin && mostrados > 0) {
+				g.drawString(this.font, "y " + (datos.recompensas.size() - mostrados) + " más (reclamá las de arriba)", x + 2, yy + 2, GRIS_TEXTO, false);
+				break;
+			}
+			g.fill(x, yy, x + cw, yy + alto, PREMIO);
+			g.fill(x + 1, yy + 1, x + cw - 1, yy + alto - 1, 0xFF0F1B16);
+			g.fill(x + 1, yy + 1, x + cw - 1, yy + 2, 0xFF1C3328);
+			g.renderItem(moneda(), x + 4, yy + 3);
+			g.drawString(this.font, this.font.plainSubstrByWidth(r.titulo(), cw - 190), x + 23, yy + 7, PREMIO, true);
+			int bx = x + cw - 5;
+			String tTodo = "Reclamar todo", tAbrir = "Abrir";
+			bx -= this.font.width(tTodo) + 10;
+			final String id = r.id();
+			boton(g, tTodo, bx, yy + 4, false, mx, my, () -> accionRecompensa("recompensa_todo", id, false));
+			bx -= this.font.width(tAbrir) + 10 + 3;
+			boton(g, tAbrir, bx, yy + 4, false, mx, my, () -> accionRecompensa("recompensa_abrir", id, true));
+			casillas(g, r.items(), x + 6, yy + 21, cw - 12, mx, my);
+			yy += alto + 5; mostrados++;
+		}
+	}
+	private void accionRecompensa(String a, String id, boolean cerrar) {
+		com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+		o.addProperty("a", a);
+		com.google.gson.JsonArray ids = new com.google.gson.JsonArray(); ids.add(id); o.add("ids", ids);
+		ar.tod5.menu.Conexion.accion(o.toString());
+		if (cerrar) this.onClose();   // el server abre el cofre
+	}
+	/** Items como casillas de inventario (con cantidad y el nombre al pasar el mouse). */
+	private void casillas(GuiGraphics g, List<ItemStack> items, int x, int y, int ancho, int mx, int my) {
+		int pf = porFila(ancho), i = 0;
+		for (ItemStack st : items) {
+			int sx = x + (i % pf) * (CASILLA + 1), sy = y + (i / pf) * (CASILLA + 1);
 			hundido(g, sx, sy, CASILLA, CASILLA);
 			g.renderItem(st, sx + 1, sy + 1);
 			if (st.getCount() > 1) g.renderItemDecorations(this.font, st, sx + 1, sy + 1, String.valueOf(st.getCount()));
