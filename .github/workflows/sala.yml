@@ -149,9 +149,16 @@ jobs:
           xdotool mousemove 714 264 click 1; sleep 0.3; xdotool mousemove 496 550 click 1; sleep 0.4; xdotool mousemove 1200 700; sleep 0.3; import -window root cap/f4_receta.png
           xdotool mousemove 642 372 click 1; sleep 1.5; import -window root cap/f5_guardada.png
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
-          xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 376 194 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f6_elegido.png
+          xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 376 238 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f6_elegido.png
           xdotool mousemove 830 246 click 1; sleep 1.5; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f7_activo.png
           xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 224 332 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f8_tablet_normal.png
+          xdotool key Escape; sleep 1
+          # 13) hacer el crafteo en una mesa de verdad: 12 + 1 trucoin -> resultado; shift+clic
+          echo "setblock 4 -60 0 crafting_table" >> srv/cmds.txt; echo "tp $N 2.5 -60 0.5 -90 40" >> srv/cmds.txt; sleep 2
+          xdotool mousemove 640 360 click 3; sleep 1.5; xdotool mousemove 1200 700; import -window root cap/g1_mesa.png
+          xdotool mousemove 496 494 click 1; sleep 0.3; xdotool mousemove 540 244 click 1; sleep 0.3
+          xdotool mousemove 676 494 click 1; sleep 0.3; xdotool mousemove 576 244 click 1; sleep 0.6; xdotool mousemove 1200 700; import -window root cap/g2_resultado.png
+          xdotool mousemove 728 280; xdotool keydown shift; xdotool click 1; xdotool keyup shift; sleep 0.8; xdotool mousemove 1200 700; import -window root cap/g3_shift.png
           xdotool key Escape; sleep 1
           cat srv/plugins/TOD5/datos/crafteos.json 2>/dev/null | head -40 || true
           grep -iE "crafteo|Crafteos" srv/server.log | tail -8 || true

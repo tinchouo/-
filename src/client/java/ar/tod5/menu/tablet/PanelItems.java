@@ -142,9 +142,9 @@ final class PanelItems extends Panel {
 		}
 		t.boton(g, "Brillo: " + (this.brillo ? "sí" : "no"), cx + 6, ey - 1, this.brillo, mx, my, () -> { this.brillo = !this.brillo; this.sucio = true; });
 		ey += 18;
-		g.drawString(f, "Descripción", ex, ey + 3, Tablet.GRIS_TEXTO, false);
-		texto(g, this.desc, ex + 60, ey, ew - 60, 32, 0xFFAAAAAA);
-		ey += 38;
+		g.drawString(f, "Descripción", ex, ey, Tablet.GRIS_TEXTO, false);
+		texto(g, this.desc, ex, ey + 10, ew, 32, 0xFFAAAAAA);
+		ey += 48;
 		// como queda
 		g.drawString(f, "Así queda", ex, ey + 4, Tablet.GRIS_TEXTO, false);
 		TabletDatos.ItemPropio ip = actual(d);

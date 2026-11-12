@@ -126,13 +126,13 @@ final class PanelCrafteos extends Panel {
 		int ey = y;
 		// nombre
 		g.drawString(f, "Nombre", ex, ey + 3, Tablet.GRIS_TEXTO, false);
-		texto(g, this.nombre, ex + 44, ey, ew - 44, 14, Tablet.TEXTO);
+		texto(g, this.nombre, ex + 54, ey, ew - 54, 14, Tablet.TEXTO);
 		ey += 18;
 		// categoria y dia
 		g.drawString(f, "Categoría", ex, ey + 3, Tablet.GRIS_TEXTO, false);
-		int catW = ew - 44 - 78;
-		texto(g, this.categoria, ex + 44, ey, catW, 14, Tablet.TEXTO);
-		int dx = ex + 44 + catW + 6;
+		int catW = ew - 54 - 78;
+		texto(g, this.categoria, ex + 54, ey, catW, 14, Tablet.TEXTO);
+		int dx = ex + 54 + catW + 6;
 		g.drawString(f, "Día", dx, ey + 3, Tablet.GRIS_TEXTO, false);
 		dx += f.width("Día") + 3;
 		dx += t.boton(g, "<", dx, ey, false, mx, my, () -> { this.dia = Math.max(1, this.dia - 1); this.sucio = true; }) + 1;
@@ -141,7 +141,7 @@ final class PanelCrafteos extends Panel {
 		ey += 18;
 		// donde se hace
 		g.drawString(f, "Dónde", ex, ey + 4, Tablet.GRIS_TEXTO, false);
-		int tx = ex + 44;
+		int tx = ex + 54;
 		for (String tp : TIPOS) {
 			boolean sel = tp.equals(this.tipo);
 			g.fill(tx, ey, tx + 18, ey + 18, sel ? t.acento() : 0xFF3A4840);
@@ -158,7 +158,7 @@ final class PanelCrafteos extends Panel {
 		ey += 22;
 		// estado
 		g.drawString(f, "Estado", ex, ey + 3, Tablet.GRIS_TEXTO, false);
-		int sx = ex + 44, estAct = c == null ? 0 : indice(ESTADOS, c.estado());
+		int sx = ex + 54, estAct = c == null ? 0 : indice(ESTADOS, c.estado());
 		for (int i = 0; i < ESTADOS.length; i++) {
 			final String es = ESTADOS[i];
 			String txt = es.substring(0, 1).toUpperCase() + es.substring(1);
@@ -188,10 +188,11 @@ final class PanelCrafteos extends Panel {
 			ey += Math.max(alto + 8, 34);
 		}
 		// nota
-		g.drawString(f, "Nota", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+		// nota (de ancho entero: los renglones se cortan igual que en el chat)
+		g.drawString(f, "Nota", ex, ey, Tablet.GRIS_TEXTO, false);
 		int by = y + ch - 14;
-		int notaAlto = Math.max(14, by - 4 - ey);
-		texto(g, this.nota, ex + 44, ey, ew - 44, Math.min(notaAlto, 32), Tablet.TEXTO);
+		int notaAlto = Math.max(14, by - 4 - (ey + 10));
+		texto(g, this.nota, ex, ey + 10, ew, Math.min(notaAlto, 32), Tablet.TEXTO);
 
 		// botones
 		int bbx = ex;
