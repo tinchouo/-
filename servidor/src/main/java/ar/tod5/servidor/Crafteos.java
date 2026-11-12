@@ -235,47 +235,62 @@ final class Crafteos implements Listener {
 		if (r != null) inv.setResult(r.resultado.clone());
 	}
 
-	/** Lo hago yo: gasta exactamente lo que pide cada casilla, y con shift fabrica todas las veces que alcance. */
+	/**
+	 * Lo hago yo: gasta exactamente lo que pide cada casilla, y con shift fabrica todas las veces que alcance.
+	 * El clic de Minecraft se cancela y el crafteo se hace en el tick siguiente, con el inventario ya quieto
+	 * (si se toca la grilla adentro del evento, Minecraft la pisa al cancelar y aparecen items de mas).
+	 */
+	private final Set<UUID> crafteando = new HashSet<>();
+
 	@EventHandler(priority = EventPriority.HIGH)
 	public void alCraftear(CraftItemEvent e) {
 		CraftingInventory inv = e.getInventory();
 		if (inv.getType() != InventoryType.WORKBENCH || !(e.getWhoClicked() instanceof Player p)) return;
+		if (buscar(inv.getMatrix()) == null) return;
+		e.setCancelled(true);
+		ClickType ct = e.getClick();
+		if (!ct.isShiftClick() && ct != ClickType.LEFT && ct != ClickType.RIGHT) return;   // teclas numericas, tirar: no
+		if (!crafteando.add(p.getUniqueId())) return;                                       // ya hay uno en camino
+		Bukkit.getScheduler().runTask(plugin, () -> {
+			crafteando.remove(p.getUniqueId());
+			if (p.getOpenInventory().getTopInventory() != inv) return;
+			hacer(p, inv, ct.isShiftClick());
+		});
+	}
+	private void hacer(Player p, CraftingInventory inv, boolean shift) {
 		ItemStack[] grilla = inv.getMatrix();
 		Receta r = buscar(grilla);
-		if (r == null) return;
-		e.setCancelled(true);
+		if (r == null) { inv.setResult(null); p.updateInventory(); return; }
 		int[] gasto = encaje(r, grilla);
 		int veces = Integer.MAX_VALUE;
 		for (int i = 0; i < 9; i++) if (gasto[i] > 0) veces = Math.min(veces, grilla[i].getAmount() / gasto[i]);
 		if (veces <= 0 || veces == Integer.MAX_VALUE) return;
 		ItemStack res = r.resultado.clone();
-		ClickType ct = e.getClick();
-		if (ct.isShiftClick()) {
-			// todas las que entren en el inventario
+		if (shift) {
 			int entran = cuantasEntran(p.getInventory(), res);
 			veces = Math.min(veces, Math.max(0, entran / res.getAmount()));
 			if (veces <= 0) return;
 			for (int v = 0; v < veces; v++) p.getInventory().addItem(res.clone()).values().forEach(s -> p.getWorld().dropItem(p.getLocation(), s));
-		} else if (ct == ClickType.LEFT || ct == ClickType.RIGHT) {
-			ItemStack cursor = e.getCursor();
+		} else {
+			ItemStack cursor = p.getItemOnCursor();
 			if (vacio(cursor)) p.setItemOnCursor(res);
 			else if (cursor.isSimilar(res) && cursor.getAmount() + res.getAmount() <= cursor.getMaxStackSize()) { cursor.setAmount(cursor.getAmount() + res.getAmount()); p.setItemOnCursor(cursor); }
 			else return;
 			veces = 1;
-		} else return;   // teclas numericas, tirar, etc: no (asi no hay duplicados raros)
+		}
 		ItemStack[] nueva = new ItemStack[9];
 		for (int i = 0; i < 9; i++) {
 			if (vacio(grilla[i])) continue;
 			ItemStack g = grilla[i].clone();
 			int queda = g.getAmount() - gasto[i] * veces;
-			// lo que deja un item al craftearse (balde de leche -> balde, etc.)
-			if (gasto[i] > 0 && queda <= 0 && g.getType().getCraftingRemainingItem() != null) nueva[i] = new ItemStack(g.getType().getCraftingRemainingItem());
+			Material resto = gasto[i] > 0 && queda <= 0 ? g.getType().getCraftingRemainingItem() : null;
+			if (resto != null && !resto.isAir()) nueva[i] = new ItemStack(resto);   // balde de leche -> balde, etc.
 			else if (queda > 0) { g.setAmount(queda); nueva[i] = g; }
 		}
 		inv.setMatrix(nueva);
 		Receta otra = buscar(nueva);
 		inv.setResult(otra == null ? null : otra.resultado.clone());
-		Bukkit.getScheduler().runTask(plugin, p::updateInventory);
+		p.updateInventory();
 	}
 	private static int cuantasEntran(PlayerInventory inv, ItemStack it) {
 		int n = 0, max = it.getMaxStackSize();
