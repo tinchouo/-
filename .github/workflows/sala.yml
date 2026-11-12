@@ -128,14 +128,17 @@ jobs:
           xdotool mousemove 477 276 click 1; sleep 0.5; xdotool mousemove 660 463 click 1; sleep 1; xdotool mousemove 1200 700; import -window root cap/k4_sacada.png
           xdotool key Escape; sleep 2; import -window root cap/k5_sigo_adentro.png
           grep -iE "disconnect|lost connection|kicked" srv/server.log | tail -3 || true
-          # 11) desafio de monedas: 3 monedas en fila, las junto con tp
+          # 11) zona de monedas: al entrar aparecen, se juntan pasando, al salir se va el contador
           echo "gamemode survival $N" >> srv/cmds.txt; echo "tp $N 0.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
-          echo "tod desafio crear prueba" >> srv/cmds.txt
-          for dx in 2 4 6; do echo "tod desafio moneda prueba $N $dx 0 0" >> srv/cmds.txt; done; sleep 3
-          echo "tod desafio empezar prueba $N" >> srv/cmds.txt; sleep 2; import -window root cap/d1_monedas.png
-          echo "tp $N 2.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.6; import -window root cap/d2_una.png
-          echo "tp $N 4.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1; echo "tp $N 6.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1; import -window root cap/d3_fin.png
-          grep -iE "desafio|Desaf" srv/server.log | tail -8 || true
+          echo "tod zona crear prueba 12 $N" >> srv/cmds.txt; sleep 1
+          for dx in 3 5 7; do echo "tod zona moneda prueba $N $dx 0 0" >> srv/cmds.txt; done; sleep 2.5
+          import -window root cap/z1_aparecen.png
+          echo "tp $N 3.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.7; import -window root cap/z2_una.png
+          echo "tp $N 5.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.7; echo "tp $N 7.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 0.8; import -window root cap/z3_todas.png
+          echo "tp $N -0.5 -60 0.5 90 10" >> srv/cmds.txt; sleep 1; import -window root cap/z3b_varita.png
+          echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 1.5; import -window root cap/z4_afuera.png
+          echo "tp $N 2.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2; import -window root cap/z5_de_nuevo.png
+          grep -iE "zona|moneda" srv/server.log | tail -8 || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5
       - name: Subir capturas y logs

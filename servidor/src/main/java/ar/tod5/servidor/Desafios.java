@@ -12,9 +12,8 @@ import java.nio.file.Files;
 import java.util.*;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
-import net.kyori.adventure.title.Title;
+import net.kyori.adventure.text.format.TextDecoration;
 import org.bukkit.Bukkit;
-import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
@@ -26,148 +25,188 @@ import org.bukkit.entity.ItemDisplay;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 import org.bukkit.util.Transformation;
+import org.bukkit.util.Vector;
 import org.joml.AxisAngle4f;
 import org.joml.Vector3f;
 
 /**
- * Desafios de monedas (provisorio): un desafio es una lista de lugares con monedas verdes 3D.
- * Al empezar, aparecen las monedas girando; el jugador las junta pasando por encima.
- *  - Hasta 10 monedas: cada una suena mas aguda que la anterior (como las rojas del Mario 64).
- *  - Mas de 10: todas suenan igual (como las de Galaxy).
- * El contador sale en pantalla con el mod (canal tod5:desafio: "juntadas;total" o "fin").
+ * Zonas de monedas (como las monedas rojas / moradas de Mario Galaxy).
  *
- * /tod desafio crear|moneda|sacar|empezar|parar|lista|borrar ...   (solo editores)
- * Archivo: plugins/TOD5/datos/desafios.json
+ * Una zona es un lugar (centro + radio) con monedas puestas. No se "empieza" nada:
+ *  - Entras al radio: aparecen las monedas (solo para vos), suena "monedas_aparecen" y sale el contador a la izquierda.
+ *  - Cada jugador junta las suyas (la que agarras desaparece solo para vos).
+ *  - Hasta 10 monedas: cada una suena (moneda_roja) un poco mas aguda; con la ultima suena monedas_completo.
+ *  - Mas de 10: todas suenan igual (moneda_morada) y al terminar no suena nada.
+ *  - Si suena una moneda y agarras otra, la anterior se corta.
+ *  - Si salis de la zona sin terminar, se reinicia (la proxima vez arrancas de cero).
+ *  - Las monedas no brillan ni se ven a traves de las paredes.
+ *
+ * Armar zonas (editores):
+ *   /tod zona crear <nombre> [radio]   el centro es donde estas parado (radio por defecto 24)
+ *   /tod zona editar <nombre>          te da la varita de esa zona:
+ *        clic derecho en un bloque = pone una moneda arriba de ese bloque
+ *        clic izquierdo mirando una moneda = la saca
+ *        mientras la tenes en la mano ves todas las monedas de esa zona
+ *   /tod zona radio <nombre> <radio> · lista · borrar <nombre>
+ * Archivo: plugins/TOD5/datos/zonas.json
  */
 final class Desafios implements Listener {
 	static final String CANAL = "tod5:desafio";
-	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-	/** Escala para hasta 10 monedas: semitonos (de grave a agudo). */
+	/** Hasta 10 monedas: semitonos de cada moneda (la ultima es la mas aguda). */
 	private static final int[] ESCALA = { -5, -3, -1, 0, 2, 4, 5, 7, 9, 11 };
+	private static final int PERIODO = 5;          // ticks entre chequeos
+	private static final float TAM = 0.75f;        // tamaño de la moneda
 
-	private final TOD5Servidor plugin;
-	private final Map<String, List<Location>> desafios = new LinkedHashMap<>();
-	private final Map<UUID, Partida> partidas = new HashMap<>();
-	private BukkitTask tarea;
-	private int tick;
-
-	private static final class Partida {
-		String nombre; int total, juntadas;
-		final List<ItemDisplay> monedas = new ArrayList<>();
+	private static final class Zona {
+		String nombre; String mundo; double x, y, z; double radio = 24;
+		final List<double[]> monedas = new ArrayList<>();   // x, y, z de cada moneda
+		Location centro() { World w = Bukkit.getWorld(mundo); return w == null ? null : new Location(w, x, y, z); }
+	}
+	private static final class Estado {
+		Zona zona; int juntadas; boolean terminada;
+		final Map<Integer, ItemDisplay> visibles = new HashMap<>();   // indice de moneda -> entidad (solo para este jugador)
 	}
 
-	Desafios(TOD5Servidor plugin) { this.plugin = plugin; }
+	private final TOD5Servidor plugin;
+	private final NamespacedKey marcaVarita;
+	private final Map<String, Zona> zonas = new LinkedHashMap<>();
+	private final Map<UUID, Estado> estados = new HashMap<>();
+	private final Map<UUID, Map<Integer, ItemDisplay>> editando = new HashMap<>();   // lo que ve el editor con la varita
+	private final Map<UUID, String> zonaEditando = new HashMap<>();
+	private BukkitTask tarea;
+	private long tick;
+	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
-	// ---------- archivo ----------
-	private File archivo() { File d = new File(plugin.getDataFolder(), "datos"); d.mkdirs(); return new File(d, "desafios.json"); }
+	Desafios(TOD5Servidor plugin) { this.plugin = plugin; this.marcaVarita = new NamespacedKey(plugin, "varita_zona"); }
+
+	// ================= archivo =================
+	private File archivo() { File d = new File(plugin.getDataFolder(), "datos"); d.mkdirs(); return new File(d, "zonas.json"); }
 	void cargar() {
-		desafios.clear();
+		zonas.clear();
 		File f = archivo();
-		if (!f.exists()) return;
-		try {
+		if (f.exists()) try {
 			JsonObject o = JsonParser.parseString(Files.readString(f.toPath(), StandardCharsets.UTF_8)).getAsJsonObject();
 			for (String n : o.keySet()) {
-				List<Location> l = new ArrayList<>();
-				for (JsonElement e : o.getAsJsonArray(n)) {
-					JsonObject j = e.getAsJsonObject();
-					World w = Bukkit.getWorld(j.get("mundo").getAsString());
-					if (w != null) l.add(new Location(w, j.get("x").getAsDouble(), j.get("y").getAsDouble(), j.get("z").getAsDouble()));
-				}
-				desafios.put(n, l);
+				JsonObject j = o.getAsJsonObject(n);
+				Zona z = new Zona(); z.nombre = n; z.mundo = j.get("mundo").getAsString();
+				z.x = j.get("x").getAsDouble(); z.y = j.get("y").getAsDouble(); z.z = j.get("z").getAsDouble(); z.radio = j.get("radio").getAsDouble();
+				for (JsonElement e : j.getAsJsonArray("monedas")) { JsonArray a = e.getAsJsonArray(); z.monedas.add(new double[] { a.get(0).getAsDouble(), a.get(1).getAsDouble(), a.get(2).getAsDouble() }); }
+				zonas.put(n, z);
 			}
-		} catch (Exception e) { plugin.getLogger().severe("No pude leer desafios.json: " + e.getMessage()); }
+		} catch (Exception e) { plugin.getLogger().severe("No pude leer zonas.json: " + e.getMessage()); }
+		if (tarea == null) tarea = Bukkit.getScheduler().runTaskTimer(plugin, this::cadaRato, PERIODO, PERIODO);
 	}
 	private void guardar() {
 		JsonObject o = new JsonObject();
-		desafios.forEach((n, l) -> {
+		zonas.forEach((n, z) -> {
+			JsonObject j = new JsonObject();
+			j.addProperty("mundo", z.mundo); j.addProperty("x", z.x); j.addProperty("y", z.y); j.addProperty("z", z.z); j.addProperty("radio", z.radio);
 			JsonArray a = new JsonArray();
-			for (Location x : l) { JsonObject j = new JsonObject(); j.addProperty("mundo", x.getWorld().getName()); j.addProperty("x", x.getX()); j.addProperty("y", x.getY()); j.addProperty("z", x.getZ()); a.add(j); }
-			o.add(n, a);
+			for (double[] m : z.monedas) { JsonArray p = new JsonArray(); p.add(m[0]); p.add(m[1]); p.add(m[2]); a.add(p); }
+			j.add("monedas", a); o.add(n, j);
 		});
 		try { Files.writeString(archivo().toPath(), GSON.toJson(o), StandardCharsets.UTF_8); }
-		catch (Exception e) { plugin.getLogger().severe("No pude guardar desafios.json: " + e.getMessage()); }
+		catch (Exception e) { plugin.getLogger().severe("No pude guardar zonas.json: " + e.getMessage()); }
 	}
 
-	// ---------- la moneda ----------
-	private static ItemStack moneda() {
+	// ================= la moneda =================
+	private static ItemStack monedaItem() {
 		ItemStack it = new ItemStack(Material.GOLD_NUGGET);
-		ItemMeta m = it.getItemMeta();
-		m.setItemModel(new NamespacedKey("tod5", "moneda_desafio"));
-		it.setItemMeta(m);
+		ItemMeta m = it.getItemMeta(); m.setItemModel(new NamespacedKey("tod5", "moneda_desafio")); it.setItemMeta(m);
 		return it;
 	}
-	private static ItemDisplay aparecer(Location l) {
-		Location en = l.clone().add(0, 0.9, 0); en.setYaw(0); en.setPitch(0);
-		return l.getWorld().spawn(en, ItemDisplay.class, d -> {
-			d.setItemStack(moneda());
-			d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-			d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(0.7f, 0.7f, 0.7f), new AxisAngle4f()));
-			d.setBrightness(new Display.Brightness(15, 15));
-			d.setGlowing(true);
-			d.setGlowColorOverride(Color.fromRGB(0x3AFF6A));
-			d.setPersistent(false);
+	/** Una moneda que ve solo este jugador. */
+	private ItemDisplay aparecer(Player p, World w, double[] m) {
+		Location l = new Location(w, m[0], m[1], m[2]);
+		ItemDisplay d = w.spawn(l, ItemDisplay.class, e -> {
+			e.setVisibleByDefault(false);
+			e.setPersistent(false);
+			e.setItemStack(monedaItem());
+			e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
+			e.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(TAM, TAM, TAM), new AxisAngle4f()));
+			e.setBillboard(Display.Billboard.FIXED);
+			e.setTeleportDuration(PERIODO);
 		});
+		p.showEntity(plugin, d);
+		return d;
 	}
 
-	// ---------- jugar ----------
-	void empezar(Player p, String nombre) {
-		parar(p, false);
-		List<Location> l = desafios.get(nombre);
-		if (l == null || l.isEmpty()) return;
-		Partida pa = new Partida();
-		pa.nombre = nombre; pa.total = l.size();
-		for (Location x : l) pa.monedas.add(aparecer(x));
-		partidas.put(p.getUniqueId(), pa);
-		mandar(p, "0;" + pa.total);
-		if (tarea == null) tarea = Bukkit.getScheduler().runTaskTimer(plugin, this::cadaTick, 1, 1);
+	// ================= cada rato: entrar/salir de zonas, juntar, girar =================
+	private void cadaRato() {
+		tick += PERIODO;
+		float giro = (tick / PERIODO % 4) * 90f;   // gira 90 grados cada vez, con interpolacion (se ve suave)
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			Estado st = estados.get(p.getUniqueId());
+			Zona dentro = zonaDe(p.getLocation());
+			if (st != null && st.zona != dentro) { salir(p, st); st = null; }
+			if (st == null && dentro != null && !dentro.monedas.isEmpty()) st = entrar(p, dentro);
+			if (st != null) juntar(p, st);
+			if (st != null) for (ItemDisplay d : st.visibles.values()) girar(d, giro);
+			Map<Integer, ItemDisplay> ed = editando.get(p.getUniqueId());
+			if (ed != null) {
+				if (!tieneVarita(p)) { ocultarEdicion(p); continue; }
+				for (ItemDisplay d : ed.values()) girar(d, giro);
+			}
+		}
 	}
-	void parar(Player p, boolean avisar) {
-		Partida pa = partidas.remove(p.getUniqueId());
-		if (pa == null) return;
-		pa.monedas.forEach(d -> { if (d.isValid()) d.remove(); });
-		mandar(p, "nada");
-		if (avisar) p.sendMessage(Component.text("Desafío cancelado.", NamedTextColor.GRAY));
+	private static void girar(ItemDisplay d, float yaw) {
+		if (!d.isValid()) return;
+		Location l = d.getLocation(); l.setYaw(yaw); l.setPitch(0);
+		d.teleport(l);   // con setTeleportDuration el giro se interpola (se ve suave)
 	}
 
-	private void cadaTick() {
-		tick++;
-		if (partidas.isEmpty()) { tarea.cancel(); tarea = null; return; }
-		for (Iterator<Map.Entry<UUID, Partida>> it = partidas.entrySet().iterator(); it.hasNext(); ) {
-			Map.Entry<UUID, Partida> e = it.next();
-			Player p = Bukkit.getPlayer(e.getKey());
-			Partida pa = e.getValue();
-			if (p == null) { pa.monedas.forEach(ItemDisplay::remove); it.remove(); continue; }
-			// girar (de a 60 grados cada 4 ticks, con interpolacion: se ve suave)
-			if (tick % 4 == 0) {
-				float ang = (float) Math.toRadians((tick / 4 * 60) % 360);
-				for (ItemDisplay d : pa.monedas) {
-					d.setInterpolationDelay(0); d.setInterpolationDuration(4);
-					d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(ang, 0, 1, 0), new Vector3f(0.7f, 0.7f, 0.7f), new AxisAngle4f()));
-				}
+	private Zona zonaDe(Location l) {
+		Zona mejor = null; double dmin = Double.MAX_VALUE;
+		for (Zona z : zonas.values()) {
+			if (!l.getWorld().getName().equals(z.mundo)) continue;
+			double d = Math.pow(l.getX() - z.x, 2) + Math.pow(l.getZ() - z.z, 2);
+			if (d <= z.radio * z.radio && Math.abs(l.getY() - z.y) <= z.radio && d < dmin) { dmin = d; mejor = z; }
+		}
+		return mejor;
+	}
+	private Estado entrar(Player p, Zona z) {
+		Estado st = new Estado(); st.zona = z;
+		World w = Bukkit.getWorld(z.mundo);
+		for (int i = 0; i < z.monedas.size(); i++) st.visibles.put(i, aparecer(p, w, z.monedas.get(i)));
+		estados.put(p.getUniqueId(), st);
+		p.playSound(p.getLocation(), "tod5:monedas_aparecen", SoundCategory.MASTER, 1f, 1f);
+		mandar(p, "0;" + z.monedas.size());
+		return st;
+	}
+	private void salir(Player p, Estado st) {
+		st.visibles.values().forEach(d -> { if (d.isValid()) d.remove(); });
+		estados.remove(p.getUniqueId());
+		mandar(p, "nada");   // si no termino, se reinicia: la proxima vez arranca de cero
+	}
+	private void juntar(Player p, Estado st) {
+		if (st.terminada) return;
+		Location cuerpo = p.getLocation().add(0, 0.9, 0);
+		int total = st.zona.monedas.size();
+		for (Iterator<Map.Entry<Integer, ItemDisplay>> it = st.visibles.entrySet().iterator(); it.hasNext(); ) {
+			ItemDisplay d = it.next().getValue();
+			if (!d.isValid() || d.getLocation().distanceSquared(cuerpo) > 1.4 * 1.4) continue;
+			d.remove(); it.remove(); st.juntadas++;
+			// la anterior se corta y suena la nueva
+			p.stopSound("tod5:moneda_roja", SoundCategory.MASTER);
+			p.stopSound("tod5:moneda_morada", SoundCategory.MASTER);
+			if (total <= ESCALA.length) {
+				float tono = (float) Math.pow(2, ESCALA[ESCALA.length - total + st.juntadas - 1] / 12.0);
+				p.playSound(p.getLocation(), "tod5:moneda_roja", SoundCategory.MASTER, 1f, tono);
+				if (st.juntadas == total) p.playSound(p.getLocation(), "tod5:monedas_completo", SoundCategory.MASTER, 1f, 1f);
+			} else {
+				p.playSound(p.getLocation(), "tod5:moneda_morada", SoundCategory.MASTER, 1f, 1f);
 			}
-			// juntar
-			Location ojo = p.getLocation().add(0, 0.9, 0);
-			for (Iterator<ItemDisplay> im = pa.monedas.iterator(); im.hasNext(); ) {
-				ItemDisplay d = im.next();
-				if (!d.getWorld().equals(ojo.getWorld()) || d.getLocation().distanceSquared(ojo) > 1.3 * 1.3) continue;
-				d.remove(); im.remove(); pa.juntadas++;
-				float tono = pa.total <= ESCALA.length
-					? (float) Math.pow(2, ESCALA[ESCALA.length - pa.total + pa.juntadas - 1] / 12.0)
-					: 1f;
-				p.playSound(p.getLocation(), "tod5:moneda_desafio", SoundCategory.MASTER, 1f, tono);
-				mandar(p, pa.juntadas + ";" + pa.total);
-			}
-			if (pa.monedas.isEmpty()) {
-				it.remove();
-				p.playSound(p.getLocation(), "tod5:desafio_completo", SoundCategory.MASTER, 1f, 1f);
-				p.showTitle(Title.title(Component.text("¡Desafío completo!", NamedTextColor.GREEN), Component.text(pa.total + " de " + pa.total + " monedas", NamedTextColor.GRAY)));
-				mandar(p, "fin;" + pa.total);
-			}
+			mandar(p, (st.juntadas == total ? "fin;" : "") + (st.juntadas == total ? total : st.juntadas + ";" + total));
+			if (st.juntadas == total) { st.terminada = true; break; }
 		}
 	}
 
@@ -175,65 +214,144 @@ final class Desafios implements Listener {
 		if (plugin.tieneElMod(p)) p.sendPluginMessage(plugin, CANAL, s.getBytes(StandardCharsets.UTF_8));
 	}
 
+	// ================= la varita =================
+	private ItemStack varita(String zona) {
+		ItemStack it = new ItemStack(Material.BLAZE_ROD);
+		ItemMeta m = it.getItemMeta();
+		m.itemName(Component.text("Varita de monedas: " + zona, NamedTextColor.GREEN));
+		m.lore(List.of(
+			Component.text("Clic derecho en un bloque: pone una moneda", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
+			Component.text("Clic izquierdo mirando una moneda: la saca", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+		m.getPersistentDataContainer().set(marcaVarita, PersistentDataType.STRING, zona);
+		it.setItemMeta(m);
+		return it;
+	}
+	private String zonaDeVarita(ItemStack it) {
+		if (it == null || !it.hasItemMeta()) return null;
+		return it.getItemMeta().getPersistentDataContainer().get(marcaVarita, PersistentDataType.STRING);
+	}
+	private boolean tieneVarita(Player p) { return zonaDeVarita(p.getInventory().getItemInMainHand()) != null; }
+
+	private void mostrarEdicion(Player p, Zona z) {
+		ocultarEdicion(p);
+		Map<Integer, ItemDisplay> m = new HashMap<>();
+		World w = Bukkit.getWorld(z.mundo);
+		for (int i = 0; i < z.monedas.size(); i++) m.put(i, aparecer(p, w, z.monedas.get(i)));
+		editando.put(p.getUniqueId(), m);
+		zonaEditando.put(p.getUniqueId(), z.nombre);
+	}
+	private void ocultarEdicion(Player p) {
+		Map<Integer, ItemDisplay> m = editando.remove(p.getUniqueId());
+		zonaEditando.remove(p.getUniqueId());
+		if (m != null) m.values().forEach(d -> { if (d.isValid()) d.remove(); });
+	}
+
 	@EventHandler
-	public void alSalir(PlayerQuitEvent e) { parar(e.getPlayer(), false); }
+	public void alUsar(PlayerInteractEvent e) {
+		if (e.getHand() != EquipmentSlot.HAND) return;
+		String nombre = zonaDeVarita(e.getItem());
+		if (nombre == null) return;
+		e.setCancelled(true);
+		Player p = e.getPlayer();
+		Zona z = zonas.get(nombre);
+		if (z == null || !plugin.tablero().esEditor(p)) { p.sendActionBar(Component.text("Esa zona no existe (o no sos editor).", NamedTextColor.RED)); return; }
+		if (!nombre.equals(zonaEditando.get(p.getUniqueId()))) mostrarEdicion(p, z);
+		if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getClickedBlock() != null) {
+			Location l = e.getClickedBlock().getLocation().add(0.5, 1.6, 0.5);
+			if (!l.getWorld().getName().equals(z.mundo)) { p.sendActionBar(Component.text("Esa zona es de otro mundo.", NamedTextColor.RED)); return; }
+			z.monedas.add(new double[] { l.getX(), l.getY(), l.getZ() }); guardar();
+			mostrarEdicion(p, z);
+			p.sendActionBar(Component.text("Moneda puesta (" + z.monedas.size() + " en \"" + nombre + "\")", NamedTextColor.GREEN));
+			p.playSound(p.getLocation(), "tod5:moneda_morada", SoundCategory.MASTER, 0.6f, 1.2f);
+		} else if (e.getAction() == Action.LEFT_CLICK_AIR || e.getAction() == Action.LEFT_CLICK_BLOCK) {
+			int i = monedaMirada(p, z);
+			if (i < 0) { p.sendActionBar(Component.text("Mirá una moneda para sacarla.", NamedTextColor.GRAY)); return; }
+			z.monedas.remove(i); guardar();
+			mostrarEdicion(p, z);
+			p.sendActionBar(Component.text("Moneda sacada (quedan " + z.monedas.size() + ")", NamedTextColor.YELLOW));
+		}
+	}
+	/** La moneda que esta mirando (a menos de 8 bloques), o -1. */
+	private int monedaMirada(Player p, Zona z) {
+		Location ojo = p.getEyeLocation(); Vector dir = ojo.getDirection();
+		int mejor = -1; double mejorT = 9;
+		for (int i = 0; i < z.monedas.size(); i++) {
+			double[] m = z.monedas.get(i);
+			Vector a = new Vector(m[0] - ojo.getX(), m[1] - ojo.getY(), m[2] - ojo.getZ());
+			double t = a.dot(dir);
+			if (t < 0 || t > 8) continue;
+			if (a.clone().subtract(dir.clone().multiply(t)).lengthSquared() < 0.5 * 0.5 && t < mejorT) { mejorT = t; mejor = i; }
+		}
+		return mejor;
+	}
 
-	void apagar() { for (UUID u : new ArrayList<>(partidas.keySet())) { Player p = Bukkit.getPlayer(u); if (p != null) parar(p, false); } }
+	@EventHandler
+	public void alSalirDelServer(PlayerQuitEvent e) {
+		Estado st = estados.remove(e.getPlayer().getUniqueId());
+		if (st != null) st.visibles.values().forEach(d -> { if (d.isValid()) d.remove(); });
+		ocultarEdicion(e.getPlayer());
+	}
+	void apagar() {
+		for (Estado st : estados.values()) st.visibles.values().forEach(d -> { if (d.isValid()) d.remove(); });
+		estados.clear();
+		for (UUID u : new ArrayList<>(editando.keySet())) { Player p = Bukkit.getPlayer(u); if (p != null) ocultarEdicion(p); }
+	}
 
-	// ---------- comando ----------
+	// ================= comando =================
 	void comando(CommandSender s, String[] args) {
 		String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
 		String nombre = args.length > 2 ? args[2].toLowerCase(Locale.ROOT) : null;
 		Player yo = s instanceof Player pl ? pl : null;
 		switch (sub) {
 			case "crear" -> {
-				if (nombre == null) { uso(s); return; }
-				desafios.putIfAbsent(nombre, new ArrayList<>()); guardar();
-				s.sendMessage(Component.text("Desafío \"" + nombre + "\" creado. Pará donde va cada moneda y usá /tod desafio moneda " + nombre, NamedTextColor.GREEN));
+				Player quien = args.length > 4 ? Bukkit.getPlayerExact(args[4]) : yo;   // crear <nombre> [radio] [jugador]
+				if (nombre == null || quien == null) { uso(s); return; }
+				Player yo2 = quien;
+				Zona z = zonas.getOrDefault(nombre, new Zona());
+				z.nombre = nombre; z.mundo = yo2.getWorld().getName();
+				z.x = yo2.getLocation().getX(); z.y = yo2.getLocation().getY(); z.z = yo2.getLocation().getZ();
+				if (args.length > 3) try { z.radio = Double.parseDouble(args[3]); } catch (NumberFormatException ex) { uso(s); return; }
+				zonas.put(nombre, z); guardar();
+				yo2.getInventory().addItem(varita(nombre));
+				s.sendMessage(Component.text("Zona \"" + nombre + "\" creada (radio " + (int) z.radio + "). Te di la varita para poner las monedas.", NamedTextColor.GREEN));
 			}
-			case "moneda" -> {
-				// moneda <nombre> [jugador] [dx dy dz]: donde esta el jugador (vos si no decis), corrida unos bloques si queres
-				Player donde = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : yo;
-				if (nombre == null || donde == null || !desafios.containsKey(nombre)) { uso(s); return; }
-				Location lugar = donde.getLocation().toBlockLocation().add(0.5, 0, 0.5);
-				if (args.length > 6) try { lugar.add(Double.parseDouble(args[4]), Double.parseDouble(args[5]), Double.parseDouble(args[6])); } catch (NumberFormatException ex) { uso(s); return; }
-				desafios.get(nombre).add(lugar); guardar();
-				ItemDisplay muestra = aparecer(lugar);
-				Bukkit.getScheduler().runTaskLater(plugin, muestra::remove, 40);
-				s.sendMessage(Component.text("Moneda " + desafios.get(nombre).size() + " puesta en \"" + nombre + "\".", NamedTextColor.GREEN));
+			case "editar" -> {
+				if (nombre == null || yo == null || !zonas.containsKey(nombre)) { uso(s); return; }
+				yo.getInventory().addItem(varita(nombre));
+				s.sendMessage(Component.text("Ahí tenés la varita de \"" + nombre + "\".", NamedTextColor.GREEN));
 			}
-			case "sacar" -> {
-				if (nombre == null || yo == null || !desafios.containsKey(nombre)) { uso(s); return; }
-				List<Location> l = desafios.get(nombre);
-				Location cerca = l.stream().filter(x -> x.getWorld().equals(yo.getWorld())).min(Comparator.comparingDouble(x -> x.distanceSquared(yo.getLocation()))).orElse(null);
-				if (cerca == null || cerca.distanceSquared(yo.getLocation()) > 9) { s.sendMessage(Component.text("No hay ninguna moneda de ese desafío a menos de 3 bloques.", NamedTextColor.RED)); return; }
-				l.remove(cerca); guardar();
-				s.sendMessage(Component.text("Moneda sacada. Quedan " + l.size() + ".", NamedTextColor.YELLOW));
+			case "radio" -> {
+				if (nombre == null || !zonas.containsKey(nombre) || args.length < 4) { uso(s); return; }
+				try { zonas.get(nombre).radio = Double.parseDouble(args[3]); } catch (NumberFormatException ex) { uso(s); return; }
+				guardar(); s.sendMessage(Component.text("Radio de \"" + nombre + "\": " + args[3], NamedTextColor.GREEN));
 			}
-			case "empezar" -> {
-				Player p = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : yo;
-				if (nombre == null || p == null || !desafios.containsKey(nombre) || desafios.get(nombre).isEmpty()) { s.sendMessage(Component.text("Ese desafío no existe o no tiene monedas.", NamedTextColor.RED)); return; }
-				empezar(p, nombre);
-				s.sendMessage(Component.text("Desafío \"" + nombre + "\" empezado para " + p.getName() + " (" + desafios.get(nombre).size() + " monedas).", NamedTextColor.GREEN));
-			}
-			case "parar" -> { Player p = args.length > 2 ? Bukkit.getPlayerExact(args[2]) : yo; if (p != null) parar(p, true); }
 			case "lista" -> {
-				if (desafios.isEmpty()) s.sendMessage(Component.text("No hay desafíos.", NamedTextColor.GRAY));
-				desafios.forEach((n, l) -> s.sendMessage(Component.text(" " + n + " · " + l.size() + " monedas", NamedTextColor.GRAY)));
+				if (zonas.isEmpty()) s.sendMessage(Component.text("No hay zonas de monedas.", NamedTextColor.GRAY));
+				zonas.forEach((n, z) -> s.sendMessage(Component.text(" " + n + " · " + z.monedas.size() + " monedas · radio " + (int) z.radio + " · " + z.mundo + " " + (int) z.x + " " + (int) z.y + " " + (int) z.z, NamedTextColor.GRAY)));
 			}
 			case "borrar" -> {
-				if (nombre == null || desafios.remove(nombre) == null) { uso(s); return; }
-				guardar(); s.sendMessage(Component.text("Desafío \"" + nombre + "\" borrado.", NamedTextColor.YELLOW));
+				if (nombre == null || zonas.remove(nombre) == null) { uso(s); return; }
+				guardar(); s.sendMessage(Component.text("Zona \"" + nombre + "\" borrada.", NamedTextColor.YELLOW));
+			}
+			// solo para la prueba automatica: pone una moneda corrida desde un jugador
+			case "moneda" -> {
+				Player donde = args.length > 3 ? Bukkit.getPlayerExact(args[3]) : yo;
+				Zona z = nombre == null ? null : zonas.get(nombre);
+				if (z == null || donde == null) { uso(s); return; }
+				Location l = donde.getLocation().toBlockLocation().add(0.5, 0.6, 0.5);
+				if (args.length > 6) l.add(Double.parseDouble(args[4]), Double.parseDouble(args[5]), Double.parseDouble(args[6]));
+				z.monedas.add(new double[] { l.getX(), l.getY(), l.getZ() }); guardar();
+				s.sendMessage(Component.text("Moneda puesta en \"" + nombre + "\" (" + z.monedas.size() + ").", NamedTextColor.GREEN));
 			}
 			default -> uso(s);
 		}
 	}
 	private static void uso(CommandSender s) {
-		s.sendMessage(Component.text("/tod desafio crear <nombre> · moneda <nombre> [jugador] [dx dy dz] · sacar <nombre> · empezar <nombre> [jugador] · parar [jugador] · lista · borrar <nombre>", NamedTextColor.YELLOW));
+		s.sendMessage(Component.text("/tod zona crear <nombre> [radio] · editar <nombre> · radio <nombre> <radio> · lista · borrar <nombre>", NamedTextColor.YELLOW));
 	}
 	List<String> completar(String[] args) {
-		if (args.length == 2) return List.of("crear", "moneda", "sacar", "empezar", "parar", "lista", "borrar");
-		if (args.length == 3 && !args[1].equalsIgnoreCase("crear") && !args[1].equalsIgnoreCase("parar")) return new ArrayList<>(desafios.keySet());
+		if (args.length == 2) return List.of("crear", "editar", "radio", "lista", "borrar");
+		if (args.length == 3 && !args[1].equalsIgnoreCase("crear")) return new ArrayList<>(zonas.keySet());
 		return List.of();
 	}
 }

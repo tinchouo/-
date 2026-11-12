@@ -64,14 +64,24 @@
    }
   ]
  },
- "moneda_desafio": {
+ "moneda_roja": {
   "sounds": [
-   "tod5:moneda_desafio"
+   "tod5:moneda_roja"
   ]
  },
- "desafio_completo": {
+ "moneda_morada": {
   "sounds": [
-   "tod5:desafio_completo"
+   "tod5:moneda_morada"
+  ]
+ },
+ "monedas_aparecen": {
+  "sounds": [
+   "tod5:monedas_aparecen"
+  ]
+ },
+ "monedas_completo": {
+  "sounds": [
+   "tod5:monedas_completo"
   ]
  }
 }

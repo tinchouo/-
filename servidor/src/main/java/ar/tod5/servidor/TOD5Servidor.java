@@ -38,6 +38,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	private Tablero tablero;
 	Monedas monedas;
 	Desafios desafios;
+	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
 
@@ -169,7 +170,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "desafio");
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona");
 		return tablero.completar(args);
 	}
 }
