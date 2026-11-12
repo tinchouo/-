@@ -145,8 +145,8 @@ jobs:
           xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f1_admin_crafteos.png
           xdotool mousemove 462 128 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f2_nuevo.png
           xdotool mousemove 788 300 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f3_mesa.png
-          xdotool mousemove 482 571 click 1; sleep 0.4; xdotool mousemove 534 228 click 1; sleep 0.3; xdotool mousemove 570 228 click 3; sleep 0.3
-          xdotool mousemove 714 264 click 1; sleep 0.3; xdotool mousemove 482 571 click 1; sleep 0.4; xdotool mousemove 1200 700; sleep 0.3; import -window root cap/f4_receta.png
+          xdotool mousemove 496 550 click 1; sleep 0.4; xdotool mousemove 534 228 click 1; sleep 0.3; xdotool mousemove 570 228 click 3; sleep 0.3
+          xdotool mousemove 714 264 click 1; sleep 0.3; xdotool mousemove 496 550 click 1; sleep 0.4; xdotool mousemove 1200 700; sleep 0.3; import -window root cap/f4_receta.png
           xdotool mousemove 642 372 click 1; sleep 1.5; import -window root cap/f5_guardada.png
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
           xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 376 194 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f6_elegido.png
