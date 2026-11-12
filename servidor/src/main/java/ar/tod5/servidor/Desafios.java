@@ -216,7 +216,7 @@ final class Desafios implements Listener {
 
 	// ================= la varita =================
 	private ItemStack varita(String zona) {
-		ItemStack it = new ItemStack(Material.BLAZE_ROD);
+		ItemStack it = new ItemStack(Material.STICK);   // un palo comun (la vara de blaze daba el logro "Into Fire")
 		ItemMeta m = it.getItemMeta();
 		m.itemName(Component.text("Varita de monedas: " + zona, NamedTextColor.GREEN));
 		m.lore(List.of(
