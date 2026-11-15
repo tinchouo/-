@@ -187,6 +187,8 @@ public class TabletDatos {
 				JsonObject it = e.getAsJsonObject();
 				d.items.add(new ItemPropio(it.get("id").getAsString(), itemDeJson(it.get("item"))));
 			}
+			if (o.has("misiones")) for (JsonElement e : o.getAsJsonArray("misiones")) d.misiones.add(misionDeJson(e.getAsJsonObject()));
+			if (o.has("misiones_admin")) for (JsonElement e : o.getAsJsonArray("misiones_admin")) d.misionesAdmin.add(misionDeJson(e.getAsJsonObject()));
 			d.conAnuncios = o.has("anuncios");
 			d.plugin = o.has("plugin") ? o.get("plugin").getAsString() : "";
 			if (o.has("anuncios")) for (JsonElement e : o.getAsJsonArray("anuncios")) {

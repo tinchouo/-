@@ -189,8 +189,8 @@ jobs:
           # 14) misiones: dos sembradas (diaria con matar + evento; opcional de equipo con "ir"), progreso, completar y reclamar; despues el editor
           cat > srv/plugins/TOD5/datos/misiones.json <<'JSON'
           {"proximo":3,"misiones":[
-           {"id":"m1","nombre":"Cazador de zombies","clase":"diaria","estado":"activa","dia":1,"equipo":false,"objetivos":[
-             {"uid":"a","tipo":"matar","clave":"zombie","texto":"","cantidad":2,"mundo":"","x":0,"y":0,"z":0,"radio":6},
+           {"id":"m1","nombre":"Cazador de chanchos","clase":"diaria","estado":"activa","dia":1,"equipo":false,"objetivos":[
+             {"uid":"a","tipo":"matar","clave":"pig","texto":"","cantidad":2,"mundo":"","x":0,"y":0,"z":0,"radio":6},
              {"uid":"b","tipo":"evento","clave":"","texto":"Saludá al admin","cantidad":1,"mundo":"","x":0,"y":0,"z":0,"radio":6}],"recompensa":[]},
            {"id":"m2","nombre":"Expedición","clase":"opcional","estado":"activa","dia":1,"equipo":true,"objetivos":[
              {"uid":"c","tipo":"ir","clave":"","texto":"el punto de encuentro","cantidad":1,"mundo":"world","x":80.5,"y":-60,"z":0.5,"radio":4}],"recompensa":[]}]}
@@ -200,7 +200,7 @@ jobs:
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
           xdotool mousemove 224 268 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h1_misiones.png
           xdotool key Escape; sleep 1
-          for i in 1 2; do echo "summon zombie 62.5 -60 0.5 {NoAI:1b}" >> srv/cmds.txt; sleep 0.5; echo "execute as $N run damage @e[type=zombie,limit=1,sort=nearest] 200 minecraft:player_attack by $N" >> srv/cmds.txt; sleep 1; done
+          for i in 1 2; do echo "summon pig 62.5 -60 0.5 {NoAI:1b}" >> srv/cmds.txt; sleep 0.5; echo "execute as $N run damage @e[type=pig,limit=1,sort=nearest] 200 minecraft:player_attack by $N" >> srv/cmds.txt; sleep 1; done
           import -window root cap/h2_objetivo.png
           echo "tod mision completar m1 $N" >> srv/cmds.txt; sleep 1.5; import -window root cap/h3_completa.png
           echo "tp $N 80.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2.5; import -window root cap/h4_ir.png
