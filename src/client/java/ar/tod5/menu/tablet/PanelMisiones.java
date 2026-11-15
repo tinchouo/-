@@ -265,7 +265,7 @@ final class PanelMisiones extends Panel {
 			}
 			ey += 16;
 			// renglon 2: como lo lee el jugador
-			String et = ti == 4 ? "Lugar" : ti == 5 ? "Texto" : "Nombre";
+			String et = ti == 4 ? "Lugar" : "Texto";
 			g.drawString(f, et, ex, ey + 3, Tablet.GRIS_TEXTO, false);
 			int tx0 = ex + 44, tw0 = ew - 44;
 			if (ti == 4) {   // al lado, donde quedo guardado

@@ -42,7 +42,7 @@ public class TabletDatos {
 					else c.append(net.minecraft.network.chat.Component.translatable("entity.minecraft." + clave.replace("minecraft:", "").trim().toLowerCase()));
 				}
 				case "picar" -> { c.append("Picá " + n); if (propio) c.append(texto); else c.append(item.isEmpty() ? net.minecraft.network.chat.Component.literal("?") : item.getHoverName()); }
-				case "ir" -> c.append("Andá a " + (propio ? texto : "un lugar"));
+				case "ir" -> { String l = propio ? texto.trim() : "un lugar"; c.append(l.toLowerCase().startsWith("el ") ? "Andá al " + l.substring(3) : "Andá a " + l); }
 				case "evento" -> c.append(propio ? texto : "Evento");
 				default -> { c.append("Conseguí " + n); if (propio) c.append(texto); else c.append(item.isEmpty() ? net.minecraft.network.chat.Component.literal("?") : item.getHoverName()); }
 			}

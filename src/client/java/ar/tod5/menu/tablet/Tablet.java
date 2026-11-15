@@ -501,8 +501,8 @@ public class Tablet extends Screen {
 			boolean ok = o.cumplido();
 			g.drawString(this.font, ok ? "✔" : "•", x + 8, oy, ok ? color : GRIS_TEXTO, false);
 			String cuenta = o.cantidad() > 1 ? Math.min(o.hecho(), o.cantidad()) + "/" + o.cantidad() : "";
-			g.drawString(this.font, this.font.substrByWidth(o.frase(), cw - 30 - this.font.width(cuenta)).getString(), x + 18, oy, ok ? GRIS_TEXTO : TEXTO, false);
-			if (!cuenta.isEmpty()) g.drawString(this.font, cuenta, x + cw - 6 - this.font.width(cuenta), oy, ok ? color : TEXTO, false);
+			g.drawString(this.font, this.font.substrByWidth(o.frase(), barW - 14).getString(), x + 18, oy, ok ? GRIS_TEXTO : TEXTO, false);
+			if (!cuenta.isEmpty()) g.drawString(this.font, cuenta, x + 11 + barW, oy, ok ? color : TEXTO, false);   // en la columna del total (no pisa el boton)
 			oy += 10;
 		}
 		if (extra > 0) dibujarRecompensas(g, m, x + 6, oy + 2, cw - 12, mx, my);
