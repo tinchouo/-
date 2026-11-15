@@ -39,6 +39,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	Monedas monedas;
 	Desafios desafios;
 	Recompensas recompensas;
+	Misiones misiones;
 	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
@@ -63,11 +64,15 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		desafios = new Desafios(this);
 		desafios.cargar();
 		getServer().getPluginManager().registerEvents(desafios, this);
+		misiones = new Misiones(this);
+		misiones.cargar();
+		getServer().getPluginManager().registerEvents(misiones, this);
+		Bukkit.getScheduler().runTaskTimer(this, misiones::cadaTick, 1, 1);
 		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
 	}
 
 	@Override
-	public void onDisable() { if (desafios != null) desafios.apagar(); }
+	public void onDisable() { if (desafios != null) desafios.apagar(); if (misiones != null) misiones.guardarProgreso(); }
 
 	boolean abierto() { return getConfig().getBoolean("abierto", false); }
 	private Component msg(String clave, String... reemplazos) {
@@ -167,7 +172,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 				getConfig().set("abierto", false); saveConfig();
 				s.sendMessage(MM.deserialize("<yellow>Server EN PREPARACIÓN.</yellow> <gray>Solo entran los admins. Los que ya estan adentro siguen jugando.</gray>"));
 			}
-			case "recargar" -> { reloadConfig(); tablero.cargar(); tablero.sincronizarTodos(); s.sendMessage(MM.deserialize("<green>Config y datos de la tablet recargados.</green>")); }
+			case "recargar" -> { reloadConfig(); tablero.cargar(); misiones.guardarProgreso(); misiones.cargar(); tablero.sincronizarTodos(); s.sendMessage(MM.deserialize("<green>Config y datos de la tablet recargados.</green>")); }
 			default -> s.sendMessage(MM.deserialize((abierto() ? "<green>Server ABIERTO" : "<yellow>Server EN PREPARACIÓN") + "</yellow></green> <gray>- en la fila: " + enFila() + " - conectados: " + Bukkit.getOnlinePlayers().size() + "</gray>"));
 		}
 		return true;
@@ -175,7 +180,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona");
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision");
 		return tablero.completar(args);
 	}
 }

@@ -33,7 +33,7 @@ public class Tablet extends Screen {
 
 	enum Seccion { INICIO("Inicio", Items.COMPASS), NOVEDADES("Novedades", Items.WRITABLE_BOOK), MISIONES("Misiones", Items.IRON_SWORD),
 		CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), EQUIPO("Equipo", Items.SHIELD), RECOMPENSAS("Recompensas", Items.GOLD_NUGGET),
-		ANUNCIOS("Anuncios", Items.BELL), ADMIN_CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), ITEMS("Ítems", Items.NAME_TAG);   // las del modo admin
+		ANUNCIOS("Anuncios", Items.BELL), ADMIN_CRAFTEOS("Crafteos", Items.CRAFTING_TABLE), ITEMS("Ítems", Items.NAME_TAG), ADMIN_MISIONES("Misiones", Items.IRON_SWORD);   // las del modo admin
 		final String nombre; final ItemStack icono;
 		Seccion(String n, net.minecraft.world.item.Item i) { nombre = n; icono = new ItemStack(i); } }
 
@@ -43,12 +43,13 @@ public class Tablet extends Screen {
 	private final PanelAnuncios anuncios = new PanelAnuncios(this);
 	private final PanelCrafteos crafteosAdmin = new PanelCrafteos(this);
 	private final PanelItems itemsAdmin = new PanelItems(this);
+	private final PanelMisiones misionesAdmin = new PanelMisiones(this);
 	/** El panel del modo admin que se esta mostrando (null si no es una seccion de admin). */
 	private Panel panel() {
-		return switch (this.seccion) { case ANUNCIOS -> this.anuncios; case ADMIN_CRAFTEOS -> this.crafteosAdmin; case ITEMS -> this.itemsAdmin; default -> null; };
+		return switch (this.seccion) { case ANUNCIOS -> this.anuncios; case ADMIN_CRAFTEOS -> this.crafteosAdmin; case ITEMS -> this.itemsAdmin; case ADMIN_MISIONES -> this.misionesAdmin; default -> null; };
 	}
 	private boolean textoActivo;   // Minecraft solo manda letras si se le avisa que hay un cuadro de texto activo
-	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS || s == Seccion.ADMIN_CRAFTEOS || s == Seccion.ITEMS; }
+	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS || s == Seccion.ADMIN_CRAFTEOS || s == Seccion.ITEMS || s == Seccion.ADMIN_MISIONES; }
 	/** El color de las luces: verde normalmente, amarillo en modo admin. */
 	int acento() { return admin ? AMARILLO_ADMIN : VERDE; }
 	void zona(int x, int y, int w, int h, Runnable r) { this.zonas.add(new Zona(x, y, w, h, r)); }
@@ -78,7 +79,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); this.misionesAdmin.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -115,6 +116,7 @@ public class Tablet extends Screen {
 	@Override
 	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
 		if (panel() != null && panel().ruedita(mx, my, sy)) return true;
+		if (this.seccion == Seccion.MISIONES) { this.scrollMisiones = Math.max(0, this.scrollMisiones - (int) (sy * 14)); return true; }
 		return super.mouseScrolled(mx, my, sx, sy);
 	}
 
@@ -218,7 +220,7 @@ public class Tablet extends Screen {
 			g.pose().popMatrix();
 			int badge = switch (s) {
 				case NOVEDADES -> datos.novedadesNuevas();
-				case MISIONES -> datos.diariaParaReclamar(reclamadas);
+				case MISIONES -> datos.misionesParaReclamar();
 				case CRAFTEOS -> datos.crafteosNuevos();
 				case EQUIPO -> datos.equipo.mensajesNuevos;
 				case RECOMPENSAS -> datos.recompensas.size();
@@ -236,11 +238,11 @@ public class Tablet extends Screen {
 		switch (this.seccion) {
 			case INICIO -> inicio(g, cx, cy, cw, mx, my);
 			case NOVEDADES -> novedades(g, cx, cy, cw, ch, mx, my);
-			case MISIONES -> misiones(g, cx, cy, cw, mx, my);
+			case MISIONES -> misiones(g, cx, cy, cw, ch, mx, my);
 			case CRAFTEOS -> crafteos(g, cx, cy, cw, mx, my);
 			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
 			case RECOMPENSAS -> recompensas(g, cx, cy, cw, ch, mx, my);
-			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS -> panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
+			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS, ADMIN_MISIONES -> panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
 		}
 		// boton ADMIN en el marco (arriba a la derecha): solo lo ven los editores
 		if (datos.editor) {
@@ -334,7 +336,7 @@ public class Tablet extends Screen {
 		g.fill(x, y, x + lw, y + lh, pulso(t + fase, 0.35f, 1f));
 	}
 
-	private void irA(Seccion s) { this.seccion = s; this.dia = datos.hoy; }
+	private void irA(Seccion s) { this.seccion = s; this.dia = datos.hoy; this.scrollMisiones = 0; }
 
 	void titulo(GuiGraphics g, String t, int x, int y) {
 		g.pose().pushMatrix();
@@ -363,7 +365,7 @@ public class Tablet extends Screen {
 	private void inicio(GuiGraphics g, int x, int y, int cw, int mx, int my) {
 		titulo(g, "Hoy, día " + datos.hoy, x, y);
 		int colW = (cw - 6) / 2, alto = 46;
-		String[][] tarjetas = datos.resumen(reclamadas);
+		String[][] tarjetas = datos.resumen();
 		Seccion[] destino = { Seccion.NOVEDADES, Seccion.MISIONES, Seccion.NOVEDADES, datos.equipo != null ? Seccion.EQUIPO : Seccion.CRAFTEOS };
 		for (int i = 0; i < 4; i++) {
 			int tx = x + (i % 2) * (colW + 6), ty = y + 18 + (i / 2) * (alto + 6);
@@ -428,50 +430,90 @@ public class Tablet extends Screen {
 		return switch (tipo) { case "cambio" -> "CAMBIO"; case "mob" -> "MOB"; case "dungeon" -> "DUNGEON"; case "diaria" -> "MISIÓN"; case "sancion" -> "SANCIÓN"; case "cuy" -> "MOMENTO CUY"; case "truco" -> "MOMENTO TRUCO"; default -> "AVISO"; };
 	}
 
-	// ---------- MISIONES: la diaria arriba, las opcionales abajo ----------
+	// ---------- MISIONES: las diarias del dia arriba, las opcionales abajo ----------
 	private final Set<String> abiertas = new HashSet<>();   // misiones con las recompensas desplegadas
+	private int scrollMisiones;
+	static final int CELESTE = 0xFF55FFFF;
 
-	private void misiones(GuiGraphics g, int x, int y, int cw, int mx, int my) {
+	private void misiones(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
 		titulo(g, "Misiones", x, y);
-		int yy = y + 16;
-		yy += filaDeDias(g, x, yy, x + cw, mx, my, false) + 4;
+		int arriba = y + 16;
+		arriba += filaDeDias(g, x, arriba, x + cw, mx, my, false) + 4;
+		int abajo = y + ch;
+		g.enableScissor(x, arriba, x + cw, abajo);
+		int yy = arriba - this.scrollMisiones;
 		g.drawString(this.font, "MISIÓN DIARIA", x, yy, GRIS_TEXTO, false);
 		yy += 11;
-		TabletDatos.Mision d = datos.diarias.get(this.dia);
-		if (d == null) { g.drawString(this.font, "Ese día no hubo misión diaria.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
-		else {
-			int extra = this.abiertas.contains(d.id()) ? altoRecompensas(d, cw) : 0;
-			int alto = 34 + extra;
-			tarjeta(g, x, yy, cw, alto);
-			g.pose().pushMatrix(); g.pose().translate(x + 6, yy + 5); g.pose().scale(1.25f, 1.25f);
-			g.drawString(this.font, d.titulo(), 0, 0, BLANCO, true);
-			g.pose().popMatrix();
-			int barW = cw - 150;
-			g.fill(x + 6, yy + 21, x + 6 + barW, yy + 27, NEGRO);
-			g.fill(x + 7, yy + 22, x + 5 + barW, yy + 26, SLOT_OSCURO);
-			int lleno = (int) ((barW - 2) * Math.min(1, d.hecho() / (float) d.total()));
-			g.fill(x + 7, yy + 22, x + 7 + lleno, yy + 26, VERDE);
-			g.drawString(this.font, d.hecho() + " / " + d.total(), x + 10 + barW, yy + 20, BLANCO, true);
-			botonRecompensas(g, d, x + cw - 5, yy + 3, mx, my);
-			boolean hecha = this.reclamadas.contains(d.id());
-			if (hecha) g.drawString(this.font, "Reclamada", x + cw - 58, yy + 20, VERDE, true);
-			else if (d.hecho() >= d.total()) boton(g, "Reclamar", x + cw - 58, yy + 18, false, mx, my, () -> this.reclamadas.add(d.id()));
-			if (extra > 0) dibujarRecompensas(g, d, x + 6, yy + 33, cw - 12, mx, my);
-			yy += alto + 6;
-		}
+		List<TabletDatos.Mision> diarias = datos.diariasDe(this.dia);
+		if (diarias.isEmpty()) { g.drawString(this.font, "Ese día no hubo misión diaria.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
+		for (TabletDatos.Mision m : diarias) yy += tarjetaMision(g, m, x, yy, cw, arriba, abajo, mx, my) + 5;
+		yy += 2;
 		g.drawString(this.font, "MISIONES OPCIONALES", x, yy, GRIS_TEXTO, false);
 		yy += 11;
-		if (datos.opcionales.isEmpty()) g.drawString(this.font, "Todavía no hay misiones opcionales.", x, yy + 2, GRIS_TEXTO, false);
-		for (TabletDatos.Mision m : datos.opcionales) {
-			int extra = this.abiertas.contains(m.id()) ? altoRecompensas(m, cw) : 0;
-			tarjeta(g, x, yy, cw, 18 + extra);
-			g.drawString(this.font, this.font.plainSubstrByWidth(m.titulo(), cw - 170), x + 5, yy + 5, BLANCO, true);
-			String p = m.hecho() + " / " + m.total();
-			g.drawString(this.font, p, x + cw - 150, yy + 5, BLANCO, true);
-			botonRecompensas(g, m, x + cw - 3, yy + 2, mx, my);
-			if (extra > 0) dibujarRecompensas(g, m, x + 5, yy + 17, cw - 10, mx, my);
-			yy += 20 + extra;
+		List<TabletDatos.Mision> ops = datos.opcionales();
+		if (ops.isEmpty()) { g.drawString(this.font, "Todavía no hay misiones opcionales.", x, yy + 2, GRIS_TEXTO, false); yy += 14; }
+		for (TabletDatos.Mision m : ops) yy += tarjetaMision(g, m, x, yy, cw, arriba, abajo, mx, my) + 5;
+		g.disableScissor();
+		this.scrollMisiones = Math.max(0, Math.min(this.scrollMisiones, yy + this.scrollMisiones - abajo));
+	}
+
+	/** Una mision: titulo (y "DE EQUIPO" si lo es), barra, objetivos, recompensas y el boton de reclamar. Devuelve el alto. */
+	private int tarjetaMision(GuiGraphics g, TabletDatos.Mision m, int x, int yy, int cw, int arriba, int abajo, int mx, int my) {
+		int color = m.diaria() ? VERDE : CELESTE;
+		int extra = this.abiertas.contains(m.id()) ? altoRecompensas(m, cw) : 0;
+		int alto = 31 + m.objetivos().size() * 10 + 3 + extra;
+		boolean visible = yy + alto > arriba && yy < abajo;
+		tarjeta(g, x, yy, cw, alto);
+		g.fill(x + 1, yy + 1, x + 3, yy + alto - 1, color);
+		String tit = this.font.plainSubstrByWidth(m.titulo(), cw - 175);
+		g.drawString(this.font, tit, x + 7, yy + 5, BLANCO, true);
+		if (m.equipo()) {   // solo se aclara cuando es de equipo
+			int ex = x + 7 + this.font.width(tit) + 6, ew = this.font.width("DE EQUIPO") + 6;
+			g.fill(ex, yy + 3, ex + ew, yy + 14, 0xFFC8A0FF);
+			g.fill(ex + 1, yy + 4, ex + ew - 1, yy + 13, 0xFF241A33);
+			g.drawString(this.font, "DE EQUIPO", ex + 3, yy + 5, 0xFFC8A0FF, false);
+			if (visible && mx >= ex && my >= yy + 3 && mx < ex + ew && my < yy + 14) g.setTooltipForNextFrame(Component.literal("El progreso es de todo tu equipo. Cada uno reclama su recompensa."), mx, my);
 		}
+		// barra
+		int barW = cw - 150, hecho = m.hecho(), total = m.total();
+		g.fill(x + 7, yy + 18, x + 7 + barW, yy + 24, NEGRO);
+		g.fill(x + 8, yy + 19, x + 6 + barW, yy + 23, SLOT_OSCURO);
+		g.fill(x + 8, yy + 19, x + 8 + (int) ((barW - 2) * Math.min(1f, hecho / (float) total)), yy + 23, color);
+		g.drawString(this.font, hecho + " / " + total, x + 11 + barW, yy + 17, BLANCO, true);
+		// a la derecha: recompensas y reclamar (solo si la parte de arriba de la tarjeta se ve entera)
+		if (yy + 2 >= arriba && yy + 30 <= abajo) {
+			if (!m.recompensas().isEmpty()) botonRecompensas(g, m, x + cw - 4, yy + 3, mx, my);
+			String est = datos.esDelServer() ? m.estado() : this.reclamadas.contains(m.id()) ? "reclamada" : m.estado();
+			int rx = x + cw - 4;
+			switch (est) {
+				case "reclamada" -> g.drawString(this.font, "Reclamada", rx - this.font.width("Reclamada"), yy + 19, color, true);
+				case "vencida" -> g.drawString(this.font, "Vencida", rx - this.font.width("Vencida"), yy + 19, GRIS_TEXTO, false);
+				case "completa", "resto" -> {
+					String bt = est.equals("resto") ? "Reclamar el resto" : "Reclamar";
+					boton(g, bt, rx - this.font.width(bt) - 10, yy + 17, true, mx, my, () -> reclamarMision(m));
+				}
+				default -> {}
+			}
+		}
+		// objetivos
+		int oy = yy + 29;
+		for (TabletDatos.Objetivo o : m.objetivos()) {
+			boolean ok = o.cumplido();
+			g.drawString(this.font, ok ? "✔" : "•", x + 8, oy, ok ? color : GRIS_TEXTO, false);
+			String cuenta = o.cantidad() > 1 ? Math.min(o.hecho(), o.cantidad()) + "/" + o.cantidad() : "";
+			g.drawString(this.font, this.font.substrByWidth(o.frase(), cw - 30 - this.font.width(cuenta)).getString(), x + 18, oy, ok ? GRIS_TEXTO : TEXTO, false);
+			if (!cuenta.isEmpty()) g.drawString(this.font, cuenta, x + cw - 6 - this.font.width(cuenta), oy, ok ? color : TEXTO, false);
+			oy += 10;
+		}
+		if (extra > 0) dibujarRecompensas(g, m, x + 6, oy + 2, cw - 12, mx, my);
+		return alto;
+	}
+	private void reclamarMision(TabletDatos.Mision m) {
+		if (!datos.esDelServer()) { this.reclamadas.add(m.id()); return; }   // el ejemplo (sin server)
+		com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+		o.addProperty("a", "mision_reclamar");
+		com.google.gson.JsonArray ids = new com.google.gson.JsonArray(); ids.add(m.id()); o.add("ids", ids);
+		ar.tod5.menu.Conexion.accion(o.toString());
 	}
 
 	/** "Ver recompensas" / "Ocultar": despliega la cajita con todas las recompensas. x = borde derecho. */

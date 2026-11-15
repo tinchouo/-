@@ -273,12 +273,14 @@ final class Crafteos implements Listener {
 			veces = Math.min(veces, Math.max(0, entran / res.getAmount()));
 			if (veces <= 0) return;
 			for (int v = 0; v < veces; v++) p.getInventory().addItem(res.clone()).values().forEach(s -> p.getWorld().dropItem(p.getLocation(), s));
+			if (plugin.misiones != null) plugin.misiones.fabricado(p, res, veces * res.getAmount());
 		} else {
 			ItemStack cursor = p.getItemOnCursor();
 			if (vacio(cursor)) p.setItemOnCursor(res);
 			else if (cursor.isSimilar(res) && cursor.getAmount() + res.getAmount() <= cursor.getMaxStackSize()) { cursor.setAmount(cursor.getAmount() + res.getAmount()); p.setItemOnCursor(cursor); }
 			else return;
 			veces = 1;
+			if (plugin.misiones != null) plugin.misiones.fabricado(p, res, res.getAmount());
 		}
 		ItemStack[] nueva = new ItemStack[9];
 		for (int i = 0; i < 9; i++) {

@@ -34,6 +34,7 @@ final class PanelAnuncios extends Panel {
 	private String id;                 // el que se esta editando (null = ninguno)
 	private int tipo = 1, grupo = 1;
 	private boolean ruleta = true, sucio, verSimbolos;
+	private String mision = "";        // la mision que se activa al enviar este anuncio ("" = ninguna)
 	private String crafteo = "";       // el crafteo que se activa al enviar este anuncio ("" = ninguno)
 	private final EditorTexto titulo = new EditorTexto(false, 40);
 	private final EditorTexto texto = new EditorTexto(true, 1000);
@@ -59,7 +60,7 @@ final class PanelAnuncios extends Panel {
 	// ---------- abrir / guardar ----------
 	private void abrir(TabletDatos.Anuncio a) {
 		guardarSiHaceFalta();
-		this.id = a.id(); this.tipo = gajo(a.tipo()); this.grupo = a.grupo(); this.ruleta = a.ruleta(); this.crafteo = a.crafteo();
+		this.id = a.id(); this.tipo = gajo(a.tipo()); this.grupo = a.grupo(); this.ruleta = a.ruleta(); this.crafteo = a.crafteo(); this.mision = a.mision();
 		this.titulo.ponerPlano(a.titulo()); this.texto.poner(a.texto());
 		this.titulo.foco(false); this.texto.foco(false);
 		this.sucio = false; this.confirmar = null;
@@ -67,7 +68,7 @@ final class PanelAnuncios extends Panel {
 	private void nuevo(TabletDatos d) {
 		guardarSiHaceFalta();
 		this.id = "a" + Long.toString(System.currentTimeMillis(), 36) + (int) (Math.random() * 1000);
-		this.tipo = 1; this.grupo = Math.max(1, d.hoy); this.ruleta = true; this.crafteo = "";
+		this.tipo = 1; this.grupo = Math.max(1, d.hoy); this.ruleta = true; this.crafteo = ""; this.mision = "";
 		this.titulo.ponerPlano(TITULOS[1]); this.texto.poner(List.of());
 		this.texto.foco(true); this.titulo.foco(false);
 		this.sucio = true;
@@ -81,6 +82,7 @@ final class PanelAnuncios extends Panel {
 		a.addProperty("grupo", this.grupo);
 		a.addProperty("ruleta", this.ruleta);
 		a.addProperty("crafteo", this.crafteo);
+		a.addProperty("mision", this.mision);
 		a.add("texto", EditorTexto.json(this.texto.letras()));
 		JsonArray ls = new JsonArray();
 		for (List<EditorTexto.Letra> l : EditorTexto.renglones(this.texto.letras())) ls.add(EditorTexto.json(l));
@@ -223,6 +225,20 @@ final class PanelAnuncios extends Panel {
 				if (mx >= cbx && my >= ey && mx < cbx + f.width(ct) + 10 && my < ey + 13)
 					g.setTooltipForNextFrame(Component.literal(actual == null ? "Clic: elegir un crafteo que se active al enviar este anuncio" : "Al enviarlo se activa este crafteo (si lo retirás, vuelve a quedar oculto). Clic: cambiar"), mx, my);
 			}
+		}
+		ey += 17;
+		// la mision que activa al enviarse (igual que el crafteo)
+		{
+			List<TabletDatos.Mision> ms = d.misionesAdmin;
+			TabletDatos.Mision actual = ms.stream().filter(m -> m.id().equals(this.mision)).findFirst().orElse(null);
+			String mt = actual == null ? "Misión: ninguna" : f.plainSubstrByWidth("Misión: " + actual.titulo(), ew - 12);
+			int mw = t.boton(g, mt, ex, ey, actual != null, mx, my, () -> {
+				int i = ms.indexOf(actual);
+				this.mision = i + 1 < ms.size() ? ms.get(i + 1).id() : "";
+				this.sucio = true;
+			});
+			if (mx >= ex && my >= ey && mx < ex + mw && my < ey + 13)
+				g.setTooltipForNextFrame(Component.literal(actual == null ? "Clic: elegir una misión que se active al enviar este anuncio" : "Al enviarlo se activa esta misión (si lo retirás, vuelve a quedar oculta). Clic: cambiar"), mx, my);
 		}
 		ey += 17;
 		// titulo

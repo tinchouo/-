@@ -186,6 +186,33 @@ jobs:
           xdotool mousemove 728 280; xdotool keydown shift; xdotool click 1; xdotool keyup shift; sleep 0.8; xdotool mousemove 1200 700; import -window root cap/g3_shift.png
           xdotool key Escape; sleep 1
           cat srv/plugins/TOD5/datos/crafteos.json 2>/dev/null | head -40 || true
+          # 14) misiones: dos sembradas (diaria con matar + evento; opcional de equipo con "ir"), progreso, completar y reclamar; despues el editor
+          cat > srv/plugins/TOD5/datos/misiones.json <<'JSON'
+          {"proximo":3,"misiones":[
+           {"id":"m1","nombre":"Cazador de zombies","clase":"diaria","estado":"activa","dia":1,"equipo":false,"objetivos":[
+             {"uid":"a","tipo":"matar","clave":"zombie","texto":"","cantidad":2,"mundo":"","x":0,"y":0,"z":0,"radio":6},
+             {"uid":"b","tipo":"evento","clave":"","texto":"Saludá al admin","cantidad":1,"mundo":"","x":0,"y":0,"z":0,"radio":6}],"recompensa":[]},
+           {"id":"m2","nombre":"Expedición","clase":"opcional","estado":"activa","dia":1,"equipo":true,"objetivos":[
+             {"uid":"c","tipo":"ir","clave":"","texto":"el punto de encuentro","cantidad":1,"mundo":"world","x":80.5,"y":-60,"z":0.5,"radio":4}],"recompensa":[]}]}
+          JSON
+          echo "tod recargar" >> srv/cmds.txt; sleep 2; echo "tod mision premioprueba m1 $N" >> srv/cmds.txt; echo "tod mision lista" >> srv/cmds.txt
+          echo "gamemode survival $N" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 224 268 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h1_misiones.png
+          xdotool key Escape; sleep 1
+          for i in 1 2; do echo "summon zombie 62.5 -60 0.5 {NoAI:1b}" >> srv/cmds.txt; sleep 0.5; echo "execute as $N run damage @e[type=zombie,limit=1,sort=nearest] 200 minecraft:player_attack by $N" >> srv/cmds.txt; sleep 1; done
+          import -window root cap/h2_objetivo.png
+          echo "tod mision completar m1 $N" >> srv/cmds.txt; sleep 1.5; import -window root cap/h3_completa.png
+          echo "tp $N 80.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2.5; import -window root cap/h4_ir.png
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 224 268 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h5_para_reclamar.png
+          xdotool mousemove 1013 263 click 1; sleep 1.5; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h6_reclamada.png
+          cat srv/plugins/TOD5/datos/misiones_progreso.json 2>/dev/null | head -40 || true
+          xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 224 332 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h7_admin.png
+          xdotool mousemove 376 194 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h8_editor.png
+          xdotool mousemove 1018 239 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h9_objetivo_nuevo.png
+          xdotool key Escape; sleep 1
+          grep -iE "mision" srv/server.log | tail -12 || true
           grep -iE "crafteo|Crafteos" srv/server.log | tail -8 || true
           echo "tod estado" >> srv/cmds.txt; sleep 2
           pkill -f net.fabricmc || true; echo "stop" >> srv/cmds.txt; sleep 5

@@ -206,6 +206,10 @@ public class Tablero {
 		o.add("novedades", nov);
 		o.add("crafteos", crafteos.paraTablet(editor));
 		if (plugin.recompensas != null) o.add("recompensas", plugin.recompensas.paraTablet(p));   // la bandeja de este jugador
+		if (plugin.misiones != null) {
+			o.add("misiones", plugin.misiones.paraTablet(p));                 // las activas, con el progreso de este jugador
+			if (editor) o.add("misiones_admin", plugin.misiones.paraAdmin());   // todas, para el editor
+		}
 		if (editor) o.add("items", crafteos.itemsParaTablet());   // los items propios (para el creativo de los editores)
 		if (editor) o.add("anuncios", anuncios.paraTablet());   // los anuncios guardados: solo los editores
 		return GSON.toJson(o);
@@ -226,6 +230,7 @@ public class Tablero {
 			String rid = r.has("ids") && r.getAsJsonArray("ids").size() > 0 ? r.getAsJsonArray("ids").get(0).getAsString() : "";
 			if (ar.equals("recompensa_abrir")) { plugin.recompensas.abrir(p, rid); return; }
 			if (ar.equals("recompensa_todo")) { plugin.recompensas.reclamarTodo(p, rid); return; }
+			if (ar.equals("mision_reclamar")) { plugin.misiones.reclamar(p, rid); return; }
 		} catch (Exception e) { return; }
 		if (!esEditor(p)) {
 			plugin.getLogger().warning(p.getName() + " intento editar la tablet sin ser editor");
@@ -255,6 +260,18 @@ public class Tablero {
 				sincronizarTodos();
 			}
 			case "item_borrar" -> { for (String id : ids) crafteos.borrarItem(id); sincronizarTodos(); }
+			case "mision_guardar" -> { plugin.misiones.guardarDesdeTablet(o.getAsJsonObject("mision")); sincronizarTodos(); }
+			case "mision_estado" -> {
+				String est = o.has("estado") ? o.get("estado").getAsString() : "";
+				for (String id : ids) { plugin.misiones.estado(id, est); plugin.getLogger().info(p.getName() + " puso la mision " + id + " en " + est); }
+				sincronizarTodos();
+			}
+			case "mision_obj_mano" -> { if (!ids.isEmpty() && o.has("uid")) plugin.misiones.itemDeLaMano(p, ids.get(0), o.get("uid").getAsString()); sincronizarTodos(); }
+			case "mision_obj_lugar" -> { if (!ids.isEmpty() && o.has("uid")) plugin.misiones.lugarAca(p, ids.get(0), o.get("uid").getAsString()); sincronizarTodos(); }
+			case "mision_recompensa" -> { if (!ids.isEmpty()) plugin.misiones.abrirRecompensa(p, ids.get(0)); }
+			case "mision_borrar" -> { for (String id : ids) plugin.misiones.borrar(id); sincronizarTodos(); }
+			case "mision_duplicar" -> { for (String id : ids) plugin.misiones.duplicar(id); sincronizarTodos(); }
+			case "mision_reiniciar" -> { for (String id : ids) plugin.misiones.reiniciar(id); sincronizarTodos(); }
 			case "anuncio_guardar" -> anuncios.guardar(o.getAsJsonObject("anuncio"));
 			case "anuncio_probar" -> { String id = anuncios.guardar(o.getAsJsonObject("anuncio")); anuncios.probar(p, id); }
 			case "anuncio_enviar" -> {
@@ -274,7 +291,7 @@ public class Tablero {
 	/** /tod dia|crafteo|anuncio|novedad|editor ... Devuelve false si no es un comando de la tablet. */
 	boolean comando(CommandSender s, String[] args) {
 		String sub = args[0].toLowerCase(Locale.ROOT);
-		if (!List.of("dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona").contains(sub)) return false;
+		if (!List.of("dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision").contains(sub)) return false;
 		if (!esEditor(s)) { s.sendMessage(Component.text("Eso es solo para los editores de TOD.", NamedTextColor.RED)); return true; }
 		switch (sub) {
 			case "dia" -> {
@@ -314,6 +331,7 @@ public class Tablero {
 			}
 			case "moneda" -> plugin.monedas.comando(s, args);
 			case "zona" -> plugin.desafios.comando(s, args);
+			case "mision" -> plugin.misiones.comando(s, args);
 		}
 		return true;
 	}
@@ -322,6 +340,7 @@ public class Tablero {
 	List<String> completar(String[] args) {
 		String sub = args[0].toLowerCase(Locale.ROOT);
 		if (sub.equals("zona")) return plugin.desafios.completar(args);
+		if (sub.equals("mision")) return plugin.misiones.completar(args);
 		if (args.length == 2) return switch (sub) {
 			case "dia" -> List.of("siguiente");
 			case "anuncio" -> Arrays.stream(Tipo.values()).map(t -> t.id).toList();

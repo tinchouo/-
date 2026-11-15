@@ -49,6 +49,10 @@ public final class TabletHud {
 			if (!c.nuevo() || !avisados.add("c:" + c.id())) continue;
 			avisos.add(new Aviso("NUEVO CRAFTEO", c.nombre() != null ? c.nombre() : "", 0xFF55FFFF, ahora));
 		}
+		for (TabletDatos.Mision m : d.misiones) {
+			if (!m.paraReclamar() || !avisados.add("m:" + m.id())) continue;
+			avisos.add(new Aviso("MISIÓN COMPLETA", m.titulo(), m.diaria() ? 0xFF55FF55 : 0xFF55FFFF, ahora));
+		}
 		for (TabletDatos.Paquete r : d.recompensas) {
 			if (!avisados.add("r:" + r.id())) continue;
 			avisos.add(new Aviso("RECOMPENSA SIN RECLAMAR", r.titulo(), COLOR_PREMIO, ahora, true));
@@ -83,7 +87,7 @@ public final class TabletHud {
 		g.drawString(f, tecla, tx + (tw - f.width(tecla) + 1) / 2, ty + 1, 0xFFE8E8E8, false);
 
 		// numerito rojo con lo que no viste
-		int nuevos = d.novedadesNuevas() + d.crafteosNuevos() + d.recompensas.size();
+		int nuevos = d.novedadesNuevas() + d.crafteosNuevos() + d.recompensas.size() + d.misionesParaReclamar();
 		if (nuevos > 0) {
 			String n = nuevos > 9 ? "9+" : String.valueOf(nuevos);
 			int bw = Math.max(10, f.width(n) + 4), bx = x + 16 - bw / 2 + 1, by = y - 3;
