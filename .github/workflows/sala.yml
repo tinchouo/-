@@ -65,6 +65,12 @@ jobs:
           xdotool mousemove 640 416 click 1; sleep 4; import -window root cap/7_menu_otra_vez.png
           xdotool mousemove 640 438 click 1
           sleep 25; import -window root cap/8_op_adentro.png
+          # 4b) SIN ser editor: recien entrado, la tablet tiene que mostrar lo del server (no los datos de ejemplo)
+          grep -n "datos del server" run/logs/latest.log | tail -3 || echo "NO LLEGARON LOS DATOS AL ENTRAR"
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2; xdotool mousemove 1200 700; import -window root cap/e0_no_editor_inicio.png
+          xdotool mousemove 224 268 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/e1_no_editor_misiones.png
+          xdotool mousemove 224 332 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/e2_no_editor_crafteos.png
+          xdotool key Escape; sleep 1
           # 5) sistema de la tablet: editor, anuncios con colores, crafteo oculto
           echo "tod editor agregar $N" >> srv/cmds.txt; sleep 2
           # la ruleta: la grabo en video (con sonido) mientras sale el primer anuncio

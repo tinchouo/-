@@ -151,6 +151,15 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		}
 		saludaron.add(p.getUniqueId());
 		tablero.sincronizar(p);   // le mando lo que tiene que ver en la tablet
+		// Recien entro: el server todavia puede no saber que este jugador escucha el canal de la tablet y ese primer envio se pierde
+		// (quedaba viendo los datos de ejemplo hasta que algo cambiaba). Lo repito al ratito.
+		for (long t : new long[] { 20, 60, 140 }) Bukkit.getScheduler().runTaskLater(this, () -> { if (p.isOnline() && tieneElMod(p)) tablero.sincronizar(p); }, t);
+	}
+
+	/** Cuando el server se entera de que el jugador escucha el canal de la tablet, se la mando. */
+	@EventHandler
+	public void alRegistrarCanal(org.bukkit.event.player.PlayerRegisterChannelEvent e) {
+		if (Tablero.CANAL_TABLET.equals(e.getChannel()) && tieneElMod(e.getPlayer())) tablero.sincronizar(e.getPlayer());
 	}
 
 	@EventHandler

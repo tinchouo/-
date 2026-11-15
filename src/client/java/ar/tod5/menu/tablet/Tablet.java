@@ -258,6 +258,16 @@ public class Tablet extends Screen {
 				this.seccion = admin ? Seccion.ANUNCIOS : Seccion.INICIO;
 			}));
 		}
+		// debajo de la tablet, chiquito: las versiones (o el aviso de que son datos de ejemplo)
+		{
+			String mod = net.fabricmc.loader.api.FabricLoader.getInstance().getModContainer("tod5").map(m -> m.getMetadata().getVersion().getFriendlyString()).orElse("?");
+			boolean real = datos.esDelServer();
+			String vt = real ? "mod " + mod + " · plugin " + (datos.plugin.isEmpty() ? "viejo" : datos.plugin)
+				: "mod " + mod + " · DATOS DE EJEMPLO: el server no mandó nada (¿falta el plugin de TOD5 o es viejo?)";
+			g.pose().pushMatrix(); g.pose().translate(x0 + 6, y0 + h + 3); g.pose().scale(0.75f, 0.75f);
+			g.drawString(this.font, vt, 0, 0, real ? 0xFF9AA39E : 0xFFFFD24A, true);
+			g.pose().popMatrix();
+		}
 		super.render(g, mx, my, a);
 		if (encima != null) g.setTooltipForNextFrame(Component.literal(encima.nombre), mx, my);
 	}
