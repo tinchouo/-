@@ -21,6 +21,9 @@ public final class Conexion {
 		PayloadTypeRegistry.playS2C().register(Red.RULETA, Red.codec(Red.RULETA));
 		PayloadTypeRegistry.playS2C().register(Red.DESAFIO, Red.codec(Red.DESAFIO));
 		PayloadTypeRegistry.playS2C().register(Red.GRAVEDAD, Red.codec(Red.GRAVEDAD));
+		PayloadTypeRegistry.playS2C().register(Red.SALTOS, Red.codec(Red.SALTOS));
+		PayloadTypeRegistry.playC2S().register(Red.SALTO, Red.codec(Red.SALTO));
+		ClientPlayNetworking.registerGlobalReceiver(Red.SALTOS, (p, ctx) -> ctx.client().execute(() -> SaltosCliente.recibir(p.texto())));
 		ClientPlayNetworking.registerGlobalReceiver(Red.GRAVEDAD, (p, ctx) -> ctx.client().execute(() -> GravedadCliente.recibir(p.texto())));
 		ClientPlayNetworking.registerGlobalReceiver(Red.DESAFIO, (p, ctx) -> ctx.client().execute(() -> ContadorDesafio.recibir(p.texto())));
 		ClientPlayNetworking.registerGlobalReceiver(Red.RULETA, (p, ctx) -> ctx.client().execute(() -> {
@@ -30,7 +33,7 @@ public final class Conexion {
 
 		// el server me manda lo que muestra la tablet (al entrar y cada vez que cambia algo)
 		ClientPlayNetworking.registerGlobalReceiver(Red.TABLET, (p, ctx) -> ctx.client().execute(() -> ar.tod5.menu.tablet.TabletDatos.recibir(p.texto())));
-		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(() -> { ar.tod5.menu.tablet.TabletDatos.olvidar(); ContadorDesafio.recibir("nada"); GravedadCliente.limpiar(); }));
+		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> client.execute(() -> { ar.tod5.menu.tablet.TabletDatos.olvidar(); ContadorDesafio.recibir("nada"); GravedadCliente.limpiar(); SaltosCliente.limpiar(); }));
 
 		// al entrar a un server: le aviso que tengo el mod y que mods tengo (solo los "de arriba", no los que vienen adentro de otros)
 		ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {

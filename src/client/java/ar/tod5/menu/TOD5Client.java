@@ -15,6 +15,7 @@ public class TOD5Client implements ClientModInitializer {
 		ContadorDesafio.registrar();
 		ClientTickEvents.END_CLIENT_TICK.register(MusicaMenu::tick);
 		ClientTickEvents.END_CLIENT_TICK.register(GravedadCliente::tick);
+		ClientTickEvents.END_CLIENT_TICK.register(SaltosCliente::tick);
 		Conexion.registrar();
 		Ruleta.registrar();
 		ComandoRuleta.registrar();

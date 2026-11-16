@@ -280,6 +280,15 @@ jobs:
           grep -E "flecha f2|Flecha f2" srv/server.log | tail -3 || echo "NO LE PEGO A LA FLECHA f2"
           echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1; grep -E "has the following entity data" srv/server.log | tail -1 || true
           echo "tod gravedad abajo $N" >> srv/cmds.txt; echo "tod flecha borrar f2" >> srv/cmds.txt; sleep 2
+          # 19) orbes y pads: un pad amarillo (8 bloques), una orbe roja (12) y una amarilla; pisar el pad; saltar y apretar espacio en la orbe
+          echo "tod salto crear pad amarilla 70 -60 0" >> srv/cmds.txt; echo "tod salto crear orbe roja 73 -59 0" >> srv/cmds.txt; echo "tod salto crear orbe amarilla 70 -57 3" >> srv/cmds.txt
+          echo "tp $N 66.5 -60 1.5 -90 5" >> srv/cmds.txt; sleep 2.5; import -window root cap/o1_vista.png
+          echo "tp $N 70.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 0.7; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 4; echo "data get entity $N Health" >> srv/cmds.txt
+          echo "tp $N 73.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 2; xdotool key space; sleep 0.12; xdotool key space; sleep 0.8; echo "data get entity $N Pos" >> srv/cmds.txt; import -window root cap/o2_orbe.png; sleep 4.5
+          echo "data get entity $N Health" >> srv/cmds.txt; sleep 1
+          grep -E " uso |Orbes y pads|Salto o|Salto p" srv/server.log | tail -8 || echo "NO SE USO NINGUN SALTO"
+          grep -E "has the following entity data" srv/server.log | tail -4 || true
+          echo "tod varita" >> srv/cmds.txt; sleep 1
           # 16) pantalla chica (como un monitor 1080p con la interfaz en Auto: 480x270): que nada se pise
           WID=$(xdotool search --name "Minecraft" | head -1); echo "ventana: $WID"; xdotool windowmove $WID 0 0; xdotool windowsize $WID 960 540; sleep 3
           xdotool mousemove 480 520; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2

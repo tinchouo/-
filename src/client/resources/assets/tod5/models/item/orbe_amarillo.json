@@ -1,0 +1,57 @@
+{
+ "textures": {
+  "t": "tod5:item/orbe_amarillo",
+  "particle": "tod5:item/orbe_amarillo"
+ },
+ "elements": [
+  {
+   "from": [
+    0,
+    0,
+    7.99
+   ],
+   "to": [
+    16,
+    16,
+    8.01
+   ],
+   "shade": false,
+   "faces": {
+    "north": {
+     "uv": [
+      16,
+      0,
+      0,
+      16
+     ],
+     "texture": "#t"
+    },
+    "south": {
+     "uv": [
+      0,
+      0,
+      16,
+      16
+     ],
+     "texture": "#t"
+    }
+   }
+  }
+ ],
+ "display": {
+  "fixed": {
+   "scale": [
+    1,
+    1,
+    1
+   ]
+  },
+  "gui": {
+   "scale": [
+    1,
+    1,
+    1
+   ]
+  }
+ }
+}

@@ -287,6 +287,8 @@ final class Flechas implements Listener {
 		Flecha f = deEntidad(e.getAttacked());
 		if (f == null) return;
 		e.setCancelled(true);
+		// con la varita: se configura en vez de pegarle
+		if (plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) { abrirMenu(e.getPlayer(), f); return; }
 		golpe(e.getPlayer(), f);
 	}
 	@EventHandler

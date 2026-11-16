@@ -42,6 +42,8 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	Misiones misiones;
 	Gravedad gravedad;
 	Flechas flechas;
+	Saltos saltos;
+	Varita varita;
 	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
@@ -54,6 +56,8 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Tablero.CANAL_TABLET);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Tablero.CANAL_RULETA);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Gravedad.CANAL);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Saltos.CANAL);
+		getServer().getMessenger().registerIncomingPluginChannel(this, Saltos.CANAL_USO, this);
 		tablero = new Tablero(this);
 		tablero.cargar();
 		getServer().getPluginManager().registerEvents(this, this);
@@ -77,11 +81,16 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		flechas = new Flechas(this);
 		flechas.cargar();
 		getServer().getPluginManager().registerEvents(flechas, this);
+		saltos = new Saltos(this);
+		saltos.cargar();
+		getServer().getPluginManager().registerEvents(saltos, this);
+		varita = new Varita(this);
+		getServer().getPluginManager().registerEvents(varita, this);
 		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
 	}
 
 	@Override
-	public void onDisable() { if (desafios != null) desafios.apagar(); if (flechas != null) flechas.apagar(); if (misiones != null) misiones.guardarProgreso(); }
+	public void onDisable() { if (desafios != null) desafios.apagar(); if (flechas != null) flechas.apagar(); if (saltos != null) saltos.apagar(); if (misiones != null) misiones.guardarProgreso(); }
 
 	boolean abierto() { return getConfig().getBoolean("abierto", false); }
 	private Component msg(String clave, String... reemplazos) {
@@ -146,6 +155,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	@Override
 	public void onPluginMessageReceived(String canal, Player p, byte[] datos) {
 		if (Tablero.CANAL_ACCION.equals(canal)) { tablero.accion(p, datos); return; }
+		if (Saltos.CANAL_USO.equals(canal)) { saltos.usado(p, new String(datos, StandardCharsets.UTF_8)); return; }
 		if (!CANAL_HOLA.equals(canal)) return;
 		String[] partes = new String(datos, StandardCharsets.UTF_8).split(";", 2);
 		String version = partes[0];
@@ -198,7 +208,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision", "gravedad", "flecha");
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision", "gravedad", "flecha", "salto", "varita");
 		return tablero.completar(args);
 	}
 }

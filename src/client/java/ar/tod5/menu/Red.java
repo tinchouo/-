@@ -30,6 +30,10 @@ public final class Red {
 
 	/** server -> mod: la gravedad de un jugador: "uuid;direccion" (abajo, arriba, este, oeste, sur, norte). */
 	public static final CustomPacketPayload.Type<Texto> GRAVEDAD = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "gravedad"));
+	/** server -> mod: los orbes y pads del mundo (JSON). */
+	public static final CustomPacketPayload.Type<Texto> SALTOS = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "saltos"));
+	/** mod -> server: use este orbe/pad ("id"). */
+	public static final CustomPacketPayload.Type<Texto> SALTO = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "salto"));
 
 	public static StreamCodec<RegistryFriendlyByteBuf, Texto> codec(CustomPacketPayload.Type<Texto> tipo) {
 		return StreamCodec.of(
