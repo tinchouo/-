@@ -289,6 +289,10 @@ jobs:
           grep -E " uso |Orbes y pads|Salto o|Salto p" srv/server.log | tail -8 || echo "NO SE USO NINGUN SALTO"
           grep -E "has the following entity data" srv/server.log | tail -4 || true
           echo "tod varita" >> srv/cmds.txt; sleep 1
+          # 20) plataforma: 3x1x3 que sube 6 bloques en 3 s; me paro arriba: me tiene que llevar (sin que el server me eche)
+          echo "tod plataforma crear 79 -60 9 79 -54 9 3" >> srv/cmds.txt; sleep 1.5; echo "tp $N 80.5 -59 10.5 -90 20" >> srv/cmds.txt; sleep 0.3; import -window root cap/p1_plataforma.png
+          sleep 1.5; echo "data get entity $N Pos" >> srv/cmds.txt; import -window root cap/p2_subiendo.png; sleep 1.2; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 0.4; import -window root cap/p3_arriba.png; sleep 2
+          grep -E "has the following entity data|Plataforma|kicked|Kicked|flying" srv/server.log | tail -5 || true
           # 16) pantalla chica (como un monitor 1080p con la interfaz en Auto: 480x270): que nada se pise
           WID=$(xdotool search --name "Minecraft" | head -1); echo "ventana: $WID"; xdotool windowmove $WID 0 0; xdotool windowsize $WID 960 540; sleep 3
           xdotool mousemove 480 520; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2

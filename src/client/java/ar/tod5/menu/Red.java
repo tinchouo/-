@@ -32,6 +32,8 @@ public final class Red {
 	public static final CustomPacketPayload.Type<Texto> GRAVEDAD = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "gravedad"));
 	/** server -> mod: los orbes y pads del mundo (JSON). */
 	public static final CustomPacketPayload.Type<Texto> SALTOS = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "saltos"));
+	/** server -> mod: las plataformas que se mueven (JSON: id, raiz, tamaño). */
+	public static final CustomPacketPayload.Type<Texto> PLATAFORMAS = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "plataformas"));
 	/** mod -> server: use este orbe/pad ("id"). */
 	public static final CustomPacketPayload.Type<Texto> SALTO = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "salto"));
 

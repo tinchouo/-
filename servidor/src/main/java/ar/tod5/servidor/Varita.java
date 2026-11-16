@@ -31,9 +31,9 @@ import org.bukkit.persistence.PersistentDataType;
  *  - clic izquierdo en algo puesto (flecha, orbe, pad): abre su menu
  */
 final class Varita implements Listener {
-	static final List<String> COSAS = List.of("flecha", "orbe_amarilla", "orbe_roja", "pad_amarilla", "pad_roja");
+	static final List<String> COSAS = List.of("flecha", "orbe_amarilla", "orbe_roja", "pad_amarilla", "pad_roja", "plataforma");
 	private static final Map<String, String> NOMBRES = Map.of("flecha", "Flecha de gravedad", "orbe_amarilla", "Orbe amarilla", "orbe_roja", "Orbe roja",
-		"pad_amarilla", "Pad amarillo", "pad_roja", "Pad rojo");
+		"pad_amarilla", "Pad amarillo", "pad_roja", "Pad rojo", "plataforma", "Plataforma");
 	private final TOD5Servidor plugin;
 	private final NamespacedKey marca;
 	private final Map<UUID, String> elegido = new HashMap<>();
@@ -86,7 +86,14 @@ final class Varita implements Listener {
 		}
 		BlockFace cara = e.getBlockFace();
 		Location celda = e.getClickedBlock().getRelative(cara).getLocation();
+		if (plugin.plataformas.esperandoFinal(p)) { plugin.plataformas.ponerFinal(p, celda); return; }
 		String c = elegido(p);
+		if (c.equals("plataforma")) {
+			var pl = plugin.plataformas.crear(celda);
+			p.sendMessage(Component.text("Plataforma puesta. Clic izquierdo con la varita en el cuadrito del medio (en la salida) para configurarla y ponerle el final.", NamedTextColor.GREEN));
+			plugin.plataformas.abrirMenu(p, pl);
+			return;
+		}
 		if (c.equals("flecha")) {
 			Location l = celda.clone().add(0.5, 0.5, 0.5); l.setYaw(p.getLocation().getYaw());
 			plugin.flechas.crear(l);
@@ -106,7 +113,7 @@ final class Varita implements Listener {
 		Elegir m = new Elegir();
 		m.inv = Bukkit.createInventory(m, 9, Component.text("¿Qué pongo con la varita?"));
 		String sel = elegido(p);
-		Material[] mats = { Material.ARROW, Material.YELLOW_DYE, Material.RED_DYE, Material.YELLOW_CARPET, Material.RED_CARPET };
+		Material[] mats = { Material.ARROW, Material.YELLOW_DYE, Material.RED_DYE, Material.YELLOW_CARPET, Material.RED_CARPET, Material.QUARTZ_SLAB };
 		for (int i = 0; i < COSAS.size(); i++) {
 			String c = COSAS.get(i);
 			m.inv.setItem(i, boton(mats[i], NOMBRES.get(c) + (c.equals(sel) ? "  ✔" : ""), c.equals(sel) ? NamedTextColor.GREEN : NamedTextColor.WHITE, "Clic: elegir"));

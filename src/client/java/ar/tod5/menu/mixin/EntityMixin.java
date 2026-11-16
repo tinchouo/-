@@ -37,6 +37,17 @@ public abstract class EntityMixin {
 		return abajo;
 	}
 
+	/** Las plataformas que se mueven son solidas para el jugador propio. */
+	@Inject(method = "collectColliders", at = @At("RETURN"), cancellable = true)
+	private static void tod5$plataformas(Entity e, net.minecraft.world.level.Level nivel, java.util.List<net.minecraft.world.phys.shapes.VoxelShape> deEntidades, AABB zona,
+			CallbackInfoReturnable<java.util.List<net.minecraft.world.phys.shapes.VoxelShape>> cir) {
+		if (!(e instanceof LocalPlayer) || !ar.tod5.menu.PlataformasCliente.hay()) return;
+		java.util.List<net.minecraft.world.phys.shapes.VoxelShape> l = new java.util.ArrayList<>(cir.getReturnValue());
+		int antes = l.size();
+		ar.tod5.menu.PlataformasCliente.agregarFormas(zona, l);
+		if (l.size() != antes) cir.setReturnValue(l);
+	}
+
 	@Inject(method = "collide", at = @At("HEAD"), cancellable = true)
 	private void tod5$escalones(Vec3 mov, CallbackInfoReturnable<Vec3> cir) {
 		if ((Object) this instanceof LocalPlayer p) { Vec3 r = GravedadCliente.choques(p, mov); if (r != null) cir.setReturnValue(r); }
