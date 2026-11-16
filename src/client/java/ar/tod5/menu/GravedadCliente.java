@@ -327,6 +327,41 @@ public final class GravedadCliente {
 		return true;
 	}
 
+	/** Volando cabeza abajo: Minecraft ya empujo con espacio (arriba del mundo) / shift (abajo); se da vuelta: espacio = arriba de la pantalla. */
+	public static void volarCabezaAbajo(Player yo) {
+		if (!(yo instanceof LocalPlayer p) || !p.getAbilities().flying || !controlesDadosVuelta()) return;
+		Input k = p.input.keyPresses;
+		int i = (k.jump() ? 1 : 0) - (k.shift() ? 1 : 0);
+		if (i != 0) p.setDeltaMovement(p.getDeltaMovement().add(0, -2.0 * i * p.getAbilities().getFlyingSpeed() * 3.0F, 0));
+	}
+
+	/**
+	 * Subir escalones (losas, bloques de 0,6 o menos) con la gravedad cambiada: como Minecraft, pero para el "arriba" de cada uno.
+	 * null = gravedad normal (lo hace Minecraft).
+	 */
+	public static Vec3 choques(Player p, Vec3 mov) {
+		G g = de(p);
+		if (g == G.ABAJO || mov.lengthSqr() == 0.0) return null;
+		AABB caja = p.getBoundingBox();
+		var lista = p.level().getEntityCollisions(p, caja.expandTowards(mov));
+		Vec3 r = Entity.collideBoundingBox(p, mov, caja, p.level(), lista);
+		Vec3 gv = new Vec3(g.x, g.y, g.z);
+		double movG = mov.dot(gv), rG = r.dot(gv);
+		Vec3 lado = mov.subtract(gv.scale(movG)), rLado = r.subtract(gv.scale(rG));
+		boolean choqueLado = lado.subtract(rLado).lengthSqr() > 1.0E-12;
+		boolean alPiso = Math.abs(movG - rG) > 1.0E-9 && movG > 0;
+		if (!choqueLado || !(alPiso || p.onGround()) || p.getAbilities().flying) return r;
+		AABB b = alPiso ? caja.move(gv.scale(rG)) : caja;
+		Vec3 sube = Entity.collideBoundingBox(p, gv.scale(-0.6), b, p.level(), lista);
+		AABB b2 = b.move(sube);
+		Vec3 va = Entity.collideBoundingBox(p, lado, b2, p.level(), lista);
+		if (va.lengthSqr() <= rLado.lengthSqr() + 1.0E-7) return r;
+		AABB b3 = b2.move(va);
+		Vec3 baja = Entity.collideBoundingBox(p, gv.scale(sube.length() + 1.0E-4), b3, p.level(), lista);
+		AABB fin = b3.move(baja);
+		return new Vec3(fin.minX - caja.minX, fin.minY - caja.minY, fin.minZ - caja.minZ);
+	}
+
 	/** Saltar de costado: para "arriba" del marco. Devuelve false si no le toca. */
 	public static boolean saltar(LivingEntity yo, float fuerza) {
 		if (!(yo instanceof LocalPlayer p)) return false;

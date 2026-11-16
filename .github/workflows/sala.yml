@@ -243,7 +243,7 @@ jobs:
           xdotool mousemove 224 268 click 1; sleep 1; xdotool mousemove 376 264 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/w3_mision_activa.png
           xdotool key Escape; sleep 1
           # 17) gravedad: un techo de piedra, /tod gravedad arriba -> cae al techo con la camara dada vuelta; tercera persona; salto
-          echo "fill 55 -54 -6 66 -54 6 stone" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
+          echo "fill 55 -54 -6 66 -54 6 stone" >> srv/cmds.txt; echo "fill 62 -55 -1 62 -55 1 stone_slab[type=top]" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 2
           echo "tod gravedad arriba $N" >> srv/cmds.txt; sleep 1; import -window root cap/x0_girando.png; sleep 3; import -window root cap/x1_techo.png
           grep -E "Gravedad (arriba|abajo)" srv/server.log | tail -2 || echo "NO CAMBIO LA GRAVEDAD"
           xdotool key F5; sleep 1.5; import -window root cap/x2_tercera.png; xdotool key F5; sleep 0.5; xdotool key F5; sleep 1

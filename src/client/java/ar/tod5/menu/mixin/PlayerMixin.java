@@ -17,7 +17,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class PlayerMixin {
 	@Inject(method = "travel", at = @At("HEAD"), cancellable = true)
 	private void tod5$viajar(Vec3 entrada, CallbackInfo ci) {
-		if (GravedadCliente.viajar((Player) (Object) this, entrada)) ci.cancel();
+		Player p = (Player) (Object) this;
+		if (GravedadCliente.viajar(p, entrada)) { ci.cancel(); return; }
+		GravedadCliente.volarCabezaAbajo(p);
 	}
 
 	@Inject(method = "updatePlayerPose", at = @At("HEAD"), cancellable = true)

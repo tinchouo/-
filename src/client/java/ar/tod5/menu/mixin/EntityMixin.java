@@ -37,6 +37,11 @@ public abstract class EntityMixin {
 		return abajo;
 	}
 
+	@Inject(method = "collide", at = @At("HEAD"), cancellable = true)
+	private void tod5$escalones(Vec3 mov, CallbackInfoReturnable<Vec3> cir) {
+		if ((Object) this instanceof LocalPlayer p) { Vec3 r = GravedadCliente.choques(p, mov); if (r != null) cir.setReturnValue(r); }
+	}
+
 	@Inject(method = "getEyePosition(F)Lnet/minecraft/world/phys/Vec3;", at = @At("RETURN"), cancellable = true)
 	private void tod5$ojos(float parcial, CallbackInfoReturnable<Vec3> cir) {
 		if ((Object) this instanceof LocalPlayer p && !GravedadCliente.normal()) cir.setReturnValue(GravedadCliente.ojos(p, parcial));

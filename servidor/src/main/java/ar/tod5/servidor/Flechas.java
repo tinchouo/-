@@ -319,9 +319,13 @@ final class Flechas implements Listener {
 		guardar();
 		plugin.getLogger().info(p.getName() + " le pego a la flecha " + f.id + ": " + actual.id + " -> " + dest.id);
 		sonar(p, l, "flecha_on");
-		sonar(p, l, "flecha_mueve");
 		// el giro en dos mitades (un giro de 180 de una sola vez no sabe para que lado ir)
 		final int giro = Math.max(2, f.giro), mitad = Math.max(1, giro / 2);
+		// el ruido de que se mueve: en loop mientras gira (cada pedazo dura 0,8 s, con 0,1 s de entrada y salida suave que se pisan con el siguiente)
+		for (int t = 0; t < giro; t += 14) {
+			if (t == 0) sonar(p, l, "flecha_mueve");
+			else Bukkit.getScheduler().runTaskLater(plugin, () -> { if (p.isOnline() && girando.contains(clave)) sonar(p, l, "flecha_mueve"); }, t);
+		}
 		// el giro por el lado corto; uno de 180 va en dos mitades de 90 (si no, no sabe para que lado ir)
 		float a0 = angulo(f, actual), dif = angulo(f, dest) - a0;
 		while (dif > Math.PI + 0.01) dif -= (float) (2 * Math.PI);
@@ -334,6 +338,7 @@ final class Flechas implements Listener {
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
 			girando.remove(clave);
 			if (!p.isOnline()) return;
+			p.stopSound("tod5:flecha_mueve", SoundCategory.BLOCKS);
 			sonar(p, l, "flecha_para");
 			plugin.gravedad.poner(p, dest);
 			p.playSound(p.getLocation(), "tod5:gravedad_cambio", SoundCategory.MASTER, 1f, 1f);
