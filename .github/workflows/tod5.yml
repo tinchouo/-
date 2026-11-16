@@ -27,7 +27,7 @@ jobs:
           mkdir -p /tmp/ref && cd /tmp/ref
           for J in $(find $W/.gradle ~/.gradle -name '*minecraft*sources.jar' 2>/dev/null); do
             echo "== $J ($(stat -c %s "$J") bytes)" >> $LOG; unzip -l "$J" 2>&1 | head -8 >> $LOG
-            unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/network/*' 'net/minecraft/sounds/*' 'net/minecraft/world/item/*' 'net/minecraft/core/component/*' 'net/minecraft/core/registries/*' 'net/minecraft/resources/*' 'net/minecraft/util/Util.java' 'net/minecraft/world/entity/Display*' >> $LOG 2>&1
+            unzip -q -o "$J" 'net/minecraft/client/*' 'net/minecraft/network/*' 'net/minecraft/sounds/*' 'net/minecraft/world/item/*' 'net/minecraft/core/component/*' 'net/minecraft/core/registries/*' 'net/minecraft/resources/*' 'net/minecraft/util/Util.java' 'net/minecraft/world/entity/Display*' 'net/minecraft/world/entity/Entity.java' 'net/minecraft/world/entity/LivingEntity.java' 'net/minecraft/world/entity/ai/attributes/*' 'net/minecraft/world/entity/player/Player.java' 'net/minecraft/world/entity/Interaction.java' 'net/minecraft/server/network/ServerGamePacketListenerImpl.java' >> $LOG 2>&1
           done
           echo "--- jars de fabric api (con nombres de Mojang)" >> $LOG
           mkdir -p /tmp/fa
