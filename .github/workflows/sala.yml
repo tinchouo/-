@@ -263,6 +263,7 @@ jobs:
           echo "tod flecha borrar f1" >> srv/cmds.txt; echo "fill 64 -61 -6 64 -55 6 stone" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 2
           echo "tod gravedad este $N" >> srv/cmds.txt; sleep 0.3; import -window root cap/z0_girando.png; sleep 3; import -window root cap/z1_pared.png
           echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
+          echo "setblock 63 -58 0 stone" >> srv/cmds.txt; sleep 0.5
           xdotool keydown w; sleep 1.2; xdotool keyup w; sleep 0.5; import -window root cap/z2_camino.png
           echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
           xdotool keydown space; sleep 0.2; xdotool keyup space; sleep 0.2; import -window root cap/z3_salto.png; sleep 1.5
