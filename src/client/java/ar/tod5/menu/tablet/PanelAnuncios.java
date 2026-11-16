@@ -260,7 +260,7 @@ final class PanelAnuncios extends Panel {
 		bx += t.boton(g, "★", bx, ey, this.verSimbolos, mx, my, () -> this.verSimbolos = !this.verSimbolos);
 		ey += 16;
 		// el texto
-		int alto = 64;
+		int alto = Math.max(30, Math.min(64, y + ch - 14 - 4 - 10 - 44 - ey - 4));   // en pantallas chicas se achica para que se vea el chat
 		caja(g, ex, ey, ew, alto, this.texto.foco());
 		int antesN = this.texto.letras().size(); String antesT = this.texto.plano();
 		int rs = this.texto.dibujar(g, ex + 4, ey + 4, ew - 8, alto - 6, claro(this.tipo));

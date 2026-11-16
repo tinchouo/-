@@ -201,6 +201,7 @@ final class PanelMisiones extends Panel {
 		int filaAlto = 18, abajoFijo = 17 + 17 + 4 + 22 + 4;   // detalle (2 renglones), recompensa, botones
 		this.ox = ex; this.oy = ey; this.ow = ew; this.oh = Math.max(filaAlto, Math.min(this.objetivos.size(), 4) * filaAlto);
 		this.oh = Math.min(this.oh, Math.max(filaAlto, by - abajoFijo - ey));
+		this.oh = Math.max(filaAlto, this.oh / filaAlto * filaAlto);   // filas enteras: ninguna queda cortada por la mitad
 		this.scrollObj = Math.max(0, Math.min(this.scrollObj, this.objetivos.size() * filaAlto - this.oh));
 		g.enableScissor(ox, oy, ox + ow, oy + oh);
 		int fy = oy - this.scrollObj;
