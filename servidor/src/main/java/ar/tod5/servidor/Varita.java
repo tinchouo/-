@@ -25,10 +25,8 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 
 /**
- * La varita (verde) de los editores: una sola cosa para poner y configurar todo lo del mapa.
- *  - clic derecho en un bloque: pone lo elegido al lado de ese bloque (en la cara que tocaste)
- *  - shift + clic derecho (sin apuntar a nada puesto): elegis que poner
- *  - clic izquierdo en algo puesto (flecha, orbe, pad): abre su menu
+ * La varita (verde) de los editores: sirve para editar. Clic derecho en algo puesto (flecha, orbe, pad, plataforma): abre su menu.
+ * (Las cosas se ponen con sus items, desde la pestaña Trucofdeath del creativo.)
  */
 final class Varita implements Listener {
 	static final List<String> COSAS = List.of("flecha", "orbe_amarilla", "orbe_roja", "pad_amarilla", "pad_roja", "plataforma");
@@ -56,9 +54,7 @@ final class Varita implements Listener {
 		ItemMeta m = it.getItemMeta();
 		m.itemName(Component.text("Varita TOD5", NamedTextColor.GREEN));
 		m.lore(List.of(
-			Component.text("Clic derecho en un bloque: poner lo elegido.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
-			Component.text("Shift + clic derecho: elegir qué poner.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
-			Component.text("Clic izquierdo en algo puesto: configurarlo.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+			Component.text("Clic derecho en una flecha, orbe, pad o plataforma: configurarla.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
 		m.setItemModel(new NamespacedKey("tod5", "varita"));
 		m.setEnchantmentGlintOverride(false);
 		m.getPersistentDataContainer().set(marca, PersistentDataType.BYTE, (byte) 1);
@@ -70,72 +66,18 @@ final class Varita implements Listener {
 	}
 	private String elegido(Player p) { return elegido.getOrDefault(p.getUniqueId(), "flecha"); }
 
+	/** Con la varita en la mano no se rompe ni se usa nada; clic derecho en un bloque solo sirve para poner el final de una plataforma. */
 	@EventHandler
 	public void alUsar(PlayerInteractEvent e) {
 		if (e.getHand() != EquipmentSlot.HAND || !es(e.getItem())) return;
-		Action a = e.getAction();
-		if (a == Action.LEFT_CLICK_AIR || a == Action.LEFT_CLICK_BLOCK) { if (a == Action.LEFT_CLICK_BLOCK) e.setCancelled(true); return; }
-		if (a != Action.RIGHT_CLICK_BLOCK && a != Action.RIGHT_CLICK_AIR) return;
 		e.setCancelled(true);
 		Player p = e.getPlayer();
-		if (!plugin.tablero().esEditor(p)) { p.sendMessage(Component.text("La varita es solo para los editores.", NamedTextColor.RED)); return; }
-		if (p.isSneaking()) { abrirElegir(p); return; }
-		if (a != Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null) {
-			p.sendActionBar(Component.text("Apuntá a un bloque para poner: " + NOMBRES.get(elegido(p)), NamedTextColor.YELLOW));
-			return;
-		}
-		BlockFace cara = e.getBlockFace();
-		Location celda = e.getClickedBlock().getRelative(cara).getLocation();
-		if (plugin.plataformas.esperandoFinal(p)) { plugin.plataformas.ponerFinal(p, celda); return; }
-		String c = elegido(p);
-		if (c.equals("plataforma")) {
-			var pl = plugin.plataformas.crear(celda);
-			p.sendMessage(Component.text("Plataforma puesta. Clic izquierdo con la varita en el cuadrito del medio (en la salida) para configurarla y ponerle el final.", NamedTextColor.GREEN));
-			plugin.plataformas.abrirMenu(p, pl);
-			return;
-		}
-		if (c.equals("flecha")) {
-			Location l = celda.clone().add(0.5, 0.5, 0.5); l.setYaw(p.getLocation().getYaw());
-			plugin.flechas.crear(l);
-		} else {
-			String[] t = c.split("_");
-			plugin.saltos.crear(celda, t[0], t[1]);
-		}
-		p.sendActionBar(Component.text("Puesto: " + NOMBRES.get(c) + "  (clic izquierdo en él: configurarlo)", NamedTextColor.GREEN));
+		if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getClickedBlock() != null && plugin.plataformas.esperandoFinal(p))
+			plugin.plataformas.ponerFinal(p, e.getClickedBlock().getRelative(e.getBlockFace()).getLocation());
 	}
-
-	// ================= elegir que poner =================
-	private static final class Elegir implements InventoryHolder {
-		Inventory inv;
-		@Override public Inventory getInventory() { return inv; }
-	}
-	private void abrirElegir(Player p) {
-		Elegir m = new Elegir();
-		m.inv = Bukkit.createInventory(m, 9, Component.text("¿Qué pongo con la varita?"));
-		String sel = elegido(p);
-		Material[] mats = { Material.ARROW, Material.YELLOW_DYE, Material.RED_DYE, Material.YELLOW_CARPET, Material.RED_CARPET, Material.QUARTZ_SLAB };
-		for (int i = 0; i < COSAS.size(); i++) {
-			String c = COSAS.get(i);
-			m.inv.setItem(i, boton(mats[i], NOMBRES.get(c) + (c.equals(sel) ? "  ✔" : ""), c.equals(sel) ? NamedTextColor.GREEN : NamedTextColor.WHITE, "Clic: elegir"));
-		}
-		p.openInventory(m.inv);
-	}
-	@EventHandler
-	public void alClic(InventoryClickEvent e) {
-		if (!(e.getInventory().getHolder() instanceof Elegir)) return;
-		e.setCancelled(true);
-		if (e.getClickedInventory() != e.getInventory() || !(e.getWhoClicked() instanceof Player p)) return;
-		int i = e.getSlot();
-		if (i < 0 || i >= COSAS.size()) return;
-		elegido.put(p.getUniqueId(), COSAS.get(i));
-		p.closeInventory();
-		p.sendActionBar(Component.text("Varita: " + NOMBRES.get(COSAS.get(i)), NamedTextColor.GREEN));
-	}
-	@EventHandler
-	public void alArrastrar(InventoryDragEvent e) { if (e.getInventory().getHolder() instanceof Elegir) e.setCancelled(true); }
 
 	void comando(org.bukkit.command.CommandSender s) {
-		if (s instanceof Player p) { p.getInventory().addItem(item()); s.sendMessage(Component.text("Te di la varita. Shift + clic derecho para elegir qué poner.", NamedTextColor.GREEN)); }
+		if (s instanceof Player p) { p.getInventory().addItem(item()); s.sendMessage(Component.text("Te di la varita: clic derecho en algo puesto para configurarlo.", NamedTextColor.GREEN)); }
 		else s.sendMessage(Component.text("Solo un jugador.", NamedTextColor.YELLOW));
 	}
 	/** Para la pestaña Trucofdeath del creativo. */

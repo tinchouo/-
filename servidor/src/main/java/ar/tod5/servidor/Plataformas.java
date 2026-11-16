@@ -271,14 +271,13 @@ final class Plataformas implements Listener {
 		Plataforma p = deEntidad(e.getAttacked());
 		if (p == null) return;
 		e.setCancelled(true);
-		if (plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), p);
 	}
 	@EventHandler
 	public void alTocar(PlayerInteractEntityEvent e) {
 		Plataforma p = deEntidad(e.getRightClicked());
 		if (p == null) return;
 		e.setCancelled(true);
-		if (e.getHand() == EquipmentSlot.HAND && e.getPlayer().isSneaking() && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), p);
+		if (e.getHand() == EquipmentSlot.HAND && plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), p);
 	}
 
 	private static final int ANCHO = 10, LARGO = 11, ALTO = 12, BLOQUE = 14, VEL = 15, MODO = 16, FINAL = 20, REINICIAR = 22, BORRAR = 24;
@@ -308,7 +307,7 @@ final class Plataformas implements Listener {
 		m.inv.setItem(MODO, Varita.boton(p.modo.equals("parpadeo") ? Material.REDSTONE_LAMP : Material.GLASS, "Al llegar: " + (p.modo.equals("parpadeo") ? "parpadea y desaparece" : "se va achicando antes de llegar"), NamedTextColor.LIGHT_PURPLE,
 			"Clic: cambiar", "Después de 0,75 s vuelve a salir."));
 		m.inv.setItem(FINAL, Varita.boton(Material.TARGET, "Poner el final", NamedTextColor.GOLD,
-			"Cerrá el menú y tocá un bloque con la varita:", "ahí llega la plataforma (los puntos naranjas).", "Ahora: " + p.bx + " " + p.by + " " + p.bz));
+			"Cerrá el menú y hacé clic derecho en un bloque con la varita:", "ahí llega la plataforma (los puntos naranjas).", "Ahora: " + p.bx + " " + p.by + " " + p.bz));
 		m.inv.setItem(REINICIAR, Varita.boton(Material.CLOCK, "Volver a empezar", NamedTextColor.GREEN, "Sale de nuevo desde la salida."));
 		m.inv.setItem(BORRAR, Varita.boton(Material.BARRIER, m.confirmarBorrar ? "¿Seguro? Clic de nuevo para borrar" : "Borrar", NamedTextColor.RED));
 	}
@@ -348,6 +347,33 @@ final class Plataformas implements Listener {
 	private static int limitar(int n, int o1, int o2, int cual) { n = Math.max(1, Math.min(16, n)); while (n > 1 && n * o1 * o2 > 64) n--; return n; }
 	@EventHandler
 	public void alArrastrarMenu(InventoryDragEvent e) { if (e.getInventory().getHolder() instanceof Menu) e.setCancelled(true); }
+
+	// ================= el item para ponerla (pestaña Trucofdeath del creativo) =================
+	private NamespacedKey marcaItem() { return new NamespacedKey(plugin, "plataforma_item"); }
+	ItemStack item() {
+		ItemStack it = new ItemStack(Material.QUARTZ_SLAB);
+		var m = it.getItemMeta();
+		m.itemName(Component.text("Plataforma que se mueve", NamedTextColor.AQUA));
+		m.lore(List.of(Component.text("Clic derecho en un bloque: ponerla (3x3) y abrir su menú.", NamedTextColor.GRAY).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false),
+			Component.text("Para configurarla después: clic derecho con la varita en el cuadradito del medio de la salida.", NamedTextColor.GRAY).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)));
+		m.getPersistentDataContainer().set(marcaItem(), PersistentDataType.BYTE, (byte) 1);
+		it.setItemMeta(m);
+		return it;
+	}
+	@EventHandler
+	public void alUsarItem(org.bukkit.event.player.PlayerInteractEvent e) {
+		if (e.getHand() != EquipmentSlot.HAND || e.getItem() == null || !e.getItem().hasItemMeta() || !e.getItem().getItemMeta().getPersistentDataContainer().has(marcaItem(), PersistentDataType.BYTE)) return;
+		e.setCancelled(true);
+		if (e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null) return;
+		Player pl = e.getPlayer();
+		if (!plugin.tablero().esEditor(pl)) { pl.sendMessage(Component.text("Solo los editores pueden ponerlas.", NamedTextColor.RED)); return; }
+		Plataforma p = crear(e.getClickedBlock().getRelative(e.getBlockFace()).getLocation());
+		abrirMenu(pl, p);
+	}
+	JsonObject itemParaTablet() {
+		JsonObject j = new JsonObject(); j.addProperty("id", "plataforma"); j.add("item", Crafteos.itemJson(item()));
+		return j;
+	}
 
 	// ================= /tod plataforma =================
 	void comando(CommandSender s, String[] args) {

@@ -171,7 +171,7 @@ final class Flechas implements Listener {
 		ItemMeta m = it.getItemMeta();
 		m.itemName(Component.text("Flecha de gravedad"));
 		m.lore(List.of(Component.text("Clic derecho: la ponés acá (solo editores).", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false),
-			Component.text("Shift + clic derecho en la flecha: configurarla.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
+			Component.text("Para configurarla: clic derecho con la varita.", NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false)));
 		m.setItemModel(new NamespacedKey("tod5", "flecha_verde"));
 		m.getPersistentDataContainer().set(marcaItem, PersistentDataType.BYTE, (byte) 1);
 		it.setItemMeta(m);
@@ -287,8 +287,6 @@ final class Flechas implements Listener {
 		Flecha f = deEntidad(e.getAttacked());
 		if (f == null) return;
 		e.setCancelled(true);
-		// con la varita: se configura en vez de pegarle
-		if (plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) { abrirMenu(e.getPlayer(), f); return; }
 		golpe(e.getPlayer(), f);
 	}
 	@EventHandler
@@ -298,7 +296,7 @@ final class Flechas implements Listener {
 		e.setCancelled(true);
 		if (e.getHand() != EquipmentSlot.HAND) return;
 		Player p = e.getPlayer();
-		if (p.isSneaking() && plugin.tablero().esEditor(p)) { abrirMenu(p, f); return; }
+		if (plugin.varita.es(p.getInventory().getItemInMainHand()) && plugin.tablero().esEditor(p)) { abrirMenu(p, f); return; }   // con la varita: configurarla
 		golpe(p, f);
 	}
 
@@ -361,7 +359,7 @@ final class Flechas implements Listener {
 		else l = p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(3));
 		l.setYaw(p.getLocation().getYaw());
 		Flecha f = crear(l);
-		p.sendMessage(Component.text("Flecha puesta. Shift + clic derecho en ella para configurarla.", NamedTextColor.GREEN));
+		p.sendMessage(Component.text("Flecha puesta. Para configurarla: clic derecho con la varita.", NamedTextColor.GREEN));
 		cadaRato();
 	}
 

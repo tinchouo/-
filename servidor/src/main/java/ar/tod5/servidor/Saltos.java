@@ -47,7 +47,7 @@ import org.joml.Vector3f;
 
 /**
  * Orbes y pads (como en Geometry Dash).
- *  - pad: lo pisas y salis disparado para tu "arriba". Ocupa el piso de un bloque (un cuarto de alto).
+ *  - pad: se pone en cualquier cara de un bloque (piso, pared o techo); lo tocas y salis disparado para donde apunta. Un cuarto de bloque de alto.
  *  - orbe: estando en el aire y adentro de su bloque, apretas espacio y saltas. Cada jugador la gasta hasta que toca el piso
  *    (salvo que tenga "se puede repetir en el aire"); las particulas de una orbe gastada no las ve ese jugador.
  *  - amarillo y rojo, con una altura cada uno (en bloques), configurable. El salto reemplaza al que tenias (no se suma).
@@ -58,15 +58,15 @@ import org.joml.Vector3f;
 final class Saltos implements Listener {
 	static final String CANAL = "tod5:saltos", CANAL_USO = "tod5:salto";
 	static final class Salto {
-		String id, mundo, tipo = "orbe", color = "amarilla";
+		String id, mundo, tipo = "orbe", color = "amarilla", cara = "up";   // cara: para donde apunta el pad (up, down, north, south, east, west)
 		double x, y, z, altura;
 		boolean repetir;
 		Location lugar() { World w = Bukkit.getWorld(mundo); return w == null ? null : new Location(w, x, y, z); }
 	}
 	private static final class Vivo { ItemDisplay vista; Interaction toque; }
 	static double alturaNormal(String tipo, String color) {
-		if (tipo.equals("pad")) return color.equals("roja") ? 12 : 8;
-		return color.equals("roja") ? 12 : 6;
+		if (tipo.equals("pad")) return color.equals("roja") ? 18 : 8;
+		return color.equals("roja") ? 3.75 : 1.25;   // la amarilla: un salto normal; la roja: el triple
 	}
 
 	private static final double CERCA = 48;
@@ -84,7 +84,7 @@ final class Saltos implements Listener {
 		this.plugin = plugin;
 		this.marca = new NamespacedKey(plugin, "salto");
 		Bukkit.getScheduler().runTaskTimer(plugin, this::cadaRato, 10, 10);
-		Bukkit.getScheduler().runTaskTimer(plugin, this::particulas, 4, 3);
+		Bukkit.getScheduler().runTaskTimer(plugin, this::aterrizajes, 4, 2);
 	}
 
 	// ================= archivo =================
@@ -103,6 +103,7 @@ final class Saltos implements Listener {
 					s.x = j.get("x").getAsDouble(); s.y = j.get("y").getAsDouble(); s.z = j.get("z").getAsDouble();
 					s.altura = j.has("altura") ? j.get("altura").getAsDouble() : alturaNormal(s.tipo, s.color);
 					s.repetir = j.has("repetir") && j.get("repetir").getAsBoolean();
+					s.cara = j.has("cara") ? j.get("cara").getAsString() : "up";
 					saltos.put(s.id, s);
 				}
 			}
@@ -122,7 +123,7 @@ final class Saltos implements Listener {
 		j.addProperty("id", s.id); if (conMundo) j.addProperty("mundo", s.mundo);
 		j.addProperty("tipo", s.tipo); j.addProperty("color", s.color);
 		j.addProperty("x", s.x); j.addProperty("y", s.y); j.addProperty("z", s.z);
-		j.addProperty("altura", s.altura); j.addProperty("repetir", s.repetir);
+		j.addProperty("altura", s.altura); j.addProperty("repetir", s.repetir); j.addProperty("cara", s.cara);
 		return j;
 	}
 
@@ -154,11 +155,15 @@ final class Saltos implements Listener {
 	}
 
 	// ================= poner / sacar =================
-	Salto crear(Location celda, String tipo, String color) {
+	/** celda: donde va; cara: (los pads) para donde apuntan: el pad queda pegado a la cara de enfrente de esa celda. */
+	Salto crear(Location celda, String tipo, String color, org.bukkit.block.BlockFace cara) {
 		Salto s = new Salto();
 		s.id = (tipo.equals("pad") ? "p" : "o") + (proximo++); s.mundo = celda.getWorld().getName(); s.tipo = tipo; s.color = color;
-		s.x = celda.getBlockX() + 0.5; s.z = celda.getBlockZ() + 0.5;
-		s.y = celda.getBlockY() + (tipo.equals("pad") ? 0.0 : 0.5);
+		s.x = celda.getBlockX() + 0.5; s.y = celda.getBlockY() + 0.5; s.z = celda.getBlockZ() + 0.5;
+		if (tipo.equals("pad")) {
+			s.cara = cara.name().toLowerCase(Locale.ROOT);
+			s.x -= cara.getModX() * 0.5; s.y -= cara.getModY() * 0.5; s.z -= cara.getModZ() * 0.5;   // en la cara del bloque que tocaste
+		}
 		s.altura = alturaNormal(tipo, color);
 		saltos.put(s.id, s); guardar(); mandarTodos();
 		plugin.getLogger().info("Salto " + s.id + " (" + tipo + " " + color + ") en " + s.mundo + " " + s.x + " " + s.y + " " + s.z);
@@ -192,54 +197,56 @@ final class Saltos implements Listener {
 			if (v == null) { v = new Vivo(); vivos.put(s.id, v); }
 			boolean orbe = s.tipo.equals("orbe");
 			if (v.vista == null || !v.vista.isValid()) {
-				v.vista = l.getWorld().spawn(orbe ? l : l.clone().add(0, 0.001, 0), ItemDisplay.class, e -> {
+				v.vista = l.getWorld().spawn(l, ItemDisplay.class, e -> {
 					e.setPersistent(false);
 					e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
 					e.setBillboard(orbe ? Display.Billboard.CENTER : Display.Billboard.FIXED);
 					e.setBrightness(new Display.Brightness(15, 15));
-					// el pad es un disco acostado: el modelo esta hecho parado (de frente), lo acuesto
-					if (!orbe) e.setTransformation(new Transformation(new Vector3f(0, 0.5f, 0), new AxisAngle4f(), new Vector3f(1, 1, 1), new AxisAngle4f()));
+					// el pad esta hecho acostado en el piso: lo giro para que apunte a su cara y lo apoyo
+					if (!orbe) e.setTransformation(transPad(s.cara));
 				});
 			}
 			ItemStack mod = modelo(s);
 			if (!mod.equals(v.vista.getItemStack())) v.vista.setItemStack(mod);
 			if (v.toque == null || !v.toque.isValid()) {
-				v.toque = l.getWorld().spawn(orbe ? l.clone().add(0, -0.25, 0) : l, Interaction.class, i -> {
-					i.setInteractionWidth(orbe ? 0.5f : 0.9f); i.setInteractionHeight(orbe ? 0.5f : 0.25f); i.setResponsive(false); i.setPersistent(false);
+				org.bukkit.util.Vector n = normal(s.cara);
+				Location centro = orbe ? l : l.clone().add(n.clone().multiply(0.12));
+				v.toque = l.getWorld().spawn(centro.clone().add(0, -0.25, 0), Interaction.class, i -> {
+					i.setInteractionWidth(0.5f); i.setInteractionHeight(0.5f); i.setResponsive(false); i.setPersistent(false);
 					i.getPersistentDataContainer().set(marca, PersistentDataType.STRING, s.id);
 				});
 			}
 		}
 	}
 
-	/** Particulas: cada uno ve las suyas (la orbe gastada no echa particulas para ese jugador). */
-	private void particulas() {
-		tick += 3;
+	static org.bukkit.util.Vector normal(String cara) {
+		return switch (cara) {
+			case "down" -> new org.bukkit.util.Vector(0, -1, 0); case "north" -> new org.bukkit.util.Vector(0, 0, -1); case "south" -> new org.bukkit.util.Vector(0, 0, 1);
+			case "east" -> new org.bukkit.util.Vector(1, 0, 0); case "west" -> new org.bukkit.util.Vector(-1, 0, 0); default -> new org.bukkit.util.Vector(0, 1, 0);
+		};
+	}
+	/** El pad (hecho acostado, con la base en el piso del bloque) girado para que apunte a su cara, con la base apoyada en el punto. */
+	private static Transformation transPad(String cara) {
+		float r = (float) (Math.PI / 2);
+		AxisAngle4f giro = switch (cara) {
+			case "down" -> new AxisAngle4f((float) Math.PI, 1, 0, 0);
+			case "north" -> new AxisAngle4f(-r, 1, 0, 0); case "south" -> new AxisAngle4f(r, 1, 0, 0);
+			case "east" -> new AxisAngle4f(-r, 0, 0, 1); case "west" -> new AxisAngle4f(r, 0, 0, 1);
+			default -> new AxisAngle4f();
+		};
+		org.bukkit.util.Vector n = normal(cara);
+		return new Transformation(new Vector3f((float) n.getX() * 0.5f, (float) n.getY() * 0.5f, (float) n.getZ() * 0.5f), giro, new Vector3f(1, 1, 1), new AxisAngle4f());
+	}
+
+	/** Al tocar el piso: se le vuelven a cargar las orbes y ya puede recibir daño de caida (las particulas las hace el mod). */
+	private void aterrizajes() {
+		tick += 2;
 		for (Player p : Bukkit.getOnlinePlayers()) {
+			if (!p.isOnGround()) continue;
 			UUID u = p.getUniqueId();
-			if (p.isOnGround()) {
-				gastadas.remove(u);
-				Long t = lanzado.get(u);
-				if (t != null && tick - t > 6) lanzado.remove(u);   // ya aterrizo (los primeros ticks todavia estaba en el piso del pad)
-			}
-			Set<String> g = gastadas.getOrDefault(u, Set.of());
-			for (Salto s : saltos.values()) {
-				if (!s.mundo.equals(p.getWorld().getName())) continue;
-				Location l = s.lugar();
-				if (l == null || p.getLocation().distanceSquared(l) > 32 * 32) continue;
-				Color c = s.color.equals("roja") ? Color.fromRGB(255, 70, 90) : Color.fromRGB(255, 225, 60);
-				Random r = new Random();
-				if (s.tipo.equals("pad")) {
-					for (int i = 0; i < 2; i++)
-						p.spawnParticle(Particle.ENTITY_EFFECT, l.clone().add((r.nextDouble() - 0.5) * 0.7, 0.15, (r.nextDouble() - 0.5) * 0.7), 0, 0, 0, 0, 1, c);
-				} else if (!g.contains(s.id)) {
-					for (int i = 0; i < 3; i++) {
-						double a = r.nextDouble() * Math.PI * 2, b = Math.acos(2 * r.nextDouble() - 1);
-						p.spawnParticle(Particle.DUST, l.clone().add(Math.sin(b) * Math.cos(a) * 0.55, Math.cos(b) * 0.55, Math.sin(b) * Math.sin(a) * 0.55), 1, 0, 0, 0, 0,
-							new Particle.DustOptions(c, 0.6f));
-					}
-				}
-			}
+			gastadas.remove(u);
+			Long t = lanzado.get(u);
+			if (t != null && tick - t > 6) lanzado.remove(u);   // los primeros ticks todavia estaba en el piso del pad
 		}
 	}
 
@@ -254,14 +261,13 @@ final class Saltos implements Listener {
 		Salto s = deEntidad(e.getAttacked());
 		if (s == null) return;
 		e.setCancelled(true);
-		if (plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), s);
 	}
 	@EventHandler
 	public void alTocar(PlayerInteractEntityEvent e) {
 		Salto s = deEntidad(e.getRightClicked());
 		if (s == null) return;
 		e.setCancelled(true);
-		if (e.getHand() == EquipmentSlot.HAND && e.getPlayer().isSneaking() && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), s);
+		if (e.getHand() == EquipmentSlot.HAND && plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), s);
 	}
 
 	private static final int COLOR = 10, ALTURA = 12, REPETIR = 14, BORRAR = 16;
@@ -283,8 +289,8 @@ final class Saltos implements Listener {
 		m.inv.setItem(COLOR, Varita.boton(roja ? Material.RED_DYE : Material.YELLOW_DYE, "Color: " + (roja ? "rojo" : "amarillo"), roja ? NamedTextColor.RED : NamedTextColor.YELLOW,
 			"Clic: cambiar (vuelve a la altura de ese color)"));
 		ItemStack h = Varita.boton(Material.FEATHER, "Altura: " + fmt(s.altura) + " bloques", NamedTextColor.AQUA,
-			"Clic izquierdo: +1   Clic derecho: -1", "Shift + clic: de a medio bloque", "Normal: " + fmt(alturaNormal(s.tipo, s.color)));
-		h.setAmount((int) Math.max(1, Math.min(64, Math.round(s.altura))));
+			"Clic izquierdo: +1   Clic derecho: -1", "Shift + clic: de a 0,25", "Normal: " + fmt(alturaNormal(s.tipo, s.color)));
+		h.setAmount((int) Math.max(1, Math.min(64, Math.ceil(s.altura))));
 		m.inv.setItem(ALTURA, h);
 		if (s.tipo.equals("orbe")) m.inv.setItem(REPETIR, Varita.boton(s.repetir ? Material.LIME_DYE : Material.GRAY_DYE, "Se puede repetir en el aire: " + (s.repetir ? "sí" : "no"), NamedTextColor.GREEN,
 			s.repetir ? "Se usa todas las veces que quieras (cada 0,1 s)." : "Se gasta hasta que tocás el piso.", "Clic: cambiar"));
@@ -301,8 +307,8 @@ final class Saltos implements Listener {
 		switch (e.getSlot()) {
 			case COLOR -> { s.color = s.color.equals("roja") ? "amarilla" : "roja"; s.altura = alturaNormal(s.tipo, s.color); }
 			case ALTURA -> {
-				double paso = e.isShiftClick() ? 0.5 : 1;
-				s.altura = Math.max(0.5, Math.min(64, s.altura + (e.isRightClick() ? -paso : paso)));
+				double paso = e.isShiftClick() ? 0.25 : 1;
+				s.altura = Math.max(0.25, Math.min(64, s.altura + (e.isRightClick() ? -paso : paso)));
 			}
 			case REPETIR -> { if (s.tipo.equals("orbe")) s.repetir = !s.repetir; }
 			case BORRAR -> {
@@ -318,14 +324,49 @@ final class Saltos implements Listener {
 	@EventHandler
 	public void alArrastrarMenu(InventoryDragEvent e) { if (e.getInventory().getHolder() instanceof Menu) e.setCancelled(true); }
 
+	// ================= los items para ponerlos (pestaña Trucofdeath del creativo) =================
+	private NamespacedKey marcaItem() { return new NamespacedKey(plugin, "salto_item"); }
+	ItemStack item(String tipo, String color) {
+		ItemStack it = new ItemStack(Material.PAPER);
+		ItemMeta m = it.getItemMeta();
+		boolean roja = color.equals("roja"), pad = tipo.equals("pad");
+		m.itemName(Component.text((pad ? "Pad " : "Orbe ") + (roja ? "roj" : "amarill") + (pad ? "o" : "a"), roja ? NamedTextColor.RED : NamedTextColor.YELLOW));
+		m.lore(List.of(Component.text(pad ? "Clic derecho en una cara de un bloque: ponerlo (apunta para afuera)." : "Clic derecho en un bloque: ponerla al lado.", NamedTextColor.GRAY).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false),
+			Component.text("Para configurarlo: clic derecho con la varita.", NamedTextColor.GRAY).decoration(net.kyori.adventure.text.format.TextDecoration.ITALIC, false)));
+		m.setItemModel(new NamespacedKey("tod5", tipo + "_" + (roja ? "rojo" : "amarillo")));
+		m.getPersistentDataContainer().set(marcaItem(), PersistentDataType.STRING, tipo + ":" + color);
+		it.setItemMeta(m);
+		return it;
+	}
+	@EventHandler
+	public void alUsarItem(org.bukkit.event.player.PlayerInteractEvent e) {
+		if (e.getHand() != EquipmentSlot.HAND || e.getItem() == null || !e.getItem().hasItemMeta()) return;
+		String q = e.getItem().getItemMeta().getPersistentDataContainer().get(marcaItem(), PersistentDataType.STRING);
+		if (q == null) return;
+		e.setCancelled(true);
+		if (e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK || e.getClickedBlock() == null) return;
+		Player p = e.getPlayer();
+		if (!plugin.tablero().esEditor(p)) { p.sendMessage(Component.text("Solo los editores pueden ponerlos.", NamedTextColor.RED)); return; }
+		String[] t = q.split(":");
+		crear(e.getClickedBlock().getRelative(e.getBlockFace()).getLocation(), t[0], t[1], e.getBlockFace());
+	}
+	List<JsonObject> itemsParaTablet() {
+		List<JsonObject> l = new ArrayList<>();
+		for (String t : List.of("orbe", "pad")) for (String c : List.of("amarilla", "roja")) {
+			JsonObject j = new JsonObject(); j.addProperty("id", t + "_" + c); j.add("item", Crafteos.itemJson(item(t, c))); l.add(j);
+		}
+		return l;
+	}
+
 	// ================= /tod salto =================
 	void comando(CommandSender s, String[] args) {
 		String sub = args.length > 1 ? args[1].toLowerCase(Locale.ROOT) : "";
 		switch (sub) {
 			case "crear" -> {   // /tod salto crear <orbe|pad> <amarilla|roja> x y z
-				if (args.length < 7) { s.sendMessage(Component.text("Uso: /tod salto crear <orbe|pad> <amarilla|roja> <x> <y> <z>", NamedTextColor.YELLOW)); return; }
+				if (args.length < 7) { s.sendMessage(Component.text("Uso: /tod salto crear <orbe|pad> <amarilla|roja> <x> <y> <z> [up|down|north|south|east|west]", NamedTextColor.YELLOW)); return; }
 				World w = s instanceof Player p ? p.getWorld() : Bukkit.getWorlds().get(0);
-				Salto n = crear(new Location(w, Double.parseDouble(args[4]), Double.parseDouble(args[5]), Double.parseDouble(args[6])), args[2].equals("pad") ? "pad" : "orbe", args[3].startsWith("roj") ? "roja" : "amarilla");
+				org.bukkit.block.BlockFace cara = args.length > 7 ? org.bukkit.block.BlockFace.valueOf(args[7].toUpperCase(Locale.ROOT)) : org.bukkit.block.BlockFace.UP;
+				Salto n = crear(new Location(w, Double.parseDouble(args[4]), Double.parseDouble(args[5]), Double.parseDouble(args[6])), args[2].equals("pad") ? "pad" : "orbe", args[3].startsWith("roj") ? "roja" : "amarilla", cara);
 				s.sendMessage(Component.text("Creado " + n.id + ".", NamedTextColor.GREEN));
 			}
 			case "lista" -> {
@@ -336,7 +377,7 @@ final class Saltos implements Listener {
 				if (args.length < 3 || !saltos.containsKey(args[2])) { s.sendMessage(Component.text("Uso: /tod salto borrar <id> (mirá /tod salto lista)", NamedTextColor.YELLOW)); return; }
 				borrar(args[2]); s.sendMessage(Component.text("Borrado.", NamedTextColor.YELLOW));
 			}
-			default -> s.sendMessage(Component.text("Uso: /tod salto [crear | lista | borrar]  (para ponerlos: la varita, /tod varita)", NamedTextColor.YELLOW));
+			default -> s.sendMessage(Component.text("Uso: /tod salto [crear | lista | borrar]  (se ponen desde la pestaña Trucofdeath del creativo; se editan con la varita)", NamedTextColor.YELLOW));
 		}
 	}
 	List<String> completar(String[] args) {

@@ -29,21 +29,39 @@ import org.slf4j.LoggerFactory;
 public final class SaltosCliente {
 	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
 	private SaltosCliente() {}
-	private record Salto(String id, boolean pad, double x, double y, double z, double altura, boolean repetir) {
-		AABB caja() { return pad ? new AABB(x - 0.5, y, z - 0.5, x + 0.5, y + 0.25, z + 0.5) : new AABB(x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5); }
+	/** (x, y, z): el centro de la orbe, o el centro de la cara donde esta pegado el pad. n: para donde apunta el pad. */
+	private record Salto(String id, boolean pad, boolean roja, double x, double y, double z, double altura, boolean repetir, Vec3 n) {
+		AABB caja() {
+			if (!pad) return new AABB(x - 0.5, y - 0.5, z - 0.5, x + 0.5, y + 0.5, z + 0.5);
+			// un cuarto de bloque de alto, para afuera de la cara
+			Vec3 a = new Vec3(x, y, z), b = a.add(n.scale(0.25));
+			double ex = n.x == 0 ? 0.5 : 0, ey = n.y == 0 ? 0.5 : 0, ez = n.z == 0 ? 0.5 : 0;
+			return new AABB(Math.min(a.x, b.x) - ex, Math.min(a.y, b.y) - ey, Math.min(a.z, b.z) - ez, Math.max(a.x, b.x) + ex, Math.max(a.y, b.y) + ey, Math.max(a.z, b.z) + ez);
+		}
+		Vec3 centro() { return new Vec3(x, y, z); }
+	}
+	private static Vec3 normal(String cara) {
+		return switch (cara) {
+			case "down" -> new Vec3(0, -1, 0); case "north" -> new Vec3(0, 0, -1); case "south" -> new Vec3(0, 0, 1);
+			case "east" -> new Vec3(1, 0, 0); case "west" -> new Vec3(-1, 0, 0); default -> new Vec3(0, 1, 0);
+		};
 	}
 	private static final List<Salto> SALTOS = new ArrayList<>();
 	private static final Set<String> GASTADAS = new HashSet<>();
 	private static final Map<String, Integer> ESPERA = new HashMap<>();
 	private static boolean espacioAntes;
+	/** Buffer: apretaste espacio en el aire (no es el del salto del piso) y lo seguis manteniendo: la proxima orbe que toques la usa. */
+	private static boolean guardado;
+	private static int vuelta;
 
 	public static void recibir(String json) {
 		SALTOS.clear();
 		try {
 			for (JsonElement e : JsonParser.parseString(json).getAsJsonArray()) {
 				JsonObject j = e.getAsJsonObject();
-				SALTOS.add(new Salto(j.get("id").getAsString(), j.get("tipo").getAsString().equals("pad"), j.get("x").getAsDouble(), j.get("y").getAsDouble(),
-					j.get("z").getAsDouble(), j.get("altura").getAsDouble(), j.has("repetir") && j.get("repetir").getAsBoolean()));
+				SALTOS.add(new Salto(j.get("id").getAsString(), j.get("tipo").getAsString().equals("pad"), j.get("color").getAsString().equals("roja"),
+					j.get("x").getAsDouble(), j.get("y").getAsDouble(), j.get("z").getAsDouble(), j.get("altura").getAsDouble(),
+					j.has("repetir") && j.get("repetir").getAsBoolean(), normal(j.has("cara") ? j.get("cara").getAsString() : "up")));
 			}
 		} catch (Exception e) { LOG.warn("TOD5 saltos: no entendi la lista ({})", e.getMessage()); }
 		LOG.info("TOD5 saltos: {}", SALTOS.size());
@@ -72,25 +90,45 @@ public final class SaltosCliente {
 		while (mc.options.keyJump.consumeClick()) clic = true;
 		boolean espacio = p.input.keyPresses.jump(), recien = clic || (espacio && !espacioAntes);
 		espacioAntes = espacio;
+		if (!espacio && !clic) guardado = false;                 // lo soltaste: se pierde el buffer
+		else if (recien && !p.onGround()) guardado = true;       // apretado en el aire (no el del salto del piso)
+		vuelta++;
+		particulas(mc, p);
 		if (p.getAbilities().flying || p.isSpectator() || p.isPassenger()) return;
 		AABB yo = p.getBoundingBox();
 		for (Salto s : SALTOS) {
 			if (ESPERA.containsKey(s.id) || !yo.intersects(s.caja())) continue;
 			if (!s.pad) {
-				if (!recien || p.onGround() || (!s.repetir && GASTADAS.contains(s.id))) continue;
+				if (!guardado || p.onGround() || (!s.repetir && GASTADAS.contains(s.id))) continue;
 				if (!s.repetir) GASTADAS.add(s.id);
+				guardado = false;   // cada apretada sirve para una sola orbe
+				saltar(p, s.altura, null);
+				Efectos.orbe(s.centro(), s.roja);
+			} else {
+				saltar(p, s.altura, s.n);
+				Efectos.pad(s.centro(), s.n, s.roja);
 			}
-			saltar(p, s.altura);
 			ESPERA.put(s.id, 2);
 			if (ClientPlayNetworking.canSend(Red.SALTO)) ClientPlayNetworking.send(new Red.Texto(Red.SALTO, s.id));
 			break;
 		}
 	}
 
-	/** Reemplaza la velocidad hacia tu "arriba" (segun tu gravedad) por la del salto. */
-	private static void saltar(LocalPlayer p, double altura) {
+	/** Las particulas de siempre: los pads echan para donde apuntan; las orbes (las que todavia podes usar) chupan para adentro. */
+	private static void particulas(Minecraft mc, LocalPlayer p) {
+		Vec3 yo = p.position();
+		for (Salto s : SALTOS) {
+			Vec3 c = s.centro();
+			if (c.distanceToSqr(yo) > 32 * 32) continue;
+			if (s.pad) Efectos.chispaPad(c, s.n, s.roja);
+			else if ((s.repetir || !GASTADAS.contains(s.id)) && vuelta % 2 == 0) Efectos.chispaOrbe(c, s.roja);
+		}
+	}
+
+	/** Reemplaza la velocidad hacia "arriba" por la del salto. Arriba: para donde apunta el pad, o (las orbes) tu arriba segun tu gravedad. */
+	private static void saltar(LocalPlayer p, double altura, Vec3 hacia) {
 		GravedadCliente.G g = GravedadCliente.de(p);
-		Vec3 arriba = new Vec3(-g.x, -g.y, -g.z);
+		Vec3 arriba = hacia != null ? hacia : new Vec3(-g.x, -g.y, -g.z);
 		Vec3 v = p.getDeltaMovement();
 		v = v.subtract(arriba.scale(v.dot(arriba))).add(arriba.scale(velocidadPara(altura)));
 		p.setDeltaMovement(v);
