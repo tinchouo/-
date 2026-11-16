@@ -60,7 +60,7 @@ final class Crafteos implements Listener {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	static final class Receta {
-		String id, nombre = "Crafteo nuevo", categoria = "General", nota = "", estado = "oculto", tipo = "mesa";
+		String id, nombre = "Crafteo nuevo", categoria = "General", nota = "", estado = "oculto", tipo = "mesa", anuncio = "";   // anuncio: el que lo activa (y que sale al activarlo)
 		int dia = 1; boolean formaExacta = true; float xp = 0.5f; int tiempo = 200;
 		ItemStack[] entrada = new ItemStack[9];
 		ItemStack resultado;
@@ -96,6 +96,7 @@ final class Crafteos implements Listener {
 				JsonArray en = j.getAsJsonArray("entrada"); r.entrada = new ItemStack[9];
 				for (int i = 0; i < en.size() && i < 9; i++) r.entrada[i] = deB64(en.get(i));
 				r.resultado = deB64(j.get("resultado"));
+				if (j.has("anuncio") && !j.get("anuncio").isJsonNull()) r.anuncio = j.get("anuncio").getAsString();
 				recetas.put(r.id, r);
 			}
 			if (o.has("items")) for (JsonElement e : o.getAsJsonArray("items")) { JsonObject j = e.getAsJsonObject(); items.put(j.get("id").getAsString(), deB64(j.get("item"))); }
@@ -111,7 +112,7 @@ final class Crafteos implements Listener {
 			JsonObject j = new JsonObject();
 			j.addProperty("id", r.id); j.addProperty("nombre", r.nombre); j.addProperty("categoria", r.categoria); j.addProperty("nota", r.nota);
 			j.addProperty("estado", r.estado); j.addProperty("tipo", r.tipo); j.addProperty("dia", r.dia); j.addProperty("forma", r.formaExacta);
-			j.addProperty("xp", r.xp); j.addProperty("tiempo", r.tiempo);
+			j.addProperty("xp", r.xp); j.addProperty("tiempo", r.tiempo); j.addProperty("anuncio", r.anuncio);
 			JsonArray en = new JsonArray(); for (ItemStack it : r.entrada) { String s = b64(it); if (s == null) en.add(JsonNull.INSTANCE); else en.add(s); }
 			j.add("entrada", en);
 			String res = b64(r.resultado); if (res != null) j.addProperty("resultado", res);

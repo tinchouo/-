@@ -21,7 +21,7 @@ import net.minecraft.world.item.Items;
  *  - objetivos: conseguir, fabricar, matar, picar, ir a un lugar, evento. Cada uno con su cantidad.
  *    El item (o el bloque) se toma del que tenes en la mano; el lugar, de donde estas parado.
  *  - recompensa: se carga en un cofre del server (hasta 27 items)
- * Un anuncio puede activar la mision al enviarse (se elige en el editor de anuncios).
+ * El anuncio que la activa se elige aca, con el boton "Anuncio".
  */
 final class PanelMisiones extends Panel {
 	private static final String[] TIPOS = { "tener", "fabricar", "matar", "picar", "ir", "evento" };
@@ -123,7 +123,7 @@ final class PanelMisiones extends Panel {
 
 		// ===== lista: diarias (por dia) y opcionales =====
 		this.lw = 102; this.lx = x; this.ly = y + 16; this.lh = ch - 16;
-		t.boton(g, "+Nueva", x + lw - f.width("+Nueva") - 10, y - 1, false, mx, my, () -> nueva(d));
+		t.boton(g, "+Nueva", t.alLadoDelTitulo("Misiones", "+Nueva", x, lw), y - 1, false, mx, my, () -> nueva(d));
 		List<TabletDatos.Mision> orden = new ArrayList<>(d.misionesAdmin);
 		orden.sort(Comparator.comparing((TabletDatos.Mision m) -> !m.diaria()).thenComparingInt(m -> m.diaria() ? m.dia() : 0));
 		g.enableScissor(lx, ly, lx + lw, ly + lh);
@@ -136,9 +136,9 @@ final class PanelMisiones extends Panel {
 			g.fill(lx, yy, lx + lw, yy + alto, selec ? t.acento() : Tablet.LINEA);
 			g.fill(lx + 1, yy + 1, lx + lw - 1, yy + alto - 1, selec ? 0xFF2A2610 : 0xFF141B18);
 			g.fill(lx + 3, yy + 3, lx + 5, yy + alto - 3, m.diaria() ? Tablet.VERDE : Tablet.CELESTE);
-			g.drawString(f, f.plainSubstrByWidth(m.titulo(), lw - 12), lx + 8, yy + 3, Tablet.TEXTO, false);
+			g.drawString(f, Tablet.cortar(f, m.titulo(), lw - 11), lx + 8, yy + 3, Tablet.TEXTO, false);
 			String sub = (m.diaria() ? "Día " + m.dia() + " · " : "") + (activa ? "Activa" : "Oculta") + (m.equipo() ? " · Eq." : "");
-			g.drawString(f, f.plainSubstrByWidth(sub, lw - 12), lx + 8, yy + 12, activa ? 0xFF55FF55 : 0xFFE06060, false);
+			g.drawString(f, Tablet.cortar(f, sub, lw - 11), lx + 8, yy + 12, activa ? 0xFF55FF55 : 0xFFE06060, false);
 			if (yy + alto > ly && yy < ly + lh) t.zona(lx, Math.max(yy, ly), lw, Math.min(yy + alto, ly + lh) - Math.max(yy, ly), () -> abrir(m));
 			yy += alto + 2;
 		}
@@ -181,7 +181,10 @@ final class PanelMisiones extends Panel {
 		int sx = ex + 44; boolean activa = srv != null && srv.estado().equals("activa");
 		sx += t.boton(g, "Oculta", sx, ey, !activa, mx, my, () -> { guardarSiHaceFalta(); accion("mision_estado", "estado", "oculta"); avisar("Oculta: nadie la ve."); }) + 3;
 		sx += t.boton(g, "Activa", sx, ey, activa, mx, my, () -> { guardarSiHaceFalta(); accion("mision_estado", "estado", "activa"); avisar("Activa: ya la ven todos."); }) + 6;
-		g.drawString(f, f.plainSubstrByWidth("o activala con un anuncio", ex + ew - sx), sx, ey + 3, Tablet.GRIS_TEXTO, false);
+		ey += 16;
+		// el anuncio que la activa (y que sale al activarla)
+		g.drawString(f, "Anuncio", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+		t.botonAnuncio(g, d, "mision", this.id, ex + 44, ey, ew - 44, mx, my);
 		ey += 16;
 		g.fill(ex, ey, ex + ew, ey + 1, Tablet.LINEA);
 		ey += 4;
@@ -290,10 +293,10 @@ final class PanelMisiones extends Panel {
 		int cx2 = ex + ew - f.width(ct) - 10;
 		int px = ex + 44, k = 0;
 		if (srv != null) for (ItemStack st : srv.recompensas()) {
-			if (px + 17 > cx2 - 14) { g.drawString(f, "+" + (srv.recompensas().size() - k), px + 1, ey + 5, Tablet.GRIS_TEXTO, false); break; }
+			if (px + 19 > cx2 - 14) { g.drawString(f, "+" + (srv.recompensas().size() - k), px + 1, ey + 5, Tablet.GRIS_TEXTO, false); break; }
 			g.renderItem(st, px, ey); if (st.getCount() > 1) g.renderItemDecorations(f, st, px, ey, String.valueOf(st.getCount()));
 			if (mx >= px && my >= ey && mx < px + 16 && my < ey + 16) g.setTooltipForNextFrame(Component.literal(st.getCount() + " × ").append(st.getHoverName()), mx, my);
-			px += 17; k++;
+			px += 19; k++;
 		}
 		if (srv != null && srv.recompensas().isEmpty()) g.drawString(f, "sin recompensa", px, ey + 5, 0xFFE0A040, false);
 		t.boton(g, ct, cx2, ey + 2, srv != null && srv.recompensas().isEmpty(), mx, my, () -> { mandarGuardar(); accion("mision_recompensa", null, null); t.onClose(); });

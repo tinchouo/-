@@ -91,21 +91,21 @@ final class PanelCrafteos extends Panel {
 		// ===== lista, por categoria =====
 		this.lw = 102; this.lx = x; this.ly = y + 16; this.lh = ch - 16;
 		t.titulo(g, "Crafteos", x, y);
-		t.boton(g, "+Nuevo", x + lw - f.width("+Nuevo") - 10, y - 1, false, mx, my, () -> nuevo(d));
+		t.boton(g, "+Nuevo", t.alLadoDelTitulo("Crafteos", "+Nuevo", x, lw), y - 1, false, mx, my, () -> nuevo(d));
 		List<TabletDatos.Crafteo> orden = new ArrayList<>(d.crafteos);
 		orden.sort(Comparator.comparing((TabletDatos.Crafteo c) -> c.categoria() == null ? "" : c.categoria().toLowerCase()).thenComparingInt(TabletDatos.Crafteo::dia));
 		g.enableScissor(lx, ly, lx + lw, ly + lh);
 		int yy = ly - this.scroll; String catAnt = null;
 		for (TabletDatos.Crafteo c : orden) {
 			String cat = c.categoria() == null ? "General" : c.categoria();
-			if (!cat.equals(catAnt)) { g.drawString(f, f.plainSubstrByWidth(cat, lw - 2), lx + 1, yy + 2, Tablet.GRIS_TEXTO, false); yy += 12; catAnt = cat; }
+			if (!cat.equals(catAnt)) { g.drawString(f, Tablet.cortar(f, cat, lw - 2), lx + 1, yy + 2, Tablet.GRIS_TEXTO, false); yy += 12; catAnt = cat; }
 			boolean sel = c.id().equals(this.id);
 			int alto = 20, est = indice(ESTADOS, c.estado());
 			g.fill(lx, yy, lx + lw, yy + alto, sel ? t.acento() : Tablet.LINEA);
 			g.fill(lx + 1, yy + 1, lx + lw - 1, yy + alto - 1, sel ? 0xFF2A2610 : 0xFF141B18);
 			g.renderItem(c.icono(), lx + 2, yy + 2);
 			String n = c.nombre() == null ? c.id() : c.nombre();
-			g.drawString(f, f.plainSubstrByWidth(n, lw - 26), lx + 21, yy + 3, Tablet.TEXTO, false);
+			g.drawString(f, Tablet.cortar(f, n, lw - 24), lx + 21, yy + 3, Tablet.TEXTO, false);
 			g.drawString(f, ESTADOS[est].substring(0, 1).toUpperCase() + ESTADOS[est].substring(1), lx + 21, yy + 11, COLOR_ESTADO[est], false);
 			if (yy + alto > ly && yy < ly + lh) t.zona(lx, Math.max(yy, ly), lw, Math.min(yy + alto, ly + lh) - Math.max(yy, ly), () -> abrir(c));
 			yy += alto + 2;
@@ -170,6 +170,10 @@ final class PanelCrafteos extends Panel {
 			}), mx, my);
 			sx += w + 3;
 		}
+		ey += 17;
+		// el anuncio que lo activa (y que sale al activarlo)
+		g.drawString(f, "Anuncio", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+		t.botonAnuncio(g, d, "crafteo", this.id, ex + 54, ey, ew - 54, mx, my);
 		ey += 18;
 		// la receta
 		g.fill(ex, ey, ex + ew, ey + 1, Tablet.LINEA);

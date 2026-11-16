@@ -125,7 +125,7 @@ final class PanelAnuncios extends Panel {
 		// ===== lista =====
 		this.lw = 102; this.lx = x; this.ly = y + 16; this.lh = ch - 16;   // angosta: el editor necesita el ancho de un renglon del chat
 		t.titulo(g, "Anuncios", x, y);
-		t.boton(g, "+Nuevo", x + lw - f.width("+Nuevo") - 10, y - 1, false, mx, my, () -> nuevo(d));
+		t.boton(g, "+Nuevo", t.alLadoDelTitulo("Anuncios", "+Nuevo", x, lw), y - 1, false, mx, my, () -> nuevo(d));
 		List<TabletDatos.Anuncio> orden = new ArrayList<>(d.anuncios);
 		orden.sort(Comparator.comparingInt((TabletDatos.Anuncio a) -> a.grupo() <= 0 ? 10000 - a.grupo() : a.grupo()));   // dias, General, Momento truco
 		g.enableScissor(lx, ly, lx + lw, ly + lh);
@@ -210,35 +210,23 @@ final class PanelAnuncios extends Panel {
 		String rt = "Ruleta: " + (this.ruleta ? "sí" : "no");
 		int rtx = ex + ew - f.width(rt) - 10;
 		t.boton(g, rt, rtx, ey, this.ruleta, mx, my, () -> { this.ruleta = !this.ruleta; this.sucio = true; });
-		// el crafteo que activa al enviarse (clic: pasa al siguiente; "ninguno" al final)
-		{
-			List<TabletDatos.Crafteo> cs = d.crafteos;
-			TabletDatos.Crafteo actual = cs.stream().filter(c -> c.id().equals(this.crafteo)).findFirst().orElse(null);
-			int cbx = gx + 20, cbw = rtx - 4 - cbx - 10;
-			String ct = actual == null ? "Crafteo: ninguno" : f.plainSubstrByWidth("⚒ " + (actual.nombre() == null ? actual.id() : actual.nombre()), Math.max(20, cbw));
-			if (cbw > 30) {
-				t.boton(g, ct, cbx, ey, actual != null, mx, my, () -> {
-					int i = cs.indexOf(actual);
-					this.crafteo = i + 1 < cs.size() ? cs.get(i + 1).id() : "";
-					this.sucio = true;
-				});
-				if (mx >= cbx && my >= ey && mx < cbx + f.width(ct) + 10 && my < ey + 13)
-					g.setTooltipForNextFrame(Component.literal(actual == null ? "Clic: elegir un crafteo que se active al enviar este anuncio" : "Al enviarlo se activa este crafteo (si lo retirás, vuelve a quedar oculto). Clic: cambiar"), mx, my);
-			}
-		}
 		ey += 17;
-		// la mision que activa al enviarse (igual que el crafteo)
+		// lo que activa al enviarse: se vincula desde cada panel (Crafteos, Misiones); aca solo se ve
 		{
-			List<TabletDatos.Mision> ms = d.misionesAdmin;
-			TabletDatos.Mision actual = ms.stream().filter(m -> m.id().equals(this.mision)).findFirst().orElse(null);
-			String mt = actual == null ? "Misión: ninguna" : f.plainSubstrByWidth("Misión: " + actual.titulo(), ew - 12);
-			int mw = t.boton(g, mt, ex, ey, actual != null, mx, my, () -> {
-				int i = ms.indexOf(actual);
-				this.mision = i + 1 < ms.size() ? ms.get(i + 1).id() : "";
-				this.sucio = true;
-			});
-			if (mx >= ex && my >= ey && mx < ex + mw && my < ey + 13)
-				g.setTooltipForNextFrame(Component.literal(actual == null ? "Clic: elegir una misión que se active al enviar este anuncio" : "Al enviarlo se activa esta misión (si lo retirás, vuelve a quedar oculta). Clic: cambiar"), mx, my);
+			List<String> cosas = new ArrayList<>();
+			for (var e : d.vinculos.entrySet()) {
+				if (!e.getValue().equals(this.id)) continue;
+				String k = e.getKey(), cid = k.substring(2);
+				if (k.startsWith("c:")) d.crafteos.stream().filter(c -> c.id().equals(cid)).findFirst().ifPresent(c -> cosas.add("⚒ " + (c.nombre() == null ? c.id() : c.nombre())));
+				else if (k.startsWith("m:")) d.misionesAdmin.stream().filter(m -> m.id().equals(cid)).findFirst().ifPresent(m -> cosas.add("✦ " + m.titulo()));
+			}
+			g.drawString(f, "Activa", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+			String lista = cosas.isEmpty() ? "nada (se vincula desde Crafteos o Misiones)" : String.join("  ", cosas);
+			String corto = Tablet.cortar(f, lista, ew - 40);
+			g.drawString(f, corto, ex + 36, ey + 3, cosas.isEmpty() ? 0xFF5A6560 : Tablet.TEXTO, false);
+			if (mx >= ex && my >= ey && mx < ex + ew && my < ey + 13) g.setTooltipForNextFrame(Component.literal(cosas.isEmpty()
+				? "Para que este anuncio active algo, andá a Crafteos o Misiones y tocá \"Anuncio\"."
+				: "Al enviarlo se activa: " + String.join(", ", cosas) + ". Si lo retirás, vuelve a quedar oculto."), mx, my);
 		}
 		ey += 17;
 		// titulo

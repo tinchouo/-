@@ -218,6 +218,32 @@ jobs:
           xdotool mousemove 376 194 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h8_editor.png
           xdotool mousemove 1018 239 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h9_objetivo_nuevo.png
           xdotool key Escape; sleep 1
+          # 15) vinculos: la mision Expedicion se vincula a un anuncio desde SU panel; activarla manda el anuncio y ocultarla lo retira
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 376 264 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/v1_mision.png
+          xdotool mousemove 650 237 click 1; sleep 1; import -window root cap/v2_selector.png
+          xdotool mousemove 640 278 click 1; sleep 1.5; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/v3_vinculada.png
+          xdotool mousemove 636 199 click 1; sleep 1.5; xdotool mousemove 722 199 click 1; sleep 0.5; xdotool key Escape
+          sleep 12; import -window root cap/v4_salio.png
+          grep -iE "vinculo|vinculado|anuncio" srv/server.log | tail -6 || true
+          xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 376 264 click 1; sleep 1; xdotool mousemove 636 199 click 1; sleep 2; xdotool mousemove 1200 700; import -window root cap/v5_oculta.png
+          grep -iE "retira" srv/server.log | tail -3 || echo "NO SE RETIRO EL ANUNCIO"
+          xdotool mousemove 224 140 click 1; sleep 1; xdotool mousemove 376 196 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/v6_anuncio_activa.png
+          xdotool key Escape; sleep 1
+          cat srv/plugins/TOD5/datos/misiones.json | grep -o '"anuncio": *"[^"]*"' || true
+          # 16) pantalla chica (como un monitor 1080p con la interfaz en Auto: 480x270): que nada se pise
+          WID=$(xdotool search --name "Minecraft" | head -1); echo "ventana: $WID"; xdotool windowmove $WID 0 0; xdotool windowsize $WID 960 540; sleep 3
+          xdotool mousemove 480 520; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
+          xdotool mousemove 70 94 click 1; sleep 1; xdotool mousemove 224 150 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s1_anuncios.png
+          xdotool mousemove 70 158 click 1; sleep 1; xdotool mousemove 224 148 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s2_crafteos.png
+          xdotool mousemove 70 222 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s3_items.png
+          xdotool mousemove 70 286 click 1; sleep 1; xdotool mousemove 224 150 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s4_misiones.png
+          xdotool mousemove 520 184 click 1; sleep 1; import -window root cap/s5_selector.png; xdotool key Escape; sleep 0.5
+          xdotool mousemove 882 42 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s6_inicio.png
+          xdotool mousemove 70 222 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s7_misiones_jugador.png
+          xdotool mousemove 70 286 click 1; sleep 1; xdotool mousemove 950 530; sleep 0.5; import -window root cap/s8_crafteos_jugador.png
+          xdotool key Escape; sleep 1
           grep -iE "mision" srv/server.log | tail -12 || true
           grep -iE "crafteo|Crafteos" srv/server.log | tail -8 || true
           echo "tod estado" >> srv/cmds.txt; sleep 2

@@ -212,6 +212,7 @@ public class Tablero {
 		}
 		if (editor) o.add("items", crafteos.itemsParaTablet());   // los items propios (para el creativo de los editores)
 		if (editor) o.add("anuncios", anuncios.paraTablet());   // los anuncios guardados: solo los editores
+		if (editor) o.add("vinculos", anuncios.vinculos());     // que anuncio activa cada crafteo y mision
 		return GSON.toJson(o);
 	}
 
@@ -247,7 +248,7 @@ public class Tablero {
 			case "crafteo_guardar" -> { crafteos.guardarDesdeTablet(o.getAsJsonObject("crafteo")); sincronizarTodos(); }
 			case "crafteo_estado" -> {
 				String est = o.has("estado") ? o.get("estado").getAsString() : "";
-				for (String id : ids) { crafteos.estado(id, est); plugin.getLogger().info(p.getName() + " puso el crafteo " + id + " en " + est); }
+				for (String id : ids) { estadoCrafteo(id, est); plugin.getLogger().info(p.getName() + " puso el crafteo " + id + " en " + est); }
 				sincronizarTodos();
 			}
 			case "crafteo_receta" -> { if (!ids.isEmpty()) crafteos.abrirMesa(p, ids.get(0)); }
@@ -263,7 +264,7 @@ public class Tablero {
 			case "mision_guardar" -> { plugin.misiones.guardarDesdeTablet(o.getAsJsonObject("mision")); sincronizarTodos(); }
 			case "mision_estado" -> {
 				String est = o.has("estado") ? o.get("estado").getAsString() : "";
-				for (String id : ids) { plugin.misiones.estado(id, est); plugin.getLogger().info(p.getName() + " puso la mision " + id + " en " + est); }
+				for (String id : ids) { estadoMision(id, est); plugin.getLogger().info(p.getName() + " puso la mision " + id + " en " + est); }
 				sincronizarTodos();
 			}
 			case "mision_obj_mano" -> { if (!ids.isEmpty() && o.has("uid")) plugin.misiones.itemDeLaMano(p, ids.get(0), o.get("uid").getAsString()); sincronizarTodos(); }
@@ -279,12 +280,35 @@ public class Tablero {
 				anuncios.enviar(id);
 				plugin.getLogger().info(p.getName() + " envio el anuncio " + id);
 			}
+			case "vincular" -> {   // {tipo: crafteo|mision, ids:[id], anuncio: id o ""}
+				String tipo = o.has("tipo") ? o.get("tipo").getAsString() : "", an = o.has("anuncio") ? o.get("anuncio").getAsString() : "";
+				for (String id : ids) { anuncios.vincular(tipo, id, an); plugin.getLogger().info(p.getName() + " vinculo " + tipo + " " + id + " al anuncio '" + an + "'"); }
+				sincronizarTodos();
+			}
 			case "anuncio_borrar" -> { for (String id : ids) anuncios.borrar(id); }
 			case "anuncio_retirar" -> {
 				for (String id : ids) if (anuncios.retirar(id)) plugin.getLogger().info(p.getName() + " retiro el anuncio " + id);
 			}
 			default -> {}
 		}
+	}
+
+	/** Activar o desactivar desde su panel (o con un comando): si tiene un anuncio vinculado, al activarlo sale el anuncio y al desactivarlo se retira. */
+	void estadoCrafteo(String id, String est) {
+		Crafteos.Receta r = crafteos.recetas.get(id);
+		if (r == null) return;
+		boolean antes = r.estado.equals("activo");
+		crafteos.estado(id, est);
+		boolean ahora = r.estado.equals("activo");
+		if (antes != ahora) anuncios.cambioDeEstado(r.anuncio, ahora);
+	}
+	void estadoMision(String id, String est) {
+		Misiones.Mision m = plugin.misiones.misiones.get(id);
+		if (m == null) return;
+		boolean antes = m.estado.equals("activa");
+		plugin.misiones.estado(id, est);
+		boolean ahora = m.estado.equals("activa");
+		if (antes != ahora) anuncios.cambioDeEstado(m.anuncio, ahora);
 	}
 
 	// ================= comandos =================

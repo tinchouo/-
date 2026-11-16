@@ -100,7 +100,7 @@ final class PanelItems extends Panel {
 			g.fill(lx, yy, lx + lw, yy + 20, sel ? t.acento() : Tablet.LINEA);
 			g.fill(lx + 1, yy + 1, lx + lw - 1, yy + 19, sel ? 0xFF2A2610 : 0xFF141B18);
 			g.renderItem(ip.item(), lx + 2, yy + 2);
-			g.drawString(f, f.plainSubstrByWidth(ip.item().getHoverName().getString(), lw - 26), lx + 21, yy + 6, Tablet.TEXTO, false);
+			g.drawString(f, Tablet.cortar(f, ip.item().getHoverName().getString(), lw - 24), lx + 21, yy + 6, Tablet.TEXTO, false);
 			if (yy + 20 > ly && yy < ly + lh) t.zona(lx, Math.max(yy, ly), lw, Math.min(yy + 20, ly + lh) - Math.max(yy, ly), () -> abrir(ip));
 			yy += 22;
 		}

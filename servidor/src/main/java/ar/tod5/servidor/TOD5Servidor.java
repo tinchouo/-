@@ -66,6 +66,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		getServer().getPluginManager().registerEvents(desafios, this);
 		misiones = new Misiones(this);
 		misiones.cargar();
+		tablero.anuncios.migrarVinculos();
 		getServer().getPluginManager().registerEvents(misiones, this);
 		Bukkit.getScheduler().runTaskTimer(this, misiones::cadaTick, 1, 1);
 		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
@@ -181,7 +182,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 				getConfig().set("abierto", false); saveConfig();
 				s.sendMessage(MM.deserialize("<yellow>Server EN PREPARACIÓN.</yellow> <gray>Solo entran los admins. Los que ya estan adentro siguen jugando.</gray>"));
 			}
-			case "recargar" -> { reloadConfig(); tablero.cargar(); misiones.guardarProgreso(); misiones.cargar(); tablero.sincronizarTodos(); s.sendMessage(MM.deserialize("<green>Config y datos de la tablet recargados.</green>")); }
+			case "recargar" -> { reloadConfig(); tablero.cargar(); misiones.guardarProgreso(); misiones.cargar(); tablero.anuncios.migrarVinculos(); tablero.sincronizarTodos(); s.sendMessage(MM.deserialize("<green>Config y datos de la tablet recargados.</green>")); }
 			default -> s.sendMessage(MM.deserialize((abierto() ? "<green>Server ABIERTO" : "<yellow>Server EN PREPARACIÓN") + "</yellow></green> <gray>- en la fila: " + enFila() + " - conectados: " + Bukkit.getOnlinePlayers().size() + "</gray>"));
 		}
 		return true;

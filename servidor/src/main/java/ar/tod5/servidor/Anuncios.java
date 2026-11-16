@@ -158,6 +158,7 @@ public class Anuncios {
 		if (a.id == null || a.id.isBlank() || a.id.length() > 40) a.id = "a" + (proximo++);
 		Anuncio viejo = anuncios.get(a.id);
 		a.enviado = viejo != null && viejo.enviado;   // "enviado" lo decide el server, no la tablet
+		a.crafteo = ""; a.mision = "";                 // los vinculos ahora los tiene cada crafteo / mision
 		if (a.titulo == null || a.titulo.isBlank()) a.titulo = tituloPorDefecto(Tablero.Tipo.de(a.tipo));
 		anuncios.put(a.id, a);
 		guardar();
@@ -172,6 +173,7 @@ public class Anuncios {
 		Anuncio a = anuncios.remove(id);
 		if (a == null) return false;
 		guardar();
+		soltarVinculos(id);   // lo que activaba queda como esta, pero ya sin anuncio
 		if (a.enviado) sacarNovedad(a);
 		tablero.sincronizarTodos();
 		return true;
@@ -183,8 +185,7 @@ public class Anuncios {
 		a.enviado = false;
 		guardar();
 		sacarNovedad(a);
-		if (!a.crafteo.isEmpty()) tablero.crafteos.estado(a.crafteo, "oculto");   // el crafteo que activo, vuelve a quedar oculto
-		if (!a.mision.isEmpty()) plugin.misiones.estado(a.mision, "oculta");       // y la mision tambien
+		ponerVinculados(a.id, false);   // lo que activo (crafteos, misiones) vuelve a quedar oculto
 		tablero.sincronizarTodos();
 		return true;
 	}
@@ -220,6 +221,59 @@ public class Anuncios {
 			mostrar(Bukkit.getOnlinePlayers(), t, act.titulo, act.lineas);
 			tablero.anotarNovedad(t, act.titulo, textoPlano(act), idNovedad(id));
 		});
+	}
+
+	// ================= vinculos =================
+	// Cada crafteo y cada mision guarda que anuncio la activa. Asi un anuncio puede activar varias cosas a la vez.
+	//  - mandar el anuncio: se activa todo lo vinculado (cuando termina la ruleta)
+	//  - retirarlo: todo lo vinculado vuelve a quedar oculto
+	//  - activar algo desde su panel: si su anuncio no salio, sale
+	//  - desactivarlo: si su anuncio salio y no queda nada activo de ese anuncio, se retira
+
+	/** Para la tablet de los editores: "c:<crafteo>" / "m:<mision>" -> id del anuncio. */
+	JsonObject vinculos() {
+		JsonObject o = new JsonObject();
+		for (Crafteos.Receta r : tablero.crafteos.recetas.values()) if (!r.anuncio.isEmpty()) o.addProperty("c:" + r.id, r.anuncio);
+		if (plugin.misiones != null) for (Misiones.Mision m : plugin.misiones.misiones.values()) if (!m.anuncio.isEmpty()) o.addProperty("m:" + m.id, m.anuncio);
+		return o;
+	}
+	void vincular(String tipo, String id, String anuncio) {
+		if (anuncio == null || !anuncios.containsKey(anuncio)) anuncio = "";
+		if (tipo.equals("crafteo")) { Crafteos.Receta r = tablero.crafteos.recetas.get(id); if (r != null) { r.anuncio = anuncio; tablero.crafteos.guardar(); } }
+		else if (tipo.equals("mision") && plugin.misiones != null) plugin.misiones.vincular(id, anuncio);
+	}
+	private void ponerVinculados(String id, boolean activo) {
+		for (Crafteos.Receta r : tablero.crafteos.recetas.values())
+			if (r.anuncio.equals(id) && r.estado.equals("activo") != activo) tablero.crafteos.estado(r.id, activo ? "activo" : "oculto");
+		if (plugin.misiones != null) for (Misiones.Mision m : plugin.misiones.misiones.values())
+			if (m.anuncio.equals(id) && m.estado.equals("activa") != activo) plugin.misiones.estado(m.id, activo ? "activa" : "oculta");
+	}
+	private boolean algoActivo(String id) {
+		for (Crafteos.Receta r : tablero.crafteos.recetas.values()) if (r.anuncio.equals(id) && r.estado.equals("activo")) return true;
+		if (plugin.misiones != null) for (Misiones.Mision m : plugin.misiones.misiones.values()) if (m.anuncio.equals(id) && m.estado.equals("activa")) return true;
+		return false;
+	}
+	/** Un editor activo o desactivo algo que tiene este anuncio vinculado. */
+	void cambioDeEstado(String id, boolean activo) {
+		Anuncio a = id == null ? null : anuncios.get(id);
+		if (a == null) return;
+		if (activo && !a.enviado) { enviar(a.id); plugin.getLogger().info("Se activo algo vinculado: sale el anuncio " + a.id); }
+		else if (!activo && a.enviado && !algoActivo(a.id)) { retirar(a.id); plugin.getLogger().info("Se desactivo lo vinculado: se retira el anuncio " + a.id); }
+	}
+	private void soltarVinculos(String id) {
+		boolean c = false;
+		for (Crafteos.Receta r : tablero.crafteos.recetas.values()) if (r.anuncio.equals(id)) { r.anuncio = ""; c = true; }
+		if (c) tablero.crafteos.guardar();
+		if (plugin.misiones != null) for (Misiones.Mision m : plugin.misiones.misiones.values()) if (m.anuncio.equals(id)) plugin.misiones.vincular(m.id, "");
+	}
+	/** Los anuncios de antes (plugin 0.23 o menos) tenian el crafteo y la mision adentro: los paso a cada uno. */
+	void migrarVinculos() {
+		boolean cambio = false;
+		for (Anuncio a : anuncios.values()) {
+			if (!a.crafteo.isEmpty()) { Crafteos.Receta r = tablero.crafteos.recetas.get(a.crafteo); if (r != null && r.anuncio.isEmpty()) { r.anuncio = a.id; tablero.crafteos.guardar(); } a.crafteo = ""; cambio = true; }
+			if (!a.mision.isEmpty()) { if (plugin.misiones != null) { Misiones.Mision m = plugin.misiones.misiones.get(a.mision); if (m != null && m.anuncio.isEmpty()) plugin.misiones.vincular(m.id, a.id); } a.mision = ""; cambio = true; }
+		}
+		if (cambio) { guardar(); plugin.getLogger().info("Vinculos de los anuncios pasados a cada crafteo y mision."); }
 	}
 
 	static String textoPlano(Anuncio a) {

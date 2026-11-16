@@ -113,6 +113,10 @@ public class TabletDatos {
 	List<ItemPropio> items = new ArrayList<>();
 	List<Anuncio> anuncios = new ArrayList<>();
 	List<Paquete> recompensas = new ArrayList<>();
+	/** Que anuncio activa cada cosa: "c:<crafteo>" / "m:<mision>" -> id del anuncio (solo editores). */
+	java.util.Map<String, String> vinculos = new java.util.HashMap<>();
+	String vinculo(String clave) { return vinculos.getOrDefault(clave, ""); }
+	Anuncio anuncio(String id) { return id == null || id.isEmpty() ? null : anuncios.stream().filter(a -> a.id().equals(id)).findFirst().orElse(null); }
 	Equipo equipo;   // null = no tiene equipo (la seccion no aparece)
 
 	int novedadesNuevas() { return (int) novedades.stream().filter(Novedad::nuevo).count(); }
@@ -189,6 +193,7 @@ public class TabletDatos {
 			}
 			if (o.has("misiones")) for (JsonElement e : o.getAsJsonArray("misiones")) d.misiones.add(misionDeJson(e.getAsJsonObject()));
 			if (o.has("misiones_admin")) for (JsonElement e : o.getAsJsonArray("misiones_admin")) d.misionesAdmin.add(misionDeJson(e.getAsJsonObject()));
+			if (o.has("vinculos")) for (var en : o.getAsJsonObject("vinculos").entrySet()) d.vinculos.put(en.getKey(), en.getValue().getAsString());
 			d.conAnuncios = o.has("anuncios");
 			d.plugin = o.has("plugin") ? o.get("plugin").getAsString() : "";
 			if (o.has("anuncios")) for (JsonElement e : o.getAsJsonArray("anuncios")) {

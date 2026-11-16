@@ -70,7 +70,7 @@ final class Misiones implements Listener {
 		ItemStack item;
 	}
 	static final class Mision {
-		String id, nombre = "Misión nueva", clase = "opcional", estado = "oculta";
+		String id, nombre = "Misión nueva", clase = "opcional", estado = "oculta", anuncio = "";   // anuncio: el que la activa (y que sale al activarla)
 		int dia = 1; boolean equipo;
 		final List<Objetivo> objetivos = new ArrayList<>();
 		final ItemStack[] recompensa = new ItemStack[Recompensas.CASILLAS];
@@ -110,7 +110,7 @@ final class Misiones implements Listener {
 			for (JsonElement e : o.getAsJsonArray("misiones")) {
 				JsonObject j = e.getAsJsonObject(); Mision m = new Mision();
 				m.id = j.get("id").getAsString(); m.nombre = str(j, "nombre", m.nombre); m.clase = str(j, "clase", "opcional"); m.estado = str(j, "estado", "oculta");
-				m.dia = j.has("dia") ? j.get("dia").getAsInt() : 1; m.equipo = j.has("equipo") && j.get("equipo").getAsBoolean();
+				m.dia = j.has("dia") ? j.get("dia").getAsInt() : 1; m.equipo = j.has("equipo") && j.get("equipo").getAsBoolean(); m.anuncio = str(j, "anuncio", "");
 				for (JsonElement oe : j.getAsJsonArray("objetivos")) {
 					JsonObject jo = oe.getAsJsonObject(); Objetivo ob = new Objetivo();
 					ob.uid = jo.get("uid").getAsString(); ob.tipo = str(jo, "tipo", "tener"); ob.clave = str(jo, "clave", ""); ob.texto = str(jo, "texto", ""); ob.mundo = str(jo, "mundo", "");
@@ -149,7 +149,7 @@ final class Misiones implements Listener {
 		for (Mision m : misiones.values()) {
 			JsonObject j = new JsonObject();
 			j.addProperty("id", m.id); j.addProperty("nombre", m.nombre); j.addProperty("clase", m.clase); j.addProperty("estado", m.estado);
-			j.addProperty("dia", m.dia); j.addProperty("equipo", m.equipo);
+			j.addProperty("dia", m.dia); j.addProperty("equipo", m.equipo); j.addProperty("anuncio", m.anuncio);
 			JsonArray obs = new JsonArray();
 			for (Objetivo ob : m.objetivos) {
 				JsonObject jo = new JsonObject();
@@ -418,6 +418,8 @@ final class Misiones implements Listener {
 		if (m == null || !(est.equals("oculta") || est.equals("activa"))) return;
 		m.estado = est; guardar();
 	}
+	/** El anuncio que la activa ("" = ninguno). */
+	void vincular(String id, String anuncio) { Mision m = misiones.get(id); if (m != null) { m.anuncio = anuncio; guardar(); } }
 	private Objetivo objetivo(String id, String uid) {
 		Mision m = misiones.get(id);
 		if (m == null) return null;
@@ -545,7 +547,7 @@ final class Misiones implements Listener {
 			}
 			case "estado" -> {
 				if (m == null || args.length < 4) { uso(s); return; }
-				estado(m.id, args[3].toLowerCase(Locale.ROOT)); plugin.tablero().sincronizarTodos();
+				plugin.tablero().estadoMision(m.id, args[3].toLowerCase(Locale.ROOT)); plugin.tablero().sincronizarTodos();
 				s.sendMessage(Component.text("\"" + m.nombre + "\": " + m.estado, NamedTextColor.GREEN));
 			}
 			// solo para la prueba automatica: la recompensa = las primeras 9 casillas del inventario de un jugador

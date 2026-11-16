@@ -53,6 +53,65 @@ public class Tablet extends Screen {
 	/** El color de las luces: verde normalmente, amarillo en modo admin. */
 	int acento() { return admin ? AMARILLO_ADMIN : VERDE; }
 	void zona(int x, int y, int w, int h, Runnable r) { this.zonas.add(new Zona(x, y, w, h, r)); }
+	/** X del boton chiquito de arriba de una lista (+Nuevo): a la derecha de la lista, pero nunca encima del titulo. */
+	int alLadoDelTitulo(String titulo, String boton, int x, int lw) {
+		int finTitulo = x + (int) Math.ceil(this.font.width(titulo) * 1.25f) + 4;
+		return Math.max(finTitulo, x + lw - this.font.width(boton) - 10);
+	}
+	/** Corta un texto al ancho, con "…" si no entra. */
+	static String cortar(net.minecraft.client.gui.Font f, String s, int ancho) {
+		if (s == null) return "";
+		if (f.width(s) <= ancho) return s;
+		return f.plainSubstrByWidth(s, Math.max(0, ancho - f.width("…"))) + "…";
+	}
+
+	// ---------- la ventanita para elegir (encima de todo) ----------
+	private Selector selector;
+	void abrirSelector(Selector s) { this.selector = s; }
+	void cerrarSelector() { this.selector = null; }
+
+	/**
+	 * El boton "Anuncio" de un crafteo o una mision: muestra el vinculado y al hacer clic abre la lista para elegir otro.
+	 * tipo: "crafteo" o "mision"; clave: "c:<id>" o "m:<id>". Devuelve el ancho.
+	 */
+	int botonAnuncio(GuiGraphics g, TabletDatos d, String tipo, String id, int x, int y, int ancho, int mx, int my) {
+		String clave = (tipo.equals("crafteo") ? "c:" : "m:") + id;
+		TabletDatos.Anuncio a = d.anuncio(d.vinculo(clave));
+		String txt = a == null ? "Ninguno · Vincular" : (a.titulo().isBlank() ? PanelAnuncios.TITULOS[PanelAnuncios.gajo(a.tipo())] : a.titulo()) + (a.enviado() ? " · enviado" : "");
+		int bw = Math.min(ancho, this.font.width(txt) + 22);
+		boolean sobre = mx >= x && my >= y && mx < x + bw && my < y + 13;
+		g.fill(x, y, x + bw, y + 13, sobre ? acento() : a != null ? PanelAnuncios.fuerte(PanelAnuncios.gajo(a.tipo())) : 0xFF3A4840);
+		g.fill(x + 1, y + 1, x + bw - 1, y + 12, sobre ? 0xFF2D2A1E : 0xFF1A211D);
+		if (a != null) g.fill(x + 3, y + 3, x + 5, y + 10, PanelAnuncios.fuerte(PanelAnuncios.gajo(a.tipo())));
+		g.drawString(this.font, cortar(this.font, txt, bw - 20), x + (a != null ? 8 : 5), y + 3, a == null ? GRIS_TEXTO : TEXTO, false);
+		g.drawString(this.font, "▾", x + bw - 10, y + 3, sobre ? acento() : GRIS_TEXTO, false);
+		if (sobre) g.setTooltipForNextFrame(Component.literal(a == null
+			? "Elegí el anuncio que lo activa. Al activarlo sale el anuncio, y al mandar el anuncio se activa."
+			: "Al activarlo sale este anuncio; al desactivarlo se retira. Mandar el anuncio también lo activa. Clic: cambiar"), mx, my);
+		this.zonas.add(new Zona(x, y, bw, 13, () -> abrirSelector(selectorAnuncios(d, tipo, id, clave))));
+		return bw;
+	}
+	private static String nombreGrupo(int g) { return g == -1 ? "Momento truco" : g == 0 ? "General" : "Día " + g; }
+	private Selector selectorAnuncios(TabletDatos d, String tipo, String id, String clave) {
+		List<Selector.Opcion> ops = new ArrayList<>();
+		ops.add(new Selector.Opcion("", "Sin anuncio", "", 0, ""));
+		List<TabletDatos.Anuncio> orden = new ArrayList<>(d.anuncios);
+		orden.sort(java.util.Comparator.comparingInt((TabletDatos.Anuncio a) -> a.grupo() <= 0 ? 10000 - a.grupo() : a.grupo()));
+		for (TabletDatos.Anuncio a : orden) {
+			long otros = d.vinculos.entrySet().stream().filter(e -> e.getValue().equals(a.id()) && !e.getKey().equals(clave)).count();
+			int k = PanelAnuncios.gajo(a.tipo());
+			ops.add(new Selector.Opcion(a.id(), a.titulo().isBlank() ? PanelAnuncios.TITULOS[k] : a.titulo(),
+				(a.enviado() ? "Enviado" : "Borrador") + (otros > 0 ? " · ya activa " + otros + (otros == 1 ? " cosa más" : " cosas más") : ""),
+				PanelAnuncios.fuerte(k), nombreGrupo(a.grupo())));
+		}
+		return new Selector("Vincular a un anuncio", ops, d.vinculo(clave), "Todavía no hay anuncios. Creá uno en la pestaña Anuncios y después vinculalo acá.", elegido -> {
+			if (elegido.isEmpty()) d.vinculos.remove(clave); else d.vinculos.put(clave, elegido);   // se ve al instante (el server lo confirma)
+			com.google.gson.JsonObject o = new com.google.gson.JsonObject();
+			o.addProperty("a", "vincular"); o.addProperty("tipo", tipo); o.addProperty("anuncio", elegido);
+			com.google.gson.JsonArray ids = new com.google.gson.JsonArray(); ids.add(id); o.add("ids", ids);
+			ar.tod5.menu.Conexion.accion(o.toString());
+		});
+	}
 
 	private TabletDatos datos = TabletDatos.actual();   // se actualiza solo si el server manda algo nuevo
 	private Seccion seccion = ultima;
@@ -79,7 +138,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); this.misionesAdmin.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { this.selector = null; this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); this.misionesAdmin.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -90,6 +149,7 @@ public class Tablet extends Screen {
 
 	@Override
 	public boolean keyPressed(KeyEvent event) {
+		if (this.selector != null) { if (event.isEscape()) this.selector = null; else this.selector.tecla(event); return true; }
 		if (panel() != null && panel().tecla(event)) return true;   // escribiendo un anuncio
 		if (TeclaTablet.TECLA.matches(event)) { this.onClose(); return true; }   // la misma tecla la cierra
 		return super.keyPressed(event);
@@ -97,6 +157,7 @@ public class Tablet extends Screen {
 
 	@Override
 	public boolean charTyped(CharacterEvent event) {
+		if (this.selector != null) return this.selector.caracter(event);
 		if (panel() != null && panel().caracter(event)) return true;
 		return super.charTyped(event);
 	}
@@ -115,6 +176,7 @@ public class Tablet extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mx, double my, double sx, double sy) {
+		if (this.selector != null) { this.selector.ruedita(sy); return true; }
 		if (panel() != null && panel().ruedita(mx, my, sy)) return true;
 		if (this.seccion == Seccion.MISIONES) { this.scrollMisiones = Math.max(0, this.scrollMisiones - (int) (sy * 14)); return true; }
 		return super.mouseScrolled(mx, my, sx, sy);
@@ -122,7 +184,7 @@ public class Tablet extends Screen {
 
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-		if (panel() != null && panel().clic(event.x(), event.y(), event.hasShiftDown())) return true;
+		if (this.selector == null && panel() != null && panel().clic(event.x(), event.y(), event.hasShiftDown())) return true;
 		for (Zona z : List.copyOf(this.zonas)) {
 			if (z.adentro(event.x(), event.y())) {
 				sonido("tablet_tocar");
@@ -130,7 +192,7 @@ public class Tablet extends Screen {
 				return true;
 			}
 		}
-		if (panel() != null) panel().sinFoco();
+		if (panel() != null && this.selector == null) panel().sinFoco();
 		return super.mouseClicked(event, doubleClick);
 	}
 
@@ -242,7 +304,10 @@ public class Tablet extends Screen {
 			case CRAFTEOS -> crafteos(g, cx, cy, cw, mx, my);
 			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
 			case RECOMPENSAS -> recompensas(g, cx, cy, cw, ch, mx, my);
-			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS, ADMIN_MISIONES -> panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
+			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS, ADMIN_MISIONES -> {
+				if (this.selector != null) panel().dibujar(g, datos, cx, cy, cw, ch, -10000, -10000);   // con la ventanita abierta, lo de atras no reacciona
+				else panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
+			}
 		}
 		// boton ADMIN en el marco (arriba a la derecha): solo lo ven los editores
 		if (datos.editor) {
@@ -268,6 +333,7 @@ public class Tablet extends Screen {
 			g.drawString(this.font, vt, 0, 0, real ? 0xFF9AA39E : 0xFFFFD24A, true);
 			g.pose().popMatrix();
 		}
+		if (this.selector != null) { this.zonas.clear(); this.selector.dibujar(g, this, sx, sy, sw, sh, mx, my); encima = null; }
 		super.render(g, mx, my, a);
 		if (encima != null) g.setTooltipForNextFrame(Component.literal(encima.nombre), mx, my);
 	}
@@ -475,7 +541,7 @@ public class Tablet extends Screen {
 		boolean visible = yy + alto > arriba && yy < abajo;
 		tarjeta(g, x, yy, cw, alto);
 		g.fill(x + 1, yy + 1, x + 3, yy + alto - 1, color);
-		String tit = this.font.plainSubstrByWidth(m.titulo(), cw - 175);
+		String tit = cortar(this.font, m.titulo(), cw - 175);
 		g.drawString(this.font, tit, x + 7, yy + 5, BLANCO, true);
 		if (m.equipo()) {   // solo se aclara cuando es de equipo
 			int ex = x + 7 + this.font.width(tit) + 6, ew = this.font.width("DE EQUIPO") + 6;
@@ -575,7 +641,7 @@ public class Tablet extends Screen {
 			g.fill(x + 1, yy + 1, x + cw - 1, yy + alto - 1, 0xFF0F1B16);
 			g.fill(x + 1, yy + 1, x + cw - 1, yy + 2, 0xFF1C3328);
 			g.renderItem(moneda(), x + 4, yy + 3);
-			g.drawString(this.font, this.font.plainSubstrByWidth(r.titulo(), cw - 190), x + 23, yy + 7, PREMIO, true);
+			g.drawString(this.font, cortar(this.font, r.titulo(), cw - 190), x + 23, yy + 7, PREMIO, true);
 			int bx = x + cw - 5;
 			String tTodo = "Reclamar todo", tAbrir = "Abrir";
 			bx -= this.font.width(tTodo) + 10;
@@ -701,7 +767,7 @@ public class Tablet extends Screen {
 		int yy = y + 17, lw = 110;
 		for (TabletDatos.Miembro m : eq.miembros) {
 			hundido(g, x, yy, lw, 14);
-			g.drawString(this.font, this.font.plainSubstrByWidth(m.nombre(), lw - 18), x + 4, yy + 3, m.conectado() ? BLANCO : GRIS_TEXTO, true);
+			g.drawString(this.font, cortar(this.font, m.nombre(), lw - 18), x + 4, yy + 3, m.conectado() ? BLANCO : GRIS_TEXTO, true);
 			g.fill(x + lw - 9, yy + 4, x + lw - 3, yy + 10, NEGRO);
 			g.fill(x + lw - 8, yy + 5, x + lw - 4, yy + 9, m.conectado() ? VERDE : SOMBRA);
 			yy += 15;
