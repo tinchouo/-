@@ -62,6 +62,8 @@ public class Anuncios {
 	private final Map<String, Anuncio> anuncios = new LinkedHashMap<>();
 	private int proximo = 1;
 	private final Set<UUID> probando = new HashSet<>();
+	/** Anuncios ya mandados que todavia no salieron (la ruleta esta girando o espera su turno en la fila). */
+	private final Set<String> publicando = new HashSet<>();
 
 	Anuncios(TOD5Servidor plugin, Tablero tablero) { this.plugin = plugin; this.tablero = tablero; }
 
@@ -213,11 +215,12 @@ public class Anuncios {
 		guardar();
 		tablero.sincronizarTodos();   // en la tablet pasa a "Enviado" en el momento, no al terminar la ruleta
 		Tablero.Tipo t = Tablero.Tipo.de(a.tipo);
+		publicando.add(id);
 		tablero.enFila(t, a.ruleta, () -> {
+			publicando.remove(id);
 			Anuncio act = anuncios.get(id);   // si lo retiraron o borraron mientras giraba la ruleta, no sale
 			if (act == null || !act.enviado) return;
-			if (!act.crafteo.isEmpty()) tablero.crafteos.estado(act.crafteo, "activo");   // se activa justo cuando sale el anuncio
-			if (!act.mision.isEmpty()) plugin.misiones.estado(act.mision, "activa");      // la mision arranca con el anuncio
+			ponerVinculados(id, true);   // lo vinculado se activa justo cuando sale el anuncio (y recien ahi avisa la tablet)
 			mostrar(Bukkit.getOnlinePlayers(), t, act.titulo, act.lineas);
 			tablero.anotarNovedad(t, act.titulo, textoPlano(act), idNovedad(id));
 		});
@@ -244,21 +247,34 @@ public class Anuncios {
 	}
 	private void ponerVinculados(String id, boolean activo) {
 		for (Crafteos.Receta r : tablero.crafteos.recetas.values())
-			if (r.anuncio.equals(id) && r.estado.equals("activo") != activo) tablero.crafteos.estado(r.id, activo ? "activo" : "oculto");
+			if (r.anuncio.equals(id) && r.estado.equals("activo") != activo) { tablero.crafteos.estado(r.id, activo ? "activo" : "oculto"); plugin.getLogger().info("Anuncio " + id + ": crafteo " + r.id + (activo ? " activado" : " oculto")); }
 		if (plugin.misiones != null) for (Misiones.Mision m : plugin.misiones.misiones.values())
-			if (m.anuncio.equals(id) && m.estado.equals("activa") != activo) plugin.misiones.estado(m.id, activo ? "activa" : "oculta");
+			if (m.anuncio.equals(id) && m.estado.equals("activa") != activo) { plugin.misiones.estado(m.id, activo ? "activa" : "oculta"); plugin.getLogger().info("Anuncio " + id + ": mision " + m.id + (activo ? " activada" : " oculta")); }
 	}
 	private boolean algoActivo(String id) {
 		for (Crafteos.Receta r : tablero.crafteos.recetas.values()) if (r.anuncio.equals(id) && r.estado.equals("activo")) return true;
 		if (plugin.misiones != null) for (Misiones.Mision m : plugin.misiones.misiones.values()) if (m.anuncio.equals(id) && m.estado.equals("activa")) return true;
 		return false;
 	}
-	/** Un editor activo o desactivo algo que tiene este anuncio vinculado. */
+	/**
+	 * Un editor quiere activar algo que tiene este anuncio vinculado. Devuelve true si la activacion tiene que esperar:
+	 * el anuncio sale (con su ruleta) y lo activa justo cuando termina, asi el aviso no sale antes que la ruleta.
+	 * Devuelve false si el anuncio ya salio (o no existe): se activa en el momento.
+	 */
+	boolean diferirActivacion(String id) {
+		Anuncio a = id == null || id.isEmpty() ? null : anuncios.get(id);
+		if (a == null) return false;
+		if (publicando.contains(id)) return true;   // ya esta saliendo: se activa con el
+		if (a.enviado) return false;
+		enviar(id);
+		plugin.getLogger().info("Se activo algo vinculado: sale el anuncio " + id + " y se activa al terminar la ruleta");
+		return true;
+	}
+	/** Un editor desactivo algo que tiene este anuncio vinculado. */
 	void cambioDeEstado(String id, boolean activo) {
 		Anuncio a = id == null ? null : anuncios.get(id);
 		if (a == null) return;
-		if (activo && !a.enviado) { enviar(a.id); plugin.getLogger().info("Se activo algo vinculado: sale el anuncio " + a.id); }
-		else if (!activo && a.enviado && !algoActivo(a.id)) { retirar(a.id); plugin.getLogger().info("Se desactivo lo vinculado: se retira el anuncio " + a.id); }
+		if (!activo && a.enviado && !algoActivo(a.id)) { retirar(a.id); plugin.getLogger().info("Se desactivo lo vinculado: se retira el anuncio " + a.id); }
 	}
 	private void soltarVinculos(String id) {
 		boolean c = false;

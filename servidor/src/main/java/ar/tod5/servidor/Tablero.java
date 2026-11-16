@@ -298,6 +298,7 @@ public class Tablero {
 		Crafteos.Receta r = crafteos.recetas.get(id);
 		if (r == null) return;
 		boolean antes = r.estado.equals("activo");
+		if (est.equals("activo") && !antes && anuncios.diferirActivacion(r.anuncio)) return;   // se activa cuando termina la ruleta del anuncio
 		crafteos.estado(id, est);
 		boolean ahora = r.estado.equals("activo");
 		if (antes != ahora) anuncios.cambioDeEstado(r.anuncio, ahora);
@@ -306,6 +307,7 @@ public class Tablero {
 		Misiones.Mision m = plugin.misiones.misiones.get(id);
 		if (m == null) return;
 		boolean antes = m.estado.equals("activa");
+		if (est.equals("activa") && !antes && anuncios.diferirActivacion(m.anuncio)) return;   // se activa cuando termina la ruleta del anuncio
 		plugin.misiones.estado(id, est);
 		boolean ahora = m.estado.equals("activa");
 		if (antes != ahora) anuncios.cambioDeEstado(m.anuncio, ahora);
