@@ -268,9 +268,9 @@ jobs:
           echo "tod gravedad abajo $N" >> srv/cmds.txt; sleep 3; import -window root cap/z5_vuelve.png
           grep -iE "moved wrongly|moved too quickly|Flying is not enabled|kicked" srv/server.log | tail -5 || true
           # flecha de costado: pared al norte; la flecha (fija, izquierda) mirando al este apunta a la izquierda (norte); le pego -> cae al norte
-          echo "fill 64 -61 -6 64 -55 6 air" >> srv/cmds.txt; echo "fill 55 -61 -4 66 -55 -4 stone" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 0" >> srv/cmds.txt
+          echo "fill 64 -61 -6 64 -55 6 air" >> srv/cmds.txt; echo "fill 55 -61 -4 66 -55 -4 stone" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt
           echo "tod flecha crear 63.5 -59 0.5 -90" >> srv/cmds.txt; sleep 1; echo "tod flecha config f2 fija izquierda" >> srv/cmds.txt; sleep 2; import -window root cap/z6_flecha_izquierda.png
-          xdotool mousemove 640 360 click 1; sleep 0.25; import -window root cap/z7_girando.png; sleep 3; import -window root cap/z8_norte.png
+          xdotool mousemove 640 360 click 1; sleep 0.25; import -window root cap/z7_girando.png; sleep 1; import -window root cap/z8_norte.png; sleep 2; xdotool key F5; sleep 1.5; import -window root cap/z9_norte_tercera.png; xdotool key F5; sleep 0.5; xdotool key F5; sleep 1
           grep -E "flecha f2|Flecha f2" srv/server.log | tail -3 || echo "NO LE PEGO A LA FLECHA f2"
           echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1; grep -E "has the following entity data" srv/server.log | tail -1 || true
           echo "tod gravedad abajo $N" >> srv/cmds.txt; echo "tod flecha borrar f2" >> srv/cmds.txt; sleep 2
