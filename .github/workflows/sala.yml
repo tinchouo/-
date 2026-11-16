@@ -175,7 +175,7 @@ jobs:
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
           xdotool mousemove 224 204 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f1_admin_crafteos.png
           xdotool mousemove 462 128 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f2_nuevo.png
-          xdotool mousemove 788 300 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f3_mesa.png
+          xdotool mousemove 788 334 click 1; sleep 2; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/f3_mesa.png
           xdotool mousemove 496 550 click 1; sleep 0.4; xdotool mousemove 534 228 click 1; sleep 0.3; xdotool mousemove 570 228 click 3; sleep 0.3
           xdotool mousemove 714 264 click 1; sleep 0.3; xdotool mousemove 496 550 click 1; sleep 0.4; xdotool mousemove 1200 700; sleep 0.3; import -window root cap/f4_receta.png
           xdotool mousemove 642 372 click 1; sleep 1.5; import -window root cap/f5_guardada.png
@@ -216,7 +216,7 @@ jobs:
           cat srv/plugins/TOD5/datos/misiones_progreso.json 2>/dev/null | head -40 || true
           xdotool mousemove 1050 88 click 1; sleep 1; xdotool mousemove 224 332 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h7_admin.png
           xdotool mousemove 376 194 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h8_editor.png
-          xdotool mousemove 1018 239 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h9_objetivo_nuevo.png
+          xdotool mousemove 1018 271 click 1; sleep 1; xdotool mousemove 1200 700; sleep 0.5; import -window root cap/h9_objetivo_nuevo.png
           xdotool key Escape; sleep 1
           # 15) vinculos: la mision Expedicion se vincula a un anuncio desde SU panel; activarla manda el anuncio y ocultarla lo retira
           xdotool mousemove 640 700; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2
