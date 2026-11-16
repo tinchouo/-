@@ -67,7 +67,10 @@ public final class SaltosCliente {
 		ESPERA.replaceAll((k, v) -> v - 1);
 		ESPERA.values().removeIf(v -> v <= 0);
 		if (p.onGround()) GASTADAS.clear();
-		boolean espacio = p.input.keyPresses.jump(), recien = espacio && !espacioAntes;
+		// recien apretado: tambien cuenta un toque cortito entre dos ticks (el juego lo anota como "clic")
+		boolean clic = false;
+		while (mc.options.keyJump.consumeClick()) clic = true;
+		boolean espacio = p.input.keyPresses.jump(), recien = clic || (espacio && !espacioAntes);
 		espacioAntes = espacio;
 		if (p.getAbilities().flying || p.isSpectator() || p.isPassenger()) return;
 		AABB yo = p.getBoundingBox();

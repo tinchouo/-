@@ -284,7 +284,7 @@ jobs:
           echo "tod salto crear pad amarilla 70 -60 0" >> srv/cmds.txt; echo "tod salto crear orbe roja 73 -59 0" >> srv/cmds.txt; echo "tod salto crear orbe amarilla 70 -57 3" >> srv/cmds.txt
           echo "tp $N 66.5 -60 1.5 -90 5" >> srv/cmds.txt; sleep 2.5; import -window root cap/o1_vista.png
           echo "tp $N 70.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 0.7; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 4; echo "data get entity $N Health" >> srv/cmds.txt
-          echo "tp $N 73.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 2; xdotool key space; sleep 0.12; xdotool key space; sleep 0.8; echo "data get entity $N Pos" >> srv/cmds.txt; import -window root cap/o2_orbe.png; sleep 4.5
+          echo "tp $N 73.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 2; xdotool keydown space; sleep 0.08; xdotool keyup space; sleep 0.1; xdotool keydown space; sleep 0.08; xdotool keyup space; sleep 0.6; echo "data get entity $N Pos" >> srv/cmds.txt; import -window root cap/o2_orbe.png; sleep 4.5
           echo "data get entity $N Health" >> srv/cmds.txt; sleep 1
           grep -E " uso |Orbes y pads|Salto o|Salto p" srv/server.log | tail -8 || echo "NO SE USO NINGUN SALTO"
           grep -E "has the following entity data" srv/server.log | tail -4 || true
