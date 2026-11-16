@@ -403,6 +403,7 @@ final class Crafteos implements Listener {
 	JsonArray itemsParaTablet() {
 		JsonArray a = new JsonArray();
 		items.forEach((id, it) -> { JsonObject j = new JsonObject(); j.addProperty("id", id); j.add("item", itemJson(it)); a.add(j); });
+		if (plugin.flechas != null) a.add(plugin.flechas.itemParaTablet());   // la flecha de gravedad, para ponerla desde el creativo
 		return a;
 	}
 

@@ -317,7 +317,7 @@ public class Tablero {
 	/** /tod dia|crafteo|anuncio|novedad|editor ... Devuelve false si no es un comando de la tablet. */
 	boolean comando(CommandSender s, String[] args) {
 		String sub = args[0].toLowerCase(Locale.ROOT);
-		if (!List.of("dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision").contains(sub)) return false;
+		if (!List.of("dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision", "gravedad", "flecha").contains(sub)) return false;
 		if (!esEditor(s)) { s.sendMessage(Component.text("Eso es solo para los editores de TOD.", NamedTextColor.RED)); return true; }
 		switch (sub) {
 			case "dia" -> {
@@ -358,6 +358,8 @@ public class Tablero {
 			case "moneda" -> plugin.monedas.comando(s, args);
 			case "zona" -> plugin.desafios.comando(s, args);
 			case "mision" -> plugin.misiones.comando(s, args);
+			case "gravedad" -> plugin.gravedad.comando(s, args);
+			case "flecha" -> plugin.flechas.comando(s, args);
 		}
 		return true;
 	}
@@ -367,6 +369,8 @@ public class Tablero {
 		String sub = args[0].toLowerCase(Locale.ROOT);
 		if (sub.equals("zona")) return plugin.desafios.completar(args);
 		if (sub.equals("mision")) return plugin.misiones.completar(args);
+		if (sub.equals("gravedad")) return plugin.gravedad.completar(args);
+		if (sub.equals("flecha")) return plugin.flechas.completar(args);
 		if (args.length == 2) return switch (sub) {
 			case "dia" -> List.of("siguiente");
 			case "anuncio" -> Arrays.stream(Tipo.values()).map(t -> t.id).toList();

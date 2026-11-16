@@ -40,6 +40,8 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	Desafios desafios;
 	Recompensas recompensas;
 	Misiones misiones;
+	Gravedad gravedad;
+	Flechas flechas;
 	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
 	private final Map<String, Long> fila = new ConcurrentHashMap<>();
@@ -69,11 +71,16 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		tablero.anuncios.migrarVinculos();
 		getServer().getPluginManager().registerEvents(misiones, this);
 		Bukkit.getScheduler().runTaskTimer(this, misiones::cadaTick, 1, 1);
+		gravedad = new Gravedad(this);
+		getServer().getPluginManager().registerEvents(gravedad, this);
+		flechas = new Flechas(this);
+		flechas.cargar();
+		getServer().getPluginManager().registerEvents(flechas, this);
 		getLogger().info("TOD5 listo. Server " + (abierto() ? "ABIERTO" : "EN PREPARACION (solo admins)"));
 	}
 
 	@Override
-	public void onDisable() { if (desafios != null) desafios.apagar(); if (misiones != null) misiones.guardarProgreso(); }
+	public void onDisable() { if (desafios != null) desafios.apagar(); if (flechas != null) flechas.apagar(); if (misiones != null) misiones.guardarProgreso(); }
 
 	boolean abierto() { return getConfig().getBoolean("abierto", false); }
 	private Component msg(String clave, String... reemplazos) {
@@ -190,7 +197,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision");
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision", "gravedad", "flecha");
 		return tablero.completar(args);
 	}
 }

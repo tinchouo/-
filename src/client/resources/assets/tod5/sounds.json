@@ -83,5 +83,40 @@
   "sounds": [
    "tod5:monedas_completo"
   ]
+ },
+ "flecha_on": {
+  "sounds": [
+   {
+    "name": "tod5:flecha_on"
+   }
+  ]
+ },
+ "flecha_ng": {
+  "sounds": [
+   {
+    "name": "tod5:flecha_ng"
+   }
+  ]
+ },
+ "flecha_mueve": {
+  "sounds": [
+   {
+    "name": "tod5:flecha_mueve"
+   }
+  ]
+ },
+ "flecha_para": {
+  "sounds": [
+   {
+    "name": "tod5:flecha_para"
+   }
+  ]
+ },
+ "gravedad_cambio": {
+  "sounds": [
+   {
+    "name": "tod5:gravedad_cambio"
+   }
+  ]
  }
 }

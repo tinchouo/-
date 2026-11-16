@@ -12,7 +12,14 @@
 		"KeyCategoryAccessor",
 		"TecladoDebugMixin",
 		"MinecraftMixin",
-		"OpcionesMixin"
+		"OpcionesMixin",
+		"CameraMixin",
+		"MouseHandlerMixin",
+		"KeyboardInputMixin",
+		"EntityMixin",
+		"LivingEntityMixin",
+		"LivingEntityRendererMixin",
+		"AvatarRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

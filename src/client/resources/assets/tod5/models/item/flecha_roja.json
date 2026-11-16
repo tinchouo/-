@@ -1,0 +1,7 @@
+{
+ "parent": "tod5:item/flecha_gravedad_base",
+ "textures": {
+  "color": "tod5:item/flecha_roja",
+  "particle": "tod5:item/flecha_roja"
+ }
+}
