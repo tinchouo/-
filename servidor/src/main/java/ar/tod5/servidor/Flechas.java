@@ -64,6 +64,8 @@ final class Flechas implements Listener {
 		String id, mundo, modo = "alterna", a = "abajo", b = "arriba";
 		double x, y, z;
 		int usos = 1;   // 0 = infinito
+		float yaw;      // para donde mira (fija, de frente se ve igual que de atras)
+		int giro = 10;  // ticks que dura el giro (10 = medio segundo)
 		Location lugar() { World w = Bukkit.getWorld(mundo); return w == null ? null : new Location(w, x, y, z); }
 	}
 	/** Lo que esta en el mundo para una flecha: el cuadro para pegarle (uno para todos) y la flecha que ve cada jugador. */
@@ -73,7 +75,6 @@ final class Flechas implements Listener {
 		final Map<UUID, String> estado = new HashMap<>();   // lo que muestra cada vista ("abajo:verde"), para no mandar de nuevo
 	}
 
-	private static final int GIRO = 20;            // ticks que dura el giro (1 s)
 	private static final double CERCA = 48;         // a esta distancia aparece
 	private static final float TAM = 1.0f;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
@@ -110,6 +111,7 @@ final class Flechas implements Listener {
 					fl.x = j.get("x").getAsDouble(); fl.y = j.get("y").getAsDouble(); fl.z = j.get("z").getAsDouble();
 					fl.modo = str(j, "modo", "alterna"); fl.a = str(j, "a", "abajo"); fl.b = str(j, "b", "arriba");
 					fl.usos = j.has("usos") ? j.get("usos").getAsInt() : 1;
+					fl.yaw = j.has("yaw") ? j.get("yaw").getAsFloat() : 0f; fl.giro = j.has("giro") ? j.get("giro").getAsInt() : 10;
 					flechas.put(fl.id, fl);
 				}
 			}
@@ -132,7 +134,7 @@ final class Flechas implements Listener {
 		for (Flecha f : flechas.values()) {
 			JsonObject j = new JsonObject();
 			j.addProperty("id", f.id); j.addProperty("mundo", f.mundo); j.addProperty("x", f.x); j.addProperty("y", f.y); j.addProperty("z", f.z);
-			j.addProperty("modo", f.modo); j.addProperty("a", f.a); j.addProperty("b", f.b); j.addProperty("usos", f.usos);
+			j.addProperty("modo", f.modo); j.addProperty("a", f.a); j.addProperty("b", f.b); j.addProperty("usos", f.usos); j.addProperty("yaw", f.yaw); j.addProperty("giro", f.giro);
 			a.add(j);
 		}
 		o.add("flechas", a);
@@ -151,6 +153,7 @@ final class Flechas implements Listener {
 		Flecha f = new Flecha();
 		f.id = "f" + (proximo++); f.mundo = l.getWorld().getName();
 		f.x = Math.round(l.getX() * 2) / 2.0; f.y = Math.round(l.getY() * 2) / 2.0; f.z = Math.round(l.getZ() * 2) / 2.0;   // a medio bloque: queda prolija
+		f.yaw = Math.round(l.getYaw() / 90f) * 90f;   // mira para donde miraba quien la puso (de a 90 grados)
 		flechas.put(f.id, f); guardar();
 		plugin.getLogger().info("Flecha de gravedad " + f.id + " en " + f.mundo + " " + f.x + " " + f.y + " " + f.z);
 		return f;
@@ -223,10 +226,11 @@ final class Flechas implements Listener {
 				estan.add(p.getUniqueId());
 				ItemDisplay d = v.vista.get(p.getUniqueId());
 				if (d == null || !d.isValid()) {
-					d = l.getWorld().spawn(l, ItemDisplay.class, e -> {
+					Location sp = l.clone(); sp.setYaw(f.yaw); sp.setPitch(0);
+					d = l.getWorld().spawn(sp, ItemDisplay.class, e -> {
 						e.setVisibleByDefault(false); e.setPersistent(false);
 						e.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
-						e.setBillboard(Display.Billboard.VERTICAL);
+						e.setBillboard(Display.Billboard.FIXED);
 						e.setBrightness(new Display.Brightness(15, 15));
 					});
 					p.showEntity(plugin, d);
@@ -297,12 +301,13 @@ final class Flechas implements Listener {
 		sonar(p, l, "flecha_on");
 		sonar(p, l, "flecha_mueve");
 		// el giro en dos mitades (un giro de 180 de una sola vez no sabe para que lado ir)
+		final int giro = Math.max(2, f.giro), mitad = Math.max(1, giro / 2);
 		float a0 = angulo(actual), a1 = angulo(dest);
 		float medio = a0 + (float) (Math.PI / 2) * Math.signum(a1 - a0 == 0 ? 1 : a1 - a0);
-		if (d != null) { d.setInterpolationDelay(0); d.setInterpolationDuration(GIRO / 2); d.setTransformation(trans(medio)); }
+		if (d != null) { d.setInterpolationDelay(0); d.setInterpolationDuration(mitad); d.setTransformation(trans(medio)); }
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
-			if (d != null && d.isValid()) { d.setInterpolationDelay(0); d.setInterpolationDuration(GIRO / 2); d.setTransformation(trans(a1)); }
-		}, GIRO / 2);
+			if (d != null && d.isValid()) { d.setInterpolationDelay(0); d.setInterpolationDuration(mitad); d.setTransformation(trans(a1)); }
+		}, mitad);
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
 			girando.remove(clave);
 			if (!p.isOnline()) return;
@@ -310,7 +315,7 @@ final class Flechas implements Listener {
 			plugin.gravedad.poner(p, dest);
 			p.playSound(p.getLocation(), "tod5:gravedad_cambio", SoundCategory.MASTER, 1f, 1f);
 			if (v != null) v.estado.remove(p.getUniqueId());   // la proxima vuelta le pone el color (roja si se gasto)
-		}, GIRO);
+		}, giro);
 	}
 
 	// ================= ponerla con el item =================
@@ -324,13 +329,14 @@ final class Flechas implements Listener {
 		Location l;
 		if (e.getClickedBlock() != null && e.getBlockFace() != null) l = e.getClickedBlock().getRelative(e.getBlockFace()).getLocation().add(0.5, 0.5, 0.5);
 		else l = p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(3));
+		l.setYaw(p.getLocation().getYaw());
 		Flecha f = crear(l);
 		p.sendMessage(Component.text("Flecha puesta. Shift + clic derecho en ella para configurarla.", NamedTextColor.GREEN));
 		cadaRato();
 	}
 
 	// ================= el menu (shift + clic derecho) =================
-	private static final int MODO = 10, DIR_A = 12, DIR_B = 13, USOS = 14, REACTIVAR = 16, BORRAR = 22;
+	private static final int MODO = 10, DIR_A = 12, DIR_B = 13, USOS = 14, VEL = 15, REACTIVAR = 16, BORRAR = 22;
 	private static final class Menu implements InventoryHolder {
 		final String id; Inventory inv; boolean confirmarBorrar;
 		Menu(String id) { this.id = id; }
@@ -365,6 +371,8 @@ final class Flechas implements Listener {
 			"Clic izquierdo: +1   Clic derecho: -1", "Shift + clic: infinitos / 1", "Cada jugador tiene sus usos.");
 		if (f.usos > 0) u.setAmount(Math.min(64, f.usos));
 		m.inv.setItem(USOS, u);
+		m.inv.setItem(VEL, boton(Material.SUGAR, "Velocidad del giro: " + String.format(Locale.ROOT, "%.2f", f.giro / 20.0) + " s", NamedTextColor.AQUA,
+			"Clic izquierdo: más lento   Clic derecho: más rápido", "Shift + clic: volver a 0,5 s"));
 		m.inv.setItem(REACTIVAR, boton(Material.LIME_DYE, "Reactivar", NamedTextColor.GREEN, "Vuelve a verde para todos (borra los usos)."));
 		m.inv.setItem(BORRAR, m.confirmarBorrar ? boton(Material.TNT, "¿Borrar? Clic de nuevo", NamedTextColor.RED, "Se borra la flecha.")
 			: boton(Material.BARRIER, "Borrar flecha", NamedTextColor.RED, "Clic: borrar (te pide confirmar)"));
@@ -386,6 +394,11 @@ final class Flechas implements Listener {
 				if (e.isShiftClick()) f.usos = f.usos == 0 ? 1 : 0;
 				else if (e.isRightClick()) f.usos = f.usos <= 1 ? 1 : f.usos - 1;
 				else if (f.usos > 0) f.usos = Math.min(999, f.usos + 1);
+			}
+			case VEL -> {
+				if (e.isShiftClick()) f.giro = 10;
+				else if (e.isRightClick()) f.giro = Math.max(2, f.giro - 2);
+				else f.giro = Math.min(100, f.giro + 2);
 			}
 			case REACTIVAR -> { usados.remove(f.id); p.sendMessage(Component.text("Flecha reactivada para todos.", NamedTextColor.GREEN)); }
 			case BORRAR -> {
