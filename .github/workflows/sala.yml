@@ -250,7 +250,7 @@ jobs:
           xdotool keydown space; sleep 0.25; xdotool keyup space; sleep 0.15; import -window root cap/x3_salto.png; sleep 2
           echo "tod gravedad abajo $N" >> srv/cmds.txt; sleep 3; import -window root cap/x4_abajo.png
           # flecha: la pongo enfrente, le pego (clic izquierdo): gira, cambia la gravedad; la segunda vez esta gastada (roja, NG)
-          echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; echo "tod flecha crear 63.5 -59 0.5" >> srv/cmds.txt; sleep 2.5; import -window root cap/y1_flecha.png
+          echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; echo "tod flecha crear 63.5 -59 0.5 -90" >> srv/cmds.txt; sleep 2.5; import -window root cap/y1_flecha.png
           xdotool mousemove 640 360 click 1; sleep 0.5; import -window root cap/y2_girando.png; sleep 1.5; import -window root cap/y3_cambio.png
           sleep 2; echo "tod flecha pegar f1 $N" >> srv/cmds.txt; sleep 1.5; import -window root cap/y4_desde_el_techo.png
           grep -E "flecha" srv/server.log | tail -6 || echo "NO LE PEGO A LA FLECHA"

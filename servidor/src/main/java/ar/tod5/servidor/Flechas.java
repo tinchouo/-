@@ -430,7 +430,9 @@ final class Flechas implements Listener {
 				if (args.length >= 5 && s instanceof Player p) l = new Location(p.getWorld(), Double.parseDouble(args[2]), Double.parseDouble(args[3]), Double.parseDouble(args[4]));
 				else if (args.length >= 5) l = new Location(Bukkit.getWorlds().get(0), Double.parseDouble(args[2]), Double.parseDouble(args[3]), Double.parseDouble(args[4]));
 				else if (s instanceof Player p) l = p.getEyeLocation().add(p.getEyeLocation().getDirection().multiply(3));
-				else { s.sendMessage(Component.text("Uso: /tod flecha crear <x> <y> <z>", NamedTextColor.YELLOW)); return; }
+				else { s.sendMessage(Component.text("Uso: /tod flecha crear <x> <y> <z> [yaw]", NamedTextColor.YELLOW)); return; }
+				if (args.length >= 6) { try { l.setYaw(Float.parseFloat(args[5])); } catch (NumberFormatException ignorar) {} }
+				else if (args.length >= 5 && s instanceof Player p) l.setYaw(p.getLocation().getYaw());
 				Flecha f = crear(l);
 				s.sendMessage(Component.text("Flecha " + f.id + " creada.", NamedTextColor.GREEN));
 				cadaRato();
