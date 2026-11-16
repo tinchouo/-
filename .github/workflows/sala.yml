@@ -255,7 +255,25 @@ jobs:
           sleep 2; echo "tod flecha pegar f1 $N" >> srv/cmds.txt; sleep 1.5; import -window root cap/y4_desde_el_techo.png
           grep -E "flecha" srv/server.log | tail -6 || echo "NO LE PEGO A LA FLECHA"
           echo "tod gravedad abajo $N" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; sleep 3; import -window root cap/y5_roja.png
-          echo "tod gravedad izquierda $N" >> srv/cmds.txt; sleep 1
+          # 18) gravedad de costado: pared al este, /tod gravedad este -> cae contra la pared, camina por la pared (W = para arriba), salta, tercera persona
+          echo "tod flecha borrar f1" >> srv/cmds.txt; echo "fill 64 -61 -6 64 -55 6 stone" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 0" >> srv/cmds.txt; sleep 2
+          echo "tod gravedad este $N" >> srv/cmds.txt; sleep 0.3; import -window root cap/z0_girando.png; sleep 3; import -window root cap/z1_pared.png
+          echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
+          xdotool keydown w; sleep 1.2; xdotool keyup w; sleep 0.5; import -window root cap/z2_camino.png
+          echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
+          xdotool keydown space; sleep 0.2; xdotool keyup space; sleep 0.2; import -window root cap/z3_salto.png; sleep 1.5
+          xdotool key F5; sleep 1.5; import -window root cap/z4_tercera.png; xdotool key F5; sleep 0.5; xdotool key F5; sleep 1
+          xdotool keydown d; sleep 0.8; xdotool keyup d; sleep 0.5; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
+          grep -E "has the following entity data|Gravedad este" srv/server.log | tail -4 || true
+          echo "tod gravedad abajo $N" >> srv/cmds.txt; sleep 3; import -window root cap/z5_vuelve.png
+          grep -iE "moved wrongly|moved too quickly|Flying is not enabled|kicked" srv/server.log | tail -5 || true
+          # flecha de costado: pared al norte; la flecha (fija, izquierda) mirando al este apunta a la izquierda (norte); le pego -> cae al norte
+          echo "fill 64 -61 -6 64 -55 6 air" >> srv/cmds.txt; echo "fill 55 -61 -4 66 -55 -4 stone" >> srv/cmds.txt; echo "tp $N 60.5 -60 0.5 -90 0" >> srv/cmds.txt
+          echo "tod flecha crear 63.5 -59 0.5 -90" >> srv/cmds.txt; sleep 1; echo "tod flecha config f2 fija izquierda" >> srv/cmds.txt; sleep 2; import -window root cap/z6_flecha_izquierda.png
+          xdotool mousemove 640 360 click 1; sleep 0.25; import -window root cap/z7_girando.png; sleep 3; import -window root cap/z8_norte.png
+          grep -E "flecha f2|Flecha f2" srv/server.log | tail -3 || echo "NO LE PEGO A LA FLECHA f2"
+          echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1; grep -E "has the following entity data" srv/server.log | tail -1 || true
+          echo "tod gravedad abajo $N" >> srv/cmds.txt; echo "tod flecha borrar f2" >> srv/cmds.txt; sleep 2
           # 16) pantalla chica (como un monitor 1080p con la interfaz en Auto: 480x270): que nada se pise
           WID=$(xdotool search --name "Minecraft" | head -1); echo "ventana: $WID"; xdotool windowmove $WID 0 0; xdotool windowsize $WID 960 540; sleep 3
           xdotool mousemove 480 520; xdotool keydown j; sleep 0.15; xdotool keyup j; sleep 2

@@ -28,6 +28,9 @@ public final class Red {
 	/** server -> mod: el contador de un desafio de monedas: "juntadas;total", "fin;total" o "nada". */
 	public static final CustomPacketPayload.Type<Texto> DESAFIO = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "desafio"));
 
+	/** server -> mod: la gravedad de un jugador: "uuid;direccion" (abajo, arriba, este, oeste, sur, norte). */
+	public static final CustomPacketPayload.Type<Texto> GRAVEDAD = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "gravedad"));
+
 	public static StreamCodec<RegistryFriendlyByteBuf, Texto> codec(CustomPacketPayload.Type<Texto> tipo) {
 		return StreamCodec.of(
 			(buf, p) -> buf.writeBytes(p.texto().getBytes(StandardCharsets.UTF_8)),

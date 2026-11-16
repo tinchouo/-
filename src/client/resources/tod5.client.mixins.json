@@ -19,7 +19,11 @@
 		"EntityMixin",
 		"LivingEntityMixin",
 		"LivingEntityRendererMixin",
-		"AvatarRendererMixin"
+		"AvatarRendererMixin",
+		"PlayerMixin",
+		"LocalPlayerMixin",
+		"MultiPlayerGameModeMixin",
+		"LivingEntityRenderStateMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

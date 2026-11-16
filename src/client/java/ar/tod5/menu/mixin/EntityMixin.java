@@ -4,6 +4,9 @@ import ar.tod5.menu.GravedadCliente;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.MoverType;
+import net.minecraft.world.entity.Pose;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,9 +18,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Gravedad dada vuelta, para el jugador propio:
- *  - el techo cuenta como piso (para caminar a velocidad normal y poder saltar)
- *  - los ojos (lo que apunta la mira) quedan donde esta la camara
+ * Gravedad cambiada (en el cliente):
+ *  - para arriba: el techo cuenta como piso (para caminar a velocidad normal y poder saltar)
+ *  - los ojos y lo que apunta la mira del jugador propio quedan donde esta la camara
+ *  - de costado: la caja queda acostada contra la pared, y la pose es siempre parado/agachado (nunca nadando)
  */
 @Mixin(Entity.class)
 public abstract class EntityMixin {
@@ -35,7 +39,25 @@ public abstract class EntityMixin {
 
 	@Inject(method = "getEyePosition(F)Lnet/minecraft/world/phys/Vec3;", at = @At("RETURN"), cancellable = true)
 	private void tod5$ojos(float parcial, CallbackInfoReturnable<Vec3> cir) {
-		if ((Object) this instanceof LocalPlayer p && GravedadCliente.giro(parcial) > 0.0001f)
-			cir.setReturnValue(cir.getReturnValue().add(0.0, GravedadCliente.bajarOjos(p, parcial), 0.0));
+		if ((Object) this instanceof LocalPlayer p && !GravedadCliente.normal()) cir.setReturnValue(GravedadCliente.ojos(p, parcial));
+	}
+
+	@Inject(method = "getViewVector", at = @At("RETURN"), cancellable = true)
+	private void tod5$mira(float parcial, CallbackInfoReturnable<Vec3> cir) {
+		if ((Object) this instanceof LocalPlayer p && GravedadCliente.costado(p))
+			cir.setReturnValue(GravedadCliente.mirada(GravedadCliente.de(p), p.getViewXRot(parcial), p.getViewYRot(parcial)));
+	}
+
+	@Inject(method = "makeBoundingBox(Lnet/minecraft/world/phys/Vec3;)Lnet/minecraft/world/phys/AABB;", at = @At("HEAD"), cancellable = true)
+	private void tod5$caja(Vec3 pos, CallbackInfoReturnable<AABB> cir) {
+		Entity e = (Entity) (Object) this;
+		if (e instanceof Player && e.level() != null && e.level().isClientSide() && GravedadCliente.costado(e))
+			cir.setReturnValue(GravedadCliente.caja(pos, GravedadCliente.de(e), e.getBbWidth(), e.getBbHeight()));
+	}
+
+	@Inject(method = "getPose", at = @At("HEAD"), cancellable = true)
+	private void tod5$pose(CallbackInfoReturnable<Pose> cir) {
+		if ((Object) this instanceof Player p && GravedadCliente.costado(p) && p.level() != null && p.level().isClientSide())
+			cir.setReturnValue(GravedadCliente.pose(p));
 	}
 }

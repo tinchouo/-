@@ -186,14 +186,29 @@ final class Flechas implements Listener {
 	private boolean gastada(Flecha f, UUID u) { return f.usos > 0 && usos(f.id, u) >= f.usos; }
 	/** A donde la manda esta flecha si le pega ahora. */
 	private Gravedad.Dir destino(Flecha f, Gravedad.Dir actual) {
-		Gravedad.Dir a = Gravedad.Dir.de(f.a), b = Gravedad.Dir.de(f.b);
+		Gravedad.Dir a = mundo(f, f.a), b = mundo(f, f.b);
 		if (a == null) a = Gravedad.Dir.ABAJO;
 		if (b == null) b = Gravedad.Dir.ARRIBA;
 		if (f.modo.equals("fija")) return a;
 		return actual == a ? b : a;
 	}
-	private static float angulo(Gravedad.Dir d) {
-		return switch (d) { case ARRIBA -> (float) Math.PI; case IZQUIERDA -> (float) (-Math.PI / 2); case DERECHA -> (float) (Math.PI / 2); default -> 0f; };
+	/** "izquierda"/"derecha" de la flecha: la izquierda de quien la puso (la flecha mira para donde miraba el). Pasa a una direccion fija. */
+	static Gravedad.Dir mundo(Flecha f, String s) {
+		if (s.equals("izquierda")) return Gravedad.Dir.izquierdaDe(f.yaw);
+		if (s.equals("derecha")) return Gravedad.Dir.izquierdaDe(f.yaw).opuesta();
+		return Gravedad.Dir.de(s);
+	}
+	/** Como se ve una direccion fija desde esta flecha (si va para adelante o atras de la flecha, no se puede mostrar: queda para abajo). */
+	private static String relativa(Flecha f, Gravedad.Dir d) {
+		if (d == Gravedad.Dir.ARRIBA) return "arriba";
+		Gravedad.Dir iz = Gravedad.Dir.izquierdaDe(f.yaw);
+		if (d == iz) return "izquierda";
+		if (d == iz.opuesta()) return "derecha";
+		return "abajo";
+	}
+	/** Cuanto se gira el dibujo (que apunta para abajo) para que apunte a esa direccion: + = hacia la izquierda de quien la mira de frente. */
+	private static float angulo(Flecha f, Gravedad.Dir d) {
+		return switch (relativa(f, d)) { case "arriba" -> (float) Math.PI; case "izquierda" -> (float) (Math.PI / 2); case "derecha" -> (float) (-Math.PI / 2); default -> 0f; };
 	}
 	private static Transformation trans(float ang) {
 		return new Transformation(new Vector3f(), new AxisAngle4f(ang, 0, 0, 1), new Vector3f(TAM, TAM, TAM), new AxisAngle4f());
@@ -245,7 +260,7 @@ final class Flechas implements Listener {
 					boolean primera = !v.estado.containsKey(p.getUniqueId());
 					d.setItemStack(modelo(roja));
 					d.setInterpolationDelay(0); d.setInterpolationDuration(primera ? 0 : 6);
-					d.setTransformation(trans(angulo(g)));
+					d.setTransformation(trans(angulo(f, g)));
 					v.estado.put(p.getUniqueId(), est);
 				}
 			}
@@ -287,7 +302,7 @@ final class Flechas implements Listener {
 		if (girando.contains(clave)) return;   // ya esta girando: el segundo clic (o el clic doble del juego) no hace nada
 		Location l = f.lugar();
 		Gravedad.Dir actual = plugin.gravedad.de(p), dest = destino(f, actual);
-		if (gastada(f, p.getUniqueId()) || dest == actual || !dest.lista()) {
+		if (gastada(f, p.getUniqueId()) || dest == null || dest == actual) {
 			sonar(p, l, "flecha_ng");
 			plugin.getLogger().info(p.getName() + " le pego a la flecha " + f.id + ": no hace nada (" + (gastada(f, p.getUniqueId()) ? "gastada" : "ya esta en " + dest.id) + ")");
 			return;
@@ -302,8 +317,11 @@ final class Flechas implements Listener {
 		sonar(p, l, "flecha_mueve");
 		// el giro en dos mitades (un giro de 180 de una sola vez no sabe para que lado ir)
 		final int giro = Math.max(2, f.giro), mitad = Math.max(1, giro / 2);
-		float a0 = angulo(actual), a1 = angulo(dest);
-		float medio = a0 + (float) (Math.PI / 2) * Math.signum(a1 - a0 == 0 ? 1 : a1 - a0);
+		// el giro por el lado corto; uno de 180 va en dos mitades de 90 (si no, no sabe para que lado ir)
+		float a0 = angulo(f, actual), dif = angulo(f, dest) - a0;
+		while (dif > Math.PI + 0.01) dif -= (float) (2 * Math.PI);
+		while (dif < -Math.PI + 0.01) dif += (float) (2 * Math.PI);
+		float a1 = a0 + dif, medio = Math.abs(dif) > Math.PI * 0.75 ? a0 + (float) (Math.PI / 2) * Math.signum(dif) : a0 + dif / 2;
 		if (d != null) { d.setInterpolationDelay(0); d.setInterpolationDuration(mitad); d.setTransformation(trans(medio)); }
 		Bukkit.getScheduler().runTaskLater(plugin, () -> {
 			if (d != null && d.isValid()) { d.setInterpolationDelay(0); d.setInterpolationDuration(mitad); d.setTransformation(trans(a1)); }
@@ -352,6 +370,8 @@ final class Flechas implements Listener {
 		it.setItemMeta(im);
 		return it;
 	}
+	private static final List<String> DIRS = List.of("abajo", "arriba", "izquierda", "derecha");
+	private static String siguiente(String d) { return DIRS.get((DIRS.indexOf(d) + 1) % DIRS.size()); }
 	private static String nombre(String dir) { return dir.substring(0, 1).toUpperCase() + dir.substring(1); }
 	void abrirMenu(Player p, Flecha f) {
 		Menu m = new Menu(f.id);
@@ -365,7 +385,7 @@ final class Flechas implements Listener {
 		boolean fija = f.modo.equals("fija");
 		m.inv.setItem(MODO, boton(fija ? Material.REPEATER : Material.COMPARATOR, "Modo: " + (fija ? "fija" : "alterna"), NamedTextColor.YELLOW,
 			fija ? "Siempre manda a la dirección 1." : "Cada golpe cambia entre la dirección 1 y la 2.", "Clic: cambiar"));
-		m.inv.setItem(DIR_A, boton(Material.ARROW, "Dirección 1: " + nombre(f.a), NamedTextColor.GREEN, "Clic: cambiar", "(izquierda y derecha: más adelante)"));
+		m.inv.setItem(DIR_A, boton(Material.ARROW, "Dirección 1: " + nombre(f.a), NamedTextColor.GREEN, "Clic: cambiar", "Izquierda/derecha: las de quien la puso", "(mirándola de frente)"));
 		if (!fija) m.inv.setItem(DIR_B, boton(Material.SPECTRAL_ARROW, "Dirección 2: " + nombre(f.b), NamedTextColor.GREEN, "Clic: cambiar"));
 		ItemStack u = boton(Material.CLOCK, "Usos por jugador: " + (f.usos == 0 ? "infinitos" : f.usos), NamedTextColor.AQUA,
 			"Clic izquierdo: +1   Clic derecho: -1", "Shift + clic: infinitos / 1", "Cada jugador tiene sus usos.");
@@ -388,8 +408,8 @@ final class Flechas implements Listener {
 		boolean bor = false;
 		switch (e.getRawSlot()) {
 			case MODO -> f.modo = f.modo.equals("fija") ? "alterna" : "fija";
-			case DIR_A -> f.a = f.a.equals("abajo") ? "arriba" : "abajo";
-			case DIR_B -> { if (!f.modo.equals("fija")) f.b = f.b.equals("abajo") ? "arriba" : "abajo"; }
+			case DIR_A -> f.a = siguiente(f.a);
+			case DIR_B -> { if (!f.modo.equals("fija")) f.b = siguiente(f.b); }
 			case USOS -> {
 				if (e.isShiftClick()) f.usos = f.usos == 0 ? 1 : 0;
 				else if (e.isRightClick()) f.usos = f.usos <= 1 ? 1 : f.usos - 1;
@@ -444,6 +464,16 @@ final class Flechas implements Listener {
 			case "borrar" -> {
 				if (args.length < 3 || !flechas.containsKey(args[2])) { s.sendMessage(Component.text("Uso: /tod flecha borrar <id> (mirá /tod flecha lista)", NamedTextColor.YELLOW)); return; }
 				borrar(args[2]); s.sendMessage(Component.text("Flecha borrada.", NamedTextColor.YELLOW));
+			}
+			case "config" -> {   // /tod flecha config <id> <fija|alterna> <dir1> [dir2] (para las pruebas y para no abrir el menu)
+				Flecha f = args.length > 4 ? flechas.get(args[2]) : null;
+				if (f == null || !List.of("fija", "alterna").contains(args[3]) || !DIRS.contains(args[4]) || (args.length > 5 && !DIRS.contains(args[5]))) {
+					s.sendMessage(Component.text("Uso: /tod flecha config <id> <fija|alterna> <dir1> [dir2]", NamedTextColor.YELLOW)); return;
+				}
+				f.modo = args[3]; f.a = args[4]; if (args.length > 5) f.b = args[5];
+				guardar();
+				Vivo v = vivos.get(f.id); if (v != null) v.estado.clear();
+				s.sendMessage(Component.text("Flecha " + f.id + ": " + f.modo + " " + f.a + (f.modo.equals("fija") ? "" : "/" + f.b), NamedTextColor.GREEN));
 			}
 			case "pegar" -> {   // para las pruebas: le pega a una flecha como si fuera el jugador
 				if (args.length < 4) return;

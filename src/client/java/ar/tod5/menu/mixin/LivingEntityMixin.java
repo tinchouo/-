@@ -10,8 +10,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** Gravedad dada vuelta: saltar desde el techo es saltar para abajo. */
+/** Gravedad cambiada: saltar es saltar para el "arriba" de cada uno; de costado no se sube a los escalones solo. */
 @Mixin(LivingEntity.class)
 public abstract class LivingEntityMixin {
 	@Shadow protected abstract float getJumpPower();
@@ -19,6 +20,7 @@ public abstract class LivingEntityMixin {
 	@Inject(method = "jumpFromGround", at = @At("HEAD"), cancellable = true)
 	private void tod5$saltar(CallbackInfo ci) {
 		LivingEntity yo = (LivingEntity) (Object) this;
+		if (GravedadCliente.saltar(yo, this.getJumpPower())) { ci.cancel(); return; }
 		if (!(yo instanceof LocalPlayer) || !GravedadCliente.invertida(yo)) return;
 		ci.cancel();
 		float f = this.getJumpPower();
@@ -29,5 +31,11 @@ public abstract class LivingEntityMixin {
 			float g = yo.getYRot() * (float) (Math.PI / 180.0);
 			yo.addDeltaMovement(new Vec3(-Mth.sin(g) * 0.2, 0.0, Mth.cos(g) * 0.2));
 		}
+	}
+
+	@Inject(method = "maxUpStep", at = @At("HEAD"), cancellable = true)
+	private void tod5$sinEscalones(CallbackInfoReturnable<Float> cir) {
+		LivingEntity yo = (LivingEntity) (Object) this;
+		if (yo.level() != null && yo.level().isClientSide() && GravedadCliente.costado(yo)) cir.setReturnValue(0.0F);
 	}
 }
