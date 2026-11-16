@@ -55,6 +55,18 @@ public abstract class EntityMixin {
 			cir.setReturnValue(GravedadCliente.caja(pos, GravedadCliente.de(e), e.getBbWidth(), e.getBbHeight()));
 	}
 
+	/** Cabeza abajo: al agacharse (o pararse) la caja se achica desde los pies, que estan arriba: se corre para que siga pegada al techo. */
+	@Unique private float tod5$altoAntes;
+	@Inject(method = "refreshDimensions", at = @At("HEAD"))
+	private void tod5$altoAntes(CallbackInfo ci) { this.tod5$altoAntes = ((Entity) (Object) this).getBbHeight(); }
+	@Inject(method = "refreshDimensions", at = @At("TAIL"))
+	private void tod5$pegadoAlTecho(CallbackInfo ci) {
+		if ((Object) this instanceof LocalPlayer p && GravedadCliente.invertida(p)) {
+			double dh = this.tod5$altoAntes - p.getBbHeight();
+			if (Math.abs(dh) > 1.0E-4) { p.setPos(p.getX(), p.getY() + dh, p.getZ()); p.yo += dh; p.yOld += dh; }
+		}
+	}
+
 	@Inject(method = "getPose", at = @At("HEAD"), cancellable = true)
 	private void tod5$pose(CallbackInfoReturnable<Pose> cir) {
 		if ((Object) this instanceof Player p && GravedadCliente.costado(p) && p.level() != null && p.level().isClientSide())

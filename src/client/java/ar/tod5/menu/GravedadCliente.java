@@ -132,6 +132,54 @@ public final class GravedadCliente {
 		return c.add(ux * ojo, uy * ojo, uz * ojo);
 	}
 
+	/** Los ojos de cualquier jugador (para las cajas de F3+B): el propio con el giro a medio camino; los otros, ya girados. */
+	public static Vec3 ojosDe(Player e, float parcial) {
+		if (e == Minecraft.getInstance().player) return ojos(e, parcial);
+		G g = de(e);
+		Vec3 pos = e.getPosition(parcial);
+		double alto = e.getBbHeight(), ojo = e.getEyeHeight() - alto / 2;
+		return centro(pos, g, e.getBbWidth(), alto).add(-g.x * ojo, -g.y * ojo, -g.z * ojo);
+	}
+	/** El "plano de los ojos" de F3+B (la rayita roja): cruzando la caja, a la altura de los ojos, de costado al piso de cada uno. */
+	public static AABB planoOjos(AABB caja, G g, Vec3 ojo) {
+		if (g.x != 0) return new AABB(ojo.x - 0.01, caja.minY, caja.minZ, ojo.x + 0.01, caja.maxY, caja.maxZ);
+		if (g.z != 0) return new AABB(caja.minX, caja.minY, ojo.z - 0.01, caja.maxX, caja.maxY, ojo.z + 0.01);
+		return new AABB(caja.minX, ojo.y - 0.01, caja.minZ, caja.maxX, ojo.y + 0.01, caja.maxZ);
+	}
+
+	// ================= agachado en el borde =================
+	/**
+	 * Agachado no te caes del borde, como en Minecraft, pero mirando el piso de cada uno (el techo con la gravedad para arriba, la pared de costado).
+	 * null = gravedad normal (lo hace Minecraft).
+	 */
+	public static Vec3 borde(Player p, Vec3 mov) {
+		G g = de(p);
+		if (g == G.ABAJO) return null;
+		if (p.getAbilities().flying || !p.isShiftKeyDown() || !p.onGround()) return mov;
+		if (-(mov.x * g.x + mov.y * g.y + mov.z * g.z) > 0) return mov;   // se esta alejando del piso (salto)
+		int ga = g.x != 0 ? 0 : g.y != 0 ? 1 : 2, ea = ga == 0 ? 1 : 0, eb = ga == 2 ? 1 : 2;
+		double[] m = { mov.x, mov.y, mov.z };
+		double d = m[ea], e = m[eb], h = Math.signum(d) * 0.05, i = Math.signum(e) * 0.05;
+		while (d != 0.0 && puedeCaer(p, g, ga, ea, eb, d, 0.0)) { if (Math.abs(d) <= 0.05) { d = 0.0; break; } d -= h; }
+		while (e != 0.0 && puedeCaer(p, g, ga, ea, eb, 0.0, e)) { if (Math.abs(e) <= 0.05) { e = 0.0; break; } e -= i; }
+		while (d != 0.0 && e != 0.0 && puedeCaer(p, g, ga, ea, eb, d, e)) {
+			if (Math.abs(d) <= 0.05) d = 0.0; else d -= h;
+			if (Math.abs(e) <= 0.05) e = 0.0; else e -= i;
+		}
+		m[ea] = d; m[eb] = e;
+		return new Vec3(m[0], m[1], m[2]);
+	}
+	/** Si se corre (d, e) sobre el piso, abajo de los pies (para su "abajo") no hay nada en 0,6 bloques. */
+	private static boolean puedeCaer(Player p, G g, int ga, int ea, int eb, double d, double e) {
+		AABB b = p.getBoundingBox();
+		double[] mn = { b.minX, b.minY, b.minZ }, mx = { b.maxX, b.maxY, b.maxZ };
+		mn[ea] += d + 1.0E-7; mx[ea] += d - 1.0E-7;
+		mn[eb] += e + 1.0E-7; mx[eb] += e - 1.0E-7;
+		if (g.x + g.y + g.z > 0) { mn[ga] = mx[ga]; mx[ga] += 0.6 + 1.0E-7; }
+		else { mx[ga] = mn[ga]; mn[ga] -= 0.6 + 1.0E-7; }
+		return p.level().noCollision(p, new AABB(mn[0], mn[1], mn[2], mx[0], mx[1], mx[2]));
+	}
+
 	// ================= la camara =================
 	public static void tick(Minecraft mc) {
 		G real = mc.player == null ? G.ABAJO : de(mc.player);

@@ -52,7 +52,7 @@ import org.joml.Vector3f;
  * Cada jugador ve SU flecha: apunta a su gravedad de ahora, verde si le quedan usos, roja si ya la gasto (suena NG).
  *
  * Se configura con shift + clic derecho (solo editores), en un menu chico:
- *   - modo: fija (siempre a la direccion 1) o alterna (entre la 1 y la 2)
+ *   - modo: fija (siempre a la direccion 1), alterna (entre la 1 y la 2) o gira (cada golpe gira 90 grados para un lado; la direccion 1 dice para que lado)
  *   - usos por jugador: 1 (por defecto), un numero o infinito
  *   - reactivar (vuelve a verde para todos) y borrar
  * Se pone con el item "Flecha de gravedad" (pestaña Trucofdeath del creativo o /tod flecha) o con /tod flecha crear [x y z].
@@ -190,6 +190,11 @@ final class Flechas implements Listener {
 		if (a == null) a = Gravedad.Dir.ABAJO;
 		if (b == null) b = Gravedad.Dir.ARRIBA;
 		if (f.modo.equals("fija")) return a;
+		if (f.modo.equals("gira")) {
+			// mirandola de frente, como las agujas del reloj: abajo -> izquierda -> arriba -> derecha -> abajo
+			int i = GIRO_RELOJ.indexOf(relativa(f, actual)), paso = f.a.equals("izquierda") ? 3 : 1;
+			return mundo(f, GIRO_RELOJ.get((i + paso) % 4));
+		}
 		return actual == a ? b : a;
 	}
 	/** "izquierda"/"derecha" de la flecha: la izquierda de quien la puso (la flecha mira para donde miraba el). Pasa a una direccion fija. */
@@ -371,6 +376,8 @@ final class Flechas implements Listener {
 		return it;
 	}
 	private static final List<String> DIRS = List.of("abajo", "arriba", "izquierda", "derecha");
+	private static final List<String> GIRO_RELOJ = List.of("abajo", "izquierda", "arriba", "derecha");
+	private static final List<String> MODOS = List.of("fija", "alterna", "gira");
 	private static String siguiente(String d) { return DIRS.get((DIRS.indexOf(d) + 1) % DIRS.size()); }
 	private static String nombre(String dir) { return dir.substring(0, 1).toUpperCase() + dir.substring(1); }
 	void abrirMenu(Player p, Flecha f) {
@@ -382,11 +389,13 @@ final class Flechas implements Listener {
 	private void pintar(Menu m, Flecha f) {
 		ItemStack vidrio = boton(Material.GRAY_STAINED_GLASS_PANE, " ", NamedTextColor.GRAY);
 		for (int i = 0; i < 27; i++) m.inv.setItem(i, vidrio);
-		boolean fija = f.modo.equals("fija");
-		m.inv.setItem(MODO, boton(fija ? Material.REPEATER : Material.COMPARATOR, "Modo: " + (fija ? "fija" : "alterna"), NamedTextColor.YELLOW,
-			fija ? "Siempre manda a la dirección 1." : "Cada golpe cambia entre la dirección 1 y la 2.", "Clic: cambiar"));
-		m.inv.setItem(DIR_A, boton(Material.ARROW, "Dirección 1: " + nombre(f.a), NamedTextColor.GREEN, "Clic: cambiar", "Izquierda/derecha: las de quien la puso", "(mirándola de frente)"));
-		if (!fija) m.inv.setItem(DIR_B, boton(Material.SPECTRAL_ARROW, "Dirección 2: " + nombre(f.b), NamedTextColor.GREEN, "Clic: cambiar"));
+		boolean fija = f.modo.equals("fija"), gira = f.modo.equals("gira");
+		m.inv.setItem(MODO, boton(fija ? Material.REPEATER : gira ? Material.COMPASS : Material.COMPARATOR, "Modo: " + f.modo, NamedTextColor.YELLOW,
+			fija ? "Siempre manda a la dirección 1." : gira ? "Cada golpe gira la gravedad 90° para un lado." : "Cada golpe cambia entre la dirección 1 y la 2.", "Clic: cambiar (fija → alterna → gira)"));
+		if (gira) m.inv.setItem(DIR_A, boton(Material.ARROW, "Gira a la " + f.a + (f.a.equals("derecha") ? " (como el reloj)" : " (contra el reloj)"), NamedTextColor.GREEN,
+			"Clic: cambiar", "Mirándola de frente."));
+		else m.inv.setItem(DIR_A, boton(Material.ARROW, "Dirección 1: " + nombre(f.a), NamedTextColor.GREEN, "Clic: cambiar", "Izquierda/derecha: las de quien la puso", "(mirándola de frente)"));
+		if (!fija && !gira) m.inv.setItem(DIR_B, boton(Material.SPECTRAL_ARROW, "Dirección 2: " + nombre(f.b), NamedTextColor.GREEN, "Clic: cambiar"));
 		ItemStack u = boton(Material.CLOCK, "Usos por jugador: " + (f.usos == 0 ? "infinitos" : f.usos), NamedTextColor.AQUA,
 			"Clic izquierdo: +1   Clic derecho: -1", "Shift + clic: infinitos / 1", "Cada jugador tiene sus usos.");
 		if (f.usos > 0) u.setAmount(Math.min(64, f.usos));
@@ -407,9 +416,12 @@ final class Flechas implements Listener {
 		if (!plugin.tablero().esEditor(p)) { p.closeInventory(); return; }
 		boolean bor = false;
 		switch (e.getRawSlot()) {
-			case MODO -> f.modo = f.modo.equals("fija") ? "alterna" : "fija";
-			case DIR_A -> f.a = siguiente(f.a);
-			case DIR_B -> { if (!f.modo.equals("fija")) f.b = siguiente(f.b); }
+			case MODO -> {
+				f.modo = MODOS.get((MODOS.indexOf(f.modo) + 1) % MODOS.size());
+				if (f.modo.equals("gira") && !f.a.equals("izquierda")) f.a = "derecha";
+			}
+			case DIR_A -> f.a = f.modo.equals("gira") ? (f.a.equals("derecha") ? "izquierda" : "derecha") : siguiente(f.a);
+			case DIR_B -> { if (f.modo.equals("alterna")) f.b = siguiente(f.b); }
 			case USOS -> {
 				if (e.isShiftClick()) f.usos = f.usos == 0 ? 1 : 0;
 				else if (e.isRightClick()) f.usos = f.usos <= 1 ? 1 : f.usos - 1;
@@ -459,7 +471,7 @@ final class Flechas implements Listener {
 			}
 			case "lista" -> {
 				s.sendMessage(Component.text("Flechas: " + flechas.size(), NamedTextColor.YELLOW));
-				for (Flecha f : flechas.values()) s.sendMessage(Component.text(" " + f.id + " · " + f.mundo + " " + f.x + " " + f.y + " " + f.z + " · " + f.modo + " " + f.a + (f.modo.equals("fija") ? "" : "/" + f.b) + " · usos " + (f.usos == 0 ? "∞" : f.usos), NamedTextColor.GRAY));
+				for (Flecha f : flechas.values()) s.sendMessage(Component.text(" " + f.id + " · " + f.mundo + " " + f.x + " " + f.y + " " + f.z + " · " + f.modo + " " + f.a + (f.modo.equals("alterna") ? "/" + f.b : "") + " · usos " + (f.usos == 0 ? "∞" : f.usos), NamedTextColor.GRAY));
 			}
 			case "borrar" -> {
 				if (args.length < 3 || !flechas.containsKey(args[2])) { s.sendMessage(Component.text("Uso: /tod flecha borrar <id> (mirá /tod flecha lista)", NamedTextColor.YELLOW)); return; }
@@ -467,13 +479,13 @@ final class Flechas implements Listener {
 			}
 			case "config" -> {   // /tod flecha config <id> <fija|alterna> <dir1> [dir2] (para las pruebas y para no abrir el menu)
 				Flecha f = args.length > 4 ? flechas.get(args[2]) : null;
-				if (f == null || !List.of("fija", "alterna").contains(args[3]) || !DIRS.contains(args[4]) || (args.length > 5 && !DIRS.contains(args[5]))) {
-					s.sendMessage(Component.text("Uso: /tod flecha config <id> <fija|alterna> <dir1> [dir2]", NamedTextColor.YELLOW)); return;
+				if (f == null || !MODOS.contains(args[3]) || !DIRS.contains(args[4]) || (args.length > 5 && !DIRS.contains(args[5]))) {
+					s.sendMessage(Component.text("Uso: /tod flecha config <id> <fija|alterna|gira> <dir1> [dir2]  (gira: dir1 = derecha o izquierda)", NamedTextColor.YELLOW)); return;
 				}
 				f.modo = args[3]; f.a = args[4]; if (args.length > 5) f.b = args[5];
 				guardar();
 				Vivo v = vivos.get(f.id); if (v != null) v.estado.clear();
-				s.sendMessage(Component.text("Flecha " + f.id + ": " + f.modo + " " + f.a + (f.modo.equals("fija") ? "" : "/" + f.b), NamedTextColor.GREEN));
+				s.sendMessage(Component.text("Flecha " + f.id + ": " + f.modo + " " + f.a + (f.modo.equals("alterna") ? "/" + f.b : ""), NamedTextColor.GREEN));
 			}
 			case "pegar" -> {   // para las pruebas: le pega a una flecha como si fuera el jugador
 				if (args.length < 4) return;

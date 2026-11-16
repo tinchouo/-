@@ -248,6 +248,10 @@ jobs:
           grep -E "Gravedad (arriba|abajo)" srv/server.log | tail -2 || echo "NO CAMBIO LA GRAVEDAD"
           xdotool key F5; sleep 1.5; import -window root cap/x2_tercera.png; xdotool key F5; sleep 0.5; xdotool key F5; sleep 1
           xdotool keydown space; sleep 0.25; xdotool keyup space; sleep 0.15; import -window root cap/x3_salto.png; sleep 2
+          # agachado cabeza abajo: camina al borde del techo (en x=67) y no se cae; al soltar shift se para (no queda agachado)
+          xdotool keydown shift; xdotool keydown w; sleep 4; xdotool keyup w; sleep 0.3; import -window root cap/x3b_borde.png; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
+          xdotool keyup shift; sleep 1; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1; import -window root cap/x3c_parado.png
+          grep -E "has the following entity data" srv/server.log | tail -2 || true
           echo "tod gravedad abajo $N" >> srv/cmds.txt; sleep 3; import -window root cap/x4_abajo.png
           # flecha: la pongo enfrente, le pego (clic izquierdo): gira, cambia la gravedad; la segunda vez esta gastada (roja, NG)
           echo "tp $N 60.5 -60 0.5 -90 10" >> srv/cmds.txt; echo "tod flecha crear 63.5 -59 0.5 -90" >> srv/cmds.txt; sleep 2.5; import -window root cap/y1_flecha.png
@@ -263,6 +267,7 @@ jobs:
           echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
           xdotool keydown space; sleep 0.2; xdotool keyup space; sleep 0.2; import -window root cap/z3_salto.png; sleep 1.5
           xdotool key F5; sleep 1.5; import -window root cap/z4_tercera.png; xdotool key F5; sleep 0.5; xdotool key F5; sleep 1
+          xdotool key F5; sleep 1; xdotool keydown F3; xdotool key b; xdotool keyup F3; sleep 1; import -window root cap/z4b_cajas.png; xdotool keydown F3; xdotool key b; xdotool keyup F3; xdotool key F5; sleep 0.5; xdotool key F5; sleep 0.5
           xdotool keydown d; sleep 0.8; xdotool keyup d; sleep 0.5; echo "data get entity $N Pos" >> srv/cmds.txt; sleep 1
           grep -E "has the following entity data|Gravedad este" srv/server.log | tail -4 || true
           echo "tod gravedad abajo $N" >> srv/cmds.txt; sleep 3; import -window root cap/z5_vuelve.png

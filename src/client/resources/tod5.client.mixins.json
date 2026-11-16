@@ -23,7 +23,8 @@
 		"PlayerMixin",
 		"LocalPlayerMixin",
 		"MultiPlayerGameModeMixin",
-		"LivingEntityRenderStateMixin"
+		"LivingEntityRenderStateMixin",
+		"EntityHitboxDebugRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

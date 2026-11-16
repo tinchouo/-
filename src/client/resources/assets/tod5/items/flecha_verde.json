@@ -1,1 +1,1 @@
-{"model": {"type": "minecraft:model", "model": "tod5:item/flecha_verde"}}
+{"model": {"type": "minecraft:select", "property": "minecraft:display_context", "cases": [{"when": "gui", "model": {"type": "minecraft:model", "model": "tod5:item/flecha_verde_icono"}}], "fallback": {"type": "minecraft:model", "model": "tod5:item/flecha_verde"}}}

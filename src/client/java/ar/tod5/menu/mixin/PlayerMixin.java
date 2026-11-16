@@ -1,6 +1,7 @@
 package ar.tod5.menu.mixin;
 
 import ar.tod5.menu.GravedadCliente;
+import net.minecraft.world.entity.EntityDimensions;
 import net.minecraft.world.entity.MoverType;
 import net.minecraft.world.entity.Pose;
 import net.minecraft.world.entity.player.Player;
@@ -28,13 +29,22 @@ public abstract class PlayerMixin {
 	@Inject(method = "canPlayerFitWithinBlocksAndEntitiesWhen", at = @At("HEAD"), cancellable = true)
 	private void tod5$entra(Pose pose, CallbackInfoReturnable<Boolean> cir) {
 		Player p = (Player) (Object) this;
-		if (p.level().isClientSide() && GravedadCliente.costado(p)) cir.setReturnValue(true);
+		if (!p.level().isClientSide()) return;
+		if (GravedadCliente.costado(p)) { cir.setReturnValue(true); return; }
+		if (GravedadCliente.invertida(p)) {
+			// cabeza abajo: la caja cuelga del techo (los pies arriba), asi que se mide desde arriba
+			EntityDimensions d = p.getDimensions(pose);
+			double techo = p.getBoundingBox().maxY;
+			cir.setReturnValue(p.level().noCollision(p, d.makeBoundingBox(p.getX(), techo - d.height(), p.getZ()).deflate(1.0E-7)));
+		}
 	}
 
-	/** Agachado en el borde no te frena de costado (eso mira el piso de abajo del mundo). */
+	/** Agachado en el borde: con la gravedad cambiada se mira el piso de cada uno (el de Minecraft mira el de abajo del mundo). */
 	@Inject(method = "maybeBackOffFromEdge", at = @At("HEAD"), cancellable = true)
 	private void tod5$borde(Vec3 mov, MoverType tipo, CallbackInfoReturnable<Vec3> cir) {
 		Player p = (Player) (Object) this;
-		if (p.level().isClientSide() && GravedadCliente.costado(p)) cir.setReturnValue(mov);
+		if (!p.level().isClientSide() || (tipo != MoverType.SELF && tipo != MoverType.PLAYER)) return;
+		Vec3 r = GravedadCliente.borde(p, mov);
+		if (r != null) cir.setReturnValue(r);
 	}
 }
