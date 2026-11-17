@@ -72,6 +72,7 @@ final class Plataformas implements Listener {
 		int t;                // ticks desde que aparecio (fase 0) o desde que empezo la fase
 		int fase;             // 0 = apareciendo/viajando, 1 = quieta al final, 2 = parpadeando, 3 = no esta (esperando)
 		long inicio;          // tick del mundo en que empieza a moverse (el mod la mueve con esto)
+		long quitada;         // tick del mundo en que desaparecio
 		int alfa = 7;         // 7 = entera ... 0 = casi invisible
 		boolean blanca;
 		double x, y, z;       // donde esta ahora (la esquina)
@@ -160,7 +161,9 @@ final class Plataformas implements Listener {
 		BoundingBox caja = e.getPlayer().getBoundingBox().expand(1.5);
 		for (Plataforma p : plataformas.values()) {
 			Viva v = vivas.get(p.id);
-			if (v == null || v.fase == 3 || !p.mundo.equals(e.getPlayer().getWorld().getName())) continue;
+			if (v == null || !p.mundo.equals(e.getPlayer().getWorld().getName())) continue;
+			// recien desaparecida: el server todavia cuenta el rato que estuvo "flotando" arriba de ella (3 s de gracia)
+			if (v.fase == 3 && e.getPlayer().getWorld().getGameTime() - v.quitada > 60) continue;
 			if (caja.overlaps(new BoundingBox(v.x, v.y, v.z, v.x + p.ancho, v.y + ALTO, v.z + p.largo))) { e.setCancelled(true); return; }
 		}
 	}
@@ -247,7 +250,11 @@ final class Plataformas implements Listener {
 			v.bloques.get(n).setItemStack(pieza("plataforma_" + mascara(p, i, k) + "_" + alfa, rgb));
 		}
 	}
-	private void quitar(Viva v) { v.bloques.forEach(Entity::remove); v.bloques.clear(); v.t = 0; v.fase = 3; mandarTodos(); }
+	private void quitar(Viva v) {
+		v.bloques.forEach(Entity::remove); v.bloques.clear(); v.t = 0; v.fase = 3;
+		v.quitada = v.marco.isEmpty() ? 0 : v.marco.get(0).getWorld().getGameTime();
+		mandarTodos();
+	}
 	private static double suave(double x) { return x * x * (3 - 2 * x); }
 	/** Se achica entera hacia su centro (cada pieza se corre hacia el centro y se achica). */
 	private void achicar(Plataforma p, Viva v) {
