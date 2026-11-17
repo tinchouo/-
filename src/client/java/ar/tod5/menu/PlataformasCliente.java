@@ -19,66 +19,101 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Plataformas que se mueven, del lado del mod: el server las dibuja (bloques de display) y aca se hacen solidas y te llevan.
- *  - el server dice cual es la pieza "raiz" (la de la esquina; esta en el centro de su bloque, a medio bloque de altura) y el tamaño
- *  - al empezar cada tick se anota donde esta cada plataforma: esa es la caja solida durante todo el tick (asi no se "escapa" mientras te moves)
- *  - si estabas parado arriba, te mueve lo mismo que se movio ella
+ * Plataformas que se mueven, del lado del mod: aca se mueven de verdad.
+ *  - el server dice de donde a donde va, en que tick del mundo empieza y cuanto tarda; cada compu calcula donde esta en cada tick
+ *    (arranca y frena suave) y pone ahi las piezas que dibuja el server: asi se ve lisa y lo que ves es lo que pisas
+ *  - la caja solida es la de ese tick, y si estabas parado arriba te mueve lo mismo que ella
+ *  - si saltas (o te caes) de una que se mueve, te llevas su velocidad (momentum), una sola vez
  */
 public final class PlataformasCliente {
 	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
 	private PlataformasCliente() {}
-	private record Plat(String id, UUID raiz, double ancho, double alto, double largo) {}
+	private record Plat(String id, double ancho, double alto, double largo, Vec3 a, Vec3 b, long inicio, int dur, List<UUID> piezas) {
+		/** La esquina en ese tick (puede ser con decimales). */
+		Vec3 donde(double tick) {
+			double f = Math.max(0, Math.min(1, (tick - inicio) / dur));
+			f = f * f * (3 - 2 * f);
+			return a.add(b.subtract(a).scale(f));
+		}
+		AABB caja(Vec3 pos) { return new AABB(pos.x, pos.y, pos.z, pos.x + ancho, pos.y + alto, pos.z + largo); }
+	}
 	private static final List<Plat> LISTA = new ArrayList<>();
 	private static final Map<String, Vec3> AHORA = new HashMap<>();
 	private static final Map<UUID, Entity> CACHE = new HashMap<>();
-	private static String parado;
+	private static String parado, paradoAntes;
 
 	public static void recibir(String json) {
 		LISTA.clear();
 		try {
 			for (JsonElement e : JsonParser.parseString(json).getAsJsonArray()) {
 				JsonObject j = e.getAsJsonObject();
-				LISTA.add(new Plat(j.get("id").getAsString(), UUID.fromString(j.get("raiz").getAsString()), j.get("ancho").getAsDouble(), j.get("alto").getAsDouble(), j.get("largo").getAsDouble()));
+				List<UUID> pz = new ArrayList<>();
+				for (JsonElement u : j.getAsJsonArray("piezas")) pz.add(UUID.fromString(u.getAsString()));
+				LISTA.add(new Plat(j.get("id").getAsString(), j.get("ancho").getAsDouble(), j.get("alto").getAsDouble(), j.get("largo").getAsDouble(),
+					new Vec3(j.get("ax").getAsDouble(), j.get("ay").getAsDouble(), j.get("az").getAsDouble()),
+					new Vec3(j.get("bx").getAsDouble(), j.get("by").getAsDouble(), j.get("bz").getAsDouble()),
+					j.get("inicio").getAsLong(), Math.max(1, j.get("dur").getAsInt()), pz));
 			}
 		} catch (Exception e) { LOG.warn("TOD5 plataformas: no entendi la lista ({})", e.getMessage()); }
 		AHORA.keySet().retainAll(LISTA.stream().map(Plat::id).toList());
 		CACHE.clear();
 	}
-	public static void limpiar() { LISTA.clear(); AHORA.clear(); CACHE.clear(); parado = null; }
+	public static void limpiar() { LISTA.clear(); AHORA.clear(); CACHE.clear(); parado = paradoAntes = null; }
 
-	private static Entity raiz(Minecraft mc, Plat p) {
-		Entity e = CACHE.get(p.raiz);
+	private static Entity pieza(Minecraft mc, UUID u) {
+		Entity e = CACHE.get(u);
 		if (e != null && !e.isRemoved()) return e;
-		for (Entity x : mc.level.entitiesForRendering()) if (x.getUUID().equals(p.raiz)) { CACHE.put(p.raiz, x); return x; }
+		for (Entity x : mc.level.entitiesForRendering()) if (x.getUUID().equals(u)) { CACHE.put(u, x); return x; }
 		return null;
 	}
-	private static AABB caja(Plat p, Vec3 pos) { return new AABB(pos.x, pos.y, pos.z, pos.x + p.ancho, pos.y + p.alto, pos.z + p.largo); }
 
-	/** Al empezar el tick: anoto donde esta cada una y, si estaba parado en una, lo muevo con ella. */
+	/** Al empezar el tick: donde esta cada una (la caja solida de este tick) y, si estaba parado arriba, lo muevo con ella. */
 	public static void inicioTick(Minecraft mc) {
 		if (mc.level == null || mc.player == null || LISTA.isEmpty()) return;
 		LocalPlayer yo = mc.player;
+		long tick = mc.level.getGameTime();
 		for (Plat p : LISTA) {
-			Entity e = raiz(mc, p);
-			if (e == null) { AHORA.remove(p.id); continue; }
-			Vec3 pos = e.position().subtract(0.5, 0.5, 0.5), antes = AHORA.put(p.id, pos);   // la pieza raiz esta en el centro de su bloque
+			Vec3 pos = p.donde(tick), antes = AHORA.put(p.id, pos);
 			if (antes != null && p.id.equals(parado)) {
 				Vec3 d = pos.subtract(antes);
 				if (d.lengthSqr() > 1.0E-10 && d.lengthSqr() < 4.0) yo.setPos(yo.position().add(d));
 			}
 		}
 	}
-	/** Al terminar el tick: ¿quedo parado arriba de alguna? */
+	/** Al terminar el tick: pongo las piezas donde van (para que se dibujen lisas) y miro si quede parado arriba de alguna. */
 	public static void finTick(Minecraft mc) {
+		paradoAntes = parado;
 		parado = null;
-		if (mc.player == null || LISTA.isEmpty()) return;
-		AABB yo = mc.player.getBoundingBox();
+		if (mc.level == null || mc.player == null || LISTA.isEmpty()) return;
+		long tick = mc.level.getGameTime();
+		for (Plat p : LISTA) {
+			// Minecraft dibuja cada cosa entre donde estaba el tick anterior y donde esta ahora: le doy esos dos lugares exactos
+			Vec3 ant = p.donde(tick - 1), act = p.donde(tick);
+			for (int n = 0; n < p.piezas.size(); n++) {
+				Entity e = pieza(mc, p.piezas.get(n));
+				if (e == null) continue;
+				int i = n / (int) Math.round(p.largo), k = n % (int) Math.round(p.largo);
+				double ox = i + 0.5, oy = 0.5, oz = k + 0.5;
+				e.setPos(act.x + ox, act.y + oy, act.z + oz);
+				e.xo = e.xOld = ant.x + ox; e.yo = e.yOld = ant.y + oy; e.zo = e.zOld = ant.z + oz;
+			}
+		}
+		LocalPlayer yo = mc.player;
+		AABB caja = yo.getBoundingBox();
 		for (Plat p : LISTA) {
 			Vec3 pos = AHORA.get(p.id);
 			if (pos == null) continue;
-			AABB c = caja(p, pos);
-			boolean encima = yo.minY >= c.maxY - 0.02 && yo.minY <= c.maxY + 0.08 && yo.maxX > c.minX && yo.minX < c.maxX && yo.maxZ > c.minZ && yo.minZ < c.maxZ;
-			if (encima) { parado = p.id; return; }
+			AABB c = p.caja(pos);
+			boolean encima = caja.minY >= c.maxY - 0.02 && caja.minY <= c.maxY + 0.08 && caja.maxX > c.minX && caja.minX < c.maxX && caja.maxZ > c.minZ && caja.minZ < c.maxZ;
+			if (encima) { parado = p.id; break; }
+		}
+		// momentum: estaba parado en una y ya no (salto o se cayo): se lleva la velocidad que tenia la plataforma
+		if (paradoAntes != null && parado == null && !yo.onGround()) {
+			for (Plat p : LISTA) {
+				if (!p.id.equals(paradoAntes)) continue;
+				Vec3 vel = p.donde(tick).subtract(p.donde(tick - 1));
+				if (vel.lengthSqr() > 1.0E-8 && vel.lengthSqr() < 4.0) yo.setDeltaMovement(yo.getDeltaMovement().add(vel));
+			}
 		}
 	}
 	/** Las cajas solidas de las plataformas que tocan esta zona (para el jugador propio). */
@@ -86,7 +121,7 @@ public final class PlataformasCliente {
 		for (Plat p : LISTA) {
 			Vec3 pos = AHORA.get(p.id);
 			if (pos == null) continue;
-			AABB c = caja(p, pos);
+			AABB c = p.caja(pos);
 			if (c.intersects(zona)) lista.add(Shapes.create(c));
 		}
 	}

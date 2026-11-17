@@ -62,20 +62,22 @@ final class Plataformas implements Listener {
 	static final class Plataforma {
 		String id, mundo, modo = "parpadeo", color = "amarillo";
 		int ax, ay, az, bx, by, bz, ancho = 3, largo = 3;
-		double segundos = 4, espera = 1, fade = 1.5;   // espera: el ratito al final (parpadeo); fade: cuanto dura el desvanecido (desvanece)
+		double segundos = 4, espera = 1, fade = 1.5, salida = 0;   // salida: cuanto se queda quieta al aparecer antes de moverse   // espera: el ratito al final (parpadeo); fade: cuanto dura el desvanecido (desvanece)
 		Location salida(World w) { return new Location(w, ax, ay, az); }
 	}
 	private static final class Viva {
 		final List<ItemDisplay> bloques = new ArrayList<>();
 		final List<ItemDisplay> marco = new ArrayList<>();
 		Interaction toque;
-		int t;                // ticks desde que salio
-		int fase;             // 0 = viajando, 1 = quieta al final, 2 = parpadeando, 3 = no esta (esperando)
+		int t;                // ticks desde que aparecio (fase 0) o desde que empezo la fase
+		int fase;             // 0 = apareciendo/viajando, 1 = quieta al final, 2 = parpadeando, 3 = no esta (esperando)
+		long inicio;          // tick del mundo en que empieza a moverse (el mod la mueve con esto)
 		int alfa = 7;         // 7 = entera ... 0 = casi invisible
 		boolean blanca;
 		double x, y, z;       // donde esta ahora (la esquina)
 	}
-	private static final int PARPADEO = 10, ESPERA = 15, CRECE = 6;   // 0,5 s parpadeando, 0,75 s sin estar, 0,3 s creciendo
+	// como en Mario Galaxy: dos destellos (uno cada medio segundo) y en el tercero se achica entera y desaparece
+	private static final int PARPADEO = 25, ESPERA = 15, CRECE = 6, ACHICA = 5;
 	static final double ALTO = 0.5;
 	/** Los colores de la ruleta. */
 	static final LinkedHashMap<String, Integer> COLORES = new LinkedHashMap<>();
@@ -135,8 +137,14 @@ final class Plataformas implements Listener {
 			Viva v = vivas.get(p.id);
 			if (v == null || v.fase == 3 || v.bloques.isEmpty() || !p.mundo.equals(pl.getWorld().getName())) continue;
 			JsonObject j = new JsonObject();
-			j.addProperty("id", p.id); j.addProperty("raiz", v.bloques.get(0).getUniqueId().toString());
+			j.addProperty("id", p.id);
 			j.addProperty("ancho", p.ancho); j.addProperty("alto", ALTO); j.addProperty("largo", p.largo);
+			j.addProperty("ax", p.ax); j.addProperty("ay", p.ay); j.addProperty("az", p.az);
+			j.addProperty("bx", p.bx); j.addProperty("by", p.by); j.addProperty("bz", p.bz);
+			j.addProperty("inicio", v.inicio); j.addProperty("dur", duracion(p));
+			JsonArray pz = new JsonArray();
+			for (ItemDisplay d : v.bloques) pz.add(d.getUniqueId().toString());
+			j.add("piezas", pz);
 			a.add(j);
 		}
 		pl.sendPluginMessage(plugin, CANAL, a.toString().getBytes(StandardCharsets.UTF_8));
@@ -179,9 +187,12 @@ final class Plataformas implements Listener {
 	/** Vuelve a empezar desde la salida (despues de cambiarle algo). */
 	private void reiniciar(Plataforma p) { sacar(p.id); mandarTodos(); }
 
-	/** Que lados de esta pieza son "de afuera" (N=1, E=2, S=4, W=8). */
+	/**
+	 * Que lados de esta pieza son "de afuera" (en el modelo: N=1, E=2, S=4, W=8). El item display gira el modelo 180 grados
+	 * (como en los marcos), asi que el norte del modelo queda al sur del mundo, y el este al oeste.
+	 */
 	private static int mascara(Plataforma p, int i, int k) {
-		return (k == 0 ? 1 : 0) | (i == p.ancho - 1 ? 2 : 0) | (k == p.largo - 1 ? 4 : 0) | (i == 0 ? 8 : 0);
+		return (k == p.largo - 1 ? 1 : 0) | (i == 0 ? 2 : 0) | (k == 0 ? 4 : 0) | (i == p.ancho - 1 ? 8 : 0);
 	}
 	private static ItemStack pieza(String modelo, int rgb) {
 		ItemStack it = new ItemStack(Material.PAPER);
@@ -223,6 +234,7 @@ final class Plataformas implements Listener {
 			}
 		}, 1);
 		v.t = 0; v.fase = 0; v.x = p.ax; v.y = p.ay; v.z = p.az; v.alfa = 7; v.blanca = false;
+		v.inicio = w.getGameTime() + CRECE + Math.round(p.salida * 20);
 		mandarTodos();
 	}
 	/** Cambia la transparencia (0..7) o el color de todas las piezas. */
@@ -237,6 +249,16 @@ final class Plataformas implements Listener {
 	}
 	private void quitar(Viva v) { v.bloques.forEach(Entity::remove); v.bloques.clear(); v.t = 0; v.fase = 3; mandarTodos(); }
 	private static double suave(double x) { return x * x * (3 - 2 * x); }
+	/** Se achica entera hacia su centro (cada pieza se corre hacia el centro y se achica). */
+	private void achicar(Plataforma p, Viva v) {
+		for (int n = 0; n < v.bloques.size(); n++) {
+			int i = n / p.largo, k = n % p.largo;
+			float ox = (float) (i + 0.5 - p.ancho / 2.0), oz = (float) (k + 0.5 - p.largo / 2.0);
+			ItemDisplay d = v.bloques.get(n);
+			d.setInterpolationDelay(0); d.setInterpolationDuration(ACHICA);
+			d.setTransformation(new Transformation(new Vector3f(-ox, 0, -oz), new AxisAngle4f(), new Vector3f(0.001f, 0.001f, 0.001f), new AxisAngle4f()));
+		}
+	}
 
 	private void cadaTick() {
 		for (Plataforma p : plataformas.values()) {
@@ -256,27 +278,28 @@ final class Plataformas implements Listener {
 			int dur = duracion(p);
 			v.t++;
 			if (v.fase == 0) {
-				double f = suave(Math.min(1.0, v.t / (double) dur));   // arranca y frena despacio
+				// la mueve el mod (cada compu, cuadro por cuadro, con el tick del mundo); aca solo llevo la cuenta de donde esta
+				long ahora = w.getGameTime();
+				double f = suave(Math.max(0, Math.min(1.0, (ahora - v.inicio) / (double) dur)));
 				v.x = p.ax + (p.bx - p.ax) * f; v.y = p.ay + (p.by - p.ay) * f; v.z = p.az + (p.bz - p.az) * f;
-				for (int n = 0; n < v.bloques.size(); n++) {
-					int i = n / p.largo, k = n % p.largo;
-					v.bloques.get(n).teleport(new Location(w, v.x + i + 0.5, v.y + 0.5, v.z + k + 0.5));
-				}
 				if (p.modo.equals("desvanece")) {
 					int fadeT = Math.max(1, (int) Math.round(p.fade * 20));
-					int falta = dur - v.t;
-					if (falta < fadeT) pintarPiezas(p, v, Math.max(0, (int) Math.floor(7.999 * falta / fadeT)), false);
+					long falta = v.inicio + dur - ahora;
+					if (falta < fadeT) pintarPiezas(p, v, (int) Math.max(0, Math.floor(7.999 * falta / fadeT)), false);
 				}
-				if (v.t >= dur) {
+				if (ahora >= v.inicio + dur) {
 					v.t = 0;
-					if (p.modo.equals("desvanece")) quitar(v);   // ya no esta: no se pisa
+					if (p.modo.equals("desvanece")) quitar(v);   // llego invisible: ya no esta (ni se pisa)
 					else v.fase = 1;
 				}
 			} else if (v.fase == 1) {
 				if (v.t >= Math.round(p.espera * 20)) { v.t = 0; v.fase = 2; }
 			} else if (v.fase == 2) {
-				pintarPiezas(p, v, 7, (v.t / 2) % 2 == 0);   // parpadea en blanco
-				if (v.t >= PARPADEO) quitar(v);
+				// destello blanco al principio y al medio segundo (3 ticks cada uno); al segundo se achica entera y se va
+				int c = v.t;
+				pintarPiezas(p, v, 7, (c >= 1 && c <= 3) || (c >= 11 && c <= 13) || c >= 21);
+				if (c == 20) achicar(p, v);
+				if (c >= PARPADEO) quitar(v);
 			} else if (v.t >= ESPERA) {
 				aparecer(p, v, w);
 			}
@@ -345,7 +368,7 @@ final class Plataformas implements Listener {
 		if (e.getHand() == EquipmentSlot.HAND && plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), p);
 	}
 
-	private static final int ANCHO = 10, LARGO = 11, COLOR = 13, VEL = 14, MODO = 15, TIEMPO = 16, FINAL = 20, REINICIAR = 22, BORRAR = 24;
+	private static final int ANCHO = 10, LARGO = 11, SALIDA = 12, COLOR = 13, VEL = 14, MODO = 15, TIEMPO = 16, FINAL = 20, REINICIAR = 22, BORRAR = 24;
 	private static final class Menu implements InventoryHolder {
 		final String id; Inventory inv; boolean confirmarBorrar;
 		Menu(String id) { this.id = id; }
@@ -363,6 +386,8 @@ final class Plataformas implements Listener {
 		String[] ayuda = { "Clic izquierdo: +1   Clic derecho: -1" };
 		m.inv.setItem(ANCHO, cantidad(Varita.boton(Material.OAK_PLANKS, "Ancho (este-oeste): " + p.ancho, NamedTextColor.AQUA, ayuda), p.ancho));
 		m.inv.setItem(LARGO, cantidad(Varita.boton(Material.SPRUCE_PLANKS, "Largo (norte-sur): " + p.largo, NamedTextColor.AQUA, ayuda), p.largo));
+		m.inv.setItem(SALIDA, Varita.boton(Material.REPEATER, p.salida <= 0 ? "Al aparecer: sale enseguida" : "Al aparecer: espera " + fmt(p.salida) + " s y sale", NamedTextColor.GREEN,
+			"Clic izquierdo: +0,25 s   Clic derecho: -0,25 s"));
 		m.inv.setItem(COLOR, Varita.boton(lana(p.color), "Color: " + p.color, NamedTextColor.WHITE, "Clic izquierdo: siguiente   Clic derecho: anterior"));
 		m.inv.setItem(VEL, Varita.boton(Material.SUGAR, "Tarda " + fmt(p.segundos) + " s en llegar", NamedTextColor.YELLOW,
 			"Clic izquierdo: +0,5 s (más lenta)   Clic derecho: -0,5 s (más rápida)", "Shift + clic: de a 0,1 s"));
@@ -397,6 +422,7 @@ final class Plataformas implements Listener {
 		switch (e.getSlot()) {
 			case ANCHO -> p.ancho = limitar(p.ancho + d, p.largo);
 			case LARGO -> p.largo = limitar(p.largo + d, p.ancho);
+			case SALIDA -> p.salida = Math.max(0, Math.min(30, p.salida + d * 0.25));
 			case COLOR -> {
 				List<String> l = new ArrayList<>(COLORES.keySet());
 				p.color = l.get((l.indexOf(p.color) + (d > 0 ? 1 : l.size() - 1)) % l.size());
