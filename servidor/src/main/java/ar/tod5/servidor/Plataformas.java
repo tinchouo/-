@@ -403,7 +403,7 @@ final class Plataformas implements Listener {
 		m.inv.setItem(VEL, Varita.boton(Material.SUGAR, "Tarda " + fmt(p.segundos) + " s en llegar", NamedTextColor.YELLOW,
 			"Clic izquierdo: +0,5 s (más lenta)   Clic derecho: -0,5 s (más rápida)", "Shift + clic: de a 0,1 s"));
 		boolean parpadeo = p.modo.equals("parpadeo");
-		m.inv.setItem(MODO, Varita.boton(parpadeo ? Material.REDSTONE_LAMP : Material.GLASS, "Al llegar: " + (parpadeo ? "se queda, parpadea y se va" : "se desvanece"), NamedTextColor.LIGHT_PURPLE,
+		m.inv.setItem(MODO, Varita.boton(parpadeo ? Material.REDSTONE_LAMP : Material.GLASS, "Al llegar: " + (parpadeo ? "frena suave, se queda, parpadea y se va" : "va pareja (sin frenar) y se desvanece"), NamedTextColor.LIGHT_PURPLE,
 			"Clic: cambiar", "Después de 0,75 s vuelve a salir."));
 		m.inv.setItem(TIEMPO, parpadeo
 			? Varita.boton(Material.CLOCK, "Se queda " + fmt(p.espera) + " s antes de parpadear", NamedTextColor.GOLD, "Clic izquierdo: +0,25 s   Clic derecho: -0,25 s")
