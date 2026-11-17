@@ -2,7 +2,7 @@
 #  - cada bloque de la plataforma es una pieza de medio bloque de alto; segun cuales lados son "de afuera" (mascara N=1, E=2, S=4, W=8)
 #    lleva el borde oscuro y queda un poquito metida para adentro; las esquinas de afuera son redondeadas
 #  - todo en gris: el color lo pone el server con el tinte (custom_model_data, colores de la ruleta)
-#  - 8 niveles de transparencia (para desvanecerse): plataforma_<mascara>_<0..7> (7 = entera)
+#  - 16 niveles de transparencia (para desvanecerse, los cambia el mod): plataforma_<mascara>_<0..15> (15 = entera)
 #  - el marco de la salida (cuadrado brillante en el piso): plataforma_marco_<mascara>
 import json, math, os, sys
 from PIL import Image, ImageDraw
@@ -14,7 +14,7 @@ P = 32            # pixeles de la textura por bloque
 MET = 0.5         # cuanto se mete para adentro en los lados de afuera (en dieciseisavos)
 RAD = 2.5         # radio de las esquinas redondeadas
 BORDE = 1.6       # ancho del borde oscuro arriba
-ALFAS = [round(255 * (i + 1) / 8) for i in range(8)]
+ALFAS = [round(255 * (i + 1) / 16) for i in range(16)]
 
 def arriba(m, a):
     k = P / 16; SS = 4; T = P * SS; kk = k * SS
@@ -33,10 +33,10 @@ def cubo(a, b, caras, rot=None):
     e = {"from": [round(v, 3) for v in a], "to": [round(v, 3) for v in b], "faces": caras}
     if rot: e["rotation"] = rot
     return e
-for a in range(8):
+for a in range(16):
     solido(150, a).save(os.path.join(TEX, f'lado_{a}.png')); solido(95, a).save(os.path.join(TEX, f'abajo_{a}.png'))
 for m in range(16):
-    for a in range(8):
+    for a in range(16):
         arriba(m, a).save(os.path.join(TEX, f'arriba_{m}_{a}.png'))
         x0 = MET if m & W else 0; x1 = 16 - (MET if m & E else 0); z0 = MET if m & N else 0; z1 = 16 - (MET if m & S else 0)
         def caras(): return {"up": {"texture": "#arriba", "tintindex": 0}, "down": {"texture": "#abajo", "tintindex": 0},

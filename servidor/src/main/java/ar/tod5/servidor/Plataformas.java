@@ -75,7 +75,7 @@ final class Plataformas implements Listener {
 		int fase;             // 0 = apareciendo/viajando, 1 = quieta al final, 2 = parpadeando, 3 = no esta (esperando)
 		long inicio;          // tick del mundo en que empieza a moverse (el mod la mueve con esto)
 		long quitada;         // tick del mundo en que desaparecio
-		int alfa = 7;         // 7 = entera ... 0 = casi invisible
+		int alfa = 15;        // 15 = entera ... 0 = casi invisible
 		boolean blanca;
 		double x, y, z;       // donde esta ahora (la esquina)
 	}
@@ -145,6 +145,7 @@ final class Plataformas implements Listener {
 			j.addProperty("ax", p.ax); j.addProperty("ay", p.ay); j.addProperty("az", p.az);
 			j.addProperty("bx", p.bx); j.addProperty("by", p.by); j.addProperty("bz", p.bz);
 			j.addProperty("inicio", v.inicio); j.addProperty("dur", duracion(p)); j.addProperty("suave", p.frena());
+			j.addProperty("fade", p.modo.equals("desvanece") ? Math.max(1, (int) Math.round(p.fade * 20)) : 0);
 			JsonArray pz = new JsonArray();
 			for (ItemDisplay d : v.bloques) pz.add(d.getUniqueId().toString());
 			j.add("piezas", pz);
@@ -221,7 +222,7 @@ final class Plataformas implements Listener {
 		v.bloques.forEach(Entity::remove); v.bloques.clear();
 		int rgb = color(p);
 		for (int i = 0; i < p.ancho; i++) for (int k = 0; k < p.largo; k++) {
-			ItemStack it = pieza("plataforma_" + mascara(p, i, k) + "_7", rgb);
+			ItemStack it = pieza("plataforma_" + mascara(p, i, k) + "_15", rgb);
 			final int fi = i, fk = k;
 			v.bloques.add(w.spawn(new Location(w, p.ax + i + 0.5, p.ay + 0.5, p.az + k + 0.5), ItemDisplay.class, d -> {
 				d.setItemStack(it); d.setPersistent(false); d.setTeleportDuration(1);
@@ -239,7 +240,7 @@ final class Plataformas implements Listener {
 				d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1, 1, 1), new AxisAngle4f()));
 			}
 		}, 1);
-		v.t = 0; v.fase = 0; v.x = p.ax; v.y = p.ay; v.z = p.az; v.alfa = 7; v.blanca = false;
+		v.t = 0; v.fase = 0; v.x = p.ax; v.y = p.ay; v.z = p.az; v.alfa = 15; v.blanca = false;
 		v.inicio = w.getGameTime() + CRECE + Math.round(p.salida * 20);
 		mandarTodos();
 	}
@@ -293,11 +294,7 @@ final class Plataformas implements Listener {
 				double f = Math.max(0, Math.min(1.0, (ahora - v.inicio) / (double) dur));
 				if (p.frena()) f = suave(f);
 				v.x = p.ax + (p.bx - p.ax) * f; v.y = p.ay + (p.by - p.ay) * f; v.z = p.az + (p.bz - p.az) * f;
-				if (p.modo.equals("desvanece")) {
-					int fadeT = Math.max(1, (int) Math.round(p.fade * 20));
-					long falta = v.inicio + dur - ahora;
-					if (falta < fadeT) pintarPiezas(p, v, (int) Math.max(0, Math.floor(7.999 * falta / fadeT)), false);
-				}
+				// el desvanecido lo hace el mod (cada compu, todas las piezas juntas, 16 pasos)
 				if (ahora >= v.inicio + dur) {
 					v.t = 0;
 					if (p.modo.equals("desvanece")) quitar(v);   // llego invisible: ya no esta (ni se pisa)
@@ -308,7 +305,7 @@ final class Plataformas implements Listener {
 			} else if (v.fase == 2) {
 				// destello blanco al principio y al medio segundo (3 ticks cada uno); al segundo se achica entera y se va
 				int c = v.t;
-				pintarPiezas(p, v, 7, (c >= 1 && c <= 3) || (c >= 11 && c <= 13) || c >= 21);
+				pintarPiezas(p, v, 15, (c >= 1 && c <= 3) || (c >= 11 && c <= 13) || c >= 21);
 				if (c == 20) achicar(p, v);
 				if (c >= PARPADEO) quitar(v);
 			} else if (v.t >= ESPERA) {
