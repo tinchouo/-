@@ -40,6 +40,8 @@ public final class PlataformasCliente {
 	private static final List<Plat> LISTA = new ArrayList<>();
 	private static final Map<String, Vec3> AHORA = new HashMap<>();
 	private static final Map<UUID, Entity> CACHE = new HashMap<>();
+	private record Lugar(Plat p, double ox, double oz) {}
+	private static final Map<UUID, Lugar> PIEZAS = new HashMap<>();
 	private static String parado, paradoAntes;
 
 	public static void recibir(String json) {
@@ -57,8 +59,21 @@ public final class PlataformasCliente {
 		} catch (Exception e) { LOG.warn("TOD5 plataformas: no entendi la lista ({})", e.getMessage()); }
 		AHORA.keySet().retainAll(LISTA.stream().map(Plat::id).toList());
 		CACHE.clear();
+		PIEZAS.clear();
+		for (Plat p : LISTA) {
+			int largo = (int) Math.round(p.largo);
+			for (int n = 0; n < p.piezas.size(); n++) PIEZAS.put(p.piezas.get(n), new Lugar(p, n / largo + 0.5, n % largo + 0.5));
+		}
 	}
-	public static void limpiar() { LISTA.clear(); AHORA.clear(); CACHE.clear(); parado = paradoAntes = null; }
+	/** Donde se dibuja esta pieza en este cuadro (null = no es de una plataforma). Sigue el horario, no lo que diga el server. */
+	public static Vec3 dibujo(Entity e, float parcial) {
+		if (PIEZAS.isEmpty()) return null;
+		Lugar l = PIEZAS.get(e.getUUID());
+		if (l == null || e.level() == null) return null;
+		Vec3 pos = l.p.donde(e.level().getGameTime() - 1 + parcial);
+		return pos.add(l.ox, 0.5, l.oz);
+	}
+	public static void limpiar() { LISTA.clear(); AHORA.clear(); CACHE.clear(); PIEZAS.clear(); parado = paradoAntes = null; }
 
 	private static Entity pieza(Minecraft mc, UUID u) {
 		Entity e = CACHE.get(u);

@@ -42,15 +42,8 @@ for m in range(16):
         def caras(): return {"up": {"texture": "#arriba", "tintindex": 0}, "down": {"texture": "#abajo", "tintindex": 0},
                              "north": {"texture": "#lado", "tintindex": 0}, "south": {"texture": "#lado", "tintindex": 0},
                              "east": {"texture": "#lado", "tintindex": 0}, "west": {"texture": "#lado", "tintindex": 0}}
-        # el cuerpo: dos cajas en cruz (sin las esquinas de afuera) + un cilindro chiquito (octogono) en cada esquina redondeada
-        rnw, rne, rse, rsw = (RAD if m & N and m & W else 0), (RAD if m & N and m & E else 0), (RAD if m & S and m & E else 0), (RAD if m & S and m & W else 0)
-        el = [cubo([x0 + max(rnw, rsw), 0, z0], [x1 - max(rne, rse), 8, z1], caras()),
-              cubo([x0, 0, z0 + max(rnw, rne)], [x1, 8, z1 - max(rsw, rse)], caras())]
-        for (cx, cz, r) in ((x0 + rnw, z0 + rnw, rnw), (x1 - rne, z0 + rne, rne), (x1 - rse, z1 - rse, rse), (x0 + rsw, z1 - rsw, rsw)):
-            if not r: continue
-            for ang in (0, 45):
-                h = r * 0.93 if ang == 0 else r * 0.93
-                el.append(cubo([cx - h, 0, cz - h], [cx + h, 8, cz + h], caras(), None if ang == 0 else {"angle": 45, "axis": "y", "origin": [round(cx, 3), 4, round(cz, 3)]}))
+        # el cuerpo: una sola caja (las esquinas redondeadas van en el dibujo de arriba)
+        el = [cubo([x0, 0, z0], [x1, 8, z1], caras())]
         mod = {"textures": {"arriba": f"tod5:item/plataforma/arriba_{m}_{a}", "lado": f"tod5:item/plataforma/lado_{a}", "abajo": f"tod5:item/plataforma/abajo_{a}",
                             "particle": f"tod5:item/plataforma/lado_{a}"},
                "elements": el, "display": {"fixed": {"scale": [1, 1, 1]}, "gui": {"rotation": [30, 45, 0], "scale": [0.6, 0.6, 0.6]}}}

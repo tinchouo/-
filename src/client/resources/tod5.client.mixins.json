@@ -26,7 +26,8 @@
 		"LivingEntityRenderStateMixin",
 		"EntityHitboxDebugRendererMixin",
 		"ScreenEffectRendererMixin",
-		"DisplayRendererMixin"
+		"DisplayRendererMixin",
+		"EntityRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

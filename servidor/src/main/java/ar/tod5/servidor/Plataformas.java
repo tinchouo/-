@@ -225,8 +225,9 @@ final class Plataformas implements Listener {
 				d.setItemStack(it); d.setPersistent(false); d.setTeleportDuration(1);
 				d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
 				d.setBrightness(new Display.Brightness(15, 15));
-				// crece desde el cuadrado de la salida
-				d.setTransformation(new Transformation(new Vector3f(0, -0.25f, 0), new AxisAngle4f(), new Vector3f(0.01f, 0.01f, 0.01f), new AxisAngle4f()));
+				// crece entera desde el centro del cuadrado de la salida
+				float ox = (float) (fi + 0.5 - p.ancho / 2.0), oz = (float) (fk + 0.5 - p.largo / 2.0);
+				d.setTransformation(new Transformation(new Vector3f(-ox, -0.25f, -oz), new AxisAngle4f(), new Vector3f(0.01f, 0.01f, 0.01f), new AxisAngle4f()));
 				d.getPersistentDataContainer().set(marca, PersistentDataType.STRING, p.id + ":" + fi + ":" + fk);
 			}));
 		}
