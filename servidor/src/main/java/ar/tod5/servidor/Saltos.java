@@ -66,7 +66,7 @@ final class Saltos implements Listener {
 	private static final class Vivo { ItemDisplay vista; Interaction toque; }
 	static double alturaNormal(String tipo, String color) {
 		if (tipo.equals("pad")) return color.equals("roja") ? 18 : 8;
-		return color.equals("roja") ? 3.75 : 1.25;   // la amarilla: un salto normal; la roja: el triple
+		return color.equals("roja") ? 6 : 2.5;   // la amarilla: el doble de un salto normal (1,25); la roja: 6 bloques
 	}
 
 	private static final double CERCA = 48;
@@ -211,8 +211,9 @@ final class Saltos implements Listener {
 			if (v.toque == null || !v.toque.isValid()) {
 				org.bukkit.util.Vector n = normal(s.cara);
 				Location centro = orbe ? l : l.clone().add(n.clone().multiply(0.12));
-				v.toque = l.getWorld().spawn(centro.clone().add(0, -0.25, 0), Interaction.class, i -> {
-					i.setInteractionWidth(0.5f); i.setInteractionHeight(0.5f); i.setResponsive(false); i.setPersistent(false);
+				float lado = orbe ? 1.0f : 0.5f;   // la orbe: todo su bloque
+				v.toque = l.getWorld().spawn(centro.clone().add(0, -lado / 2, 0), Interaction.class, i -> {
+					i.setInteractionWidth(lado); i.setInteractionHeight(lado); i.setResponsive(false); i.setPersistent(false);
 					i.getPersistentDataContainer().set(marca, PersistentDataType.STRING, s.id);
 				});
 			}

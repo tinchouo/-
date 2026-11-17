@@ -25,7 +25,8 @@
 		"MultiPlayerGameModeMixin",
 		"LivingEntityRenderStateMixin",
 		"EntityHitboxDebugRendererMixin",
-		"ScreenEffectRendererMixin"
+		"ScreenEffectRendererMixin",
+		"DisplayRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
