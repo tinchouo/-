@@ -28,11 +28,11 @@ import org.slf4j.LoggerFactory;
 public final class PlataformasCliente {
 	private static final Logger LOG = LoggerFactory.getLogger("TOD5");
 	private PlataformasCliente() {}
-	private record Plat(String id, double ancho, double alto, double largo, Vec3 a, Vec3 b, long inicio, int dur, List<UUID> piezas) {
+	private record Plat(String id, double ancho, double alto, double largo, Vec3 a, Vec3 b, long inicio, int dur, boolean suave, List<UUID> piezas) {
 		/** La esquina en ese tick (puede ser con decimales). */
 		Vec3 donde(double tick) {
 			double f = Math.max(0, Math.min(1, (tick - inicio) / dur));
-			f = f * f * (3 - 2 * f);
+			if (suave) f = f * f * (3 - 2 * f);
 			return a.add(b.subtract(a).scale(f));
 		}
 		AABB caja(Vec3 pos) { return new AABB(pos.x, pos.y, pos.z, pos.x + ancho, pos.y + alto, pos.z + largo); }
@@ -54,7 +54,7 @@ public final class PlataformasCliente {
 				LISTA.add(new Plat(j.get("id").getAsString(), j.get("ancho").getAsDouble(), j.get("alto").getAsDouble(), j.get("largo").getAsDouble(),
 					new Vec3(j.get("ax").getAsDouble(), j.get("ay").getAsDouble(), j.get("az").getAsDouble()),
 					new Vec3(j.get("bx").getAsDouble(), j.get("by").getAsDouble(), j.get("bz").getAsDouble()),
-					j.get("inicio").getAsLong(), Math.max(1, j.get("dur").getAsInt()), pz));
+					j.get("inicio").getAsLong(), Math.max(1, j.get("dur").getAsInt()), !j.has("suave") || j.get("suave").getAsBoolean(), pz));
 			}
 		} catch (Exception e) { LOG.warn("TOD5 plataformas: no entendi la lista ({})", e.getMessage()); }
 		AHORA.keySet().retainAll(LISTA.stream().map(Plat::id).toList());
@@ -70,7 +70,8 @@ public final class PlataformasCliente {
 		if (PIEZAS.isEmpty()) return null;
 		Lugar l = PIEZAS.get(e.getUUID());
 		if (l == null || e.level() == null) return null;
-		Vec3 pos = l.p.donde(e.level().getGameTime() - 1 + parcial);
+		// Minecraft dibuja al jugador entre el tick anterior y el ultimo; el reloj del mundo ya avanzo uno despues de mover a todos: -2
+		Vec3 pos = l.p.donde(e.level().getGameTime() - 2 + parcial);
 		return pos.add(l.ox, 0.5, l.oz);
 	}
 	public static void limpiar() { LISTA.clear(); AHORA.clear(); CACHE.clear(); PIEZAS.clear(); parado = paradoAntes = null; }
@@ -82,18 +83,28 @@ public final class PlataformasCliente {
 		return null;
 	}
 
-	/** Al empezar el tick: donde esta cada una (la caja solida de este tick) y, si estaba parado arriba, lo muevo con ella. */
+	private static Vec3 arrastre;
+	/** Al empezar el tick: donde esta cada una (la caja solida de este tick) y cuanto se movio la que tenia abajo. */
 	public static void inicioTick(Minecraft mc) {
+		arrastre = null;
 		if (mc.level == null || mc.player == null || LISTA.isEmpty()) return;
-		LocalPlayer yo = mc.player;
 		long tick = mc.level.getGameTime();
 		for (Plat p : LISTA) {
 			Vec3 pos = p.donde(tick), antes = AHORA.put(p.id, pos);
 			if (antes != null && p.id.equals(parado)) {
 				Vec3 d = pos.subtract(antes);
-				if (d.lengthSqr() > 1.0E-10 && d.lengthSqr() < 4.0) yo.setPos(yo.position().add(d));
+				if (d.lengthSqr() > 1.0E-10 && d.lengthSqr() < 4.0) arrastre = d;
 			}
 		}
+	}
+	/**
+	 * Lo muevo con la plataforma al principio de SU tick (despues de que Minecraft anoto donde estaba): asi el personaje y la camara
+	 * se deslizan junto con ella en vez de dar un saltito cada tick.
+	 */
+	public static void arrastrar(LocalPlayer yo) {
+		if (arrastre == null) return;
+		yo.setPos(yo.position().add(arrastre));
+		arrastre = null;
 	}
 	/** Al terminar el tick: pongo las piezas donde van (para que se dibujen lisas) y miro si quede parado arriba de alguna. */
 	public static void finTick(Minecraft mc) {

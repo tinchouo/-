@@ -35,6 +35,10 @@ public abstract class LocalPlayerMixin {
 		this.tod5$cambiado = false;
 	}
 
+	/** Plataformas que se mueven: me arrastra al principio de mi tick (ver PlataformasCliente.arrastrar). */
+	@Inject(method = "tick", at = @At("HEAD"))
+	private void tod5$plataforma(CallbackInfo ci) { ar.tod5.menu.PlataformasCliente.arrastrar((LocalPlayer) (Object) this); }
+
 	@Inject(method = "moveTowardsClosestSpace", at = @At("HEAD"), cancellable = true)
 	private void tod5$sinEmpujar(double x, double z, CallbackInfo ci) {
 		if (GravedadCliente.costado((LocalPlayer) (Object) this)) ci.cancel();

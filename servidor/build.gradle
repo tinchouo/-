@@ -1,6 +1,6 @@
 plugins { id 'java' }
 group = 'ar.tod5'
-version = '0.31.1'
+version = '0.31.2'
 repositories {
 	mavenCentral()
 	maven { url = 'https://repo.papermc.io/repository/maven-public/' }

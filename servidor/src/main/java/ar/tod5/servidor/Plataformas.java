@@ -62,7 +62,9 @@ final class Plataformas implements Listener {
 	static final class Plataforma {
 		String id, mundo, modo = "parpadeo", color = "amarillo";
 		int ax, ay, az, bx, by, bz, ancho = 3, largo = 3;
-		double segundos = 4, espera = 1, fade = 1.5, salida = 0;   // salida: cuanto se queda quieta al aparecer antes de moverse   // espera: el ratito al final (parpadeo); fade: cuanto dura el desvanecido (desvanece)
+		double segundos = 4, espera = 1, fade = 1.5, salida = 0;
+		Boolean frena;   // arranca y frena suave (null = segun el modo: parpadeo si, desvanece no)
+		boolean frena() { return frena != null ? frena : modo.equals("parpadeo"); }   // salida: cuanto se queda quieta al aparecer antes de moverse   // espera: el ratito al final (parpadeo); fade: cuanto dura el desvanecido (desvanece)
 		Location salida(World w) { return new Location(w, ax, ay, az); }
 	}
 	private static final class Viva {
@@ -142,7 +144,7 @@ final class Plataformas implements Listener {
 			j.addProperty("ancho", p.ancho); j.addProperty("alto", ALTO); j.addProperty("largo", p.largo);
 			j.addProperty("ax", p.ax); j.addProperty("ay", p.ay); j.addProperty("az", p.az);
 			j.addProperty("bx", p.bx); j.addProperty("by", p.by); j.addProperty("bz", p.bz);
-			j.addProperty("inicio", v.inicio); j.addProperty("dur", duracion(p));
+			j.addProperty("inicio", v.inicio); j.addProperty("dur", duracion(p)); j.addProperty("suave", p.frena());
 			JsonArray pz = new JsonArray();
 			for (ItemDisplay d : v.bloques) pz.add(d.getUniqueId().toString());
 			j.add("piezas", pz);
@@ -288,7 +290,8 @@ final class Plataformas implements Listener {
 			if (v.fase == 0) {
 				// la mueve el mod (cada compu, cuadro por cuadro, con el tick del mundo); aca solo llevo la cuenta de donde esta
 				long ahora = w.getGameTime();
-				double f = suave(Math.max(0, Math.min(1.0, (ahora - v.inicio) / (double) dur)));
+				double f = Math.max(0, Math.min(1.0, (ahora - v.inicio) / (double) dur));
+				if (p.frena()) f = suave(f);
 				v.x = p.ax + (p.bx - p.ax) * f; v.y = p.ay + (p.by - p.ay) * f; v.z = p.az + (p.bz - p.az) * f;
 				if (p.modo.equals("desvanece")) {
 					int fadeT = Math.max(1, (int) Math.round(p.fade * 20));
@@ -376,7 +379,7 @@ final class Plataformas implements Listener {
 		if (e.getHand() == EquipmentSlot.HAND && plugin.varita.es(e.getPlayer().getInventory().getItemInMainHand()) && plugin.tablero().esEditor(e.getPlayer())) abrirMenu(e.getPlayer(), p);
 	}
 
-	private static final int ANCHO = 10, LARGO = 11, SALIDA = 12, COLOR = 13, VEL = 14, MODO = 15, TIEMPO = 16, FINAL = 20, REINICIAR = 22, BORRAR = 24;
+	private static final int FRENA = 21, ANCHO = 10, LARGO = 11, SALIDA = 12, COLOR = 13, VEL = 14, MODO = 15, TIEMPO = 16, FINAL = 20, REINICIAR = 22, BORRAR = 24;
 	private static final class Menu implements InventoryHolder {
 		final String id; Inventory inv; boolean confirmarBorrar;
 		Menu(String id) { this.id = id; }
@@ -406,6 +409,8 @@ final class Plataformas implements Listener {
 			? Varita.boton(Material.CLOCK, "Se queda " + fmt(p.espera) + " s antes de parpadear", NamedTextColor.GOLD, "Clic izquierdo: +0,25 s   Clic derecho: -0,25 s")
 			: Varita.boton(Material.PHANTOM_MEMBRANE, "Se desvanece en los últimos " + fmt(p.fade) + " s", NamedTextColor.GOLD,
 				"Como un fade out: siempre termina invisible al llegar.", "Clic izquierdo: +0,25 s   Clic derecho: -0,25 s"));
+		m.inv.setItem(FRENA, Varita.boton(p.frena() ? Material.SLIME_BALL : Material.FEATHER, p.frena() ? "Arranca y frena suave" : "Velocidad pareja (no frena al llegar)", NamedTextColor.AQUA,
+			"Clic: cambiar", "Pareja: si saltás al final te llevás toda la velocidad."));
 		m.inv.setItem(FINAL, Varita.boton(Material.TARGET, "Poner el final", NamedTextColor.GOLD,
 			"Cerrá el menú y hacé clic derecho en un bloque con la varita:", "ahí llega la plataforma (los puntos naranjas).", "Ahora: " + p.bx + " " + p.by + " " + p.bz));
 		m.inv.setItem(REINICIAR, Varita.boton(Material.COMPASS, "Volver a empezar", NamedTextColor.GREEN, "Sale de nuevo desde la salida."));
@@ -436,7 +441,8 @@ final class Plataformas implements Listener {
 				p.color = l.get((l.indexOf(p.color) + (d > 0 ? 1 : l.size() - 1)) % l.size());
 			}
 			case VEL -> p.segundos = Math.max(0.2, Math.min(120, Math.round((p.segundos + d * (e.isShiftClick() ? 0.1 : 0.5)) * 10) / 10.0));
-			case MODO -> p.modo = p.modo.equals("parpadeo") ? "desvanece" : "parpadeo";
+			case MODO -> { p.modo = p.modo.equals("parpadeo") ? "desvanece" : "parpadeo"; p.frena = null; }
+			case FRENA -> p.frena = !p.frena();
 			case TIEMPO -> {
 				if (p.modo.equals("parpadeo")) p.espera = Math.max(0, Math.min(30, p.espera + d * 0.25));
 				else p.fade = Math.max(0.25, Math.min(p.segundos, p.fade + d * 0.25));
