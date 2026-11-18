@@ -72,8 +72,9 @@ final class Varita implements Listener {
 		if (e.getHand() != EquipmentSlot.HAND || !es(e.getItem())) return;
 		e.setCancelled(true);
 		Player p = e.getPlayer();
-		if (e.getAction() == Action.RIGHT_CLICK_BLOCK && e.getClickedBlock() != null && plugin.plataformas.esperandoFinal(p))
-			plugin.plataformas.ponerFinal(p, e.getClickedBlock().getRelative(e.getBlockFace()).getLocation());
+		boolean bloque = e.getAction() == Action.RIGHT_CLICK_BLOCK || e.getAction() == Action.LEFT_CLICK_BLOCK;
+		if (bloque && e.getClickedBlock() != null && plugin.plataformas.esperandoFinal(p))
+			plugin.plataformas.elegirEsquina(p, e.getClickedBlock().getRelative(e.getBlockFace()).getLocation(), e.getAction() == Action.LEFT_CLICK_BLOCK);
 	}
 
 	void comando(org.bukkit.command.CommandSender s) {

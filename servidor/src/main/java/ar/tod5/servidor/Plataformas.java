@@ -64,19 +64,17 @@ final class Plataformas implements Listener {
 		int ax, ay, az, bx, by, bz, ancho = 3, largo = 3;
 		double segundos = 4, espera = 1, fade = 1.5, salida = 0;
 		/** Parpadeo: arranca y frena suave. Desvanece: velocidad pareja hasta el final. */
-		boolean frena() { return modo.equals("parpadeo"); }   // salida: cuanto se queda quieta al aparecer antes de moverse   // espera: el ratito al final (parpadeo); fade: cuanto dura el desvanecido (desvanece)
+		boolean frena() { return modo.equals("parpadeo"); }
+		// salida: cuanto se queda quieta al aparecer antes de moverse; espera: el ratito al final (parpadeo); fade: cuanto dura el desvanecido (desvanece)
 		Location salida(World w) { return new Location(w, ax, ay, az); }
 	}
 	private static final class Viva {
 		final List<ItemDisplay> bloques = new ArrayList<>();
 		final List<ItemDisplay> marco = new ArrayList<>();
 		Interaction toque;
-		int t;                // ticks desde que aparecio (fase 0) o desde que empezo la fase
-		int fase;             // 0 = apareciendo/viajando, 1 = quieta al final, 2 = parpadeando, 3 = no esta (esperando)
-		long inicio;          // tick del mundo en que empieza a moverse (el mod la mueve con esto)
-		long quitada;         // tick del mundo en que desaparecio
-		int alfa = 15;        // 15 = entera ... 0 = casi invisible
-		boolean blanca;
+		long cero;            // tick del mundo en que empezo la primera vuelta (todas las vueltas se cuentan desde aca)
+		boolean esta;         // esta vuelta: ¿se puede pisar?
+		long quitada;         // tick del mundo en que desaparecio por ultima vez
 		double x, y, z;       // donde esta ahora (la esquina)
 	}
 	// como en Mario Galaxy: dos destellos (uno cada medio segundo) y en el tercero se achica entera y desaparece
@@ -94,6 +92,7 @@ final class Plataformas implements Listener {
 	final Map<String, Plataforma> plataformas = new LinkedHashMap<>();
 	private final Map<String, Viva> vivas = new HashMap<>();
 	private final Map<UUID, String> poniendoFinal = new HashMap<>();   // editor que esta eligiendo el final de una plataforma con la varita
+	private final Map<UUID, Location[]> esquinas = new HashMap<>();     // las dos esquinas que va eligiendo (clic izquierdo y derecho)
 	private int proximo = 1;
 
 	Plataformas(TOD5Servidor plugin) {
@@ -101,6 +100,7 @@ final class Plataformas implements Listener {
 		this.marca = new NamespacedKey(plugin, "plataforma");
 		Bukkit.getScheduler().runTaskTimer(plugin, this::cadaTick, 20, 1);
 		Bukkit.getScheduler().runTaskTimer(plugin, this::marcarSalidas, 20, 10);
+		Bukkit.getScheduler().runTaskTimer(plugin, this::marcarEsquinas, 20, 5);
 	}
 
 	// ================= archivo =================
@@ -138,16 +138,18 @@ final class Plataformas implements Listener {
 		JsonArray a = new JsonArray();
 		for (Plataforma p : plataformas.values()) {
 			Viva v = vivas.get(p.id);
-			if (v == null || v.fase == 3 || v.bloques.isEmpty() || !p.mundo.equals(pl.getWorld().getName())) continue;
+			if (v == null || v.bloques.isEmpty() || !p.mundo.equals(pl.getWorld().getName())) continue;
 			JsonObject j = new JsonObject();
 			j.addProperty("id", p.id);
 			j.addProperty("ancho", p.ancho); j.addProperty("alto", ALTO); j.addProperty("largo", p.largo);
 			j.addProperty("ax", p.ax); j.addProperty("ay", p.ay); j.addProperty("az", p.az);
 			j.addProperty("bx", p.bx); j.addProperty("by", p.by); j.addProperty("bz", p.bz);
-			j.addProperty("inicio", v.inicio); j.addProperty("dur", duracion(p)); j.addProperty("suave", p.frena());
-			j.addProperty("fade", p.modo.equals("desvanece") ? Math.max(1, (int) Math.round(p.fade * 20)) : 0);
+			// el horario: con esto cada compu sabe donde esta y si esta, en cualquier tick, para siempre (no hace falta volver a mandar nada)
+			j.addProperty("cero", v.cero); j.addProperty("salida", salidaT(p)); j.addProperty("dur", duracion(p)); j.addProperty("suave", p.frena());
+			j.addProperty("fin", finT(p)); j.addProperty("ciclo", cicloT(p)); j.addProperty("parpadeo", p.modo.equals("parpadeo") ? finT(p) - PARPADEO : -1);
+			j.addProperty("color", color(p)); j.addProperty("fade", p.modo.equals("desvanece") ? Math.max(1, (int) Math.round(p.fade * 20)) : 0);
 			JsonArray pz = new JsonArray();
-			for (ItemDisplay d : v.bloques) pz.add(d.getUniqueId().toString());
+			for (ItemDisplay d : v.bloques) pz.add(d.getEntityId());   // el numero de la entidad: el mod la encuentra al instante
 			j.add("piezas", pz);
 			a.add(j);
 		}
@@ -166,7 +168,7 @@ final class Plataformas implements Listener {
 			Viva v = vivas.get(p.id);
 			if (v == null || !p.mundo.equals(e.getPlayer().getWorld().getName())) continue;
 			// recien desaparecida: el server todavia cuenta el rato que estuvo "flotando" arriba de ella (3 s de gracia)
-			if (v.fase == 3 && e.getPlayer().getWorld().getGameTime() - v.quitada > 60) continue;
+			if (!v.esta && e.getPlayer().getWorld().getGameTime() - v.quitada > 60) continue;
 			if (caja.overlaps(new BoundingBox(v.x, v.y, v.z, v.x + p.ancho, v.y + ALTO, v.z + p.largo))) { e.setCancelled(true); return; }
 		}
 	}
@@ -191,7 +193,7 @@ final class Plataformas implements Listener {
 	}
 	void apagar() { for (String id : new ArrayList<>(vivas.keySet())) sacar(id); }
 	/** Vuelve a empezar desde la salida (despues de cambiarle algo). */
-	private void reiniciar(Plataforma p) { sacar(p.id); mandarTodos(); }
+	private void reiniciar(Plataforma p) { sacar(p.id); mandarTodos(); }   // las vuelve a crear con el horario nuevo (en el proximo tick)
 
 	/**
 	 * Que lados de esta pieza son "de afuera" (en el modelo: N=1, E=2, S=4, W=8). El item display gira el modelo 180 grados
@@ -217,66 +219,51 @@ final class Plataformas implements Listener {
 		return false;
 	}
 	private int duracion(Plataforma p) { return Math.max(4, (int) Math.round(p.segundos * 20)); }
+	/** La vuelta, en ticks desde que aparece: crece, espera la salida, viaja, (parpadeo: espera y parpadea), desaparece, espera y vuelve. */
+	private int salidaT(Plataforma p) { return CRECE + (int) Math.round(p.salida * 20); }                  // empieza a moverse
+	private int llegaT(Plataforma p) { return salidaT(p) + duracion(p); }                                   // llega al final
+	private int finT(Plataforma p) {                                                                       // desaparece
+		return p.modo.equals("parpadeo") ? llegaT(p) + (int) Math.round(p.espera * 20) + PARPADEO : llegaT(p);
+	}
+	private int cicloT(Plataforma p) { return finT(p) + ESPERA; }
 
-	private void aparecer(Plataforma p, Viva v, World w) {
+	/** Crea las piezas una sola vez (despues solo se esconden y vuelven a aparecer: no se crean ni se borran en cada vuelta). */
+	private void crearPiezas(Plataforma p, Viva v, World w) {
 		v.bloques.forEach(Entity::remove); v.bloques.clear();
 		int rgb = color(p);
 		for (int i = 0; i < p.ancho; i++) for (int k = 0; k < p.largo; k++) {
 			ItemStack it = pieza("plataforma_" + mascara(p, i, k) + "_15", rgb);
 			final int fi = i, fk = k;
 			v.bloques.add(w.spawn(new Location(w, p.ax + i + 0.5, p.ay + 0.5, p.az + k + 0.5), ItemDisplay.class, d -> {
-				d.setItemStack(it); d.setPersistent(false); d.setTeleportDuration(1);
+				d.setItemStack(it); d.setPersistent(false);
 				d.setItemDisplayTransform(ItemDisplay.ItemDisplayTransform.FIXED);
 				d.setBrightness(new Display.Brightness(15, 15));
-				// crece entera desde el centro del cuadrado de la salida
-				float ox = (float) (fi + 0.5 - p.ancho / 2.0), oz = (float) (fk + 0.5 - p.largo / 2.0);
-				d.setTransformation(new Transformation(new Vector3f(-ox, -0.25f, -oz), new AxisAngle4f(), new Vector3f(0.01f, 0.01f, 0.01f), new AxisAngle4f()));
+				d.setTransformation(chica(p, fi, fk));
 				d.getPersistentDataContainer().set(marca, PersistentDataType.STRING, p.id + ":" + fi + ":" + fk);
 			}));
 		}
-		Bukkit.getScheduler().runTaskLater(plugin, () -> {
-			for (ItemDisplay d : v.bloques) {
-				d.setInterpolationDelay(0); d.setInterpolationDuration(CRECE);
-				d.setTransformation(new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1, 1, 1), new AxisAngle4f()));
-			}
-		}, 1);
-		v.t = 0; v.fase = 0; v.x = p.ax; v.y = p.ay; v.z = p.az; v.alfa = 15; v.blanca = false;
-		v.inicio = w.getGameTime() + CRECE + Math.round(p.salida * 20);
+		v.cero = w.getGameTime() + 1;
 		mandarTodos();
 	}
-	/** Cambia la transparencia (0..7) o el color de todas las piezas. */
-	private void pintarPiezas(Plataforma p, Viva v, int alfa, boolean blanca) {
-		if (alfa == v.alfa && blanca == v.blanca) return;
-		v.alfa = alfa; v.blanca = blanca;
-		int rgb = blanca ? 0xFFFFFF : color(p);
+	/** La pieza achicada en el centro de la plataforma (escondida). */
+	private static Transformation chica(Plataforma p, int i, int k) {
+		float ox = (float) (i + 0.5 - p.ancho / 2.0), oz = (float) (k + 0.5 - p.largo / 2.0);
+		return new Transformation(new Vector3f(-ox, -0.25f, -oz), new AxisAngle4f(), new Vector3f(0.001f, 0.001f, 0.001f), new AxisAngle4f());
+	}
+	private void transformar(Plataforma p, Viva v, boolean grande, int duracion) {
 		for (int n = 0; n < v.bloques.size(); n++) {
-			int i = n / p.largo, k = n % p.largo;
-			v.bloques.get(n).setItemStack(pieza("plataforma_" + mascara(p, i, k) + "_" + alfa, rgb));
+			ItemDisplay d = v.bloques.get(n);
+			d.setInterpolationDelay(0); d.setInterpolationDuration(duracion);
+			d.setTransformation(grande ? new Transformation(new Vector3f(), new AxisAngle4f(), new Vector3f(1, 1, 1), new AxisAngle4f()) : chica(p, n / p.largo, n % p.largo));
 		}
-	}
-	private void quitar(Viva v) {
-		v.bloques.forEach(Entity::remove); v.bloques.clear(); v.t = 0; v.fase = 3;
-		v.quitada = v.marco.isEmpty() ? 0 : v.marco.get(0).getWorld().getGameTime();
-		mandarTodos();
 	}
 	private static double suave(double x) { return x * x * (3 - 2 * x); }
-	/** Se achica entera hacia su centro (cada pieza se corre hacia el centro y se achica). */
-	private void achicar(Plataforma p, Viva v) {
-		for (int n = 0; n < v.bloques.size(); n++) {
-			int i = n / p.largo, k = n % p.largo;
-			float ox = (float) (i + 0.5 - p.ancho / 2.0), oz = (float) (k + 0.5 - p.largo / 2.0);
-			ItemDisplay d = v.bloques.get(n);
-			d.setInterpolationDelay(0); d.setInterpolationDuration(ACHICA);
-			d.setTransformation(new Transformation(new Vector3f(-ox, 0, -oz), new AxisAngle4f(), new Vector3f(0.001f, 0.001f, 0.001f), new AxisAngle4f()));
-		}
-	}
-
 	private void cadaTick() {
 		for (Plataforma p : plataformas.values()) {
 			World w = Bukkit.getWorld(p.mundo);
 			Viva v = vivas.get(p.id);
 			if (w == null || !alguienCerca(p, w)) { if (v != null) { sacar(p.id); mandarTodos(); } continue; }
-			if (v == null) { v = new Viva(); vivas.put(p.id, v); aparecer(p, v, w); }
+			if (v == null) { v = new Viva(); vivas.put(p.id, v); crearPiezas(p, v, w); }
 			// el cuadradito para configurarla (en el medio de la salida, solo lo usan los editores con la varita)
 			if (v.toque == null || !v.toque.isValid()) {
 				final String id = p.id;
@@ -286,31 +273,22 @@ final class Plataformas implements Listener {
 				});
 			}
 			if (v.marco.isEmpty() || !v.marco.get(0).isValid()) ponerMarco(p, v, w);
-			int dur = duracion(p);
-			v.t++;
-			if (v.fase == 0) {
-				// la mueve el mod (cada compu, cuadro por cuadro, con el tick del mundo); aca solo llevo la cuenta de donde esta
-				long ahora = w.getGameTime();
-				double f = Math.max(0, Math.min(1.0, (ahora - v.inicio) / (double) dur));
-				if (p.frena()) f = suave(f);
-				v.x = p.ax + (p.bx - p.ax) * f; v.y = p.ay + (p.by - p.ay) * f; v.z = p.az + (p.bz - p.az) * f;
-				// el desvanecido lo hace el mod (cada compu, todas las piezas juntas, 16 pasos)
-				if (ahora >= v.inicio + dur) {
-					v.t = 0;
-					if (p.modo.equals("desvanece")) quitar(v);   // llego invisible: ya no esta (ni se pisa)
-					else v.fase = 1;
-				}
-			} else if (v.fase == 1) {
-				if (v.t >= Math.round(p.espera * 20)) { v.t = 0; v.fase = 2; }
-			} else if (v.fase == 2) {
-				// destello blanco al principio y al medio segundo (3 ticks cada uno); al segundo se achica entera y se va
-				int c = v.t;
-				pintarPiezas(p, v, 15, (c >= 1 && c <= 3) || (c >= 11 && c <= 13) || c >= 21);
-				if (c == 20) achicar(p, v);
-				if (c >= PARPADEO) quitar(v);
-			} else if (v.t >= ESPERA) {
-				aparecer(p, v, w);
-			}
+			if (v.bloques.isEmpty() || !v.bloques.get(0).isValid()) { crearPiezas(p, v, w); continue; }
+			// en que parte de la vuelta esta (lo mismo calcula cada compu con el horario)
+			long ahora = w.getGameTime();
+			if (ahora < v.cero) continue;
+			int c = (int) ((ahora - v.cero) % cicloT(p));
+			int sale = salidaT(p), llega = llegaT(p), fin = finT(p);
+			if (c == 0) transformar(p, v, false, 0);              // nueva vuelta: chiquita en el centro...
+			if (c == 1) transformar(p, v, true, CRECE);           // ...y crece entera
+			if (p.modo.equals("parpadeo") && c == fin - PARPADEO + 20) transformar(p, v, false, ACHICA);   // al tercer destello se achica entera
+			if (c == fin && p.modo.equals("desvanece")) transformar(p, v, false, 0);                    // llego invisible: la escondo
+			boolean esta = c < fin;
+			if (v.esta && !esta) v.quitada = ahora;
+			v.esta = esta;
+			double f = Math.max(0, Math.min(1.0, (c - sale) / (double) (llega - sale)));
+			if (p.frena()) f = suave(f);
+			v.x = p.ax + (p.bx - p.ax) * f; v.y = p.ay + (p.by - p.ay) * f; v.z = p.az + (p.bz - p.az) * f;
 		}
 	}
 
@@ -345,15 +323,44 @@ final class Plataformas implements Listener {
 		}
 	}
 
-	// ================= varita: poner el final =================
+	// ================= varita: poner el final (dos esquinas) =================
 	boolean esperandoFinal(Player p) { return poniendoFinal.containsKey(p.getUniqueId()); }
-	/** El editor toco un bloque con la varita mientras elegia el final: la plataforma termina ahi (esa celda es la esquina como en la salida). */
-	void ponerFinal(Player pl, Location celda) {
-		Plataforma p = plataformas.get(poniendoFinal.remove(pl.getUniqueId()));
-		if (p == null) return;
-		p.bx = celda.getBlockX() - p.ancho / 2; p.by = celda.getBlockY(); p.bz = celda.getBlockZ() - p.largo / 2;
+	/**
+	 * Eligiendo el final con la varita: clic izquierdo en un bloque = una esquina, clic derecho = la otra (las dos son obligatorias).
+	 * Las esquinas son los lugares (al lado de la cara que tocaste) donde va a quedar la plataforma. Tienen que tener el mismo tamaño que ella.
+	 */
+	void elegirEsquina(Player pl, Location celda, boolean izquierda) {
+		Plataforma p = plataformas.get(poniendoFinal.get(pl.getUniqueId()));
+		if (p == null) { poniendoFinal.remove(pl.getUniqueId()); return; }
+		Location[] e = esquinas.computeIfAbsent(pl.getUniqueId(), k -> new Location[2]);
+		e[izquierda ? 0 : 1] = celda;
+		if (e[0] == null || e[1] == null) {
+			pl.sendActionBar(Component.text(izquierda ? "Esquina 1 lista. Ahora haz clic derecho en la otra esquina." : "Esquina 2 lista. Ahora haz clic izquierdo en la otra esquina.", NamedTextColor.GOLD));
+			return;
+		}
+		int x0 = Math.min(e[0].getBlockX(), e[1].getBlockX()), x1 = Math.max(e[0].getBlockX(), e[1].getBlockX());
+		int z0 = Math.min(e[0].getBlockZ(), e[1].getBlockZ()), z1 = Math.max(e[0].getBlockZ(), e[1].getBlockZ());
+		int y = Math.min(e[0].getBlockY(), e[1].getBlockY());
+		if (x1 - x0 + 1 != p.ancho || z1 - z0 + 1 != p.largo) {
+			pl.sendMessage(Component.text("Ese lugar es de " + (x1 - x0 + 1) + "x" + (z1 - z0 + 1) + " y la plataforma es de " + p.ancho + "x" + p.largo
+				+ ". Elige las dos esquinas otra vez (clic izquierdo y clic derecho).", NamedTextColor.RED));
+			esquinas.remove(pl.getUniqueId());
+			return;
+		}
+		poniendoFinal.remove(pl.getUniqueId()); esquinas.remove(pl.getUniqueId());
+		p.bx = x0; p.by = y; p.bz = z0;
 		guardar(); reiniciar(p);
-		pl.sendMessage(Component.text("Final de la plataforma " + p.id + " puesto.", NamedTextColor.GREEN));
+		pl.sendMessage(Component.text("Final de la plataforma " + p.id + " listo.", NamedTextColor.GREEN));
+	}
+	/** Mientras elige: la esquina que ya eligio, marcada. */
+	private void marcarEsquinas() {
+		Particle.DustOptions naranja = new Particle.DustOptions(Color.fromRGB(255, 160, 40), 1.0f);
+		for (Map.Entry<UUID, String> en : poniendoFinal.entrySet()) {
+			Player pl = Bukkit.getPlayer(en.getKey());
+			Location[] e = esquinas.get(en.getKey());
+			if (pl == null || e == null) continue;
+			for (Location l : e) if (l != null) pl.spawnParticle(Particle.DUST, l.getBlockX() + 0.5, l.getBlockY() + 0.5, l.getBlockZ() + 0.5, 8, 0.3, 0.3, 0.3, 0, naranja);
+		}
 	}
 
 	// ================= el menu =================
@@ -441,7 +448,11 @@ final class Plataformas implements Listener {
 				if (p.modo.equals("parpadeo")) p.espera = Math.max(0, Math.min(30, p.espera + d * 0.25));
 				else p.fade = Math.max(0.25, Math.min(p.segundos, p.fade + d * 0.25));
 			}
-			case FINAL -> { poniendoFinal.put(pl.getUniqueId(), p.id); pl.closeInventory(); pl.sendMessage(Component.text("Tocá un bloque con la varita: ahí termina la plataforma.", NamedTextColor.GOLD)); return; }
+			case FINAL -> {
+				poniendoFinal.put(pl.getUniqueId(), p.id); esquinas.remove(pl.getUniqueId()); pl.closeInventory();
+				pl.sendMessage(Component.text("Con la varita: clic izquierdo en una esquina y clic derecho en la otra esquina de donde debe llegar la plataforma (" + p.ancho + "x" + p.largo + ").", NamedTextColor.GOLD));
+				return;
+			}
 			case REINICIAR -> { reiniciar(p); return; }
 			case BORRAR -> {
 				if (!m.confirmarBorrar) { m.confirmarBorrar = true; pintar(m, p); return; }
