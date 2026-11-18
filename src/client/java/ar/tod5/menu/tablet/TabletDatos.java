@@ -81,10 +81,13 @@ public class TabletDatos {
 	public record Anuncio(String id, String tipo, String titulo, int grupo, boolean ruleta, boolean enviado, String crafteo, String mision, List<EditorTexto.Letra> texto) {}
 	/** Un premio sin reclamar de la bandeja de Recompensas (zonas de monedas, desafios...). */
 	public record Paquete(String id, String titulo, List<ItemStack> items) {}
-	public record Miembro(String nombre, boolean conectado) {}
+	public record Miembro(String nombre, boolean conectado, String uuid, boolean lider) {
+		Miembro(String nombre, boolean conectado) { this(nombre, conectado, "", false); }
+	}
 	public record Mensaje(String hora, String quien, String texto) {}
 	public record Nota(String titulo, String texto, String autor) {}
 	public static class Equipo {
+		String id = "", colorId = ""; boolean soyLider; List<String> invitables = new ArrayList<>();
 		String nombre; int color; int mensajesNuevos;
 		List<Miembro> miembros = new ArrayList<>(); List<Mensaje> chat = new ArrayList<>(); List<Nota> notas = new ArrayList<>();
 	}
@@ -117,7 +120,27 @@ public class TabletDatos {
 	java.util.Map<String, String> vinculos = new java.util.HashMap<>();
 	String vinculo(String clave) { return vinculos.getOrDefault(clave, ""); }
 	Anuncio anuncio(String id) { return id == null || id.isEmpty() ? null : anuncios.stream().filter(a -> a.id().equals(id)).findFirst().orElse(null); }
-	Equipo equipo;   // null = no tiene equipo (la seccion no aparece)
+	Equipo equipo;   // null = no tiene equipo (la seccion sale en gris)
+	/** Para el panel de equipos del admin. */
+	public record Jugador(String uuid, String nombre, String equipo, boolean whitelist, boolean conectado) {}
+	public record ColorEquipo(String id, String nombre, int rgb) {}
+	List<Equipo> equiposAdmin = new ArrayList<>();
+	List<Jugador> jugadores = new ArrayList<>();
+	List<ColorEquipo> coloresEquipo = new ArrayList<>();
+	boolean whitelistActiva, conEquipos;
+	Equipo equipoAdmin(String id) { return equiposAdmin.stream().filter(e -> e.id.equals(id)).findFirst().orElse(null); }
+	static Equipo equipoDeJson(JsonObject o) {
+		Equipo e = new Equipo();
+		e.id = o.get("id").getAsString(); e.nombre = o.get("nombre").getAsString(); e.colorId = o.get("color").getAsString();
+		e.color = 0xFF000000 | o.get("rgb").getAsInt();
+		e.soyLider = o.has("soyLider") && o.get("soyLider").getAsBoolean();
+		for (JsonElement m : o.getAsJsonArray("miembros")) {
+			JsonObject j = m.getAsJsonObject();
+			e.miembros.add(new Miembro(j.get("nombre").getAsString(), j.get("conectado").getAsBoolean(), j.get("uuid").getAsString(), j.get("lider").getAsBoolean()));
+		}
+		if (o.has("invitables")) for (JsonElement i : o.getAsJsonArray("invitables")) e.invitables.add(i.getAsString());
+		return e;
+	}
 
 	int novedadesNuevas() { return (int) novedades.stream().filter(Novedad::nuevo).count(); }
 	int crafteosNuevos() { return (int) crafteos.stream().filter(Crafteo::nuevo).count(); }
@@ -202,6 +225,21 @@ public class TabletDatos {
 					a.has("grupo") ? a.get("grupo").getAsInt() : 0, !a.has("ruleta") || a.get("ruleta").getAsBoolean(),
 					a.has("enviado") && a.get("enviado").getAsBoolean(), a.has("crafteo") ? a.get("crafteo").getAsString() : "", a.has("mision") ? a.get("mision").getAsString() : "",
 					EditorTexto.deJson(a.has("texto") ? a.getAsJsonArray("texto") : null)));
+			}
+			if (o.has("equipo")) d.equipo = equipoDeJson(o.getAsJsonObject("equipo"));
+			if (o.has("equipos_admin")) {
+				JsonObject ea = o.getAsJsonObject("equipos_admin");
+				d.conEquipos = true;
+				for (JsonElement e : ea.getAsJsonArray("equipos")) d.equiposAdmin.add(equipoDeJson(e.getAsJsonObject()));
+				for (JsonElement e : ea.getAsJsonArray("jugadores")) {
+					JsonObject j = e.getAsJsonObject();
+					d.jugadores.add(new Jugador(j.get("uuid").getAsString(), j.get("nombre").getAsString(), j.get("equipo").getAsString(), j.get("whitelist").getAsBoolean(), j.get("conectado").getAsBoolean()));
+				}
+				for (JsonElement e : ea.getAsJsonArray("colores")) {
+					JsonObject j = e.getAsJsonObject();
+					d.coloresEquipo.add(new ColorEquipo(j.get("id").getAsString(), j.get("nombre").getAsString(), 0xFF000000 | j.get("rgb").getAsInt()));
+				}
+				d.whitelistActiva = ea.get("whitelistActiva").getAsBoolean();
 			}
 			servidor = d;
 			ar.tod5.menu.ItemsTOD.actualizar(d.items);   // los items propios van a la pestaña del creativo

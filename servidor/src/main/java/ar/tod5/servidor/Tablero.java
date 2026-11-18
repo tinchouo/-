@@ -213,6 +213,11 @@ public class Tablero {
 		if (editor) o.add("items", crafteos.itemsParaTablet());   // los items propios (para el creativo de los editores)
 		if (editor) o.add("anuncios", anuncios.paraTablet());   // los anuncios guardados: solo los editores
 		if (editor) o.add("vinculos", anuncios.vinculos());     // que anuncio activa cada crafteo y mision
+		if (plugin.equipos != null) {
+			JsonObject eq = plugin.equipos.paraTablet(p);           // su equipo (o nada: la seccion sale en gris)
+			if (eq != null) o.add("equipo", eq);
+			if (editor) o.add("equipos_admin", plugin.equipos.paraAdmin());
+		}
 		return GSON.toJson(o);
 	}
 
@@ -232,6 +237,7 @@ public class Tablero {
 			if (ar.equals("recompensa_abrir")) { plugin.recompensas.abrir(p, rid); return; }
 			if (ar.equals("recompensa_todo")) { plugin.recompensas.reclamarTodo(p, rid); return; }
 			if (ar.equals("mision_reclamar")) { plugin.misiones.reclamar(p, rid); return; }
+			if (plugin.equipos != null && plugin.equipos.accionJugador(p, ar, r)) return;   // lo de su equipo (cualquiera)
 		} catch (Exception e) { return; }
 		if (!esEditor(p)) {
 			plugin.getLogger().warning(p.getName() + " intento editar la tablet sin ser editor");
@@ -286,6 +292,7 @@ public class Tablero {
 				sincronizarTodos();
 			}
 			case "anuncio_borrar" -> { for (String id : ids) anuncios.borrar(id); }
+			case "eq_crear", "eq_editar", "eq_borrar", "eq_meter", "eq_sacar", "eq_lider", "wl_agregar", "wl_sacar", "wl_activar" -> plugin.equipos.accionAdmin(p, a, o);
 			case "anuncio_retirar" -> {
 				for (String id : ids) if (anuncios.retirar(id)) plugin.getLogger().info(p.getName() + " retiro el anuncio " + id);
 			}
