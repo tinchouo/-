@@ -26,7 +26,10 @@ public final class ItemsTOD {
 
 	/** Una moneda del mod (la misma que da /tod moneda en el plugin). */
 	public static ItemStack moneda(String nombre) {
-		ItemStack it = new ItemStack(Items.GOLD_NUGGET);
+		// la base es un disco SIN musica: no entra en ninguna receta (con pepitas de oro el libro de recetas las agarraba)
+		ItemStack it = new ItemStack(Items.MUSIC_DISC_13);
+		it.remove(DataComponents.JUKEBOX_PLAYABLE);
+		it.set(DataComponents.RARITY, net.minecraft.world.item.Rarity.COMMON);
 		it.set(DataComponents.ITEM_MODEL, Identifier.fromNamespaceAndPath("tod5", nombre));
 		it.set(DataComponents.ITEM_NAME, Component.translatable("item.tod5." + nombre));
 		it.set(DataComponents.MAX_STACK_SIZE, 99);   // se apilan hasta 99 (igual que las que da el plugin)

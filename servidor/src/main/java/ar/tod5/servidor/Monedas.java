@@ -46,13 +46,16 @@ final class Monedas implements Listener {
 	Monedas(TOD5Servidor plugin) { this.marca = new NamespacedKey(plugin, "moneda"); }
 
 	ItemStack crear(Tipo t, int cantidad) {
-		ItemStack it = new ItemStack(Material.GOLD_NUGGET);
+		// la base es un disco SIN musica: no entra en ninguna receta (con pepitas de oro el libro de recetas las agarraba para hacer lingotes)
+		ItemStack it = new ItemStack(Material.MUSIC_DISC_13);
 		ItemMeta m = it.getItemMeta();
 		m.setItemModel(new NamespacedKey("tod5", t.modelo));
 		m.setMaxStackSize(MAX);   // se apilan hasta 99 (igual que las del creativo del mod)
 		m.itemName(Component.translatable("item.tod5." + t.modelo));   // el nombre lo pone el mod (como un item de verdad)
 		m.getPersistentDataContainer().set(marca, PersistentDataType.STRING, t.name().toLowerCase(Locale.ROOT));
 		it.setItemMeta(m);
+		it.unsetData(io.papermc.paper.datacomponent.DataComponentTypes.JUKEBOX_PLAYABLE);
+		it.setData(io.papermc.paper.datacomponent.DataComponentTypes.RARITY, org.bukkit.inventory.ItemRarity.COMMON);
 		it.setAmount(Math.max(1, Math.min(MAX, cantidad)));   // despues de subir el tope a 99
 		return it;
 	}

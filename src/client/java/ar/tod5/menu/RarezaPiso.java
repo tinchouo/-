@@ -8,8 +8,6 @@ import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.core.particles.ColorParticleOption;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.entity.Entity;
@@ -39,6 +37,10 @@ public final class RarezaPiso {
 		float pulso = Ajustes.rendimiento() ? 0.85f : 0.65f + 0.35f * (0.5f + 0.5f * (float) Math.sin(edad * 0.157));
 		int c = colorPiso(r, edad);
 		pose.pushPose();
+		// la "plataforma" de luz en el piso, debajo del item (como en Fortnite)
+		float rp = 0.32f + 0.06f * r.estrellas;
+		int cp = argb(c, 0.95f * pulso);
+		col.submitCustomGeometry(pose, RenderTypes.entityTranslucentEmissive(BRILLO), (p, vc) -> quad(p, vc, -rp, 0.03f, -rp, rp, 0.03f, rp, cp, false));
 		pose.translate(0, centroY, 0);
 		// rayo para arriba (dos planos cruzados), desde legendario
 		if (r.estrellas >= 5) {
@@ -54,7 +56,7 @@ public final class RarezaPiso {
 		pose.pushPose();
 		pose.translate(0, 0, -0.18f);
 		float t = 0.26f + 0.05f * r.estrellas;
-		int cb = argb(c, (r.estrellas >= 5 ? 0.95f : 0.8f) * pulso);
+		int cb = argb(c, 1.0f * pulso);
 		col.submitCustomGeometry(pose, RenderTypes.entityTranslucentEmissive(BRILLO), (p, vc) -> quad(p, vc, -t, -t, 0, t, t, 0, cb, false));
 		if (r.estrellas >= 5) {
 			float tc = t * 0.45f;
@@ -89,7 +91,7 @@ public final class RarezaPiso {
 			if (r == null || AZAR.nextFloat() > 0.04f + 0.04f * r.estrellas) continue;
 			int c = r == Rareza.EXOTICO ? 0xE3FCFF : r.color;
 			double x = e.getX() + (AZAR.nextDouble() - 0.5) * 0.4, y = e.getY() + 0.25 + AZAR.nextDouble() * 0.2, z = e.getZ() + (AZAR.nextDouble() - 0.5) * 0.4;
-			mc.level.addParticle(ColorParticleOption.create(ParticleTypes.ENTITY_EFFECT, 0xFF000000 | c), x, y, z, 0, 0.02, 0);
+			mc.level.addParticle(new net.minecraft.core.particles.DustParticleOptions(c, 0.7f), x, y, z, 0, 0.02, 0);   // un puntito del color de la rareza
 		}
 	}
 }

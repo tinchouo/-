@@ -64,11 +64,14 @@ final class Mochilas implements Listener {
 			Component.text("Póntela (tecla N o su casilla del inventario)", NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false),
 			Component.text("y ábrela con la tecla B.", NamedTextColor.DARK_GRAY).decoration(TextDecoration.ITALIC, false)));
 		m.setItemModel(new NamespacedKey("tod5", "mochila"));
+		if (m instanceof LeatherArmorMeta lm) lm.setColor(org.bukkit.Color.fromRGB(COLORES[nivel - 1]));   // cada nivel de un color (despues se puede teñir)
 		m.addItemFlags(ItemFlag.HIDE_DYE, ItemFlag.HIDE_ATTRIBUTES);
 		m.getPersistentDataContainer().set(NIVEL, PersistentDataType.INTEGER, nivel);
 		it.setItemMeta(m);
 		return it;
 	}
+	/** El color de cada nivel: marrón, verde, azul y violeta. */
+	static final int[] COLORES = { 0x8F7A3A, 0x4E8A3A, 0x3A63A0, 0x7A3FA0 };
 	static boolean es(ItemStack it) { return it != null && !it.getType().isAir() && it.hasItemMeta() && it.getItemMeta().getPersistentDataContainer().has(NIVEL, PersistentDataType.INTEGER); }
 	static int nivel(ItemStack it) { return es(it) ? Math.max(1, Math.min(4, it.getItemMeta().getPersistentDataContainer().get(NIVEL, PersistentDataType.INTEGER))) : 0; }
 	static int color(ItemStack it) {
@@ -113,6 +116,7 @@ final class Mochilas implements Listener {
 
 	/** La ventana de la mochila abierta. */
 	static final class Ventana implements InventoryHolder {
+		int mano = -1;   // -1 = la puesta; si no, la casilla del inventario de la que se abrio (la de la mano)
 		Inventory inv;
 		@Override public Inventory getInventory() { return inv; }
 	}
@@ -121,7 +125,23 @@ final class Mochilas implements Listener {
 	void abrir(Player p) {
 		ItemStack m = puesta(p);
 		if (m == null) { p.sendActionBar(Component.text("No tienes una mochila puesta.", NamedTextColor.YELLOW)); return; }
+		abrirVentana(p, m, -1);
+	}
+	/** Clic derecho con una mochila en la mano: la abre (sin ponértela). */
+	@EventHandler
+	public void alUsar(org.bukkit.event.player.PlayerInteractEvent e) {
+		if (e.getHand() != org.bukkit.inventory.EquipmentSlot.HAND) return;
+		if (e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_AIR && e.getAction() != org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK) return;
+		Player p = e.getPlayer();
+		ItemStack m = p.getInventory().getItemInMainHand();
+		if (!es(m) || m.getAmount() != 1) return;
+		if (e.getAction() == org.bukkit.event.block.Action.RIGHT_CLICK_BLOCK && !p.isSneaking() && e.getClickedBlock() != null && e.getClickedBlock().getType().isInteractable()) return;   // abrir un cofre con la mochila en la mano
+		e.setCancelled(true);
+		abrirVentana(p, m, p.getInventory().getHeldItemSlot());
+	}
+	private void abrirVentana(Player p, ItemStack m, int mano) {
 		Ventana v = new Ventana();
+		v.mano = mano;
 		int n = ESPACIOS[nivel(m) - 1];
 		Component titulo = m.getItemMeta().hasCustomName() ? m.getItemMeta().customName() : Component.text("Mochila");
 		v.inv = Bukkit.createInventory(v, n, titulo);
@@ -131,6 +151,11 @@ final class Mochilas implements Listener {
 	}
 	/** Guarda lo de la ventana en la mochila puesta. */
 	private void guardarVentana(Player p, Inventory inv) {
+		if (inv.getHolder() instanceof Ventana v && v.mano >= 0) {   // la de la mano
+			ItemStack h = p.getInventory().getItem(v.mano);
+			if (es(h)) { guardarContenido(h, inv.getContents()); p.getInventory().setItem(v.mano, h); }
+			return;
+		}
 		ItemStack m = puesta(p);
 		if (m == null) return;
 		guardarContenido(m, inv.getContents());
@@ -144,6 +169,9 @@ final class Mochilas implements Listener {
 	@EventHandler(ignoreCancelled = true)
 	public void alClic(InventoryClickEvent e) {
 		if (!(e.getView().getTopInventory().getHolder() instanceof Ventana)) return;
+		// la mochila abierta desde la mano no se puede mover mientras esta abierta
+		if (e.getView().getTopInventory().getHolder() instanceof Ventana vv && vv.mano >= 0
+			&& ((e.getClickedInventory() == e.getView().getBottomInventory() && e.getSlot() == vv.mano) || e.getHotbarButton() == vv.mano)) { e.setCancelled(true); return; }
 		boolean arriba = e.getClickedInventory() == e.getView().getTopInventory();
 		ItemStack metiendo = null;
 		if (arriba) {

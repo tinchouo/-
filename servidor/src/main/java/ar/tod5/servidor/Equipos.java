@@ -48,6 +48,7 @@ final class Equipos implements Listener, CommandExecutor {
 		int proximaNota = 1;
 	}
 	static final String CANAL = "tod5:equipos";
+	private final java.util.Map<UUID, Long> ultimoChat = new java.util.HashMap<>();
 	private static final int MAX_CHAT = 100, MAX_LETRAS_CHAT = 120, MAX_NOTAS = 60;
 	/** Los colores que deja usar Minecraft para un equipo (con su nombre para mostrar). */
 	static final LinkedHashMap<String, String> COLORES = new LinkedHashMap<>();
@@ -271,6 +272,9 @@ final class Equipos implements Listener, CommandExecutor {
 			}
 			case "equipo_chat" -> {
 				if (q == null) return true;
+				Long ult = ultimoChat.get(p.getUniqueId());
+				if (ult != null && System.currentTimeMillis() - ult < 900) return true;   // 1 mensaje por segundo (el mod ya avisa)
+				ultimoChat.put(p.getUniqueId(), System.currentTimeMillis());
 				String t = limpio(o.has("texto") ? o.get("texto").getAsString() : "", MAX_LETRAS_CHAT);
 				if (t.isEmpty()) return true;
 				Msg m = new Msg(); m.t = System.currentTimeMillis(); m.uuid = p.getUniqueId().toString(); m.quien = p.getName(); m.texto = t;

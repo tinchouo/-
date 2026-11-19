@@ -38,6 +38,7 @@ public final class AvisoDurabilidad {
 		});
 		if (s == null) return;
 		int a = (int) (Math.max(0f, Math.min(1f, alfa)) * 255);
+		g.nextStratum();   // una capa nueva: asi el rojo queda encima del dibujo del item
 		g.blitSprite(RenderPipelines.GUI_TEXTURED, s, x, y, 16, 16, (a << 24) | 0xFF2020);
 	}
 }

@@ -52,7 +52,7 @@ import org.joml.Vector3f;
  * Como en Mario Galaxy 2: medio bloque de alto, un color de la ruleta, borde oscuro y esquinas redondeadas; la salida es un cuadrado brillante.
  * Arranca y frena suave. Al aparecer crece desde el cuadrado.
  *  - "parpadeo" (lo normal): llega, se queda un ratito (configurable), parpadea en blanco y desaparece; a los 0,75 s vuelve a salir
- *  - "desvanece": los ultimos N segundos (configurable, como un fade out) se va haciendo transparente; al llegar ya no esta (ni se pisa)
+ *  - "desvanece": llega al final y ahi se va haciendo transparente durante N segundos (configurable); al terminar ya no esta (ni se pisa)
  * Cada bloque es una pieza (item display) con el borde segun que lados son de afuera; el color va por tinte. Lo solido lo pone el mod:
  * el server le manda a cada uno la pieza "raiz" de cada plataforma y su tamaño (canal tod5:plataformas), y el mod hace que se pueda pisar y que te lleve.
  * Como el server no sabe que estas parado en algo, no echa por "volar" a quien este arriba de una plataforma.
@@ -223,7 +223,7 @@ final class Plataformas implements Listener {
 	private int salidaT(Plataforma p) { return CRECE + (int) Math.round(p.salida * 20); }                  // empieza a moverse
 	private int llegaT(Plataforma p) { return salidaT(p) + duracion(p); }                                   // llega al final
 	private int finT(Plataforma p) {                                                                       // desaparece
-		return p.modo.equals("parpadeo") ? llegaT(p) + (int) Math.round(p.espera * 20) + PARPADEO : llegaT(p);
+		return p.modo.equals("parpadeo") ? llegaT(p) + (int) Math.round(p.espera * 20) + PARPADEO : llegaT(p) + Math.max(1, (int) Math.round(p.fade * 20));
 	}
 	private int cicloT(Plataforma p) { return finT(p) + ESPERA; }
 
@@ -407,12 +407,12 @@ final class Plataformas implements Listener {
 		m.inv.setItem(VEL, Varita.boton(Material.SUGAR, "Tarda " + fmt(p.segundos) + " s en llegar", NamedTextColor.YELLOW,
 			"Clic izquierdo: +0,5 s (más lenta)   Clic derecho: -0,5 s (más rápida)", "Shift + clic: de a 0,1 s"));
 		boolean parpadeo = p.modo.equals("parpadeo");
-		m.inv.setItem(MODO, Varita.boton(parpadeo ? Material.REDSTONE_LAMP : Material.GLASS, "Al llegar: " + (parpadeo ? "frena suave, se queda, parpadea y se va" : "va pareja (sin frenar) y se desvanece"), NamedTextColor.LIGHT_PURPLE,
+		m.inv.setItem(MODO, Varita.boton(parpadeo ? Material.REDSTONE_LAMP : Material.GLASS, "Al llegar: " + (parpadeo ? "frena suave, se queda, parpadea y se va" : "va pareja, llega y se desvanece"), NamedTextColor.LIGHT_PURPLE,
 			"Clic: cambiar", "Después de 0,75 s vuelve a salir."));
 		m.inv.setItem(TIEMPO, parpadeo
 			? Varita.boton(Material.CLOCK, "Se queda " + fmt(p.espera) + " s antes de parpadear", NamedTextColor.GOLD, "Clic izquierdo: +0,25 s   Clic derecho: -0,25 s")
-			: Varita.boton(Material.PHANTOM_MEMBRANE, "Se desvanece en los últimos " + fmt(p.fade) + " s", NamedTextColor.GOLD,
-				"Como un fade out: siempre termina invisible al llegar.", "Clic izquierdo: +0,25 s   Clic derecho: -0,25 s"));
+			: Varita.boton(Material.PHANTOM_MEMBRANE, "Al llegar se desvanece en " + fmt(p.fade) + " s", NamedTextColor.GOLD,
+				"Llega, se queda y se va haciendo transparente.", "Clic izquierdo: +0,25 s   Clic derecho: -0,25 s"));
 		m.inv.setItem(FINAL, Varita.boton(Material.TARGET, "Poner el final", NamedTextColor.GOLD,
 			"Cerrá el menú y hacé clic derecho en un bloque con la varita:", "ahí llega la plataforma (los puntos naranjas).", "Ahora: " + p.bx + " " + p.by + " " + p.bz));
 		m.inv.setItem(REINICIAR, Varita.boton(Material.COMPASS, "Volver a empezar", NamedTextColor.GREEN, "Sale de nuevo desde la salida."));
@@ -446,7 +446,7 @@ final class Plataformas implements Listener {
 			case MODO -> p.modo = p.modo.equals("parpadeo") ? "desvanece" : "parpadeo";
 			case TIEMPO -> {
 				if (p.modo.equals("parpadeo")) p.espera = Math.max(0, Math.min(30, p.espera + d * 0.25));
-				else p.fade = Math.max(0.25, Math.min(p.segundos, p.fade + d * 0.25));
+				else p.fade = Math.max(0.25, Math.min(10, p.fade + d * 0.25));
 			}
 			case FINAL -> {
 				poniendoFinal.put(pl.getUniqueId(), p.id); esquinas.remove(pl.getUniqueId()); pl.closeInventory();

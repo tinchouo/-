@@ -17,8 +17,8 @@ public final class RarezaSlot {
 		Rareza r = Rareza.rareza(it);
 		if (r == null) return;
 		float p = Rareza.pulso();
-		int z = r.estrellas >= 5 ? 20 : 10 + r.estrellas * 2;
-		dibujar(g, x + 8 - z / 2, y + 8 - z / 2, z, conAlfa(r.color, (r.estrellas >= 5 ? 0.95f : 0.8f) * p));
+		int z = r.estrellas >= 5 ? 22 : 12 + r.estrellas * 2;
+		dibujar(g, x + 8 - z / 2, y + 8 - z / 2, z, conAlfa(r.color, 1.0f * p));
 		if (r.estrellas >= 5) { int c = 10; dibujar(g, x + 8 - c / 2, y + 8 - c / 2, c, conAlfa(r.claro, 0.9f * p)); }
 	}
 	private static void dibujar(GuiGraphics g, int x, int y, int z, int color) {

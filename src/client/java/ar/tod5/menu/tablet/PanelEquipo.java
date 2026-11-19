@@ -32,6 +32,7 @@ final class PanelEquipo extends Panel {
 	private boolean escribiendoNota;
 	private String confirmar; private long confirmarHasta;
 	private int scrollChat, scrollNotas;
+	private long ultimoEnvio, avisoHasta;   // 1 segundo entre mensajes
 	private int bx, by, bw, bh;   // el cuadro de la derecha (para la ruedita)
 
 	PanelEquipo(Tablet t) { this.t = t; }
@@ -65,10 +66,9 @@ final class PanelEquipo extends Panel {
 		Font f = Minecraft.getInstance().font;
 		TabletDatos.Equipo eq = d.equipo;
 		if (eq == null) return;
-		// titulo: "Equipo <nombre>" con el nombre de su color
+		// titulo: el nombre del equipo, de su color
 		g.pose().pushMatrix(); g.pose().translate(x, y); g.pose().scale(1.25f, 1.25f);
-		g.drawString(f, "Equipo ", 0, 0, Tablet.TEXTO, false);
-		g.drawString(f, eq.nombre, f.width("Equipo "), 0, eq.color, false);
+		g.drawString(f, eq.nombre, 0, 0, eq.color, false);
 		g.pose().popMatrix();
 		// pestañitas arriba a la derecha
 		int fx = x + cw;
@@ -78,14 +78,14 @@ final class PanelEquipo extends Panel {
 		fx -= f.width(tn) + 10; t.boton(g, tn, fx, y - 1, this.verNotas, mx, my, () -> { this.verNotas = true; this.mensaje.foco(false); });
 		fx -= f.width(tc) + 13; t.boton(g, tc, fx, y - 1, !this.verNotas, mx, my, () -> { this.verNotas = false; this.escribiendoNota = false; sinFoco(); });
 
-		miembros(g, d, eq, f, x, y, mx, my);
+		miembros(g, d, eq, f, x, y, ch, mx, my);
 
 		this.bx = x + 124; this.by = y + 17; this.bw = cw - 124; this.bh = ch - 17;
 		if (this.verNotas) notas(g, eq, f, mx, my); else chat(g, eq, f, mx, my);
 	}
 
 	// ================= miembros =================
-	private void miembros(GuiGraphics g, TabletDatos d, TabletDatos.Equipo eq, Font f, int x, int y, int mx, int my) {
+	private void miembros(GuiGraphics g, TabletDatos d, TabletDatos.Equipo eq, Font f, int x, int y, int ch, int mx, int my) {
 		int lw = 118;
 		g.drawString(f, eq.miembros.size() + (eq.miembros.size() == 1 ? " miembro" : " miembros"), x, y + 17, Tablet.GRIS_TEXTO, false);
 		if (eq.soyLider) g.drawString(f, "Eres el líder", x, y + 27, Tablet.AMARILLO, false);
@@ -111,15 +111,23 @@ final class PanelEquipo extends Panel {
 		}
 		yy += 4;
 		if (eq.soyLider) {
-			yy += 16;
-			t.boton(g, "+ Invitar", x, yy - 16, false, mx, my, () -> {
+			t.boton(g, "+ Invitar", x, yy, false, mx, my, () -> {
 				List<Selector.Opcion> ops = new ArrayList<>();
 				for (String n : eq.invitables) ops.add(new Selector.Opcion(n, n, "", 0, "Conectados"));
 				t.abrirSelector(new Selector("Invitar al equipo", ops, "", "No hay nadie conectado para invitar.", n -> { if (!n.isEmpty()) mandarNombre("equipo_invitar", n); }));
 			});
 		}
+		// salir: abajo de todo (a la altura de la caja del chat), en rojo
 		boolean conf = pidiendo("salir");
-		t.boton(g, conf ? "¿Seguro? Salir" : "Salir del equipo", x, yy, conf, mx, my, () -> { if (confirmado("salir")) mandar("equipo_salir", null, null); });
+		botonRojo(g, f, conf ? "¿Seguro? Salir" : "Salir del equipo", x, y + ch - 17, conf, mx, my, () -> { if (confirmado("salir")) mandar("equipo_salir", null, null); });
+	}
+	private void botonRojo(GuiGraphics g, Font f, String txt, int x, int y, boolean elegido, int mx, int my, Runnable r) {
+		int bw = f.width(txt) + 10, bh = 13;
+		boolean encima = mx >= x && my >= y && mx < x + bw && my < y + bh;
+		g.fill(x, y, x + bw, y + bh, elegido || encima ? 0xFFD03A3A : 0xFF4A3A3A);
+		g.fill(x + 1, y + 1, x + bw - 1, y + bh - 1, elegido ? 0xFF4A1414 : encima ? 0xFF3A1E1E : 0xFF1A1414);
+		g.drawString(f, txt, x + 5, y + 3, elegido || encima ? 0xFFFF6A6A : Tablet.TEXTO, true);
+		t.zona(x, y, bw, bh, r);
 	}
 	private static void mandarNombre(String a, String n) { mandar(a, "nombre", n); }
 
@@ -151,10 +159,13 @@ final class PanelEquipo extends Panel {
 		marco(g, bx + 3, cy, bw - 6, caja - 1, this.mensaje.foco() ? t.acento() : 0xFFA0A0A0);
 		this.mensaje.dibujar(g, bx + 7, cy + 3, bw - 14, 9, BLANCO);
 		if (this.mensaje.plano().isEmpty() && !this.mensaje.foco()) g.drawString(f, "Escribe al equipo... (máx. 120 letras)", bx + 7, cy + 4, 0xFF707070, false);
+		if (Util.getMillis() < this.avisoHasta) g.drawString(f, "Espera un poco antes de volver a escribir.", bx + 6, cy - 11, 0xFFFF6A6A, true);
 	}
 	private void enviarMensaje() {
 		String s = this.mensaje.plano().trim();
 		if (s.isEmpty()) return;
+		if (Util.getMillis() - this.ultimoEnvio < 1000) { this.avisoHasta = Util.getMillis() + 2000; return; }   // el mensaje queda escrito
+		this.ultimoEnvio = Util.getMillis();
 		mandar("equipo_chat", "texto", s);
 		this.mensaje.ponerPlano("");
 		this.scrollChat = 0;

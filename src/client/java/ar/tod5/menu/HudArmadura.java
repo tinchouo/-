@@ -18,6 +18,8 @@ import net.minecraft.world.item.ItemStack;
 public final class HudArmadura {
 	private HudArmadura() {}
 	private static final Identifier BARRA = Identifier.withDefaultNamespace("hud/hotbar");
+	private static final Identifier MANO_IZQ = Identifier.withDefaultNamespace("hud/hotbar_offhand_left"), MANO_DER = Identifier.withDefaultNamespace("hud/hotbar_offhand_right");
+	private static final Identifier ESCUDO = Identifier.withDefaultNamespace("container/slot/shield");
 	private static final Identifier[] VACIAS = {
 		Identifier.withDefaultNamespace("container/slot/helmet"), Identifier.withDefaultNamespace("container/slot/chestplate"),
 		Identifier.withDefaultNamespace("container/slot/leggings"), Identifier.withDefaultNamespace("container/slot/boots") };
@@ -40,6 +42,11 @@ public final class HudArmadura {
 		if (p == null || !Ajustes.armadura() || mc.options.hideGui || p.isSpectator()) return;
 		int centro = g.guiWidth() / 2, y = g.guiHeight() - 22;
 		boolean secundariaIzq = p.getMainArm().getOpposite() == HumanoidArm.LEFT;
+		// la mano secundaria siempre a la vista (Minecraft solo la dibuja cuando tiene algo)
+		if (p.getOffhandItem().isEmpty()) {
+			if (secundariaIzq) { g.blitSprite(RenderPipelines.GUI_TEXTURED, MANO_IZQ, centro - 91 - 29, g.guiHeight() - 23, 29, 24); g.blitSprite(RenderPipelines.GUI_TEXTURED, ESCUDO, centro - 91 - 26, g.guiHeight() - 19, 16, 16, 0x66FFFFFF); }
+			else { g.blitSprite(RenderPipelines.GUI_TEXTURED, MANO_DER, centro + 91, g.guiHeight() - 23, 29, 24); g.blitSprite(RenderPipelines.GUI_TEXTURED, ESCUDO, centro + 91 + 10, g.guiHeight() - 19, 16, 16, 0x66FFFFFF); }
+		}
 		// la armadura: a la izquierda (dejando siempre el lugar de la mano secundaria si va de ese lado)
 		int ax = centro - 91 - 6 - 82 - (secundariaIzq ? 29 : 0);
 		marco(g, ax, y, 4);
@@ -55,5 +62,11 @@ public final class HudArmadura {
 		ItemStack m = MochilasCliente.puesta();
 		if (m.isEmpty()) g.blit(RenderPipelines.GUI_TEXTURED, MochilasCliente.VACIA, mx + 3, y + 3, 0f, 0f, 16, 16, 16, 16, 0x66FFFFFF);
 		else g.renderItem(m, mx + 3, y + 3);
+		// con un inventario o cofre abierto, se oscurece igual que la barra de Minecraft
+		if (mc.screen != null) {
+			g.fill(ax, y, ax + 82, y + 22, 0xC0101010);
+			g.fill(mx, y, mx + 22, y + 22, 0xC0101010);
+			if (p.getOffhandItem().isEmpty()) { int ox = secundariaIzq ? centro - 91 - 29 : centro + 91; g.fill(ox, g.guiHeight() - 23, ox + 29, g.guiHeight() + 1, 0xC0101010); }
+		}
 	}
 }
