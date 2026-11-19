@@ -35,6 +35,10 @@ public abstract class AvatarRendererMixin {
 	@Inject(method = "extractRenderState(Lnet/minecraft/world/entity/Avatar;Lnet/minecraft/client/renderer/entity/state/AvatarRenderState;F)V", at = @At("TAIL"))
 	private void tod5$cartel(Avatar e, AvatarRenderState s, float parcial, CallbackInfo ci) {
 		CartelEstado c = (CartelEstado) s;
+		// la mochila en la espalda
+		c.tod5$mochila().clear();
+		net.minecraft.world.item.ItemStack m = ar.tod5.menu.MochilasCliente.espalda(e.getUUID());
+		if (!m.isEmpty()) net.minecraft.client.Minecraft.getInstance().getItemModelResolver().updateForLiving(c.tod5$mochila(), m, net.minecraft.world.item.ItemDisplayContext.HEAD, e);
 		if (s.nameTag == null) { c.tod5$vida(null); return; }   // Minecraft decidio no mostrar el nombre (lejos, invisible, regla del equipo...)
 		PlayerTeam eq = e.getTeam() instanceof PlayerTeam t ? t : null;
 		ChatFormatting color = eq != null && eq.getColor() != null && eq.getColor().isColor() ? eq.getColor() : ChatFormatting.WHITE;

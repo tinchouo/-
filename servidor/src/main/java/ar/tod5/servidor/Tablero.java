@@ -238,6 +238,7 @@ public class Tablero {
 			if (ar.equals("recompensa_todo")) { plugin.recompensas.reclamarTodo(p, rid); return; }
 			if (ar.equals("mision_reclamar")) { plugin.misiones.reclamar(p, rid); return; }
 			if (plugin.equipos != null && plugin.equipos.accionJugador(p, ar, r)) return;   // lo de su equipo (cualquiera)
+			if (plugin.mochilas != null && ar.startsWith("mochila_") && plugin.mochilas.accion(p, ar, r)) return;   // su mochila (cualquiera)
 		} catch (Exception e) { return; }
 		if (!esEditor(p)) {
 			plugin.getLogger().warning(p.getName() + " intento editar la tablet sin ser editor");

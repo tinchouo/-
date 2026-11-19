@@ -6,5 +6,7 @@
  "item.tod5.fracoin": "Fracoin",
  "item.tod5.tinchoin": "Tinchoin",
  "item.tod5.truquita": "Truquita",
- "itemGroup.tod5.trucofdeath": "Trucofdeath"
+ "itemGroup.tod5.trucofdeath": "Trucofdeath",
+ "key.tod5.mochila_abrir": "Abrir la mochila",
+ "key.tod5.mochila_poner": "Ponerse / cambiar la mochila"
 }

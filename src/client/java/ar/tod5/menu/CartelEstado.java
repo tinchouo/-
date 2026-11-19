@@ -6,4 +6,6 @@ import net.minecraft.network.chat.Component;
 public interface CartelEstado {
 	Component tod5$vida();
 	void tod5$vida(Component c);
+	/** La mochila en la espalda (vacia = no tiene). */
+	net.minecraft.client.renderer.item.ItemStackRenderState tod5$mochila();
 }

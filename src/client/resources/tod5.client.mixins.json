@@ -34,7 +34,10 @@
 		"TooltipRenderUtilMixin",
 		"AbstractContainerScreenMixin",
 		"ItemEntityRenderStateMixin",
-		"ItemEntityRendererMixin"
+		"ItemEntityRendererMixin",
+		"ContainerScreenAccessor",
+		"InventoryScreenMixin",
+		"CapeLayerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

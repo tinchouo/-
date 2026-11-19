@@ -264,7 +264,7 @@ public class TabletDatos {
 	}
 
 	/** Un item entero como lo manda el plugin (con nombre, encantamientos, dibujo propio, etc.). */
-	static ItemStack itemDeJson(JsonElement e) {
+	public static ItemStack itemDeJson(JsonElement e) {
 		if (e == null || e.isJsonNull()) return ItemStack.EMPTY;
 		try {
 			var mc = net.minecraft.client.Minecraft.getInstance();

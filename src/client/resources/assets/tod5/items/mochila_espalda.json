@@ -1,0 +1,1 @@
+{ "model": { "type": "minecraft:model", "model": "tod5:item/mochila_espalda", "tints": [ { "type": "minecraft:dye", "default": -7375302 } ] } }

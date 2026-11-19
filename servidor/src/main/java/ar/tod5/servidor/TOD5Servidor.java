@@ -45,6 +45,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	Saltos saltos;
 	Plataformas plataformas;
 	Equipos equipos;
+	Mochilas mochilas;
 	Varita varita;
 	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
@@ -91,6 +92,9 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		equipos.cargar();
 		getServer().getPluginManager().registerEvents(equipos, this);
 		if (getCommand("equipo") != null) getCommand("equipo").setExecutor(equipos);
+		mochilas = new Mochilas(this);
+		getServer().getPluginManager().registerEvents(mochilas, this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Mochilas.CANAL);
 		plataformas = new Plataformas(this);
 		plataformas.cargar();
 		getServer().getPluginManager().registerEvents(plataformas, this);
