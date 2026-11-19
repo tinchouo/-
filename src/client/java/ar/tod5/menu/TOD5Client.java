@@ -6,8 +6,23 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 public class TOD5Client implements ClientModInitializer {
 	public static final String MOD_ID = "tod5";
 
-	/** IP del server para el boton Jugar (placeholder hasta que haya server). */
-	public static final String IP_SERVER = System.getProperty("tod5.ip", "trucoofdeath4.holy.gg");
+	/** Direccion por defecto del server (la que usan todos los jugadores si no hay archivo de config). */
+	private static final String IP_POR_DEFECTO = "trucoofdeath4.holy.gg";
+
+	/** IP del server para el boton Jugar: -Dtod5.ip=..., si no el archivo config/tod5.txt (primera linea), si no la de por defecto. */
+	public static final String IP_SERVER = leerIp();
+
+	private static String leerIp() {
+		String p = System.getProperty("tod5.ip");
+		if (p != null && !p.isBlank()) return p.trim();
+		try {
+			java.nio.file.Path f = net.fabricmc.loader.api.FabricLoader.getInstance().getConfigDir().resolve("tod5.txt");
+			if (java.nio.file.Files.exists(f)) {
+				for (String l : java.nio.file.Files.readAllLines(f)) if (!l.isBlank() && !l.startsWith("#")) return l.trim();
+			}
+		} catch (Exception ignorado) { }
+		return IP_POR_DEFECTO;
+	}
 
 	@Override
 	public void onInitializeClient() {
