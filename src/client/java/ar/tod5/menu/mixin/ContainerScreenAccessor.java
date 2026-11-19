@@ -10,4 +10,5 @@ public interface ContainerScreenAccessor {
 	@Accessor("hoveredSlot") Slot tod5$hovered();
 	@Accessor("leftPos") int tod5$left();
 	@Accessor("topPos") int tod5$top();
+	@Accessor("imageWidth") int tod5$ancho();
 }

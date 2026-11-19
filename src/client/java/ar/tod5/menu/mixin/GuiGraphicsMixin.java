@@ -28,6 +28,7 @@ public abstract class GuiGraphicsMixin {
 	}
 	@Inject(method = "renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/level/Level;Lnet/minecraft/world/item/ItemStack;III)V", at = @At("TAIL"))
 	private void tod5$chispitas(LivingEntity e, Level l, ItemStack it, int x, int y, int seed, CallbackInfo ci) {
+		ar.tod5.menu.AvisoDurabilidad.dibujar((GuiGraphics) (Object) this, it, x, y);
 		RarezaSlot.adelante((GuiGraphics) (Object) this, it, x, y);
 	}
 

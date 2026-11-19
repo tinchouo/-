@@ -73,6 +73,7 @@ public final class MochilasCliente {
 			for (var e : o.getAsJsonObject("espaldas").entrySet()) ESPALDAS.put(UUID.fromString(e.getKey()), e.getValue().getAsInt());
 		} catch (Exception e) { LoggerFactory.getLogger("TOD5").warn("TOD5 mochilas: no entendí ({})", e.getMessage()); }
 	}
+	public static ItemStack puesta() { return puesta; }
 	public static void limpiar() { puesta = ItemStack.EMPTY; ESPALDAS.clear(); }
 
 	/** Lo que se dibuja en la espalda de ese jugador (vacio = no tiene). */

@@ -19,6 +19,7 @@ public class PantallaAjustes extends Screen {
 	}
 
 	private Component textoRareza() { return Component.literal("Efectos de rareza: " + (Ajustes.rendimiento() ? "Rendimiento" : "Completos")); }
+	private Component textoArmadura() { return Component.literal("Armadura en la barra: " + (Ajustes.armadura() ? "Sí" : "No")); }
 	private Component textoRuleta() { return Component.literal("Ruleta de anuncios: " + Ajustes.ruleta().texto); }
 
 	@Override
@@ -28,6 +29,8 @@ public class PantallaAjustes extends Screen {
 			.bounds(x, y, bw, 20).build());
 		this.addRenderableWidget(Button.builder(textoRareza(), b -> { Ajustes.rendimiento(!Ajustes.rendimiento()); b.setMessage(textoRareza()); })
 			.bounds(x, y + 40, bw, 20).build());
+		this.addRenderableWidget(Button.builder(textoArmadura(), b -> { Ajustes.armadura(!Ajustes.armadura()); b.setMessage(textoArmadura()); })
+			.bounds(x, y + 80, bw, 20).build());
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
 			.bounds(this.width / 2 - 100, this.height - 32, 200, 20).build());
 	}
@@ -48,5 +51,7 @@ public class PantallaAjustes extends Screen {
 		String ayuda2 = Ajustes.rendimiento() ? "Sin animaciones ni partículas (para PC con pocos recursos)."
 			: "Brillos animados y partículas en los ítems con rareza.";
 		g.drawString(this.font, ayuda2, (this.width - this.font.width(ayuda2)) / 2, this.height / 2 + 42, 0xFFAAAAAA, false);
+		String ayuda3 = Ajustes.armadura() ? "Tu armadura a la izquierda de la barra y la mochila a la derecha." : "No se muestra la armadura al lado de la barra.";
+		g.drawString(this.font, ayuda3, (this.width - this.font.width(ayuda3)) / 2, this.height / 2 + 82, 0xFFAAAAAA, false);
 	}
 }

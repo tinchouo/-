@@ -20,6 +20,7 @@ public final class Ajustes {
 	private static final Path ARCHIVO = FabricLoader.getInstance().getConfigDir().resolve("tod5.properties");
 	private static PosRuleta ruleta = PosRuleta.CENTRO;
 	private static boolean rendimiento;   // efectos de rareza: false = completos, true = rendimiento (sin animaciones ni particulas)
+	private static boolean armadura = true;   // armadura y mochila al lado de la barra de abajo
 	private static boolean cargado;
 
 	private Ajustes() {}
@@ -30,6 +31,9 @@ public final class Ajustes {
 	public static boolean rendimiento() { cargar(); return rendimiento; }
 	public static void rendimiento(boolean r) { cargar(); rendimiento = r; guardar(); }
 
+	public static boolean armadura() { cargar(); return armadura; }
+	public static void armadura(boolean b) { cargar(); armadura = b; guardar(); }
+
 	private static void cargar() {
 		if (cargado) return;
 		cargado = true;
@@ -38,6 +42,7 @@ public final class Ajustes {
 		try (Reader r = Files.newBufferedReader(ARCHIVO)) {
 			p.load(r);
 			rendimiento = Boolean.parseBoolean(p.getProperty("rendimiento", "false"));
+			armadura = Boolean.parseBoolean(p.getProperty("armadura", "true"));
 			ruleta = PosRuleta.valueOf(p.getProperty("ruleta", "CENTRO"));   // si estaba "APAGADA" (version vieja) vuelve al centro
 		} catch (IOException | IllegalArgumentException e) { ruleta = PosRuleta.CENTRO; }
 	}
@@ -46,6 +51,7 @@ public final class Ajustes {
 		Properties p = new Properties();
 		p.setProperty("ruleta", ruleta.name());
 		p.setProperty("rendimiento", Boolean.toString(rendimiento));
+		p.setProperty("armadura", Boolean.toString(armadura));
 		try (Writer w = Files.newBufferedWriter(ARCHIVO)) { p.store(w, "TRUCOFDEATH: ajustes del jugador"); } catch (IOException ignored) {}
 	}
 }

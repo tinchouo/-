@@ -47,6 +47,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	Equipos equipos;
 	Mochilas mochilas;
 	Totems totems;
+	final Ordenar ordenar = new Ordenar();
 	Varita varita;
 	Tablero tablero() { return tablero; }
 	boolean tieneElMod(Player p) { return saludaron.contains(p.getUniqueId()); }
