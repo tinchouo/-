@@ -414,6 +414,7 @@ final class Crafteos implements Listener {
 		if (plugin.flechas != null) a.add(plugin.flechas.itemParaTablet());
 		if (plugin.varita != null) a.add(plugin.varita.itemParaTablet());   // la varita de los editores
 		if (plugin.mochilas != null) plugin.mochilas.itemsParaTablet().forEach(a::add);   // las mochilas (hasta que haya tienda)
+		if (plugin.totems != null) plugin.totems.itemsParaTablet().forEach(a::add);   // los totems
 		if (plugin.saltos != null) plugin.saltos.itemsParaTablet().forEach(a::add);   // orbes y pads
 		if (plugin.plataformas != null) a.add(plugin.plataformas.itemParaTablet());   // la flecha de gravedad, para ponerla desde el creativo
 		return a;
