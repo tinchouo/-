@@ -29,6 +29,7 @@ final class PanelItems extends Panel {
 	private final Tablet t;
 	private String id;
 	private int color = 0xFFFFFF; private boolean brillo;
+	private String rareza = ""; private boolean unico;
 	private final EditorTexto base = new EditorTexto(false, 40), nombre = new EditorTexto(false, 40), desc = new EditorTexto(true, 200);
 	private boolean sucio; private long graciaHasta;
 	private String confirmar; private long confirmarHasta;
@@ -58,12 +59,15 @@ final class PanelItems extends Panel {
 		if (lore != null) for (Component l : lore.lines()) { if (sb.length() > 0) sb.append('\n'); sb.append(l.getString()); }
 		this.desc.ponerPlano(sb.toString());
 		this.brillo = it.hasFoil();
+		ar.tod5.menu.Rareza.Datos rd = ar.tod5.menu.Rareza.de(it);
+		this.rareza = rd.rareza() == null ? "" : rd.rareza().id; this.unico = rd.unico();
 		sinFoco(); this.sucio = false; this.confirmar = null;
 	}
 	private void nuevo() {
 		guardarSiHaceFalta();
 		this.id = "i" + Long.toString(System.currentTimeMillis(), 36);
 		this.base.ponerPlano("paper"); this.nombre.ponerPlano("Item nuevo"); this.desc.ponerPlano(""); this.color = 0xFFFFFF; this.brillo = false;
+		this.rareza = ""; this.unico = false;
 		sinFoco(); this.nombre.foco(true);
 		mandarGuardar();
 	}
@@ -72,6 +76,7 @@ final class PanelItems extends Panel {
 		JsonObject i = new JsonObject();
 		i.addProperty("id", this.id); i.addProperty("base", this.base.plano().trim()); i.addProperty("nombre", this.nombre.plano().trim());
 		i.addProperty("color", this.color); i.addProperty("desc", this.desc.plano()); i.addProperty("brillo", this.brillo);
+		i.addProperty("rareza", this.rareza); i.addProperty("unico", this.unico);
 		JsonObject o = new JsonObject(); o.addProperty("a", "item_guardar"); o.add("item", i);
 		ar.tod5.menu.Conexion.accion(o.toString());
 		this.sucio = false; this.graciaHasta = Util.getMillis() + 4000;
@@ -141,6 +146,20 @@ final class PanelItems extends Panel {
 			cx += 14;
 		}
 		t.boton(g, "Brillo: " + (this.brillo ? "sí" : "no"), cx + 6, ey - 1, this.brillo, mx, my, () -> { this.brillo = !this.brillo; this.sucio = true; });
+		ey += 18;
+		// rareza (como Fortnite) y la etiqueta Único (se le puede poner a cualquier item)
+		g.drawString(f, "Rareza", ex, ey + 3, Tablet.GRIS_TEXTO, false);
+		ar.tod5.menu.Rareza rz = ar.tod5.menu.Rareza.porId(this.rareza);
+		String rt = rz == null ? "Sin rareza" : rz.nombre + " " + "★".repeat(rz.estrellas);
+		int rw = t.boton(g, rt, ex + 48, ey - 1, rz != null, mx, my, () -> {
+			java.util.List<Selector.Opcion> ops = new java.util.ArrayList<>();
+			ops.add(new Selector.Opcion("", "Sin rareza", "Se ve como un ítem normal", 0, ""));
+			for (ar.tod5.menu.Rareza r : ar.tod5.menu.Rareza.values())
+				ops.add(new Selector.Opcion(r.id, r.nombre, "★".repeat(r.estrellas), 0xFF000000 | r.color, ""));
+			t.abrirSelector(new Selector("Rareza", ops, this.rareza, "", v -> { this.rareza = v; this.sucio = true; }));
+		});
+		if (rz != null) g.fill(ex + 44, ey + 1, ex + 46, ey + 11, 0xFF000000 | rz.color);
+		t.boton(g, "Único: " + (this.unico ? "sí" : "no"), ex + 48 + rw + 4, ey - 1, this.unico, mx, my, () -> { this.unico = !this.unico; this.sucio = true; });
 		ey += 18;
 		g.drawString(f, "Descripción", ex, ey, Tablet.GRIS_TEXTO, false);
 		texto(g, this.desc, ex, ey + 10, ew, 32, 0xFFAAAAAA);

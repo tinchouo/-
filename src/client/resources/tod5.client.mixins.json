@@ -28,7 +28,13 @@
 		"EntityHitboxDebugRendererMixin",
 		"ScreenEffectRendererMixin",
 		"DisplayRendererMixin",
-		"EntityRendererMixin"
+		"EntityRendererMixin",
+		"GuiGraphicsMixin",
+		"GuiGraphicsInvoker",
+		"TooltipRenderUtilMixin",
+		"AbstractContainerScreenMixin",
+		"ItemEntityRenderStateMixin",
+		"ItemEntityRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

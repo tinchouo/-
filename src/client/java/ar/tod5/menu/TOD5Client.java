@@ -18,6 +18,7 @@ public class TOD5Client implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(SaltosCliente::tick);
 		ClientTickEvents.START_CLIENT_TICK.register(PlataformasCliente::inicioTick);
 		ClientTickEvents.END_CLIENT_TICK.register(PlataformasCliente::finTick);
+		ClientTickEvents.END_CLIENT_TICK.register(RarezaPiso::tick);
 		Conexion.registrar();
 		Ruleta.registrar();
 		ComandoRuleta.registrar();

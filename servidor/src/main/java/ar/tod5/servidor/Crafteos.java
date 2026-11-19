@@ -361,10 +361,18 @@ final class Crafteos implements Listener {
 		m.lore(lore.isEmpty() ? null : lore);
 		m.setEnchantmentGlintOverride(j.has("brillo") && j.get("brillo").getAsBoolean() ? Boolean.TRUE : null);
 		m.getPersistentDataContainer().set(marcaItem, PersistentDataType.STRING, id);
+		// rareza (como Fortnite; la dibuja el mod) y si es unico
+		String rz = j.has("rareza") ? j.get("rareza").getAsString() : "";
+		if (RAREZAS.contains(rz)) m.getPersistentDataContainer().set(RAREZA, PersistentDataType.STRING, rz);
+		else m.getPersistentDataContainer().remove(RAREZA);
+		if (j.has("unico") && j.get("unico").getAsBoolean()) m.getPersistentDataContainer().set(UNICO, PersistentDataType.BYTE, (byte) 1);
+		else m.getPersistentDataContainer().remove(UNICO);
 		it.setItemMeta(m);
 		items.put(id, it); guardar();
 		return id;
 	}
+	static final NamespacedKey RAREZA = new NamespacedKey("tod5", "rareza"), UNICO = new NamespacedKey("tod5", "unico");
+	static final java.util.Set<String> RAREZAS = java.util.Set.of("comun", "poco_comun", "raro", "epico", "legendario", "mitico", "exotico");
 	/** Guarda como item del evento el que tiene en la mano (por si lo armaste con un yunque o comandos). */
 	String itemDeLaMano(Player p) {
 		ItemStack mano = p.getInventory().getItemInMainHand();

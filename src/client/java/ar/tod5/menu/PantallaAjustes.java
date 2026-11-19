@@ -18,6 +18,7 @@ public class PantallaAjustes extends Screen {
 		this.anterior = anterior;
 	}
 
+	private Component textoRareza() { return Component.literal("Efectos de rareza: " + (Ajustes.rendimiento() ? "Rendimiento" : "Completos")); }
 	private Component textoRuleta() { return Component.literal("Ruleta de anuncios: " + Ajustes.ruleta().texto); }
 
 	@Override
@@ -25,6 +26,8 @@ public class PantallaAjustes extends Screen {
 		int bw = 240, x = this.width / 2 - bw / 2, y = this.height / 2 - 24;
 		this.addRenderableWidget(Button.builder(textoRuleta(), b -> { Ajustes.ruleta(Ajustes.ruleta().siguiente()); b.setMessage(textoRuleta()); })
 			.bounds(x, y, bw, 20).build());
+		this.addRenderableWidget(Button.builder(textoRareza(), b -> { Ajustes.rendimiento(!Ajustes.rendimiento()); b.setMessage(textoRareza()); })
+			.bounds(x, y + 40, bw, 20).build());
 		this.addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
 			.bounds(this.width / 2 - 100, this.height - 32, 200, 20).build());
 	}
@@ -42,5 +45,8 @@ public class PantallaAjustes extends Screen {
 			case ESQUINA -> "La ruleta sale más chica, abajo a la derecha.";
 		};
 		g.drawString(this.font, ayuda, (this.width - this.font.width(ayuda)) / 2, this.height / 2 + 2, 0xFFAAAAAA, false);
+		String ayuda2 = Ajustes.rendimiento() ? "Sin animaciones ni partículas (para PC con pocos recursos)."
+			: "Brillos animados y partículas en los ítems con rareza.";
+		g.drawString(this.font, ayuda2, (this.width - this.font.width(ayuda2)) / 2, this.height / 2 + 42, 0xFFAAAAAA, false);
 	}
 }
