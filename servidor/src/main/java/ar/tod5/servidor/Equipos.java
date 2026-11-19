@@ -28,18 +28,27 @@ import org.bukkit.scoreboard.Team;
 
 /**
  * Los equipos del evento.
- *  - por dentro son equipos de Minecraft (scoreboard): el color del nombre, etc. El mod dibuja arriba de la cabeza la vida, el nombre y <Equipo>.
+ *  - NO usa los equipos de Minecraft (scoreboard): los cambian todo. El server le manda al mod quien esta en que equipo (canal tod5:equipos)
+ *    y el mod dibuja arriba de la cabeza la vida, el nombre y <Equipo>. Los editores salen como [Admin] amarillo en el Tab y arriba de la cabeza.
+ *  - cada equipo tiene su chat privado y sus notas (con autor, dia y hora; se marcan como hechas o que ya no sirven).
  *  - el admin (editor) hace todo desde la tablet: crear y borrar equipos, meter, sacar y mover gente, elegir lider, y la whitelist.
  *  - el primero que entra a un equipo es el lider; si el lider se va, pasa a ser lider el que hace mas tiempo que esta (orden de llegada).
  *  - el lider invita y echa. Cualquiera se puede ir. Las invitaciones llegan por el chat (clic para aceptar o rechazar) con /equipo.
  * Textos para los jugadores: en castellano neutro.
  */
 final class Equipos implements Listener, CommandExecutor {
+	static final class Msg { long t; String uuid, quien, texto; }
+	static final class Nota { int id; String titulo, texto, autor; long t; int dia; String estado = "activa"; }   // estado: activa | hecha | obsoleta
 	static final class Equipo {
 		String id, nombre, color = "yellow";
 		List<String> miembros = new ArrayList<>();   // uuids, por orden de llegada
 		String lider;
+		List<Msg> chat = new ArrayList<>();
+		List<Nota> notas = new ArrayList<>();
+		int proximaNota = 1;
 	}
+	static final String CANAL = "tod5:equipos";
+	private static final int MAX_CHAT = 100, MAX_LETRAS_CHAT = 120, MAX_NOTAS = 60;
 	/** Los colores que deja usar Minecraft para un equipo (con su nombre para mostrar). */
 	static final LinkedHashMap<String, String> COLORES = new LinkedHashMap<>();
 	static {
@@ -68,7 +77,8 @@ final class Equipos implements Listener, CommandExecutor {
 				for (JsonElement e : o.getAsJsonArray("equipos")) { Equipo q = GSON.fromJson(e, Equipo.class); if (q != null && q.id != null) equipos.put(q.id, q); }
 			}
 		} catch (Exception e) { plugin.getLogger().severe("No pude leer los equipos: " + e.getMessage()); }
-		for (Equipo q : equipos.values()) aplicar(q);
+		// los equipos de Minecraft de versiones anteriores ya no se usan: se borran
+		try { for (Team t : tablero().getTeams()) if (t.getName().startsWith("tod5_")) t.unregister(); } catch (Exception ignorado) { }
 		plugin.getLogger().info("Equipos: " + equipos.size());
 	}
 	private void guardar() {
@@ -78,36 +88,40 @@ final class Equipos implements Listener, CommandExecutor {
 		try { Files.writeString(archivo().toPath(), GSON.toJson(o), StandardCharsets.UTF_8); }
 		catch (Exception e) { plugin.getLogger().severe("No pude guardar los equipos: " + e.getMessage()); }
 	}
-	/** Guarda, actualiza el equipo de Minecraft y la tablet de todos. */
+	/** Guarda y actualiza la tablet y el mod de todos. */
 	private void cambio(Equipo q) {
 		guardar();
-		if (q != null) aplicar(q);
 		plugin.tablero().sincronizarTodos();
+		mandarTodos();
 	}
 
-	// ================= el equipo de Minecraft =================
+	// ================= lo que va al mod (y el Tab) =================
 	private Scoreboard tablero() { return Bukkit.getScoreboardManager().getMainScoreboard(); }
-	private static String nombreMc(Equipo q) { return "tod5_" + q.id; }
 	private static NamedTextColor colorMc(String c) { NamedTextColor n = NamedTextColor.NAMES.value(c); return n == null ? NamedTextColor.WHITE : n; }
-	/** Deja el equipo de Minecraft igual que el nuestro (nombre, color y miembros). */
-	private void aplicar(Equipo q) {
-		Team t = tablero().getTeam(nombreMc(q));
-		if (t == null) t = tablero().registerNewTeam(nombreMc(q));
-		t.displayName(Component.text(q.nombre));
-		t.color(colorMc(q.color));
-		Set<String> deberian = new HashSet<>();
-		for (String u : q.miembros) { String n = nombre(u); if (n != null) deberian.add(n); }
-		for (String e : new ArrayList<>(t.getEntries())) if (!deberian.contains(e)) t.removeEntry(e);
-		for (String n : deberian) if (!t.hasEntry(n)) t.addEntry(n);
-	}
 	private static String nombre(String uuid) {
 		try { OfflinePlayer op = Bukkit.getOfflinePlayer(UUID.fromString(uuid)); return op.getName(); } catch (Exception e) { return null; }
 	}
-	@EventHandler
-	public void alEntrar(PlayerJoinEvent e) {   // por si cambio de nombre
-		Equipo q = de(e.getPlayer().getUniqueId());
-		if (q != null) aplicar(q);
+	/** Le dice a todos los mods quien es admin y de que equipo es cada uno (para el cartel de la cabeza), y pone el nombre del Tab. */
+	void mandarTodos() {
+		JsonObject todos = new JsonObject();
+		for (Player p : Bukkit.getOnlinePlayers()) {
+			JsonObject j = new JsonObject();
+			Equipo q = de(p.getUniqueId());
+			boolean admin = plugin.tablero().esEditor(p);
+			if (q != null) { j.addProperty("n", q.nombre); j.addProperty("c", colorMc(q.color).value()); }
+			if (admin) j.addProperty("a", true);
+			if (q != null || admin) todos.add(p.getUniqueId().toString(), j);
+			// el Tab: los admins [Admin] en amarillo; todos los demas, blanco (sin color de equipo)
+			p.playerListName(admin ? Component.text("[Admin] " + p.getName(), NamedTextColor.YELLOW) : null);
+		}
+		JsonObject o = new JsonObject(); o.add("j", todos);
+		byte[] datos = o.toString().getBytes(StandardCharsets.UTF_8);
+		for (Player p : Bukkit.getOnlinePlayers()) p.sendPluginMessage(plugin, CANAL, datos);
 	}
+	@EventHandler
+	public void alEntrar(PlayerJoinEvent e) { Bukkit.getScheduler().runTaskLater(plugin, this::mandarTodos, 40L); }
+	@EventHandler
+	public void alSalir(org.bukkit.event.player.PlayerQuitEvent e) { Bukkit.getScheduler().runTaskLater(plugin, this::mandarTodos, 2L); }
 
 	// ================= consultas =================
 	Equipo de(UUID u) { for (Equipo q : equipos.values()) if (q.miembros.contains(u.toString())) return q; return null; }
@@ -124,8 +138,6 @@ final class Equipos implements Listener, CommandExecutor {
 	void borrar(String id) {
 		Equipo q = equipos.remove(id);
 		if (q == null) return;
-		Team t = tablero().getTeam(nombreMc(q));
-		if (t != null) t.unregister();
 		cambio(null);
 	}
 	/** Lo mete en este equipo (sacandolo del que estaba). Si el equipo estaba vacio, queda de lider. */
@@ -138,7 +150,6 @@ final class Equipos implements Listener, CommandExecutor {
 		q.miembros.add(u.toString());
 		if (q.lider == null || !q.miembros.contains(q.lider)) q.lider = u.toString();
 		invitaciones.remove(u);
-		if (antes != null) aplicar(antes);
 		cambio(q);
 	}
 	private void sacarDe(Equipo q, UUID u) {
@@ -167,6 +178,21 @@ final class Equipos implements Listener, CommandExecutor {
 		JsonArray inv = new JsonArray();
 		for (Player o2 : Bukkit.getOnlinePlayers()) if (!q.miembros.contains(o2.getUniqueId().toString())) inv.add(o2.getName());
 		o.add("invitables", inv);
+		JsonArray chat = new JsonArray();
+		for (int i = Math.max(0, q.chat.size() - 60); i < q.chat.size(); i++) {
+			Msg m = q.chat.get(i); JsonObject j = new JsonObject();
+			j.addProperty("t", m.t); j.addProperty("uuid", m.uuid); j.addProperty("quien", m.quien); j.addProperty("texto", m.texto);
+			chat.add(j);
+		}
+		o.add("chat", chat);
+		JsonArray notas = new JsonArray();
+		for (Nota n : q.notas) {
+			JsonObject j = new JsonObject();
+			j.addProperty("id", n.id); j.addProperty("titulo", n.titulo); j.addProperty("texto", n.texto); j.addProperty("autor", n.autor);
+			j.addProperty("t", n.t); j.addProperty("dia", n.dia); j.addProperty("estado", n.estado);
+			notas.add(j);
+		}
+		o.add("notas", notas);
 		return o;
 	}
 	private JsonObject json(Equipo q) {
@@ -243,9 +269,46 @@ final class Equipos implements Listener, CommandExecutor {
 				avisarEquipo(q, otro.getName() + " fue expulsado del equipo.");
 				if (otro.getPlayer() != null) otro.getPlayer().sendMessage(Component.text("Te expulsaron del equipo " + q.nombre + ".", NamedTextColor.RED));
 			}
+			case "equipo_chat" -> {
+				if (q == null) return true;
+				String t = limpio(o.has("texto") ? o.get("texto").getAsString() : "", MAX_LETRAS_CHAT);
+				if (t.isEmpty()) return true;
+				Msg m = new Msg(); m.t = System.currentTimeMillis(); m.uuid = p.getUniqueId().toString(); m.quien = p.getName(); m.texto = t;
+				q.chat.add(m);
+				while (q.chat.size() > MAX_CHAT) q.chat.remove(0);
+				guardar();
+				sincronizarEquipo(q);
+			}
+			case "equipo_nota" -> {
+				if (q == null) return true;
+				String tit = limpio(o.has("titulo") ? o.get("titulo").getAsString() : "", 40), tx = limpio(o.has("texto") ? o.get("texto").getAsString() : "", 200);
+				if (tit.isEmpty() && tx.isEmpty()) return true;
+				if (tit.isEmpty()) tit = "Nota";
+				Nota n = new Nota(); n.id = q.proximaNota++; n.titulo = tit; n.texto = tx; n.autor = p.getName(); n.t = System.currentTimeMillis(); n.dia = plugin.tablero().dia();
+				q.notas.add(0, n);
+				while (q.notas.size() > MAX_NOTAS) q.notas.remove(q.notas.size() - 1);
+				guardar();
+				sincronizarEquipo(q);
+			}
+			case "equipo_nota_estado" -> {
+				if (q == null) return true;
+				int id = o.has("id") ? o.get("id").getAsInt() : -1;
+				String est = o.has("estado") ? o.get("estado").getAsString() : "";
+				if (!List.of("activa", "hecha", "obsoleta").contains(est)) return true;
+				for (Nota n : q.notas) if (n.id == id) { n.estado = est; guardar(); sincronizarEquipo(q); break; }
+			}
 			default -> {}
 		}
 		return true;
+	}
+	/** Saca los caracteres raros y corta al largo maximo. */
+	private static String limpio(String s, int max) {
+		String t = s.replaceAll("[\\p{Cntrl}]", " ").replaceAll(" +", " ").trim();
+		return t.length() > max ? t.substring(0, max) : t;
+	}
+	/** Actualiza la tablet solo de los que estan conectados en este equipo. */
+	private void sincronizarEquipo(Equipo q) {
+		for (String u : q.miembros) { Player pl = Bukkit.getPlayer(UUID.fromString(u)); if (pl != null) plugin.tablero().sincronizar(pl); }
 	}
 	/** Acciones del panel del admin. */
 	void accionAdmin(Player p, String a, JsonObject o) {

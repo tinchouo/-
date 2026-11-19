@@ -37,7 +37,6 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scoreboard.Team;
 
 /**
  * Las misiones del evento. Se arman en la tablet (modo admin > Misiones), sin tocar archivos.
@@ -189,17 +188,17 @@ final class Misiones implements Listener {
 
 	// ================= de quien es el progreso =================
 	/** El equipo del jugador: su "team" del juego (/team). null = no tiene. */
-	private static String equipoDe(Player p) {
-		Team t = Bukkit.getScoreboardManager().getMainScoreboard().getEntryTeam(p.getName());
-		return t == null ? null : t.getName();
+	private String equipoDe(Player p) {
+		Equipos.Equipo q = plugin.equipos == null ? null : plugin.equipos.de(p.getUniqueId());
+		return q == null ? null : "tod5_" + q.id;   // el mismo nombre de siempre, asi no se pierde el progreso guardado
 	}
-	private static String dueno(Mision m, Player p) {
+	private String dueno(Mision m, Player p) {
 		String eq = m.equipo ? equipoDe(p) : null;
 		return eq != null ? "e:" + eq : "j:" + p.getUniqueId();
 	}
 	private Prog prog(Mision m, String dueno) { return progreso.computeIfAbsent(m.id, k -> new HashMap<>()).computeIfAbsent(dueno, k -> new Prog()); }
 	/** Los conectados que comparten ese progreso. */
-	private static List<Player> companeros(Mision m, String dueno) {
+	private List<Player> companeros(Mision m, String dueno) {
 		List<Player> l = new ArrayList<>();
 		for (Player p : Bukkit.getOnlinePlayers()) if (dueno(m, p).equals(dueno)) l.add(p);
 		return l;

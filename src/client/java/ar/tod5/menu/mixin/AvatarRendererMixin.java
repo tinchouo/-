@@ -11,7 +11,7 @@ import net.minecraft.client.renderer.state.CameraRenderState;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.Avatar;
-import net.minecraft.world.scores.PlayerTeam;
+import ar.tod5.menu.EquiposCliente;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -22,7 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * - Gravedad dada vuelta: los jugadores se ven cabeza abajo.
  * - El cartel de arriba de la cabeza (solo ahi, no en el Tab), de arriba hacia abajo:
  *     "20 ❤" (corazon rojo) y, si tiene absorcion, "4 ❤" (corazon amarillo) al lado
- *     el nombre, del color del equipo (blanco si no tiene)
+ *     el nombre, del color del equipo (blanco si no tiene); los admins: "[Admin] nombre" en amarillo
  *     "<Equipo>" del color del equipo (si tiene)
  */
 @Mixin(AvatarRenderer.class)
@@ -40,10 +40,15 @@ public abstract class AvatarRendererMixin {
 		net.minecraft.world.item.ItemStack m = ar.tod5.menu.MochilasCliente.espalda(e.getUUID());
 		if (!m.isEmpty()) net.minecraft.client.Minecraft.getInstance().getItemModelResolver().updateForLiving(c.tod5$mochila(), m, net.minecraft.world.item.ItemDisplayContext.HEAD, e);
 		if (s.nameTag == null) { c.tod5$vida(null); return; }   // Minecraft decidio no mostrar el nombre (lejos, invisible, regla del equipo...)
-		PlayerTeam eq = e.getTeam() instanceof PlayerTeam t ? t : null;
-		ChatFormatting color = eq != null && eq.getColor() != null && eq.getColor().isColor() ? eq.getColor() : ChatFormatting.WHITE;
-		s.nameTag = Component.literal(e.getName().getString()).withStyle(color);
-		s.scoreText = eq != null ? Component.literal("<" + eq.getDisplayName().getString() + ">").withStyle(color) : null;
+		EquiposCliente.Info inf = EquiposCliente.de(e.getUUID());
+		String nombre = e.getName().getString();
+		ChatFormatting colorAdmin = ChatFormatting.YELLOW;
+		if (inf != null && inf.admin()) {
+			s.nameTag = Component.literal("[Admin] " + nombre).withStyle(colorAdmin);
+		} else {
+			s.nameTag = Component.literal(nombre).withStyle(s2 -> inf != null && inf.rgb() >= 0 ? s2.withColor(inf.rgb()) : s2.withColor(ChatFormatting.WHITE));
+		}
+		s.scoreText = inf != null && inf.equipo() != null ? Component.literal("<" + inf.equipo() + ">").withStyle(s2 -> s2.withColor(inf.rgb() >= 0 ? inf.rgb() : 0xFFFFFF)) : null;
 		int vida = (int) Math.ceil(Math.max(0, e.getHealth()));
 		int extra = (int) Math.ceil(Math.max(0, e.getAbsorptionAmount()));
 		MutableComponent v = Component.literal(vida + " ").withStyle(ChatFormatting.WHITE).append(Component.literal("❤").withStyle(ChatFormatting.RED));

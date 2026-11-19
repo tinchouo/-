@@ -45,9 +45,10 @@ public class Tablet extends Screen {
 	private final PanelItems itemsAdmin = new PanelItems(this);
 	private final PanelMisiones misionesAdmin = new PanelMisiones(this);
 	private final PanelEquipos equiposAdmin = new PanelEquipos(this);
+	private final PanelEquipo equipoJugador = new PanelEquipo(this);
 	/** El panel del modo admin que se esta mostrando (null si no es una seccion de admin). */
 	private Panel panel() {
-		return switch (this.seccion) { case ANUNCIOS -> this.anuncios; case ADMIN_CRAFTEOS -> this.crafteosAdmin; case ITEMS -> this.itemsAdmin; case ADMIN_MISIONES -> this.misionesAdmin; case ADMIN_EQUIPOS -> this.equiposAdmin; default -> null; };
+		return switch (this.seccion) { case ANUNCIOS -> this.anuncios; case ADMIN_CRAFTEOS -> this.crafteosAdmin; case ITEMS -> this.itemsAdmin; case ADMIN_MISIONES -> this.misionesAdmin; case ADMIN_EQUIPOS -> this.equiposAdmin; case EQUIPO -> this.equipoJugador; default -> null; };
 	}
 	private boolean textoActivo;   // Minecraft solo manda letras si se le avisa que hay un cuadro de texto activo
 	private static boolean esAdmin(Seccion s) { return s == Seccion.ANUNCIOS || s == Seccion.ADMIN_CRAFTEOS || s == Seccion.ITEMS || s == Seccion.ADMIN_MISIONES || s == Seccion.ADMIN_EQUIPOS; }
@@ -139,7 +140,7 @@ public class Tablet extends Screen {
 	public void added() { super.added(); sonido("tablet_abrir"); }
 
 	@Override
-	public void removed() { this.selector = null; this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); this.misionesAdmin.guardarSiHaceFalta(); this.equiposAdmin.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
+	public void removed() { this.selector = null; this.anuncios.guardarSiHaceFalta(); this.crafteosAdmin.guardarSiHaceFalta(); this.itemsAdmin.guardarSiHaceFalta(); this.misionesAdmin.guardarSiHaceFalta(); this.equiposAdmin.guardarSiHaceFalta(); this.equipoJugador.guardarSiHaceFalta(); ultima = this.seccion; Vistos.guardar(); sonido("tablet_cerrar"); super.removed(); }
 
 	/** Sonidos propios de la tablet (abrir, cerrar, tocar). */
 	private void sonido(String nombre) {
@@ -152,7 +153,7 @@ public class Tablet extends Screen {
 	public boolean keyPressed(KeyEvent event) {
 		if (this.selector != null) { if (event.isEscape()) this.selector = null; else this.selector.tecla(event); return true; }
 		if (panel() != null && panel().tecla(event)) return true;   // escribiendo un anuncio
-		if (TeclaTablet.TECLA.matches(event)) { this.onClose(); return true; }   // la misma tecla la cierra
+		if (TeclaTablet.TECLA.matches(event) && !(panel() != null && panel().escribiendo())) { this.onClose(); return true; }   // la misma tecla la cierra
 		return super.keyPressed(event);
 	}
 
@@ -295,7 +296,7 @@ public class Tablet extends Screen {
 				case NOVEDADES -> datos.novedadesNuevas();
 				case MISIONES -> datos.misionesParaReclamar();
 				case CRAFTEOS -> datos.crafteosNuevos();
-				case EQUIPO -> datos.equipo == null ? 0 : datos.equipo.mensajesNuevos;
+				case EQUIPO -> datos.equipo == null ? 0 : datos.equipo.mensajesNuevos();
 				case RECOMPENSAS -> datos.recompensas.size();
 				default -> 0;
 			};
@@ -313,9 +314,8 @@ public class Tablet extends Screen {
 			case NOVEDADES -> novedades(g, cx, cy, cw, ch, mx, my);
 			case MISIONES -> misiones(g, cx, cy, cw, ch, mx, my);
 			case CRAFTEOS -> crafteos(g, cx, cy, cw, mx, my);
-			case EQUIPO -> equipo(g, cx, cy, cw, ch, mx, my);
 			case RECOMPENSAS -> recompensas(g, cx, cy, cw, ch, mx, my);
-			case ANUNCIOS, ADMIN_CRAFTEOS, ITEMS, ADMIN_MISIONES, ADMIN_EQUIPOS -> {
+			case EQUIPO, ANUNCIOS, ADMIN_CRAFTEOS, ITEMS, ADMIN_MISIONES, ADMIN_EQUIPOS -> {
 				if (this.selector != null) panel().dibujar(g, datos, cx, cy, cw, ch, -10000, -10000);   // con la ventanita abierta, lo de atras no reacciona
 				else panel().dibujar(g, datos, cx, cy, cw, ch, mx, my);
 			}
@@ -766,62 +766,5 @@ public class Tablet extends Screen {
 		ar.tod5.menu.Conexion.accion(o.toString());
 	}
 
-	// ---------- EQUIPO ----------
-	// ---------- EQUIPO (del jugador) ----------
-	private String confirmarSalir; private long confirmarHasta;
-	/** Tu equipo: los miembros (★ = lider, punto verde = conectado). El lider invita y expulsa; cualquiera puede salir. */
-	private void equipo(GuiGraphics g, int x, int y, int cw, int ch, int mx, int my) {
-		TabletDatos.Equipo eq = datos.equipo;
-		g.pose().pushMatrix(); g.pose().translate(x, y); g.pose().scale(1.25f, 1.25f);
-		g.drawString(this.font, eq.nombre, 0, 0, eq.color, false);
-		g.pose().popMatrix();
-		long ahora = net.minecraft.util.Util.getMillis();
-		if (this.confirmarSalir != null && ahora > this.confirmarHasta) this.confirmarSalir = null;
-		// arriba a la derecha: invitar (lider) y salir
-		int fx = x + cw;
-		boolean conf = "salir".equals(this.confirmarSalir);
-		String ts = conf ? "¿Seguro? Salir" : "Salir del equipo";
-		fx -= this.font.width(ts) + 10;
-		boton(g, ts, fx, y - 1, conf, mx, my, () -> {
-			if (conf) { accionEquipo("equipo_salir", ""); this.confirmarSalir = null; }
-			else { this.confirmarSalir = "salir"; this.confirmarHasta = net.minecraft.util.Util.getMillis() + 3000; }
-		});
-		if (eq.soyLider) {
-			String ti = "+ Invitar";
-			fx -= this.font.width(ti) + 13;
-			boton(g, ti, fx, y - 1, false, mx, my, () -> {
-				List<Selector.Opcion> ops = new ArrayList<>();
-				for (String n : eq.invitables) ops.add(new Selector.Opcion(n, n, "", 0, "Conectados"));
-				abrirSelector(new Selector("Invitar al equipo", ops, "", "No hay nadie conectado para invitar.", n -> { if (!n.isEmpty()) accionEquipo("equipo_invitar", n); }));
-			});
-		}
-		g.drawString(this.font, eq.miembros.size() + (eq.miembros.size() == 1 ? " miembro" : " miembros") + (eq.soyLider ? " · eres el líder" : ""), x, y + 14, GRIS_TEXTO, false);
-		int yy = y + 28, lw = Math.min(260, cw);
-		for (TabletDatos.Miembro m : eq.miembros) {
-			hundido(g, x, yy, lw, 16);
-			int nx = x + 5;
-			if (m.lider()) { g.drawString(this.font, "★", nx, yy + 4, AMARILLO, true); nx += 10; }
-			g.drawString(this.font, cortar(this.font, m.nombre(), lw - 90), nx, yy + 4, m.conectado() ? BLANCO : GRIS_TEXTO, true);
-			// conectado
-			g.fill(x + lw - 9, yy + 5, x + lw - 3, yy + 11, NEGRO);
-			g.fill(x + lw - 8, yy + 6, x + lw - 4, yy + 10, m.conectado() ? VERDE : SOMBRA);
-			// el lider puede expulsar a los demas
-			if (eq.soyLider && !m.lider()) {
-				String clave = "echar:" + m.nombre();
-				boolean c2 = clave.equals(this.confirmarSalir);
-				String te = c2 ? "¿Seguro?" : "Expulsar";
-				int bx = x + lw - 14 - this.font.width(te) - 10;
-				boton(g, te, bx, yy + 1, c2, mx, my, () -> {
-					if (c2) { accionEquipo("equipo_echar", m.nombre()); this.confirmarSalir = null; }
-					else { this.confirmarSalir = clave; this.confirmarHasta = net.minecraft.util.Util.getMillis() + 3000; }
-				});
-			}
-			yy += 18;
-		}
-	}
-	private void accionEquipo(String a, String nombre) {
-		com.google.gson.JsonObject o = new com.google.gson.JsonObject();
-		o.addProperty("a", a); o.addProperty("nombre", nombre);
-		ar.tod5.menu.Conexion.accion(o.toString());
-	}
+	// ---------- EQUIPO: ver PanelEquipo ----------
 }

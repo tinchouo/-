@@ -84,11 +84,21 @@ public class TabletDatos {
 	public record Miembro(String nombre, boolean conectado, String uuid, boolean lider) {
 		Miembro(String nombre, boolean conectado) { this(nombre, conectado, "", false); }
 	}
-	public record Mensaje(String hora, String quien, String texto) {}
-	public record Nota(String titulo, String texto, String autor) {}
+	/** Un mensaje del chat del equipo (t = cuando, en milisegundos). */
+	public record Mensaje(long t, String uuid, String quien, String texto) {}
+	/** Una nota del equipo. estado: activa | hecha | obsoleta. */
+	public record Nota(int id, String titulo, String texto, String autor, long t, int dia, String estado) {}
 	public static class Equipo {
 		String id = "", colorId = ""; boolean soyLider; List<String> invitables = new ArrayList<>();
-		String nombre; int color; int mensajesNuevos;
+		String nombre; int color;
+		/** Mensajes de los demas que todavia no viste (se marcan al mirar el chat). */
+		int mensajesNuevos() {
+			var yo = net.minecraft.client.Minecraft.getInstance().player;
+			String mio = yo == null ? "" : yo.getUUID().toString();
+			int n = 0;
+			for (Mensaje m : chat) if (!m.uuid().equals(mio) && !Vistos.visto("m:" + id + ":" + m.t())) n++;
+			return n;
+		}
 		List<Miembro> miembros = new ArrayList<>(); List<Mensaje> chat = new ArrayList<>(); List<Nota> notas = new ArrayList<>();
 	}
 
@@ -139,6 +149,14 @@ public class TabletDatos {
 			e.miembros.add(new Miembro(j.get("nombre").getAsString(), j.get("conectado").getAsBoolean(), j.get("uuid").getAsString(), j.get("lider").getAsBoolean()));
 		}
 		if (o.has("invitables")) for (JsonElement i : o.getAsJsonArray("invitables")) e.invitables.add(i.getAsString());
+		if (o.has("chat")) for (JsonElement c : o.getAsJsonArray("chat")) {
+			JsonObject j = c.getAsJsonObject();
+			e.chat.add(new Mensaje(j.get("t").getAsLong(), j.get("uuid").getAsString(), j.get("quien").getAsString(), j.get("texto").getAsString()));
+		}
+		if (o.has("notas")) for (JsonElement c : o.getAsJsonArray("notas")) {
+			JsonObject j = c.getAsJsonObject();
+			e.notas.add(new Nota(j.get("id").getAsInt(), j.get("titulo").getAsString(), j.get("texto").getAsString(), j.get("autor").getAsString(), j.get("t").getAsLong(), j.get("dia").getAsInt(), j.get("estado").getAsString()));
+		}
 		return e;
 	}
 
@@ -164,7 +182,7 @@ public class TabletDatos {
 		Mision d = diariasDe(hoy).stream().findFirst().orElse(null);
 		long cambiosHoy = novedades.stream().filter(n -> n.dia() == hoy && n.tipo().equals("cambio")).count();
 		String[] ultima = equipo != null
-			? new String[] { "EQUIPO", equipo.miembros.stream().filter(Miembro::conectado).count() + " / " + equipo.miembros.size() + " conectados", equipo.mensajesNuevos + " mensajes nuevos" }
+			? new String[] { "EQUIPO", equipo.miembros.stream().filter(Miembro::conectado).count() + " / " + equipo.miembros.size() + " conectados", equipo.mensajesNuevos() + " mensajes nuevos" }
 			: new String[] { "CRAFTEOS", crafteosNuevos() + " nuevos", "Mirá los crafteos nuevos" };
 		return new String[][] {
 			{ "NOVEDADES", novedadesNuevas() + " nuevas", novedades.isEmpty() ? "" : textoCorto(novedades.get(novedades.size() - 1)) },
@@ -297,15 +315,16 @@ public class TabletDatos {
 		d.misiones.add(ej("d" + (h - 1), "Conseguí 16 de obsidiana", "diaria", h - 1, false, "reclamada", "tener", "", Items.OBSIDIAN, 16, 16, List.of(it(Items.GOLD_NUGGET, 2), it(Items.COOKED_BEEF, 8))));
 		d.misiones.add(ej("o1", "el templo escondido del Aether", "opcional", 1, true, "en_curso", "ir", "", null, 0, 1, List.of(it(Items.TOTEM_OF_UNDYING, 1), it(Items.GOLD_NUGGET, 15), it(Items.DIAMOND, 4), it(Items.GOLDEN_APPLE, 2), it(Items.ENDER_PEARL, 8))));
 		d.misiones.add(ej("o2", "Juntá diamantes", "opcional", 1, false, "en_curso", "tener", "", Items.DIAMOND, 2, 4, List.of(it(Items.GOLD_NUGGET, 10), it(Items.RABBIT_HIDE, 16), it(Items.LEATHER, 8))));
-		Equipo e = new Equipo(); e.nombre = "Rejunte Morado"; e.color = 0xFFAA00AA; e.mensajesNuevos = 2;
+		Equipo e = new Equipo(); e.nombre = "Rejunte Morado"; e.color = 0xFFAA00AA; e.id = "demo";
 		e.miembros.add(new Miembro("tinchooide", true)); e.miembros.add(new Miembro("Jabbeerr", true)); e.miembros.add(new Miembro("rubiklikexd", true));
 		e.miembros.add(new Miembro("Lilross01", false)); e.miembros.add(new Miembro("Arielzunder55", false));
-		e.chat.add(new Mensaje("19:42", "Jabbeerr", "Encontré una fortaleza, dejé las coords en notas"));
-		e.chat.add(new Mensaje("19:43", "rubiklikexd", "Voy, llevo tótems"));
-		e.chat.add(new Mensaje("19:45", "tinchooide", "Esperen que termino la misión de obsidiana y voy para allá, que si no después no llego al evento de las 20 y me lo pierdo"));
-		e.chat.add(new Mensaje("19:46", "Jabbeerr", "dale"));
-		e.notas.add(new Nota("Fortaleza del Nether", "X 412  Y 70  Z -88", "Jabbeerr · día " + (h - 1)));
-		e.notas.add(new Nota("Base", "X -1200  Y 64  Z 340. El cofre de tótems es el de la izquierda, no lo vacíen.", "tinchooide · día 2"));
+		long ahora = System.currentTimeMillis();
+		e.chat.add(new Mensaje(ahora - 240000, "u1", "Jabbeerr", "Encontré una fortaleza, dejé las coords en notas"));
+		e.chat.add(new Mensaje(ahora - 180000, "u2", "rubiklikexd", "Voy, llevo tótems"));
+		e.chat.add(new Mensaje(ahora - 120000, "u3", "tinchooide", "Esperen que termino la misión de obsidiana y voy para allá, que si no después no llego al evento de las 20 y me lo pierdo"));
+		e.chat.add(new Mensaje(ahora - 60000, "u1", "Jabbeerr", "dale"));
+		e.notas.add(new Nota(2, "Fortaleza del Nether", "X 412  Y 70  Z -88", "Jabbeerr", ahora - 3600000, h - 1, "activa"));
+		e.notas.add(new Nota(1, "Base", "X -1200  Y 64  Z 340. El cofre de tótems es el de la izquierda, no lo vacíen.", "tinchooide", ahora - 86400000, 2, "hecha"));
 		d.equipo = e;
 		return d;
 	}

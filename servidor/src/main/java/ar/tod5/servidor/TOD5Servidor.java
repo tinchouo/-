@@ -91,6 +91,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		equipos = new Equipos(this);
 		equipos.cargar();
 		getServer().getPluginManager().registerEvents(equipos, this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Equipos.CANAL);
 		if (getCommand("equipo") != null) getCommand("equipo").setExecutor(equipos);
 		mochilas = new Mochilas(this);
 		getServer().getPluginManager().registerEvents(mochilas, this);

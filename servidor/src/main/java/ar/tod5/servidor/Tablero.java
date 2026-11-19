@@ -362,6 +362,7 @@ public class Tablero {
 				plugin.getConfig().set("editores", lista); plugin.saveConfig();
 				s.sendMessage(Component.text("Editores: " + lista, NamedTextColor.GREEN));
 				sincronizarTodos();
+				if (plugin.equipos != null) plugin.equipos.mandarTodos();
 			}
 			case "moneda" -> plugin.monedas.comando(s, args);
 			case "zona" -> plugin.desafios.comando(s, args);
