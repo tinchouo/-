@@ -151,15 +151,25 @@ final class Mochilas implements Listener {
 			else if (e.getClick() == ClickType.SWAP_OFFHAND) metiendo = e.getWhoClicked().getInventory().getItemInOffHand();
 			else metiendo = e.getCursor();
 		} else if (e.getAction() == InventoryAction.MOVE_TO_OTHER_INVENTORY) metiendo = e.getCurrentItem();
-		if (es(metiendo)) { e.setCancelled(true); avisoNoEntra(e.getWhoClicked()); }
+		if (llevaMochila(metiendo)) { e.setCancelled(true); avisoNoEntra(e.getWhoClicked()); }
 	}
 	@EventHandler(ignoreCancelled = true)
 	public void alArrastrar(InventoryDragEvent e) {
-		if (!(e.getView().getTopInventory().getHolder() instanceof Ventana) || !es(e.getOldCursor())) return;
+		if (!(e.getView().getTopInventory().getHolder() instanceof Ventana) || !llevaMochila(e.getOldCursor())) return;
 		int tope = e.getView().getTopInventory().getSize();
 		for (int s : e.getRawSlots()) if (s < tope) { e.setCancelled(true); avisoNoEntra(e.getWhoClicked()); return; }
 	}
-	private static void avisoNoEntra(org.bukkit.entity.HumanEntity h) { if (h instanceof Player p) p.sendActionBar(Component.text("Una mochila no entra dentro de otra.", NamedTextColor.YELLOW)); }
+	/** Es una mochila, o una shulker / bundle que lleva una mochila adentro (a cualquier profundidad). */
+	static boolean llevaMochila(ItemStack it) {
+		if (it == null || it.getType().isAir()) return false;
+		if (es(it)) return true;
+		if (!it.hasItemMeta()) return false;
+		org.bukkit.inventory.meta.ItemMeta m = it.getItemMeta();
+		if (m instanceof org.bukkit.inventory.meta.BundleMeta b) { for (ItemStack c : b.getItems()) if (llevaMochila(c)) return true; }
+		if (m instanceof org.bukkit.inventory.meta.BlockStateMeta bm && bm.getBlockState() instanceof org.bukkit.block.ShulkerBox sb) { for (ItemStack c : sb.getInventory().getContents()) if (llevaMochila(c)) return true; }
+		return false;
+	}
+	private static void avisoNoEntra(org.bukkit.entity.HumanEntity h) { if (h instanceof Player p) p.sendActionBar(Component.text("Las mochilas no entran en otra mochila (ni escondidas en una shulker o bundle).", NamedTextColor.YELLOW)); }
 
 	// ================= ponérsela / sacársela =================
 	/**
