@@ -21,7 +21,8 @@ public final class TabletHud {
 	private static final Identifier TABLET = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/hud/tablet_mini.png");
 	private static final Identifier PUNTO = Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "textures/gui/hud/punto.png");
 	private static final long DURA = 7000, FUNDE = 600;
-	private static final int MARGEN = 4, ANCHO_AVISO = 170, MAX_AVISOS = 3;
+	public static final int MARGEN = 4;
+	private static final int ANCHO_AVISO = 170, MAX_AVISOS = 3;
 
 	private record Aviso(String titulo, String texto, int color, long desde, boolean premio) {
 		Aviso(String titulo, String texto, int color, long desde) { this(titulo, texto, color, desde, false); }
@@ -33,6 +34,9 @@ public final class TabletHud {
 	private static final Set<String> avisados = new HashSet<>();
 
 	private TabletHud() {}
+	/** El rebote de la tablet chiquita cuando le llega un iconito de mision. */
+	private static long rebote;
+	public static void rebotar() { rebote = Util.getMillis(); }
 
 	public static void registrar() {
 		HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(TOD5Client.MOD_ID, "tablet_hud"), (g, dt) -> dibujar(g));
@@ -50,8 +54,9 @@ public final class TabletHud {
 			avisos.add(new Aviso("NUEVO CRAFTEO", c.nombre() != null ? c.nombre() : "", 0xFF55FFFF, ahora));
 		}
 		for (TabletDatos.Mision m : d.misiones) {
-			if (!m.paraReclamar() || !avisados.add("m:" + m.id())) continue;
-			avisos.add(new Aviso("MISIÓN COMPLETA", m.titulo(), m.diaria() ? 0xFF55FF55 : 0xFF55FFFF, ahora));
+			if (!m.paraReclamar() || avisados.contains("m:" + m.id()) || ar.tod5.menu.MisionesFijadas.enVuelo(m.id())) continue;   // espera a que llegue el iconito
+			avisados.add("m:" + m.id());
+			avisos.add(m.diaria() ? new Aviso("MISIÓN DIARIA COMPLETADA", "Día " + m.dia(), 0xFF55FF55, ahora) : new Aviso("MISIÓN OPCIONAL COMPLETADA", m.titulo(), 0xFF55FFFF, ahora));
 		}
 		for (TabletDatos.Paquete r : d.recompensas) {
 			if (!avisados.add("r:" + r.id())) continue;
@@ -78,7 +83,13 @@ public final class TabletHud {
 
 		// la tablet chiquita (16x20) y su tecla al costado
 		int x = MARGEN, y = MARGEN;
-		g.blit(RenderPipelines.GUI_TEXTURED, TABLET, x, y, 0, 0, 16, 20, 64, 80, 64, 80, 0xFFFFFFFF);
+		float rb = (Util.getMillis() - rebote) / 350f;
+		if (rb >= 0 && rb < 1) {   // boing
+			float e = 1f + 0.25f * (float) Math.sin(rb * Math.PI) * (1 - rb);
+			g.pose().pushMatrix(); g.pose().translate(x + 8, y + 10); g.pose().scale(e, e); g.pose().translate(-(x + 8), -(y + 10));
+			g.blit(RenderPipelines.GUI_TEXTURED, TABLET, x, y, 0, 0, 16, 20, 64, 80, 64, 80, 0xFFFFFFFF);
+			g.pose().popMatrix();
+		} else g.blit(RenderPipelines.GUI_TEXTURED, TABLET, x, y, 0, 0, 16, 20, 64, 80, 64, 80, 0xFFFFFFFF);
 		String tecla = TeclaTablet.TECLA != null ? TeclaTablet.TECLA.getTranslatedKeyMessage().getString() : "J";
 		int tw = Math.max(12, f.width(tecla) + 6), tx = x + 20, ty = y + 4;
 		g.fill(tx, ty, tx + tw, ty + 12, 0xFF141618);                       // tecla: borde

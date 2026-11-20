@@ -519,6 +519,7 @@ public class Tablet extends Screen {
 	}
 
 	// ---------- MISIONES: las diarias del dia arriba, las opcionales abajo ----------
+	private long avisoFijar;
 	private final Set<String> abiertas = new HashSet<>();   // misiones con las recompensas desplegadas
 	private int scrollMisiones;
 	static final int CELESTE = 0xFF55FFFF;
@@ -561,6 +562,16 @@ public class Tablet extends Screen {
 			g.fill(ex + 1, yy + 4, ex + ew - 1, yy + 13, 0xFF241A33);
 			g.drawString(this.font, "DE EQUIPO", ex + 3, yy + 5, 0xFFC8A0FF, false);
 			if (visible && mx >= ex && my >= yy + 3 && mx < ex + ew && my < yy + 14) g.setTooltipForNextFrame(Component.literal("El progreso es de todo tu equipo. Cada uno reclama su recompensa."), mx, my);
+		}
+		// fijar (hasta 5, se ven a la derecha de la pantalla)
+		if (visible && !m.estado().equals("reclamada") && !m.estado().equals("vencida") && yy + 2 >= arriba) {
+			int px = x + 7 + this.font.width(tit) + 6 + (m.equipo() ? this.font.width("DE EQUIPO") + 12 : 0);
+			boolean fij = ar.tod5.menu.MisionesFijadas.fijada(m.id());
+			boton(g, fij ? "Fijada" : "Fijar", px, yy + 2, fij, mx, my, () -> {
+				String err = ar.tod5.menu.MisionesFijadas.alternar(m.id());
+				if (err != null) this.avisoFijar = Util.getMillis() + 2500;
+			});
+			if (Util.getMillis() < this.avisoFijar) g.drawString(this.font, "Puedes fijar hasta 5 misiones.", px + this.font.width("Fijada") + 16, yy + 5, 0xFFFF6A6A, true);
 		}
 		// barra
 		int barW = cw - 150, hecho = m.hecho(), total = m.total();

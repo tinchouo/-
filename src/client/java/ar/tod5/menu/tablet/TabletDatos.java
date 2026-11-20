@@ -28,7 +28,7 @@ public class TabletDatos {
 	 * lugar y radio: solo en el modo admin.
 	 */
 	public record Objetivo(String uid, String tipo, String clave, String texto, int cantidad, int hecho, double radio, ItemStack item, String lugar) {
-		boolean cumplido() { return hecho >= cantidad; }
+		public boolean cumplido() { return hecho >= cantidad; }
 		/** Lo que lee el jugador: "Conseguí 16 × Obsidiana". */
 		public net.minecraft.network.chat.Component frase() {
 			var c = net.minecraft.network.chat.Component.empty();
@@ -36,15 +36,15 @@ public class TabletDatos {
 			boolean propio = texto != null && !texto.isBlank();
 			switch (tipo) {
 				case "matar" -> {
-					c.append("Matá " + n);
+					c.append("Mata " + n);
 					if (propio) c.append(texto);
 					else if (clave.startsWith("custom:")) c.append(clave.substring(7));
 					else c.append(net.minecraft.network.chat.Component.translatable("entity.minecraft." + clave.replace("minecraft:", "").trim().toLowerCase()));
 				}
-				case "picar" -> { c.append("Picá " + n); if (propio) c.append(texto); else c.append(item.isEmpty() ? net.minecraft.network.chat.Component.literal("?") : item.getHoverName()); }
-				case "ir" -> { String l = propio ? texto.trim() : "un lugar"; c.append(l.toLowerCase().startsWith("el ") ? "Andá al " + l.substring(3) : "Andá a " + l); }
+				case "picar" -> { c.append("Pica " + n); if (propio) c.append(texto); else c.append(item.isEmpty() ? net.minecraft.network.chat.Component.literal("?") : item.getHoverName()); }
+				case "ir" -> { String l = propio ? texto.trim() : "un lugar"; c.append(l.toLowerCase().startsWith("el ") ? "Ve al " + l.substring(3) : "Ve a " + l); }
 				case "evento" -> c.append(propio ? texto : "Evento");
-				default -> { c.append("Conseguí " + n); if (propio) c.append(texto); else c.append(item.isEmpty() ? net.minecraft.network.chat.Component.literal("?") : item.getHoverName()); }
+				default -> { c.append("Consigue " + n); if (propio) c.append(texto); else c.append(item.isEmpty() ? net.minecraft.network.chat.Component.literal("?") : item.getHoverName()); }
 			}
 			return c;
 		}
@@ -54,7 +54,7 @@ public class TabletDatos {
 	 * estado (jugador): en_curso, completa, resto (reclamo y no le entro todo), reclamada, vencida. (admin): oculta, activa.
 	 */
 	public record Mision(String id, String titulo, String clase, int dia, boolean equipo, String estado, List<Objetivo> objetivos, List<ItemStack> recompensas) {
-		boolean diaria() { return "diaria".equals(clase); }
+		public boolean diaria() { return "diaria".equals(clase); }
 		int hecho() { int n = 0; for (Objetivo o : objetivos) n += Math.min(o.hecho(), o.cantidad()); return n; }
 		int total() { int n = 0; for (Objetivo o : objetivos) n += o.cantidad(); return Math.max(1, n); }
 		boolean paraReclamar() { return "completa".equals(estado) || "resto".equals(estado); }
@@ -261,6 +261,7 @@ public class TabletDatos {
 			}
 			servidor = d;
 			ar.tod5.menu.ItemsTOD.actualizar(d.items);   // los items propios van a la pestaña del creativo
+			ar.tod5.menu.MisionesFijadas.actualizar(d.misiones);   // el progreso nuevo vuela a la mision fijada (o a la tablet)
 			LOG.info("TOD5 tablet: datos del server (día {}, {} novedades, {} crafteos, editor: {})", d.hoy, d.novedades.size(), d.crafteos.size(), d.editor);
 		} catch (Exception e) {
 			LOG.error("TOD5 tablet: no entendi lo que mando el server", e);

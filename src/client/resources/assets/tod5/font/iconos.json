@@ -1,0 +1,6 @@
+{
+	"providers": [
+		{ "type": "bitmap", "file": "tod5:font/espada.png", "ascent": 7, "height": 8, "chars": [""] },
+		{ "type": "bitmap", "file": "tod5:font/espadas.png", "ascent": 7, "height": 8, "chars": [""] }
+	]
+}

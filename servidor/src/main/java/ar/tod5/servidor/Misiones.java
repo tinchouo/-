@@ -231,10 +231,13 @@ final class Misiones implements Listener {
 		boolean todo = m.objetivos.stream().allMatch(x -> pr.hecho.getOrDefault(x.uid, 0) >= x.cantidad);
 		if (todo && !pr.completa) {
 			pr.completa = true;
-			for (Player q : quienes) {
-				q.playSound(q.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.MASTER, 0.7f, 1f);
-				q.sendActionBar(Component.text("¡Misión completa! " + m.nombre + " · reclamá la recompensa en la tablet", NamedTextColor.GREEN));
-			}
+			// el aviso sale cuando termina la animacion del mod (el iconito tarda 3 s en llegar a la mision)
+			final boolean deEquipo = dueno.startsWith("e:");
+			final String quien = nombreDueno(dueno);
+			Bukkit.getScheduler().runTaskLater(plugin, () -> {
+				for (Player q : companeros(m, dueno)) q.playSound(q.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, SoundCategory.MASTER, 0.7f, 1f);
+				anunciarCompleta(m, quien, deEquipo);
+			}, 60L);
 			plugin.getLogger().info(dueno + " completo la mision " + m.id + " (" + m.nombre + ")");
 			guardarProgreso();
 		} else if (!todo) for (Player q : quienes) {
@@ -327,6 +330,26 @@ final class Misiones implements Listener {
 		sumar(e.getPlayer(), "picar", o -> !vacio(o.item) && o.item.getType() == mat, 1);
 	}
 
+	/** "j:<uuid>" = el nombre del jugador; "e:tod5_<id>" = el nombre del equipo. */
+	private String nombreDueno(String dueno) {
+		if (dueno.startsWith("e:tod5_") && plugin.equipos != null) {
+			String id = dueno.substring(7);
+			for (Player o : Bukkit.getOnlinePlayers()) { Equipos.Equipo q = plugin.equipos.de(o.getUniqueId()); if (q != null && q.id.equals(id)) return q.nombre; }
+			return "Un equipo";
+		}
+		try { String n = Bukkit.getOfflinePlayer(UUID.fromString(dueno.substring(2))).getName(); return n == null ? "Alguien" : n; } catch (Exception e) { return "Alguien"; }
+	}
+	/** En el chat, para todos: "⚔ Tincho completó la misión diaria de hoy." (verde) / "...la misión opcional: Nombre" (celeste). De equipo: dos espadas y el nombre del equipo. */
+	private void anunciarCompleta(Mision m, String quien, boolean deEquipo) {
+		boolean diaria = m.clase.equals("diaria");
+		NamedTextColor c = diaria ? NamedTextColor.GREEN : NamedTextColor.AQUA;
+		String que = diaria ? "la misión diaria " + (m.dia == plugin.tablero().dia() ? "de hoy" : "del día " + m.dia) + "." : "la misión opcional: " + m.nombre;
+		Component icono = Component.text(deEquipo ? "\uE101" : "\uE100").font(net.kyori.adventure.key.Key.key("tod5", "iconos")).color(NamedTextColor.WHITE);
+		Component msg = icono.append(Component.text(" " + quien + " completó " + que, c).font(net.kyori.adventure.key.Key.key("minecraft", "default")));
+		for (Player o : Bukkit.getOnlinePlayers()) o.sendMessage(msg);
+		Bukkit.getConsoleSender().sendMessage(Component.text(quien + " completó " + que));
+	}
+
 	// ================= reclamar =================
 	void reclamar(Player p, String id) {
 		Mision m = misiones.get(id);
@@ -342,7 +365,7 @@ final class Misiones implements Listener {
 			p.sendActionBar(Component.text("Recompensa reclamada: " + m.nombre, NamedTextColor.GREEN));
 		} else {
 			pr.resto.put(u, quedan);
-			p.sendActionBar(Component.text("No te entra todo: quedan " + quedan.size() + " cosas guardadas en la misión. Hacé lugar y reclamá de nuevo.", NamedTextColor.YELLOW));
+			p.sendActionBar(Component.text("No te cabe todo: quedan " + quedan.size() + " cosas guardadas en la misión. Haz lugar y reclama de nuevo.", NamedTextColor.YELLOW));
 		}
 		guardarProgreso();
 		plugin.tablero().sincronizar(p);
