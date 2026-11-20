@@ -27,6 +27,24 @@ public abstract class AbstractContainerScreenMixin {
 		ContainerScreenAccessor s = (ContainerScreenAccessor) this;
 		if (ev.button() == 0 && ar.tod5.menu.MochilasCliente.adentro(s.tod5$left(), s.tod5$top(), ev.x(), ev.y())) { ar.tod5.menu.MochilasCliente.clicCasilla(); cir.setReturnValue(true); }
 	}
+	/** En una mochila abierta: una mochila no entra (ni siquiera se intenta: queda como en Minecraft, sin parpadeo ni texto). */
+	@Inject(method = "slotClicked", at = @At("HEAD"), cancellable = true)
+	private void tod5$sinMochilas(Slot slot, int id, int boton, net.minecraft.world.inventory.ClickType tipo, CallbackInfo ci) {
+		if (!ar.tod5.menu.MochilasCliente.esVentana(this)) return;
+		var pantalla = (AbstractContainerScreen<?>) (Object) this;
+		var yo = net.minecraft.client.Minecraft.getInstance().player;
+		if (yo == null) return;
+		ItemStack llevo = pantalla.getMenu().getCarried();
+		boolean arriba = slot != null && !(slot.container instanceof net.minecraft.world.entity.player.Inventory);
+		boolean no = switch (tipo) {
+			case PICKUP -> arriba && ar.tod5.menu.MochilasCliente.esMochila(llevo);
+			case QUICK_MOVE -> slot != null && !arriba && ar.tod5.menu.MochilasCliente.esMochila(slot.getItem());
+			case SWAP -> arriba && ar.tod5.menu.MochilasCliente.esMochila(boton == 40 ? yo.getOffhandItem() : yo.getInventory().getItem(boton));
+			case QUICK_CRAFT -> ar.tod5.menu.MochilasCliente.esMochila(llevo);
+			default -> false;
+		};
+		if (no) ci.cancel();
+	}
 	@Inject(method = "renderTooltip(Lnet/minecraft/client/gui/GuiGraphics;II)V", at = @At("TAIL"))
 	private void tod5$limpiar(GuiGraphics g, int mx, int my, CallbackInfo ci) { RarezaTooltip.hover = ItemStack.EMPTY; }
 }

@@ -68,12 +68,23 @@ public final class MochilasCliente {
 	public static void recibir(String json) {
 		try {
 			JsonObject o = JsonParser.parseString(json).getAsJsonObject();
+			if (o.has("ventana")) { ventana = Minecraft.getInstance().screen; return; }
 			puesta = ar.tod5.menu.tablet.TabletDatos.itemDeJson(o.get("puesta"));
 			ESPALDAS.clear();
 			for (var e : o.getAsJsonObject("espaldas").entrySet()) ESPALDAS.put(UUID.fromString(e.getKey()), e.getValue().getAsInt());
 		} catch (Exception e) { LoggerFactory.getLogger("TOD5").warn("TOD5 mochilas: no entendí ({})", e.getMessage()); }
 	}
 	public static ItemStack puesta() { return puesta; }
+	/** La pantalla que el server abrio como mochila (para no dejar meter otra mochila adentro, sin parpadeo). */
+	private static Object ventana;
+	public static boolean esVentana(Object pantalla) { return pantalla != null && pantalla == ventana; }
+	public static boolean esMochila(ItemStack it) {
+		if (it == null || it.isEmpty()) return false;
+		var cd = it.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+		if (cd == null) return false;
+		var t = cd.copyTag();
+		return t.getCompound("PublicBukkitValues").map(b -> b.contains("tod5:mochila")).orElse(false);
+	}
 	public static void limpiar() { puesta = ItemStack.EMPTY; ESPALDAS.clear(); }
 
 	/** Lo que se dibuja en la espalda de ese jugador (vacio = no tiene). */

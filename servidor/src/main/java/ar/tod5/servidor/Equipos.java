@@ -270,6 +270,10 @@ final class Equipos implements Listener, CommandExecutor {
 				avisarEquipo(q, otro.getName() + " fue expulsado del equipo.");
 				if (otro.getPlayer() != null) otro.getPlayer().sendMessage(Component.text("Te expulsaron del equipo " + q.nombre + ".", NamedTextColor.RED));
 			}
+			case "equipo_marca" -> {
+				marcar(p, o);
+				return true;
+			}
 			case "equipo_chat" -> {
 				if (q == null) return true;
 				Long ult = ultimoChat.get(p.getUniqueId());
@@ -304,6 +308,40 @@ final class Equipos implements Listener, CommandExecutor {
 			default -> {}
 		}
 		return true;
+	}
+	// ================= la marca (boton del medio del mouse) =================
+	private final java.util.Map<UUID, org.bukkit.entity.TextDisplay> marcas = new java.util.HashMap<>();
+	private final java.util.Map<UUID, Long> ultimaMarca = new java.util.HashMap<>();
+	/** Una marca tuya en el mundo por 5 s, que ven vos y tu equipo (a traves de las paredes). */
+	private void marcar(Player p, JsonObject o) {
+		long ahora = System.currentTimeMillis();
+		Long u = ultimaMarca.get(p.getUniqueId());
+		if (u != null && ahora - u < 450) return;
+		ultimaMarca.put(p.getUniqueId(), ahora);
+		if (!o.has("x") || !o.has("y") || !o.has("z")) return;
+		org.bukkit.Location l = new org.bukkit.Location(p.getWorld(), o.get("x").getAsDouble(), o.get("y").getAsDouble() + 0.6, o.get("z").getAsDouble());
+		if (l.distanceSquared(p.getLocation()) > 200 * 200) return;
+		org.bukkit.entity.TextDisplay vieja = marcas.remove(p.getUniqueId());
+		if (vieja != null) vieja.remove();
+		Equipo q = de(p.getUniqueId());
+		NamedTextColor c = q == null ? NamedTextColor.WHITE : colorMc(q.color);
+		org.bukkit.entity.TextDisplay d = p.getWorld().spawn(l, org.bukkit.entity.TextDisplay.class, t -> {
+			t.setPersistent(false);
+			t.setVisibleByDefault(false);
+			t.text(Component.text(p.getName(), c).append(Component.newline()).append(Component.text("▼", c)));
+			t.setBillboard(org.bukkit.entity.Display.Billboard.CENTER);
+			t.setSeeThrough(true);
+			t.setShadowed(true);
+			t.setBackgroundColor(org.bukkit.Color.fromARGB(0, 0, 0, 0));
+			t.setBrightness(new org.bukkit.entity.Display.Brightness(15, 15));
+			t.setTransformation(new org.bukkit.util.Transformation(new org.joml.Vector3f(), new org.joml.AxisAngle4f(), new org.joml.Vector3f(1.6f, 1.6f, 1.6f), new org.joml.AxisAngle4f()));
+		});
+		marcas.put(p.getUniqueId(), d);
+		List<Player> ven = new ArrayList<>();
+		ven.add(p);
+		if (q != null) for (String m : q.miembros) { Player o2 = Bukkit.getPlayer(UUID.fromString(m)); if (o2 != null && o2 != p && o2.getWorld() == p.getWorld()) ven.add(o2); }
+		for (Player v : ven) { v.showEntity(plugin, d); v.playSound(v.getLocation(), org.bukkit.Sound.BLOCK_NOTE_BLOCK_BELL, 0.6f, 1.6f); }
+		Bukkit.getScheduler().runTaskLater(plugin, () -> { d.remove(); marcas.remove(p.getUniqueId(), d); }, 100L);
 	}
 	/** Saca los caracteres raros y corta al largo maximo. */
 	private static String limpio(String s, int max) {

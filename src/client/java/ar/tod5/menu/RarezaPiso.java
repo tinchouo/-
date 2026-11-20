@@ -37,10 +37,6 @@ public final class RarezaPiso {
 		float pulso = Ajustes.rendimiento() ? 0.85f : 0.65f + 0.35f * (0.5f + 0.5f * (float) Math.sin(edad * 0.157));
 		int c = colorPiso(r, edad);
 		pose.pushPose();
-		// la "plataforma" de luz en el piso, debajo del item (como en Fortnite)
-		float rp = 0.32f + 0.06f * r.estrellas;
-		int cp = argb(c, 0.95f * pulso);
-		col.submitCustomGeometry(pose, RenderTypes.entityTranslucentEmissive(BRILLO), (p, vc) -> quad(p, vc, -rp, 0.03f, -rp, rp, 0.03f, rp, cp, false));
 		pose.translate(0, centroY, 0);
 		// rayo para arriba (dos planos cruzados), desde legendario
 		if (r.estrellas >= 5) {
@@ -50,6 +46,26 @@ public final class RarezaPiso {
 				quad(p, vc, -ancho, 0, 0, ancho, alto, 0, cr, true);
 				quad(p, vc, 0, 0, -ancho, 0, alto, ancho, cr, true);
 			});
+		}
+		// puntitos propios que suben (mas cuanto mas rara; el exotico, blancos)
+		if (!Ajustes.rendimiento()) {
+			int n = 2 + r.estrellas * 2;
+			int cpu = r == Rareza.EXOTICO ? 0xF4FFFF : r.claro;
+			float s = 0.03f;
+			for (int k = 0; k < n; k++) {
+				float per = 1.4f + 0.23f * (k % 5);
+				float fase = ((k * 7919) % 1000) / 1000f * per;
+				float pr = (((edad / 20f) + fase) % per) / per;
+				double ang = k * 2.39996;   // repartidos alrededor
+				float rad = 0.12f + 0.06f * (k % 3);
+				float px = (float) Math.cos(ang) * rad, pz = (float) Math.sin(ang) * rad, py = -0.15f + pr * (0.6f + 0.08f * r.estrellas);
+				int ca = argb(cpu, (float) Math.sin(pr * Math.PI) * 0.95f);
+				pose.pushPose();
+				pose.translate(px, py, pz);
+				pose.mulPose(cam.orientation);
+				col.submitCustomGeometry(pose, RenderTypes.entityTranslucentEmissive(BRILLO), (p, vc) -> quad(p, vc, -s, -s, 0, s, s, 0, ca, false));
+				pose.popPose();
+			}
 		}
 		// mirando a la camara: brillo (un poco detras del item) y la raya blanca
 		pose.mulPose(cam.orientation);
@@ -83,15 +99,7 @@ public final class RarezaPiso {
 	}
 
 	/** Cada tick: particulitas que suben de los items con rareza cercanos (mas cuanto mas rara). */
-	public static void tick(Minecraft mc) {
-		if (mc.level == null || mc.player == null || mc.isPaused() || Ajustes.rendimiento()) return;
-		for (Entity e : mc.level.entitiesForRendering()) {
-			if (!(e instanceof ItemEntity ie) || e.distanceToSqr(mc.player) > 32 * 32) continue;
-			Rareza r = Rareza.rareza(ie.getItem());
-			if (r == null || AZAR.nextFloat() > 0.04f + 0.04f * r.estrellas) continue;
-			int c = r == Rareza.EXOTICO ? 0xE3FCFF : r.color;
-			double x = e.getX() + (AZAR.nextDouble() - 0.5) * 0.4, y = e.getY() + 0.25 + AZAR.nextDouble() * 0.2, z = e.getZ() + (AZAR.nextDouble() - 0.5) * 0.4;
-			mc.level.addParticle(new net.minecraft.core.particles.DustParticleOptions(c, 0.7f), x, y, z, 0, 0.02, 0);   // un puntito del color de la rareza
-		}
-	}
+	/** Antes tiraba particulas de Minecraft; ahora los puntitos los dibuja dibujar(). */
+	public static void tick(Minecraft mc) { }
+
 }

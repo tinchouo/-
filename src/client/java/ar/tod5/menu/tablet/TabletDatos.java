@@ -288,7 +288,17 @@ public class TabletDatos {
 			var mc = net.minecraft.client.Minecraft.getInstance();
 			if (mc.getConnection() == null) return ItemStack.EMPTY;
 			var ops = net.minecraft.resources.RegistryOps.create(com.mojang.serialization.JsonOps.INSTANCE, mc.getConnection().registryAccess());
-			return ItemStack.CODEC.parse(ops, e).result().orElse(ItemStack.EMPTY);
+			var r = ItemStack.CODEC.parse(ops, e);
+			if (r.result().isPresent()) return r.result().get();
+			// reintento: sin los componentes quitados ("!minecraft:..."), que despues se sacan a mano
+			JsonObject o = e.getAsJsonObject().deepCopy();
+			java.util.List<String> quitar = new java.util.ArrayList<>();
+			if (o.has("components")) { JsonObject c = o.getAsJsonObject("components"); for (String k : new java.util.ArrayList<>(c.keySet())) if (k.startsWith("!")) { quitar.add(k.substring(1)); c.remove(k); } }
+			var r2 = ItemStack.CODEC.parse(ops, o);
+			if (r2.result().isEmpty()) { org.slf4j.LoggerFactory.getLogger("TOD5").warn("TOD5 no entendí un item: {}", r.error().map(x -> x.message()).orElse("?")); return ItemStack.EMPTY; }
+			ItemStack st = r2.result().get();
+			for (String q : quitar) { Identifier id = Identifier.tryParse(q); if (id != null) BuiltInRegistries.DATA_COMPONENT_TYPE.getOptional(id).ifPresent(t -> st.remove(t)); }
+			return st;
 		} catch (Exception ex) { return ItemStack.EMPTY; }
 	}
 

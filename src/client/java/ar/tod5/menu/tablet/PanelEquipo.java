@@ -145,21 +145,21 @@ final class PanelEquipo extends Panel {
 			renglones.addAll(f.split(linea, bw - 12));
 			Vistos.marcar("m:" + eq.id + ":" + m.t());   // lo estas viendo: ya esta leido
 		}
-		int visibles = (bh - caja - 10) / 10;
+		int visibles = (bh - caja - 20) / 10;   // deja un renglon libre arriba de la caja para avisos
 		int maxScroll = Math.max(0, renglones.size() - visibles);
 		this.scrollChat = Math.max(0, Math.min(maxScroll, this.scrollChat));
 		int hasta = renglones.size() - this.scrollChat, desde = Math.max(0, hasta - visibles);
-		int ry = by + bh - caja - 6 - (hasta - desde) * 10;
+		int ry = by + bh - caja - 16 - (hasta - desde) * 10;
 		if (eq.chat.isEmpty()) g.drawString(f, "Todavía no hay mensajes. Escribe algo abajo.", bx + 6, by + 6, 0xFF707070, false);
 		for (int i = desde; i < hasta; i++) { g.drawString(f, renglones.get(i), bx + 6, ry, BLANCO, true); ry += 10; }
-		if (this.scrollChat > 0) g.drawString(f, "▼ más nuevos", bx + bw - f.width("▼ más nuevos") - 6, by + bh - caja - 14, 0xFF909090, false);
+		if (this.scrollChat > 0 && Util.getMillis() >= this.avisoHasta) g.drawString(f, "▼ más nuevos", bx + bw - f.width("▼ más nuevos") - 6, by + bh - caja - 13, 0xFF909090, false);
 		// la caja para escribir
 		int cy = by + bh - caja - 2;
 		g.fill(bx + 3, cy, bx + bw - 3, cy + caja - 1, 0xFF000000);
 		marco(g, bx + 3, cy, bw - 6, caja - 1, this.mensaje.foco() ? t.acento() : 0xFFA0A0A0);
 		this.mensaje.dibujar(g, bx + 7, cy + 3, bw - 14, 9, BLANCO);
 		if (this.mensaje.plano().isEmpty() && !this.mensaje.foco()) g.drawString(f, "Escribe al equipo... (máx. 120 letras)", bx + 7, cy + 4, 0xFF707070, false);
-		if (Util.getMillis() < this.avisoHasta) g.drawString(f, "Espera un poco antes de volver a escribir.", bx + 6, cy - 11, 0xFFFF6A6A, true);
+		if (Util.getMillis() < this.avisoHasta) g.drawString(f, "Espera un poco antes de volver a escribir.", bx + 6, cy - 11, 0xFFFF6A6A, false);
 	}
 	private void enviarMensaje() {
 		String s = this.mensaje.plano().trim();

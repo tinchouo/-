@@ -147,6 +147,7 @@ final class Mochilas implements Listener {
 		v.inv = Bukkit.createInventory(v, n, titulo);
 		v.inv.setContents(contenido(m));
 		p.openInventory(v.inv);
+		p.sendPluginMessage(plugin, CANAL, "{\"ventana\":true}".getBytes(StandardCharsets.UTF_8));   // al mod: esta ventana es una mochila
 		p.playSound(p.getLocation(), Sound.ITEM_ARMOR_EQUIP_LEATHER, 0.7f, 1.2f);
 	}
 	/** Guarda lo de la ventana en la mochila puesta. */
@@ -197,7 +198,7 @@ final class Mochilas implements Listener {
 		if (m instanceof org.bukkit.inventory.meta.BlockStateMeta bm && bm.getBlockState() instanceof org.bukkit.block.ShulkerBox sb) { for (ItemStack c : sb.getInventory().getContents()) if (llevaMochila(c)) return true; }
 		return false;
 	}
-	private static void avisoNoEntra(org.bukkit.entity.HumanEntity h) { if (h instanceof Player p) p.sendActionBar(Component.text("Las mochilas no entran en otra mochila (ni escondidas en una shulker o bundle).", NamedTextColor.YELLOW)); }
+	private static void avisoNoEntra(org.bukkit.entity.HumanEntity h) { }   // sin texto: simplemente no entra (el mod ya ni lo deja intentar)
 
 	// ================= ponérsela / sacársela =================
 	/**

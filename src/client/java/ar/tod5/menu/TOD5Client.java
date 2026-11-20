@@ -42,5 +42,6 @@ public class TOD5Client implements ClientModInitializer {
 		MochilasCliente.registrar();
 		HudArmadura.registrar();
 		OrdenarBoton.registrar();
+		Marca.registrar();
 	}
 }
