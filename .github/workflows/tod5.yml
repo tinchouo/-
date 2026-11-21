@@ -45,6 +45,17 @@ jobs:
           done
           echo "archivos ref: $(find /tmp/ref -type f | wc -l)" >> $LOG
           true
+      - name: Texturas de Minecraft (referencia)
+        if: always() && contains(github.event.head_commit.message, '[tex]')
+        shell: bash {0}
+        run: |
+          mkdir -p /tmp/ref/tex
+          for J in $(find ~/.gradle $GITHUB_WORKSPACE/.gradle -name 'minecraft-client*.jar' -o -name 'client.jar' 2>/dev/null); do
+            echo "jar $J" >> /tmp/ref/tex/jars.txt
+            (cd /tmp/ref/tex && unzip -q -o "$J" 'assets/minecraft/textures/item/*' 'assets/minecraft/textures/entity/wither/*' 'assets/minecraft/textures/entity/turtle/*' 2>/dev/null)
+          done
+          find /tmp/ref/tex -name '*.png' | wc -l >> /tmp/ref/tex/jars.txt
+          true
       - name: Subir log y referencia
         if: always()
         run: |
