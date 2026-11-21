@@ -49,7 +49,7 @@ import org.bukkit.potion.PotionEffectType;
  *  - equipo     (epico)       te salva y cura 6 corazones + Velocidad, Regeneracion y Resistencia I (10 s) a tu equipo a 5 bloques
  *  - guardian = "TODtem" (legendario) funciona desde el inventario (no desde una mochila)
  *  - ancestral  (mitico)      te salva, te cura toda la vida, empuja a los enemigos; en la otra mano +2 corazones
- *  - estrella   (exotico)     clic derecho: 10 s sin recibir dano (no mata de un golpe). Si te salva, tambien te da la estrella.
+ *  - estrella   (exotico)     te salva y te da 10 s sin recibir dano (no mata de un golpe)
  * ORDEN al morir (lo hace el plugin, no Minecraft): 1) la mano secundaria, 2) la mano principal, 3) el TODtem del inventario.
  * Todo es liviano: solo se hace algo al morir, al usar la estrella y una cuenta cada 4 ticks si hay alguna estrella activa.
  */
@@ -74,7 +74,7 @@ final class Totems implements Listener {
 		ItemMeta m = it.getItemMeta();
 		String nombre, rareza; List<String> lore;
 		switch (id) {
-			case "estrella" -> { nombre = "Tótem Estrella"; rareza = "exotico"; lore = List.of("Haz clic derecho para usarlo.", "10 segundos de invencibilidad.", "No mata a los enemigos de un golpe."); }
+			case "estrella" -> { nombre = "Tótem Estrella"; rareza = "exotico"; lore = List.of("Te salva y te da 10 segundos", "de invencibilidad.", "No mata a los enemigos de un golpe."); }
 			case "chapucero" -> { nombre = "Tótem Chapucero"; rareza = "comun"; lore = List.of("Te salva de morir,", "pero te deja con medio corazón."); }
 			case "caballero" -> { nombre = "Tótem del Cuy Caballero"; rareza = "raro"; lore = List.of("Te salva y te da un escudo de corazones.", "Después queda como un tótem normal."); }
 			case "guardian" -> { nombre = "TODtem"; rareza = "legendario"; lore = List.of("Funciona desde el inventario", "(no desde una mochila)."); }
@@ -90,6 +90,7 @@ final class Totems implements Listener {
 		for (String s : lore) l.add(Component.text(s, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
 		m.lore(l);
 		m.getPersistentDataContainer().set(TOTEM, PersistentDataType.STRING, id);
+		m.setItemModel(new NamespacedKey("tod5", "totem_" + id));   // su dibujo propio (lo trae el mod)
 		m.getPersistentDataContainer().set(Crafteos.RAREZA, PersistentDataType.STRING, rareza);
 		if (id.equals("slasher")) {
 			m.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(SLASHER, 0.2, AttributeModifier.Operation.MULTIPLY_SCALAR_1, EquipmentSlotGroup.OFFHAND));
@@ -223,16 +224,6 @@ final class Totems implements Listener {
 	}
 
 	// ================= la estrella =================
-	@EventHandler
-	public void alUsar(PlayerInteractEvent e) {
-		if (e.getHand() != EquipmentSlot.HAND || (e.getAction() != Action.RIGHT_CLICK_AIR && e.getAction() != Action.RIGHT_CLICK_BLOCK)) return;
-		Player p = e.getPlayer();
-		ItemStack it = p.getInventory().getItemInMainHand();
-		if (!"estrella".equals(tipo(it))) return;
-		e.setCancelled(true);
-		if (p.getGameMode() != GameMode.CREATIVE) it.setAmount(it.getAmount() - 1);
-		activarEstrella(p);
-	}
 	private void activarEstrella(Player p) {
 		estrella.put(p.getUniqueId(), System.currentTimeMillis() + ESTRELLA_MS);
 		p.getWorld().playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 1.6f);

@@ -18,10 +18,13 @@ public final class AvisoDurabilidad {
 	private AvisoDurabilidad() {}
 	private static final Map<Item, Identifier> TEXTURAS = new HashMap<>();
 	private static final Identifier SIN = Identifier.fromNamespaceAndPath("tod5", "nada");
+	private static final Identifier ESCUDO = Identifier.fromNamespaceAndPath("tod5", "textures/gui/escudo_silueta.png");
 	/** La textura plana del item (textures/item/<nombre>.png). Si no tiene (escudo, items 3D), no se tiñe. */
 	private static Identifier textura(Minecraft mc, ItemStack it) {
 		Identifier m = it.get(net.minecraft.core.component.DataComponents.ITEM_MODEL);
 		if (m == null) m = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(it.getItem());
+		if (m.getPath().equals("shield")) return ESCUDO;   // el escudo es 3D: una silueta aproximada
+		if (m.getPath().equals("crossbow")) m = Identifier.withDefaultNamespace("crossbow_standby");
 		Identifier t = Identifier.fromNamespaceAndPath(m.getNamespace(), "textures/item/" + m.getPath() + ".png");
 		return mc.getResourceManager().getResource(t).isPresent() ? t : SIN;
 	}
@@ -29,13 +32,12 @@ public final class AvisoDurabilidad {
 	public static void dibujar(GuiGraphics g, ItemStack it, int x, int y) {
 		if (it.isEmpty() || !it.isDamageableItem() || it.getMaxDamage() <= 0) return;
 		Minecraft mc = Minecraft.getInstance();
-		if (!(mc.screen instanceof AbstractContainerScreen<?>)) return;
 		float queda = 1f - (float) it.getDamageValue() / it.getMaxDamage();
 		if (queda > 0.25f) return;
 		float fuerza = Math.min(1f, (0.25f - queda) / 0.25f);           // 0 recien llega al 25%, 1 a punto de romperse
-		float vel = 2.5f + 5f * fuerza;
+		float vel = 7f + 9f * fuerza;   // late mas rapido cuanto menos le queda
 		float latido = 0.5f + 0.5f * (float) Math.sin(net.minecraft.util.Util.getMillis() / 1000.0 * vel);
-		float alfa = (0.15f + 0.45f * fuerza) * (0.45f + 0.55f * latido);
+		float alfa = (0.45f + 0.45f * fuerza) * (0.35f + 0.65f * latido);
 		Identifier tex = TEXTURAS.computeIfAbsent(it.getItem(), k -> textura(mc, it));
 		if (tex == SIN) return;
 		int a = (int) (Math.max(0f, Math.min(1f, alfa)) * 255);

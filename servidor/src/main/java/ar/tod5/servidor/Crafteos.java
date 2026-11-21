@@ -351,7 +351,9 @@ final class Crafteos implements Listener {
 		String id = j.has("id") && !j.get("id").getAsString().isBlank() ? j.get("id").getAsString() : "i" + (proximo++);
 		Material base = Material.matchMaterial(j.has("base") ? j.get("base").getAsString() : "paper");
 		if (base == null || !base.isItem() || base.isAir()) base = Material.PAPER;
-		ItemStack it = new ItemStack(base);
+		// si ya existia (o es uno de los del plugin: totems, mochilas...), se edita ESE: no se crea otro y no pierde lo que hace
+		ItemStack previo = items.containsKey(id) ? items.get(id) : integrado(id);
+		ItemStack it = previo != null && previo.getType() == base ? previo.clone() : new ItemStack(base);
 		ItemMeta m = it.getItemMeta();
 		int color = j.has("color") ? j.get("color").getAsInt() : 0xFFFFFF;
 		String nombre = j.has("nombre") ? j.get("nombre").getAsString() : "Item";
@@ -408,15 +410,28 @@ final class Crafteos implements Listener {
 		}
 		return a;
 	}
+	/** Los items que arma el plugin (totems, mochilas, varita...). */
+	private List<JsonObject> integrados() {
+		List<JsonObject> a = new ArrayList<>();
+		if (plugin.flechas != null) a.add(plugin.flechas.itemParaTablet());
+		if (plugin.varita != null) a.add(plugin.varita.itemParaTablet());
+		if (plugin.mochilas != null) a.addAll(plugin.mochilas.itemsParaTablet());
+		if (plugin.totems != null) a.addAll(plugin.totems.itemsParaTablet());
+		if (plugin.saltos != null) a.addAll(plugin.saltos.itemsParaTablet());
+		if (plugin.plataformas != null) a.add(plugin.plataformas.itemParaTablet());
+		return a;
+	}
+	/** El item del plugin con ese id (para editarlo desde la tablet), o null. */
+	private ItemStack integrado(String id) {
+		for (JsonObject j : integrados()) if (j.get("id").getAsString().equals(id)) {
+			try { return Bukkit.getUnsafe().deserializeItemFromJson(j.getAsJsonObject("item")); } catch (Exception e) { return null; }
+		}
+		return null;
+	}
 	JsonArray itemsParaTablet() {
 		JsonArray a = new JsonArray();
 		items.forEach((id, it) -> { JsonObject j = new JsonObject(); j.addProperty("id", id); j.add("item", itemJson(it)); a.add(j); });
-		if (plugin.flechas != null) a.add(plugin.flechas.itemParaTablet());
-		if (plugin.varita != null) a.add(plugin.varita.itemParaTablet());   // la varita de los editores
-		if (plugin.mochilas != null) plugin.mochilas.itemsParaTablet().forEach(a::add);   // las mochilas (hasta que haya tienda)
-		if (plugin.totems != null) plugin.totems.itemsParaTablet().forEach(a::add);   // los totems
-		if (plugin.saltos != null) plugin.saltos.itemsParaTablet().forEach(a::add);   // orbes y pads
-		if (plugin.plataformas != null) a.add(plugin.plataformas.itemParaTablet());   // la flecha de gravedad, para ponerla desde el creativo
+		for (JsonObject j : integrados()) if (!items.containsKey(j.get("id").getAsString())) a.add(j);   // si lo editaron, va el editado (no dos)
 		return a;
 	}
 
