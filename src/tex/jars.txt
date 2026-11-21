@@ -1,0 +1,6 @@
+jar /home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-clientonly-intermediary/1.21.11-loom.mappings.1_21_11.layered+hash.2198-v2/minecraft-clientonly-intermediary-1.21.11-loom.mappings.1_21_11.layered+hash.2198-v2.jar
+jar /home/runner/.gradle/caches/fabric-loom/minecraftMaven/net/minecraft/minecraft-clientonly/1.21.11-loom.mappings.1_21_11.layered+hash.2198-v2/minecraft-clientonly-1.21.11-loom.mappings.1_21_11.layered+hash.2198-v2.jar
+jar /home/runner/.gradle/caches/fabric-loom/1.21.11/minecraft-client.jar
+jar /home/runner/.gradle/caches/fabric-loom/1.21.11/minecraft-client-only.jar
+jar /home/runner/work/-/-/.gradle/loom-cache/minecraftMaven/net/minecraft/minecraft-clientOnly-b00516cda8/1.21.11-loom.mappings.1_21_11.layered+hash.2198-v2/minecraft-clientOnly-b00516cda8-1.21.11-loom.mappings.1_21_11.layered+hash.2198-v2.jar
+796
