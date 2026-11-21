@@ -90,7 +90,6 @@ final class Totems implements Listener {
 		for (String s : lore) l.add(Component.text(s, NamedTextColor.GRAY).decoration(TextDecoration.ITALIC, false));
 		m.lore(l);
 		m.getPersistentDataContainer().set(TOTEM, PersistentDataType.STRING, id);
-		m.setItemModel(new NamespacedKey("tod5", "totem_" + id));   // su dibujo propio (lo trae el mod)
 		m.getPersistentDataContainer().set(Crafteos.RAREZA, PersistentDataType.STRING, rareza);
 		if (id.equals("slasher")) {
 			m.addAttributeModifier(Attribute.ATTACK_DAMAGE, new AttributeModifier(SLASHER, 0.2, AttributeModifier.Operation.MULTIPLY_SCALAR_1, EquipmentSlotGroup.OFFHAND));
