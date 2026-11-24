@@ -25,6 +25,8 @@ public final class Conexion {
 		PayloadTypeRegistry.playS2C().register(Red.PLATAFORMAS, Red.codec(Red.PLATAFORMAS));
 		PayloadTypeRegistry.playS2C().register(Red.EQUIPOS, Red.codec(Red.EQUIPOS));
 		ClientPlayNetworking.registerGlobalReceiver(Red.EQUIPOS, (p, ctx) -> ctx.client().execute(() -> EquiposCliente.recibir(p.texto())));
+		PayloadTypeRegistry.playS2C().register(Red.SISTEMA, Red.codec(Red.SISTEMA));
+		ClientPlayNetworking.registerGlobalReceiver(Red.SISTEMA, (p, ctx) -> ctx.client().execute(() -> Purgatorio.sistema(p.texto())));
 		PayloadTypeRegistry.playS2C().register(Red.MOCHILAS, Red.codec(Red.MOCHILAS));
 		ClientPlayNetworking.registerGlobalReceiver(Red.MOCHILAS, (p, ctx) -> ctx.client().execute(() -> MochilasCliente.recibir(p.texto())));
 		ClientPlayNetworking.registerGlobalReceiver(Red.PLATAFORMAS, (p, ctx) -> ctx.client().execute(() -> PlataformasCliente.recibir(p.texto())));

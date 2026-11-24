@@ -36,6 +36,7 @@ public final class Red {
 	public static final CustomPacketPayload.Type<Texto> PLATAFORMAS = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "plataformas"));
 	/** server -> mod: la mochila que tenes puesta y el color de la de cada jugador (JSON). */
 	public static final CustomPacketPayload.Type<Texto> EQUIPOS = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "equipos"));
+	public static final CustomPacketPayload.Type<Texto> SISTEMA = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "sistema"));
 	public static final CustomPacketPayload.Type<Texto> MOCHILAS = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "mochilas"));
 	/** mod -> server: use este orbe/pad ("id"). */
 	public static final CustomPacketPayload.Type<Texto> SALTO = new CustomPacketPayload.Type<>(Identifier.fromNamespaceAndPath("tod5", "salto"));

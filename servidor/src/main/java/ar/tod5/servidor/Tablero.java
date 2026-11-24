@@ -373,6 +373,7 @@ public class Tablero {
 			case "salto" -> plugin.saltos.comando(s, args);
 			case "varita" -> plugin.varita.comando(s);
 			case "plataforma" -> plugin.plataformas.comando(s, args);
+			case "purgatorio" -> plugin.purgatorio.comando(s, args);
 		}
 		return true;
 	}

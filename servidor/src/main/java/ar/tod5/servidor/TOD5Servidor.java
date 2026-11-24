@@ -47,6 +47,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 	Equipos equipos;
 	Mochilas mochilas;
 	Totems totems;
+	Purgatorio purgatorio;
 	final Ordenar ordenar = new Ordenar();
 	Varita varita;
 	Tablero tablero() { return tablero; }
@@ -95,6 +96,9 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 		getServer().getPluginManager().registerEvents(equipos, this);
 		getServer().getMessenger().registerOutgoingPluginChannel(this, Equipos.CANAL);
 		if (getCommand("equipo") != null) getCommand("equipo").setExecutor(equipos);
+		purgatorio = new Purgatorio(this);
+		getServer().getPluginManager().registerEvents(purgatorio, this);
+		getServer().getMessenger().registerOutgoingPluginChannel(this, Purgatorio.CANAL);
 		totems = new Totems(this);
 		getServer().getPluginManager().registerEvents(totems, this);
 		mochilas = new Mochilas(this);
@@ -227,7 +231,7 @@ public class TOD5Servidor extends JavaPlugin implements Listener, PluginMessageL
 
 	@Override
 	public List<String> onTabComplete(CommandSender s, Command c, String a, String[] args) {
-		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision", "gravedad", "flecha", "salto", "varita", "plataforma");
+		if (args.length == 1) return List.of("abrir", "cerrar", "estado", "recargar", "dia", "crafteo", "anuncio", "novedad", "editor", "moneda", "zona", "mision", "gravedad", "flecha", "salto", "varita", "plataforma", "purgatorio");
 		return tablero.completar(args);
 	}
 }
